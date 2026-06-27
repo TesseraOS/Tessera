@@ -1,0 +1,41 @@
+# Normalize line endings across Windows/macOS/Linux checkouts.
+# Without this, CRLF/LF churn pollutes diffs on a mixed-OS team.
+* text=auto eol=lf
+
+# Scripts that MUST keep a specific ending regardless of platform.
+*.sh        text eol=lf
+*.ps1       text eol=crlf
+*.psm1      text eol=crlf
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+
+# Explicit text types.
+*.ts        text
+*.tsx       text
+*.js        text
+*.jsx       text
+*.json      text
+*.jsonc     text
+*.md        text
+*.yml       text
+*.yaml      text
+*.css       text
+*.sql       text
+
+# Lockfiles & generated artifacts: keep diffs collapsed and out of language stats.
+pnpm-lock.yaml      linguist-generated=true -diff
+*.snap              linguist-generated=true
+
+# Binary assets — never try to diff or normalize these.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.pdf   binary
+*.woff  binary
+*.woff2 binary
+*.db    binary
+*.sqlite binary
+*.sqlite3 binary

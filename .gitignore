@@ -1,0 +1,80 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Tessera — .gitignore
+# Governance principle (see .harness/governance once Phase B lands): the harness
+# "system of record" (feature_list, effects, progress, plans, in-repo memory, ADRs)
+# IS committed. Everything generated, secret, or machine-local is ignored here.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+
+# Build output / caches
+dist/
+build/
+out/
+.next/
+.turbo/
+.cache/
+*.tsbuildinfo
+coverage/
+.nyc_output/
+.eslintcache
+.vitest/
+playwright-report/
+test-results/
+
+# Environment & secrets — NEVER commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+.secrets/
+
+# Local-mode data stores (SQLite + vector + object cache). These are runtime state,
+# not source of record, so they stay local.
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/
+.data/
+storage/
+.vectordb/
+
+# Logs & telemetry dumps
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.shared.json
+
+# Claude Code adapter: commit shared settings, ignore machine-local overrides.
+.claude/settings.local.json
+.claude/*.local.json
+
+# Temp / scratch
+tmp/
+.tmp/
+*.tmp
+scratch/

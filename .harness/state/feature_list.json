@@ -248,7 +248,7 @@
       "release": "R0",
       "priority": "must",
       "status": "todo",
-      "blockedBy": ["F-011"],
+      "blockedBy": ["F-011", "F-028"],
       "acceptance": [
         "Global search across code/memory/graph with provenance",
         "Package Inspector renders stages/scores/sources from the compilation trace",
@@ -302,6 +302,44 @@
     { "id": "F-024", "title": "Backup/restore + migration system", "requirements": ["FR-56"], "service": "api", "package": "@tessera/storage", "release": "R1", "priority": "should", "status": "backlog" },
     { "id": "F-025", "title": "Multi-tenancy + org RBAC", "requirements": ["FR-52", "FR-54", "NFR-2"], "service": "api", "package": "@tessera/api", "release": "R2", "priority": "must", "status": "backlog" },
     { "id": "F-026", "title": "MCP gateway (multi-client auth + quotas)", "requirements": ["FR-36"], "service": "api", "package": "@tessera/mcp", "release": "R2", "priority": "should", "status": "backlog" },
-    { "id": "F-027", "title": "Governance & audit UI + full audit trail", "requirements": ["FR-48", "FR-55", "NFR-13"], "service": "web", "package": "@tessera/web", "release": "R3", "priority": "should", "status": "backlog" }
+    { "id": "F-027", "title": "Governance & audit UI + full audit trail", "requirements": ["FR-48", "FR-55", "NFR-13"], "service": "web", "package": "@tessera/web", "release": "R3", "priority": "should", "status": "backlog" },
+
+    {
+      "id": "F-028",
+      "title": "UI foundation: design tokens/theming, base shadcn components, app shell, command palette",
+      "requirements": ["FR-49", "NFR-9"],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-001"],
+      "acceptance": [
+        "Design tokens (semantic CSS vars) + light/dark/system theming per docs/design/DESIGN-SYSTEM.md",
+        "Base shadcn/ui components, app shell (sidebar + topbar), command palette (⌘K)",
+        "Skeleton/empty/error primitives, toasts, motion primitives; WCAG AA baseline"
+      ],
+      "verification": ["typecheck", "lint", "test", "e2e"],
+      "effects": ["E-004"]
+    },
+    {
+      "id": "F-029",
+      "title": "CI/CD pipeline (GitHub Actions) running the verification gates",
+      "requirements": ["NFR-15"],
+      "service": "root",
+      "package": "—",
+      "release": "R0",
+      "priority": "should",
+      "status": "todo",
+      "blockedBy": ["F-001"],
+      "acceptance": [
+        "Workflow runs verify-state + typecheck/lint/format/test/build (+e2e) on Node 22/pnpm",
+        "Dependency audit + secret scanning; steps mirror .harness/verification/gates.json",
+        "Activates when a Git remote exists; branch protection requires green CI"
+      ],
+      "verification": ["state"],
+      "notes": "CD (build/deploy) per deployment mode added later (R1 image, R2 cloud). See ADR-0010."
+    },
+    { "id": "F-030", "title": "Billing & subscriptions (cloud) behind a Billing port (Dodo Payments)", "requirements": ["FR-61", "NFR-12"], "service": "api", "package": "@tessera/api", "release": "R2", "priority": "should", "status": "backlog", "notes": "Direction per ADR-0011; gated on OQ4 (license/business model)." }
   ]
 }

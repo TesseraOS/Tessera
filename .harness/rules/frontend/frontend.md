@@ -1,7 +1,14 @@
 # Rule: Frontend / Dashboard
 
-Applies to `apps/web`. Stack: Next.js + React + TypeScript + Tailwind + shadcn/ui.
-(A dedicated frontend ADR is due at R1; until then these rules + the PRD UX baseline apply.)
+Applies to `apps/web`. Stack and design foundation are **locked** in
+[ADR-0009](../../../docs/adr/0009-frontend-stack-and-design-system.md): Next.js + React +
+TypeScript + Tailwind + shadcn/ui (+ TanStack Query, Zustand, React Hook Form + Zod, Framer
+Motion, React Flow, Monaco, Recharts/Tremor).
+
+> **Binding design system.** All UI conforms to
+> [`docs/design/DESIGN-SYSTEM.md`](../../../docs/design/DESIGN-SYSTEM.md). Use **design
+> tokens** (semantic CSS variables) only — never hardcode colors/spacing/radius. It is
+> implemented first by **F-028 (UI foundation)** and consumed by every later UI feature.
 
 ## Architecture
 - Prefer **Server Components**; make client components only when interactivity requires it.

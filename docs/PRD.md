@@ -74,6 +74,8 @@ debugging. The same codebase runs **Local, Self-Hosted, Managed Cloud, and Enter
   [ADR-0007](adr/0007-cloudflare-tunnel-documented-not-built.md)).
 - **NG4** — No general-purpose note-taking / PKM for non-engineering use in v1.
 - **NG5** — No fine-tuning pipeline in v1 (memory informs prompts, not weights).
+- **NG6** — The dashboard is a **responsive web app, not a PWA**; offline is the local
+  engine's job, not a service-worker shell ([ADR-0009](adr/0009-frontend-stack-and-design-system.md)).
 
 ## 4. Personas & primary use cases
 
@@ -194,6 +196,10 @@ debugging. The same codebase runs **Local, Self-Hosted, Managed Cloud, and Enter
 | FR-48 | Governance UI: users, roles, audit log, retention. | S | R3 |
 | FR-49 | UX baseline: command palette (⌘K), themes, skeleton/empty/error states, toasts, optimistic updates, virtualized lists, WCAG AA. | M | R0→ |
 
+> All dashboard work conforms to the binding UI spec
+> [`design/DESIGN-SYSTEM.md`](design/DESIGN-SYSTEM.md) ([ADR-0009](adr/0009-frontend-stack-and-design-system.md)),
+> implemented first by **F-028 (UI foundation)**.
+
 ### 6.8 Deployment, multi-tenancy & collaboration
 | ID | Requirement | Pri | Rel |
 |----|-------------|-----|-----|
@@ -205,6 +211,7 @@ debugging. The same codebase runs **Local, Self-Hosted, Managed Cloud, and Enter
 | FR-55 | **Audit logs** for sensitive actions (access, config, exports). | S | R3 |
 | FR-56 | Backup & restore; migration system for schema/data. | M | R1 |
 | FR-57 | Feature flags for progressive rollout. | C | R2 |
+| FR-61 | Billing & subscriptions (**cloud only**) behind a `Billing` port; provider Dodo Payments. | S | R2 |
 
 ### 6.9 Plugin ecosystem
 | ID | Requirement | Pri | Rel |
@@ -233,6 +240,7 @@ debugging. The same codebase runs **Local, Self-Hosted, Managed Cloud, and Enter
 | NFR-12 | **Cost control** | Local-default avoids API spend; cloud tracks per-tenant usage/cost; embedding/LLM calls batched & cached. |
 | NFR-13 | **Compliance-readiness** | Audit trail, retention, data export/delete (DSR), configurable encryption — designed to support SOC2/GDPR posture. |
 | NFR-14 | **i18n-readiness** | UI strings externalized; not necessarily translated in v1. |
+| NFR-15 | **CI/CD** | Automated pipeline (GitHub Actions, [ADR-0010](adr/0010-ci-cd-github-actions.md)) runs the verification gates + dependency/secret scanning on every change; green required to merge. |
 
 ---
 
@@ -288,7 +296,8 @@ Selected by a **deployment profile** ([ADR-0003](adr/0003-local-first-cloud-read
   dashboard (FR-42/43/45/46), Docker stack + backup/migrations (FR-51/56), plugin lifecycle
   (FR-59).
 - **R2 — Managed Cloud:** multi-tenancy (FR-52/54), MCP gateway (FR-36), retention
-  (FR-15), analytics (FR-47), feature flags (FR-57), plugin permissions (FR-60).
+  (FR-15), analytics (FR-47), feature flags (FR-57), plugin permissions (FR-60), **billing**
+  (FR-61).
 - **R3 — Enterprise:** governance/audit UI (FR-48/55), full RBAC/SSO, compliance posture
   (NFR-13), data residency.
 
@@ -311,6 +320,10 @@ Selected by a **deployment profile** ([ADR-0003](adr/0003-local-first-cloud-read
   [0004](adr/0004-context-compilation-over-naive-rag.md) ·
   [0005](adr/0005-orm-drizzle.md) · [0006](adr/0006-embeddings-and-vector-store.md) ·
   [0007](adr/0007-cloudflare-tunnel-documented-not-built.md) ·
-  [0008](adr/0008-brand-tessera-and-package-scope.md)
+  [0008](adr/0008-brand-tessera-and-package-scope.md) ·
+  [0009](adr/0009-frontend-stack-and-design-system.md) ·
+  [0010](adr/0010-ci-cd-github-actions.md) · [0011](adr/0011-billing-dodo-payments.md)
 - [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) ·
+  [`design/DESIGN-SYSTEM.md`](design/DESIGN-SYSTEM.md) ·
+  [`REQUIREMENTS-COVERAGE.md`](REQUIREMENTS-COVERAGE.md) ·
   [`roadmap.md`](roadmap.md) · [`glossary.md`](glossary.md)

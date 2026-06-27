@@ -43,6 +43,19 @@
       "rationale": "The public API/MCP contract is the source for OpenAPI + the generated SDK + the dashboard; any contract change must regenerate and update all three (API is additive/versioned).",
       "confidence": 1.0,
       "origin": "manual"
+    },
+    {
+      "id": "E-004",
+      "from": { "kind": "contract", "ref": "docs/design/DESIGN-SYSTEM.md design tokens (semantic CSS variables / theme)" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/web: all components + app shell" },
+        { "kind": "module", "ref": "@tessera/web: charts (Recharts/Tremor using the --chart-* palette)" },
+        { "kind": "artifact", "ref": "light/dark theme definitions" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "Components consume design tokens only; changing a token or the theme contract affects every component, the chart palette, and both themes, so token changes must be reviewed across the UI.",
+      "confidence": 0.9,
+      "origin": "manual"
     }
   ]
 }

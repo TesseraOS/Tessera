@@ -24,6 +24,9 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0006](0006-embeddings-and-vector-store.md) | Embeddings runtime & vector store | Accepted |
 | [0007](0007-cloudflare-tunnel-documented-not-built.md) | Cloudflare Tunnel: documented, not built | Accepted |
 | [0008](0008-brand-tessera-and-package-scope.md) | Brand "Tessera" & `@tessera/*` package scope | Accepted |
+| [0009](0009-frontend-stack-and-design-system.md) | Frontend stack & design system (responsive, not PWA) | Accepted |
+| [0010](0010-ci-cd-github-actions.md) | CI/CD via GitHub Actions | Accepted |
+| [0011](0011-billing-dodo-payments.md) | Billing via Dodo Payments (Managed Cloud, R2) | Accepted (direction) |
 
 ## Conventions
 

@@ -5,6 +5,34 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-27 — Phase B.1: pre-code hardening (gaps from brief review)
+**What changed**
+- Added the **design system**: [`docs/design/DESIGN-SYSTEM.md`](../../docs/design/DESIGN-SYSTEM.md)
+  (tokens via tweakcn/shadcn, layout via efferd, components via coss/shadcn, motion, full UX
+  baseline, a11y, perf) + **ADR-0009** (frontend stack locked; responsive web, **not PWA**).
+- Captured two dropped brief items: **ADR-0011** billing via Dodo Payments (R2 direction) and
+  **ADR-0010** CI/CD via GitHub Actions. Updated the ADR index.
+- Added [`docs/REQUIREMENTS-COVERAGE.md`](../../docs/REQUIREMENTS-COVERAGE.md) tracing the
+  entire original brief → PRD/ADR/harness, or gap.
+- PRD: +FR-61 (billing), +NFR-15 (CI/CD), +NG6 (no PWA), design-system references.
+- Code harness made explicit: [`F-001 scaffold plan`](../plans/F-001-monorepo-toolchain-scaffold.md)
+  (tsconfig strict flags, eslint boundary rule, prettier, vitest, turbo, CI, scripts→gates);
+  frontend rule now binds to the design system.
+- State: +F-028 (UI foundation, R0), +F-029 (CI/CD), +F-030 (billing, R2); F-014 now
+  blockedBy F-028; +effect E-004 (design tokens → all components).
+
+**Evidence/verification**
+- `node scripts/verify-state.mjs` valid (30 features, 4 effect-links); link-check 0 broken
+  (see verification run for this session).
+
+**Decisions** (via AskUserQuestion): capture billing now/build R2 (Dodo); responsive web not
+PWA; lock frontend stack ADR now.
+
+**Next step**
+- Coding phase: claim **F-001** (scaffold) — plan already written.
+
+---
+
 ## 2026-06-27 — Phase B: agent harness built
 **What changed**
 - Built the tool-agnostic global harness under [`.harness/`](../) plus root

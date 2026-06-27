@@ -5,6 +5,56 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-28 — Phase B.2 fix: agy works in a real terminal (correction) + wrapper hardening
+**Correction:** a real-terminal run proved `agy` is **not** hung/broken — the log
+(`logs/agy/worker-*.log`, gitignored) shows **silent keyring auth succeeded**
+(kumarashishranjan4971@gmail.com, model Gemini 3.5 Flash) and it **streamed from Gemini**;
+it stopped only because the user pressed Ctrl+C (~70s in, following my premature "it's hung"
+advice). Root cause of the *apparent* stall: `agy --print` emits nothing until the full
+response is ready. (Claude's non-TTY sandbox still can't drive agy — that part stands.)
+
+**Wrapper hardening (agy-worker.ps1/.sh):**
+- **Default to interactive** (`-i`): visible progress + tool-review approvals. `-Headless`/
+  `--headless` opts into `--print` (with a "silent until complete, don't Ctrl+C" warning).
+- **Dirty-tree guard:** run mode refuses to switch branches with uncommitted changes (it had
+  carried B.2 work onto the worker branch) unless `-AllowDirty`/`--allow-dirty`.
+- **Docs fix:** `pwsh` -> `.\scripts\agy-worker.ps1` / `powershell -File` (user has PS 5.1,
+  not PowerShell 7). Added the `agy` auth prereq note.
+- ADR-0012 Context updated with the evidence.
+
+**To validate F-031 end-to-end (human):** `agy models` (confirm auth), then
+`.\scripts\agy-worker.ps1 -Spec <narrow-spec> -Branch feat/<id>-worker -Dir <narrow-dir>`
+(interactive), let it finish, then Claude verifies the branch.
+
+**Next step:** coding — claim **F-001** (scaffold).
+
+---
+
+## 2026-06-27 — Phase B.2: agy/Gemini worker integration (human-in-the-loop)
+**What changed**
+- **ADR-0012** (supersedes the deferral): adopt `agy`/Gemini as an OPTIONAL, human-in-the-loop,
+  build-phase worker — never a product dependency.
+- [`delegate-to-worker` skill](../skills/delegate-to-worker/SKILL.md) + `.claude` command/skill
+  shims: Claude plans the scoped spec + independently verifies; a human runs the worker.
+- Guarded wrappers [`scripts/agy-worker.ps1`](../../scripts/agy-worker.ps1) + `.sh`: preflight,
+  dedicated branch, scoped `--add-dir`, timeout + log, **forbids `--dangerously-skip-permissions`**,
+  no secrets, `-Check` dry-run.
+- Governance: tool-access "deferred" -> "adopted (human-in-the-loop)". Feature **F-031** (in_review).
+
+**Key finding:** `agy` v1.0.13 is installed, but `agy models` / `agy -p` **hang with a 0-byte
+log** when driven by a non-TTY process (this sandbox) — the documented Windows/console limit.
+So Claude **cannot** drive `agy`; a human runs it in a real terminal. Full automation is
+out of reach on this setup (revisit on WSL/native per ADR-0012).
+
+**Evidence/verification**
+- `agy-worker.ps1 -Check` dry-run + link-check + verify-state (see B.2 verification run).
+- Real end-to-end delegation is **pending a human run** (I can't execute agy headless).
+
+**Next step:** coding — claim **F-001** (scaffold); use `delegate-to-worker` for bulk subtasks
+once we're in implementation.
+
+---
+
 ## 2026-06-27 — Phase B.1 addendum: governance policy model + ecosystem positioning
 **What changed** (after reviewing Databricks **Omnigent**, a meta-harness)
 - Added [`.harness/governance/policy-model.md`](../governance/policy-model.md): static +

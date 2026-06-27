@@ -38,24 +38,25 @@ The planner / generator / evaluator subagents
 and evaluator are read/verify-oriented; the generator may edit. Keep the evaluator
 independent of the generator.
 
-## Deferred (under consideration): external worker agents
+## Adopted (human-in-the-loop): external worker agent (`agy`/Gemini)
 
-**Option:** delegating bulk work to a cheaper external model as a *worker* (e.g.
-[`antigravity-for-claude-code`](https://github.com/yuting0624/antigravity-for-claude-code) —
-Google's Antigravity `agy` CLI driving Gemini), with Claude as planner + independent
-evaluator. Maps onto our existing `generator` (worker) / `planner` + `evaluator` split.
+**What:** delegating bulk, well-specified work to Google's Antigravity `agy` CLI (Gemini) as
+a **worker**, with Claude as **planner + independent evaluator** — our `generator` (worker) /
+`planner` + `evaluator` split with an external generator.
 
-**Decision (2026-06-27): deferred, not adopted.** Reasons: pre-code (nothing to delegate
-yet); native-Windows-unsupported (needs WSL; slow over the `E:` mount); sends code to a
-third party (Google); a community plugin that runs arbitrary commands; and its own warning
-that the worker "may alter its environment to make a check pass."
+**Decision (2026-06-27, [ADR-0012](../../docs/adr/0012-agy-gemini-worker-build-tooling.md)):
+adopted as OPTIONAL, human-in-the-loop, build-phase tooling — never a Tessera product/runtime
+dependency** (the product stays agent-agnostic, PRD NG7). Claude **cannot drive `agy`** (no
+TTY in the sandbox -> it hangs), so a **human runs the guarded wrapper**
+(`scripts/agy-worker.ps1` / `.sh`) in a real terminal; Claude writes the scoped spec and
+**independently verifies**. Protocol:
+[`delegate-to-worker`](../skills/delegate-to-worker/SKILL.md). Tracked as feature **F-031**.
 
-**Revisit only when ALL hold:** (a) we are in a heavy implementation phase with real bulk
-work; (b) it runs **sandboxed**, on a **dedicated branch**, never `--yolo` on the real repo;
-(c) Claude's **independent `evaluator`** verifies every result (the worker never self-certifies);
-(d) data-sharing to the provider is consciously accepted; (e) it is **optional dev tooling
-only** — never a Tessera product/runtime dependency (the product stays agent-agnostic). At
-that point, capture the adoption in an ADR.
+**Mandatory guardrails:** dedicated branch; scoped `--add-dir`; `--print-timeout` + `--log-file`
+always set; **never `--dangerously-skip-permissions`** on the real repo; **no secrets** passed
+to the worker (egress-proxy ideal — see [`policy-model.md`](policy-model.md)); worker output is
+**untrusted** until Claude's evaluator re-runs the gates; mind **cost** (policy-model budgets);
+keep proprietary/sensitive code out of delegated scope (data leaves to Gemini).
 
 ## Drift
 If `.claude/settings.json` and this policy disagree, this policy is the intent — update the

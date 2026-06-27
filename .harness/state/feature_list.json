@@ -1,0 +1,307 @@
+{
+  "$schemaRef": "./schemas/feature_list.schema.json",
+  "version": 1,
+  "project": "tessera",
+  "updated": "2026-06-27",
+  "policy": {
+    "wip_limit": 1,
+    "ordering": "by release, then id; respect blockedBy"
+  },
+  "statuses": ["backlog", "todo", "in_progress", "blocked", "in_review", "done"],
+  "releases": ["R0", "R1", "R2", "R3"],
+  "features": [
+    {
+      "id": "F-001",
+      "title": "Monorepo & toolchain scaffold (Turborepo + pnpm + TS strict + lint/format/test)",
+      "requirements": ["NFR-8", "NFR-10"],
+      "service": "root",
+      "package": "—",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": [],
+      "acceptance": [
+        "pnpm-workspace + turbo.json + base tsconfig (strict) build an empty workspace",
+        "ESLint (type-aware) + Prettier + Vitest configured; package-boundary lint rule present",
+        "verification gates typecheck/lint/format/test/build run green on the scaffold"
+      ],
+      "verification": ["state", "typecheck", "lint", "format", "test", "build"],
+      "notes": "Activates the pending-toolchain gates in verification/gates.json."
+    },
+    {
+      "id": "F-002",
+      "title": "@tessera/core: ids, typed errors, config types, domain event bus",
+      "requirements": ["NFR-1", "NFR-8"],
+      "service": "root",
+      "package": "@tessera/core",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-001"],
+      "acceptance": [
+        "Stable id helpers, typed error base classes, and result/error types",
+        "In-memory domain event bus with typed events",
+        "No internal dependencies; consumable by all packages"
+      ],
+      "verification": ["typecheck", "lint", "test"]
+    },
+    {
+      "id": "F-003",
+      "title": "Storage ports + SQLite & filesystem adapters + conformance suite",
+      "requirements": ["FR-50", "NFR-5"],
+      "service": "api",
+      "package": "@tessera/storage",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-002"],
+      "acceptance": [
+        "RelationalStore + BlobStore + Queue ports defined (Drizzle for SQL)",
+        "SQLite, filesystem, and in-process queue adapters implemented",
+        "Shared conformance suite passes for every adapter"
+      ],
+      "verification": ["typecheck", "lint", "test"],
+      "effects": ["E-001"]
+    },
+    {
+      "id": "F-004",
+      "title": "VectorStore port + sqlite-vec adapter (model+dim recorded per vector)",
+      "requirements": ["FR-21"],
+      "service": "api",
+      "package": "@tessera/storage",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-003"],
+      "acceptance": [
+        "VectorStore port with upsert/query and capability flags",
+        "sqlite-vec adapter passing the conformance suite",
+        "Each vector records its embedding model id + dimension"
+      ],
+      "verification": ["typecheck", "lint", "test"],
+      "effects": ["E-001"]
+    },
+    {
+      "id": "F-005",
+      "title": "Embeddings port + Transformers.js adapter (Ollama optional)",
+      "requirements": ["FR-21"],
+      "service": "api",
+      "package": "@tessera/ai",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-002"],
+      "acceptance": [
+        "Embeddings port (embed/batch) with model metadata",
+        "Transformers.js in-process adapter works with zero external services/keys",
+        "Optional Ollama adapter behind the same port"
+      ],
+      "verification": ["typecheck", "lint", "test"]
+    },
+    {
+      "id": "F-006",
+      "title": "Ingestion: local filesystem + Git, event-driven, incremental, secret-redacted",
+      "requirements": ["FR-1", "FR-2", "FR-3", "FR-6", "FR-7", "FR-8", "FR-9"],
+      "service": "api",
+      "package": "@tessera/ingestion",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-003", "F-004", "F-005"],
+      "acceptance": [
+        "Filesystem + Git connectors emit change events; workers process via Queue port",
+        "Incremental + idempotent (content-hash diffing); no full re-index on small changes",
+        "Secret scrubbing before persist; processors are plugins"
+      ],
+      "verification": ["typecheck", "lint", "test"]
+    },
+    {
+      "id": "F-007",
+      "title": "Memory subsystem: types, metadata, versioning, manual capture",
+      "requirements": ["FR-10", "FR-11", "FR-12", "FR-13"],
+      "service": "api",
+      "package": "@tessera/memory",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-003"],
+      "acceptance": [
+        "Memory kinds (decision/lesson/incident/failure/architecture/glossary/task) with metadata",
+        "Versioned + supersedable (never silently mutated)",
+        "Create/edit via API + MCP"
+      ],
+      "verification": ["typecheck", "lint", "test"]
+    },
+    {
+      "id": "F-008",
+      "title": "Knowledge graph + effect-links + get_effects",
+      "requirements": ["FR-16", "FR-17", "FR-18", "FR-19"],
+      "service": "api",
+      "package": "@tessera/knowledge-graph",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-006"],
+      "acceptance": [
+        "Nodes/edges model (relational, recursive-CTE traversal) for files/symbols/modules/people/decisions",
+        "Effect-links typed with rationale/confidence/origin; static + manual",
+        "get_effects(symbol) returns ranked dependents with paths"
+      ],
+      "verification": ["typecheck", "lint", "test"],
+      "effects": ["E-002"]
+    },
+    {
+      "id": "F-009",
+      "title": "Hybrid retrieval: semantic + keyword + graph + symbolic + fusion ranker",
+      "requirements": ["FR-21", "FR-22", "FR-23", "FR-25", "FR-26"],
+      "service": "api",
+      "package": "@tessera/retrieval",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-004", "F-008"],
+      "acceptance": [
+        "Five retrievers behind a common interface; keyword via FTS, semantic via VectorStore",
+        "Fusion ranker with configurable weights and per-candidate signal attribution",
+        "Returns one ranked candidate set"
+      ],
+      "verification": ["typecheck", "lint", "test"]
+    },
+    {
+      "id": "F-010",
+      "title": "Context Compiler: plan→retrieve→expand→rank→dedup→compress→assemble + provenance",
+      "requirements": ["FR-27", "FR-28", "FR-29", "FR-30", "FR-32"],
+      "service": "api",
+      "package": "@tessera/context-compiler",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-009"],
+      "acceptance": [
+        "Full pipeline producing a provenance-tagged, token-budget-bounded Context Package",
+        "Deduplication + per-fragment 'why included' explainability",
+        "Compilation trace emitted for the Package Inspector",
+        "Beats naive top-k RAG on the labeled task suite (Context Quality Score)"
+      ],
+      "verification": ["typecheck", "lint", "test"],
+      "effects": ["E-003"]
+    },
+    {
+      "id": "F-011",
+      "title": "REST API /v1 (Fastify): schema validation, OpenAPI, health/ready",
+      "requirements": ["FR-37", "NFR-1", "NFR-6", "NFR-11"],
+      "service": "api",
+      "package": "@tessera/api",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-010", "F-007"],
+      "acceptance": [
+        "Versioned /v1 routes for search/compile/effects/memory; Zod validation at boundary",
+        "OpenAPI generated from schemas; consistent error envelope",
+        "/health and /ready endpoints"
+      ],
+      "verification": ["typecheck", "lint", "test", "e2e"],
+      "effects": ["E-003"]
+    },
+    {
+      "id": "F-012",
+      "title": "MCP server: search, compile_context, get_effects, capture_memory, explain",
+      "requirements": ["FR-35"],
+      "service": "api",
+      "package": "@tessera/mcp",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-011"],
+      "acceptance": [
+        "MCP tools wrap the same domain services as REST",
+        "Works with at least one real agent client end-to-end",
+        "Tool inputs validated; errors surfaced cleanly"
+      ],
+      "verification": ["typecheck", "lint", "test", "e2e"],
+      "effects": ["E-003"]
+    },
+    {
+      "id": "F-013",
+      "title": "Plugin SDK + plugin-host (discovery, config schema, lifecycle, isolation)",
+      "requirements": ["FR-40", "FR-58"],
+      "service": "api",
+      "package": "@tessera/plugin-host",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-006"],
+      "acceptance": [
+        "Stable contracts for Connector/Processor/AIProvider/StorageBackend/RetrievalStrategy",
+        "Host: discovery + config validation + lifecycle + failure isolation",
+        "First-party connectors/embeddings use the same contracts as third parties"
+      ],
+      "verification": ["typecheck", "lint", "test"]
+    },
+    {
+      "id": "F-014",
+      "title": "Dashboard: global search + Context Package inspector + UX baseline",
+      "requirements": ["FR-41", "FR-44", "FR-49", "NFR-9"],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-011"],
+      "acceptance": [
+        "Global search across code/memory/graph with provenance",
+        "Package Inspector renders stages/scores/sources from the compilation trace",
+        "UX baseline: ⌘K, themes, skeleton/empty/error states, toasts, virtualized lists; WCAG AA"
+      ],
+      "verification": ["typecheck", "lint", "test", "e2e"],
+      "effects": ["E-003"]
+    },
+    {
+      "id": "F-015",
+      "title": "Deployment profile & config loader (Local) with adapter wiring",
+      "requirements": ["FR-50", "FR-53"],
+      "service": "api",
+      "package": "@tessera/config",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-003"],
+      "acceptance": [
+        "Validated config schema selects adapters/providers/budgets by profile",
+        "Local profile wires SQLite+sqlite-vec+filesystem+Transformers.js with zero external deps",
+        "Secrets via SecretsProvider port (env/file locally)"
+      ],
+      "verification": ["typecheck", "lint", "test"]
+    },
+    {
+      "id": "F-016",
+      "title": "Observability baseline: OpenTelemetry traces + Pino logs + metrics",
+      "requirements": ["NFR-7"],
+      "service": "api",
+      "package": "@tessera/observability",
+      "release": "R0",
+      "priority": "must",
+      "status": "todo",
+      "blockedBy": ["F-002"],
+      "acceptance": [
+        "OTel spans across API → service → compiler stage → adapter with correlation ids",
+        "Structured Pino logging that never logs secrets/raw ingested content",
+        "Core metrics (latency, queue depth, compile latency per stage)"
+      ],
+      "verification": ["typecheck", "lint", "test"]
+    },
+
+    { "id": "F-017", "title": "GitHub connector (PRs/issues) + auto memory extraction", "requirements": ["FR-4", "FR-14"], "service": "api", "package": "@tessera/ingestion", "release": "R1", "priority": "should", "status": "backlog" },
+    { "id": "F-018", "title": "Temporal retriever (recency / time-window weighting)", "requirements": ["FR-24"], "service": "api", "package": "@tessera/retrieval", "release": "R1", "priority": "should", "status": "backlog" },
+    { "id": "F-019", "title": "Compiler compression stage (citation-preserving)", "requirements": ["FR-31"], "service": "api", "package": "@tessera/context-compiler", "release": "R1", "priority": "should", "status": "backlog" },
+    { "id": "F-020", "title": "Compiler reproducibility + caching + pluggable stage strategies", "requirements": ["FR-33", "FR-34"], "service": "api", "package": "@tessera/context-compiler", "release": "R1", "priority": "should", "status": "backlog" },
+    { "id": "F-021", "title": "Realtime updates (SSE/WebSocket)", "requirements": ["FR-38"], "service": "api", "package": "@tessera/api", "release": "R1", "priority": "should", "status": "backlog" },
+    { "id": "F-022", "title": "Generated TypeScript SDK from OpenAPI", "requirements": ["FR-39"], "service": "root", "package": "@tessera/sdk", "release": "R1", "priority": "should", "status": "backlog" },
+    { "id": "F-023", "title": "Postgres + pgvector adapters + Docker Compose stack", "requirements": ["FR-51"], "service": "api", "package": "@tessera/storage", "release": "R1", "priority": "must", "status": "backlog", "effects": ["E-001"] },
+    { "id": "F-024", "title": "Backup/restore + migration system", "requirements": ["FR-56"], "service": "api", "package": "@tessera/storage", "release": "R1", "priority": "should", "status": "backlog" },
+    { "id": "F-025", "title": "Multi-tenancy + org RBAC", "requirements": ["FR-52", "FR-54", "NFR-2"], "service": "api", "package": "@tessera/api", "release": "R2", "priority": "must", "status": "backlog" },
+    { "id": "F-026", "title": "MCP gateway (multi-client auth + quotas)", "requirements": ["FR-36"], "service": "api", "package": "@tessera/mcp", "release": "R2", "priority": "should", "status": "backlog" },
+    { "id": "F-027", "title": "Governance & audit UI + full audit trail", "requirements": ["FR-48", "FR-55", "NFR-13"], "service": "web", "package": "@tessera/web", "release": "R3", "priority": "should", "status": "backlog" }
+  ]
+}

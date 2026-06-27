@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "updated": "2026-06-27",
+  "description": "Ordered verification gates. Run in order; stop at first failure. 'active' gates run now; 'pending-toolchain' gates activate when package.json + workspace scripts exist.",
+  "gates": [
+    {
+      "id": "state",
+      "order": 0,
+      "status": "active",
+      "command": "node scripts/verify-state.mjs",
+      "requiredFor": ["always"],
+      "description": "Validate harness state files (feature_list.json, effects.json)."
+    },
+    {
+      "id": "typecheck",
+      "order": 1,
+      "status": "pending-toolchain",
+      "command": "pnpm -w typecheck",
+      "requiredFor": ["code"],
+      "description": "TypeScript strict typecheck across the workspace."
+    },
+    {
+      "id": "lint",
+      "order": 2,
+      "status": "pending-toolchain",
+      "command": "pnpm -w lint",
+      "requiredFor": ["code"],
+      "description": "ESLint (type-aware) incl. package-boundary rules."
+    },
+    {
+      "id": "format",
+      "order": 3,
+      "status": "pending-toolchain",
+      "command": "pnpm -w format:check",
+      "requiredFor": ["code"],
+      "description": "Prettier formatting check."
+    },
+    {
+      "id": "test",
+      "order": 4,
+      "status": "pending-toolchain",
+      "command": "pnpm -w test",
+      "requiredFor": ["code"],
+      "description": "Unit + integration tests, incl. adapter conformance suites."
+    },
+    {
+      "id": "build",
+      "order": 5,
+      "status": "pending-toolchain",
+      "command": "pnpm -w build",
+      "requiredFor": ["code"],
+      "description": "Turborepo build of all packages and apps."
+    },
+    {
+      "id": "e2e",
+      "order": 6,
+      "status": "pending-toolchain",
+      "command": "pnpm -w test:e2e",
+      "requiredFor": ["user-facing"],
+      "description": "End-to-end tests over the MCP/REST surface and dashboard."
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "$schemaRef": "./schemas/effects.schema.json",
+  "version": 1,
+  "updated": "2026-06-27",
+  "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
+  "links": [
+    {
+      "id": "E-001",
+      "from": { "kind": "contract", "ref": "@tessera/storage:ports (RelationalStore|VectorStore|BlobStore|Queue)" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/storage:adapters/* (sqlite, sqlite-vec, filesystem, in-proc; later postgres, pgvector, s3, bullmq)" },
+        { "kind": "test", "ref": "@tessera/storage:conformance-suite" },
+        { "kind": "decision", "ref": "docs/adr/0003-local-first-cloud-ready-ports-and-adapters.md" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "A storage port is implemented by every adapter and validated by one shared conformance suite; changing the interface breaks all adapters and the suite, and a semantic change needs an ADR.",
+      "confidence": 1.0,
+      "origin": "manual"
+    },
+    {
+      "id": "E-002",
+      "from": { "kind": "contract", "ref": "@tessera/knowledge-graph:effect-link & node/edge model" },
+      "to": [
+        { "kind": "symbol", "ref": "@tessera/knowledge-graph:get_effects" },
+        { "kind": "module", "ref": "@tessera/retrieval:graph-retriever" },
+        { "kind": "module", "ref": "@tessera/web:graph & effects views" },
+        { "kind": "schema", "ref": ".harness/state/schemas/effects.schema.json" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "The KG/effect-link model feeds graph retrieval, get_effects, and the dashboard; the harness effects schema mirrors the product model, so changing one should be reflected in the others.",
+      "confidence": 0.9,
+      "origin": "manual"
+    },
+    {
+      "id": "E-003",
+      "from": { "kind": "contract", "ref": "REST /v1 + MCP tool contracts (@tessera/api, @tessera/mcp)" },
+      "to": [
+        { "kind": "artifact", "ref": "generated OpenAPI document" },
+        { "kind": "package", "ref": "@tessera/sdk (generated TS client)" },
+        { "kind": "module", "ref": "@tessera/web (dashboard API calls)" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "The public API/MCP contract is the source for OpenAPI + the generated SDK + the dashboard; any contract change must regenerate and update all three (API is additive/versioned).",
+      "confidence": 1.0,
+      "origin": "manual"
+    }
+  ]
+}

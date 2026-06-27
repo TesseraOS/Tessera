@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tessera.dev/schemas/feature_list.schema.json",
+  "title": "Tessera feature list",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "project", "updated", "policy", "statuses", "releases", "features"],
+  "properties": {
+    "$schemaRef": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 },
+    "project": { "type": "string" },
+    "updated": { "type": "string", "format": "date" },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wip_limit"],
+      "properties": {
+        "wip_limit": { "type": "integer", "minimum": 1 },
+        "ordering": { "type": "string" }
+      }
+    },
+    "statuses": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "releases": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "features": { "type": "array", "items": { "$ref": "#/$defs/feature" } }
+  },
+  "$defs": {
+    "feature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "requirements", "service", "release", "priority", "status"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^F-[0-9]{3}$" },
+        "title": { "type": "string", "minLength": 3 },
+        "requirements": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^(FR|NFR)-[0-9]+$" }
+        },
+        "service": { "type": "string", "enum": ["root", "api", "web"] },
+        "package": { "type": "string" },
+        "release": { "type": "string", "enum": ["R0", "R1", "R2", "R3"] },
+        "priority": { "type": "string", "enum": ["must", "should", "could", "wont"] },
+        "status": {
+          "type": "string",
+          "enum": ["backlog", "todo", "in_progress", "blocked", "in_review", "done"]
+        },
+        "blockedBy": { "type": "array", "items": { "type": "string", "pattern": "^F-[0-9]{3}$" } },
+        "acceptance": { "type": "array", "items": { "type": "string" } },
+        "verification": { "type": "array", "items": { "type": "string" } },
+        "effects": { "type": "array", "items": { "type": "string", "pattern": "^E-[0-9]{3}$" } },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

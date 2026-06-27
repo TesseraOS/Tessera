@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tessera.dev/schemas/effects.schema.json",
+  "title": "Tessera effect-link graph",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "updated", "links"],
+  "properties": {
+    "$schemaRef": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 },
+    "updated": { "type": "string", "format": "date" },
+    "description": { "type": "string" },
+    "links": { "type": "array", "items": { "$ref": "#/$defs/link" } }
+  },
+  "$defs": {
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["file", "symbol", "module", "package", "contract", "schema", "test", "artifact", "decision", "doc"]
+        },
+        "ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "from", "to", "kind", "rationale", "confidence", "origin"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^E-[0-9]{3}$" },
+        "from": { "$ref": "#/$defs/ref" },
+        "to": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/ref" } },
+        "kind": { "type": "string", "const": "EFFECT_LINK" },
+        "rationale": { "type": "string", "minLength": 1 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "origin": { "type": "string", "enum": ["static", "manual", "learned"] }
+      }
+    }
+  }
+}

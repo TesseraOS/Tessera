@@ -76,6 +76,9 @@ debugging. The same codebase runs **Local, Self-Hosted, Managed Cloud, and Enter
 - **NG5** — No fine-tuning pipeline in v1 (memory informs prompts, not weights).
 - **NG6** — The dashboard is a **responsive web app, not a PWA**; offline is the local
   engine's job, not a service-worker shell ([ADR-0009](adr/0009-frontend-stack-and-design-system.md)).
+- **NG7** — Tessera is **not an agent orchestrator / meta-harness / runtime.** It supplies
+  context & memory to agents and to orchestration layers; it does not compose, sandbox, or
+  run agents (see [§5.1](#51-ecosystem--interoperability)).
 
 ## 4. Personas & primary use cases
 
@@ -110,6 +113,17 @@ debugging. The same codebase runs **Local, Self-Hosted, Managed Cloud, and Enter
    or API keys** locally, scaling to multi-tenant cloud with the same code.
 4. **Explainability & governance as features** — provenance on every fragment; RBAC,
    audit, and retention as product surface, not afterthoughts.
+
+### 5.1 Ecosystem & interoperability
+
+Tessera occupies the **context/memory layer**, deliberately *below* agent orchestration. It
+is **complementary** to both single agents and **meta-harnesses / orchestrators** — e.g.
+Databricks **Omnigent**, which composes, governs, and runs agents but explicitly leaves
+context/memory to other systems. Those layers route their agents through Tessera (via
+**MCP/REST**) to obtain compiled, provenance-tagged context; Tessera does **not** orchestrate
+them (NG7). This separation is *why* Tessera stays agent-agnostic and focused: orchestrators
+decide *which agent does what*; Tessera decides *what each agent should know*. The same MCP
+surface serves an IDE agent, a CLI agent, or an orchestrator's worker identically.
 
 ---
 

@@ -9,6 +9,7 @@ confidently.
 | [`commit-policy`](commit-policy.md) | What/when to commit, message format, branching, what's ignored. |
 | [`secrets-policy`](secrets-policy.md) | Handling of secrets and sensitive data. |
 | [`tool-access`](tool-access.md) | Which tools/commands agents may run; maps to `.claude/settings.json`. |
+| [`policy-model`](policy-model.md) | How policies are expressed/enforced: static + **stateful/contextual** (scopes, cost budgets, egress-proxy credentials). |
 | [`adr-policy`](adr-policy.md) | When a decision must become an ADR. |
 
 These policies are **binding** and sit just below the golden rules in precedence

@@ -9,6 +9,10 @@ point — the "Tool Access" concern of the harness model).
 Agents get the tools needed to read, build, test, and verify — and are **gated** on actions
 that are hard to reverse or reach outside the repo.
 
+> The allow/ask/deny lists below are the **static** layer. Stateful, contextual policies
+> (post-action triggers, resource-scoped writes, cost budgets, egress-proxy credentials) are
+> defined in [`policy-model.md`](policy-model.md) — read both together.
+
 ## Allowed without prompting (read & verify)
 - Read/search the repo; run the **verification gates** and state validator
   (`node scripts/verify-state.mjs`, `pnpm -w typecheck|lint|test|build`).

@@ -5,6 +5,23 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-27 — Phase B.1 addendum: governance policy model + ecosystem positioning
+**What changed** (after reviewing Databricks **Omnigent**, a meta-harness)
+- Added [`.harness/governance/policy-model.md`](../governance/policy-model.md): static +
+  **stateful/contextual** policies (scopes, post-action triggers, resource-scoped writes,
+  cost budgets, **egress-proxy credential injection**), with an honest enforcement matrix.
+  Wired into governance README + tool-access.
+- Product positioning: PRD **NG7** (Tessera is *not* an orchestrator) + new **§5.1 Ecosystem
+  & interoperability**; ARCHITECTURE §2 "Ecosystem position". Tessera = MCP context/memory
+  layer **complementary** to meta-harnesses (Omnigent); it fills Omnigent's context gap.
+
+**Decision** (AskUserQuestion): adopt the stateful governance model + interoperability
+positioning; do **not** build orchestrator/sandbox/live-session infra (out of scope).
+
+**Next step:** coding — claim **F-001** (scaffold).
+
+---
+
 ## 2026-06-27 — Phase B.1: pre-code hardening (gaps from brief review)
 **What changed**
 - Added the **design system**: [`docs/design/DESIGN-SYSTEM.md`](../../docs/design/DESIGN-SYSTEM.md)

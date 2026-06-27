@@ -50,6 +50,14 @@ External actors: **agents** (primary consumers via MCP/REST), **humans** (dashbo
 and **sources** (ingested). Optional external services (hosted embeddings/LLM, OIDC,
 object store) are adapter-selected and never required locally.
 
+**Ecosystem position.** Tessera is the *context/memory layer* — **not** an agent
+orchestrator or runtime. It sits alongside single agents and *beneath* **meta-harnesses**
+(e.g. Databricks Omnigent) that compose, govern, and run agents: those layers call Tessera
+over MCP/REST for compiled, provenance-tagged context. We therefore deliberately **do not**
+build orchestration, sandboxing, or live agent-session infrastructure (PRD NG7) — our
+investment is compilation, memory, the knowledge graph, and effect-links. The single MCP
+surface serves an IDE agent, a CLI agent, or an orchestrator's worker identically.
+
 ## 3. Containers (C4 L2)
 
 | Container | Package(s) | Runtime | Responsibility |

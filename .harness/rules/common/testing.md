@@ -23,5 +23,15 @@ Tests are the evidence that a feature works. "It compiles" is not done.
 - **Name tests by the behavior** they assert; structure each with **Arrange-Act-Assert (AAA)**.
 - A failing test is never "fixed" by deleting/skipping it without an explicit, recorded
   reason.
-- Tooling target: **Vitest** (unit/integration) and **Playwright** (web E2E) — wired when
-  the toolchain lands.
+- Tooling: **Vitest** (unit/integration; wired in F-001) and **Playwright** (web E2E; added
+  with the first web e2e feature).
+
+## Layout (ADR-0014)
+Split by test type — do not put everything in one place:
+- **Unit tests: co-located** with source — `packages/<pkg>/src/foo.ts` + `foo.test.ts`
+  (white-box; short `./foo` imports; refactor-safe).
+- **Integration, e2e, and port conformance suites: separate** —
+  `packages/<pkg>/tests/integration/`, `packages/<pkg>/tests/conformance/`; app e2e under
+  `apps/api/tests/e2e/` and `apps/web/e2e/`. These are black-box and import the package's
+  **public entry** (`@tessera/<pkg>`), not its `src/` internals.
+- Build excludes `*.test.ts`; `tests/` lives outside `src` so it is never compiled or shipped.

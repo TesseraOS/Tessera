@@ -5,6 +5,24 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-28 — Decision: test organization = hybrid (ADR-0014)
+**What changed** (convention, after research + lead's question)
+- [ADR-0014](../../docs/adr/0014-test-organization-hybrid.md): **unit tests co-located** in
+  `src/` (white-box, short imports, refactor-safe); **integration + e2e + port conformance
+  suites** in a separate per-package `tests/` dir (app e2e in `apps/*/tests/e2e`, `apps/web/e2e`).
+- Codified in [`rules/common/testing.md`](../rules/common/testing.md) (new Layout section);
+  ADR index updated.
+- `@tessera/core`'s current tests are all unit → stay co-located (no move).
+
+**Decision** (AskUserQuestion): hybrid chosen over full-separation (brittle `../../src`
+imports + mirrored tree) and over co-locate-everything (integration/e2e don't map to one file).
+
+**Evidence/verification:** link-check + verify-state (this session).
+**Next step:** **F-003** — storage ports + SQLite/filesystem adapters + conformance suite
+(first feature to use `tests/integration` + `tests/conformance`).
+
+---
+
 ## 2026-06-28 — F-002 DONE: @tessera/core domain primitives
 **What changed**
 - Fleshed out `@tessera/core` (was a shell): `id.ts` (branded `Id<Brand>`, `newId` via

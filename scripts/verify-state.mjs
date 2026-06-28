@@ -34,7 +34,18 @@ function load(url) {
 
 const SERVICES = ['root', 'api', 'web'];
 const PRIORITIES = ['must', 'should', 'could', 'wont'];
-const REF_KINDS = ['file', 'symbol', 'module', 'package', 'contract', 'schema', 'test', 'artifact', 'decision', 'doc'];
+const REF_KINDS = [
+  'file',
+  'symbol',
+  'module',
+  'package',
+  'contract',
+  'schema',
+  'test',
+  'artifact',
+  'decision',
+  'doc',
+];
 const ORIGINS = ['static', 'manual', 'learned'];
 const reqRe = /^(FR|NFR)-[0-9]+$/;
 const featRe = /^F-[0-9]{3}$/;
@@ -91,16 +102,20 @@ if (features) {
     else ids.add(f.id);
     if (typeof f.title !== 'string' || f.title.length < 3) err(at, 'title too short');
     if (!Array.isArray(f.requirements)) err(at, 'requirements[] required');
-    else f.requirements.forEach((r) => { if (!reqRe.test(r)) err(at, `bad requirement ref "${r}"`); });
+    else
+      f.requirements.forEach((r) => {
+        if (!reqRe.test(r)) err(at, `bad requirement ref "${r}"`);
+      });
     if (!SERVICES.includes(f.service)) err(at, `service must be ${SERVICES.join('|')}`);
     if (!releases.includes(f.release)) err(at, `release "${f.release}" not in releases[]`);
     if (!PRIORITIES.includes(f.priority)) err(at, `priority must be ${PRIORITIES.join('|')}`);
     if (!statuses.includes(f.status)) err(at, `status "${f.status}" not in statuses[]`);
     if (f.status === 'in_progress') inProgress++;
-    if (f.effects) f.effects.forEach((e) => {
-      if (!effectRe.test(e)) err(at, `bad effect ref "${e}"`);
-      else if (effects && !effectIds.has(e)) err(at, `effect ${e} not found in effects.json`);
-    });
+    if (f.effects)
+      f.effects.forEach((e) => {
+        if (!effectRe.test(e)) err(at, `bad effect ref "${e}"`);
+        else if (effects && !effectIds.has(e)) err(at, `effect ${e} not found in effects.json`);
+      });
   });
 
   // second pass: blockedBy references
@@ -122,5 +137,7 @@ if (errors.length) {
 }
 const fc = features?.features?.length ?? 0;
 const ec = effects?.links?.length ?? 0;
-console.log(`✓ state valid — ${fc} features, ${ec} effect-links, wip_limit ${features?.policy?.wip_limit}`);
+console.log(
+  `✓ state valid — ${fc} features, ${ec} effect-links, wip_limit ${features?.policy?.wip_limit}`,
+);
 process.exit(0);

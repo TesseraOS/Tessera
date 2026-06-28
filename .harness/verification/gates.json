@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updated": "2026-06-27",
-  "description": "Ordered verification gates. Run in order; stop at first failure. 'active' gates run now; 'pending-toolchain' gates activate when package.json + workspace scripts exist.",
+  "updated": "2026-06-28",
+  "description": "Ordered verification gates. Run in order; stop at first failure. Code gates went 'active' with the F-001 scaffold. 'e2e' activates with the first user-facing feature.",
   "gates": [
     {
       "id": "state",
@@ -14,39 +14,39 @@
     {
       "id": "typecheck",
       "order": 1,
-      "status": "pending-toolchain",
+      "status": "active",
       "command": "pnpm -w typecheck",
       "requiredFor": ["code"],
-      "description": "TypeScript strict typecheck across the workspace."
+      "description": "TypeScript strict typecheck across the workspace (turbo run typecheck)."
     },
     {
       "id": "lint",
       "order": 2,
-      "status": "pending-toolchain",
+      "status": "active",
       "command": "pnpm -w lint",
       "requiredFor": ["code"],
-      "description": "ESLint (type-aware) incl. package-boundary rules."
+      "description": "ESLint (flat config) incl. package-boundary rule (turbo run lint)."
     },
     {
       "id": "format",
       "order": 3,
-      "status": "pending-toolchain",
+      "status": "active",
       "command": "pnpm -w format:check",
       "requiredFor": ["code"],
-      "description": "Prettier formatting check."
+      "description": "Prettier formatting check (code + root config; docs/harness excluded)."
     },
     {
       "id": "test",
       "order": 4,
-      "status": "pending-toolchain",
+      "status": "active",
       "command": "pnpm -w test",
       "requiredFor": ["code"],
-      "description": "Unit + integration tests, incl. adapter conformance suites."
+      "description": "Unit + integration tests via Vitest (turbo run test), incl. adapter conformance suites."
     },
     {
       "id": "build",
       "order": 5,
-      "status": "pending-toolchain",
+      "status": "active",
       "command": "pnpm -w build",
       "requiredFor": ["code"],
       "description": "Turborepo build of all packages and apps."
@@ -57,7 +57,7 @@
       "status": "pending-toolchain",
       "command": "pnpm -w test:e2e",
       "requiredFor": ["user-facing"],
-      "description": "End-to-end tests over the MCP/REST surface and dashboard."
+      "description": "End-to-end tests over the MCP/REST surface and dashboard (activates with the first user-facing feature)."
     }
   ]
 }

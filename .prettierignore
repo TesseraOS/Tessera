@@ -1,0 +1,18 @@
+# Generated / vendored
+node_modules/
+**/dist/
+**/.turbo/
+.turbo/
+pnpm-lock.yaml
+logs/
+coverage/
+
+# Hand-authored docs & harness content are NOT prettier-governed (prose/tables/state files
+# are maintained by hand). Prettier scopes to code + root config. Revisit if desired.
+**/*.md
+docs/
+.harness/
+
+# Non-JS scripts
+scripts/*.ps1
+scripts/*.sh

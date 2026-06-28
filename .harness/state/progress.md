@@ -5,6 +5,36 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-28 — F-001 DONE: monorepo & toolchain scaffold
+**What changed** (first coding feature; activates the verification gates)
+- Turborepo + pnpm workspace: `package.json` (scripts→gates), `pnpm-workspace.yaml`,
+  `turbo.json` (tasks), `tsconfig.base.json` (strict: noUncheckedIndexedAccess,
+  exactOptionalPropertyTypes, noImplicitOverride, verbatimModuleSyntax, NodeNext).
+- ESLint 9 flat config (`eslint.config.mjs`) incl. **package-boundary rule** (ADR-0001);
+  Prettier (scoped to code + root config; docs/harness excluded by design); Vitest.
+- First package `@tessera/core` (shell: `VERSION`/`coreVersion()` + 2 tests) to prove the
+  toolchain end-to-end. F-002 fleshes it out.
+- CI: `.github/workflows/ci.yml` mirroring gates.json (ADR-0010) + `pnpm audit`; `.env.example`.
+- Flipped `verification/gates.json` typecheck/lint/format/test/build → **active** (e2e stays
+  pending). Added effect **E-005** (CI ⇄ gates.json must stay in lockstep).
+
+**Evidence/verification** (all green, executed)
+- `pnpm install` ok (turbo 2.10, eslint 9.39, ts 5.9, vitest 2.1, prettier 3.9).
+- typecheck ✓ · lint ✓ · format:check ✓ ("All matched files use Prettier code style!") ·
+  test ✓ (2 passed) · build ✓ (emits `packages/core/dist`).
+- **Boundary rule proven:** a deliberate `@tessera/other/src/x` import made `lint` FAIL
+  (exit 1, no-restricted-imports); removing it returned lint to green.
+- `node scripts/verify-state.mjs` valid (30 features, 5 effect-links).
+
+**Decisions**
+- Prettier scoped to code + root config only (markdown/docs/.harness hand-maintained) — a
+  pragmatic scoping, revisit if we want prettier on docs. Type-aware ESLint deferred until
+  real domain packages exist (F-002+); scaffold uses recommended + boundary rule.
+
+**Next step:** **F-002** — `@tessera/core` (ids, typed errors, config types, event bus).
+
+---
+
 ## 2026-06-28 — agy/Gemini worker integration removed (decision: not using agy)
 **Decision:** we will **not** use `agy`/Gemini as a sub-agent in this project. The build-phase
 worker integration added earlier (commit `e6713c2`) is fully removed: deleted ADR-0012, the

@@ -18,7 +18,7 @@
       "package": "—",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": [],
       "acceptance": [
         "pnpm-workspace + turbo.json + base tsconfig (strict) build an empty workspace",
@@ -26,7 +26,8 @@
         "verification gates typecheck/lint/format/test/build run green on the scaffold"
       ],
       "verification": ["state", "typecheck", "lint", "format", "test", "build"],
-      "notes": "Activates the pending-toolchain gates in verification/gates.json."
+      "effects": ["E-005"],
+      "notes": "Done 2026-06-28: gates active; @tessera/core shell stands up the toolchain (F-002 fleshes it out)."
     },
     {
       "id": "F-002",

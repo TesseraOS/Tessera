@@ -56,6 +56,18 @@
       "rationale": "Components consume design tokens only; changing a token or the theme contract affects every component, the chart palette, and both themes, so token changes must be reviewed across the UI.",
       "confidence": 0.9,
       "origin": "manual"
+    },
+    {
+      "id": "E-005",
+      "from": { "kind": "file", "ref": ".harness/verification/gates.json" },
+      "to": [
+        { "kind": "file", "ref": ".github/workflows/ci.yml" },
+        { "kind": "file", "ref": ".harness/protocols/verification.md" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "CI runs the verification gates; the workflow steps and the verification protocol table must mirror gates.json. Adding/removing/renaming a gate requires updating the CI workflow and the protocol.",
+      "confidence": 1.0,
+      "origin": "manual"
     }
   ]
 }

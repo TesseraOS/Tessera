@@ -1,0 +1,69 @@
+name: CI
+
+# Runs the harness verification gates on every change (ADR-0010, NFR-15).
+# Steps mirror .harness/verification/gates.json — keep them in lockstep.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Harness state (gate 0)
+        run: node scripts/verify-state.mjs
+
+      - name: Typecheck (gate 1)
+        run: pnpm typecheck
+
+      - name: Lint (gate 2)
+        run: pnpm lint
+
+      - name: Format (gate 3)
+        run: pnpm format:check
+
+      - name: Test (gate 4)
+        run: pnpm test
+
+      - name: Build (gate 5)
+        run: pnpm build
+
+      # gate 6 (e2e) activates with the first user-facing feature.
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Dependency audit (high+)
+        run: pnpm audit --audit-level=high

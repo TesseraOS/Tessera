@@ -37,14 +37,16 @@
       "package": "@tessera/core",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-001"],
       "acceptance": [
         "Stable id helpers, typed error base classes, and result/error types",
         "In-memory domain event bus with typed events",
         "No internal dependencies; consumable by all packages"
       ],
-      "verification": ["typecheck", "lint", "test"]
+      "verification": ["typecheck", "lint", "format", "test", "build"],
+      "effects": ["E-006"],
+      "notes": "Done 2026-06-28: id/errors/result/config/events + 15 tests; gates green."
     },
     {
       "id": "F-003",

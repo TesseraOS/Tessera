@@ -29,6 +29,9 @@ export default tseslint.config(
           ],
         },
       ],
+      // TypeScript already checks undefined variables; the core no-undef rule is redundant
+      // and noisy for TS (globals like Map/Set/Promise). Recommended by typescript-eslint.
+      'no-undef': 'off',
     },
   },
   prettier,

@@ -1,15 +1,19 @@
 /**
- * @tessera/core — shared domain primitives.
+ * @tessera/core — shared, dependency-free domain primitives used by every package.
  *
- * Placeholder established by F-001 (monorepo & toolchain scaffold) to prove the build,
- * typecheck, lint, and test gates end-to-end. F-002 fleshes this out with stable ids,
- * typed error classes, config types, and the in-process domain event bus.
+ * (F-002) ids, typed errors, Result, config types, and an in-process typed event bus.
  */
 
 /** Current package version (kept in sync with package.json by tooling later). */
 export const VERSION = '0.0.0';
 
-/** Returns the Tessera core package version. */
+/** Returns the @tessera/core package version. */
 export function coreVersion(): string {
   return VERSION;
 }
+
+export * from './id.js';
+export * from './errors.js';
+export * from './result.js';
+export * from './config.js';
+export * from './events.js';

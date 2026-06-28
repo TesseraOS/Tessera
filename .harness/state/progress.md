@@ -5,6 +5,28 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-28 — F-002 DONE: @tessera/core domain primitives
+**What changed**
+- Fleshed out `@tessera/core` (was a shell): `id.ts` (branded `Id<Brand>`, `newId` via
+  `node:crypto`, `isId`), `errors.ts` (`TesseraError` + Validation/NotFound/Conflict/
+  Unauthorized/Forbidden/Internal + `ErrorCode`), `result.ts` (`Result`/`ok`/`err`/`isOk`/
+  `isErr`), `config.ts` (`DeploymentProfile`, `DEPLOYMENT_PROFILES`, `CoreConfig`, guard),
+  `events.ts` (typed in-process `createEventBus`). `index.ts` re-exports all.
+- Config: core `tsconfig` `types:["node"]` (for node:crypto); eslint `no-undef:off` (TS handles it).
+- Effect **E-006**: @tessera/core public API → every package/app (change additively).
+
+**Evidence/verification** (executed, green)
+- typecheck ✓ · lint ✓ · format:check ✓ · test ✓ (**6 files, 15 tests**) · build ✓ (emits dist).
+- `verify-state` valid.
+
+**Decisions**
+- Node-targeted core (uses `node:crypto`); browser consumers use the SDK/API, not core directly.
+- `Result` type provided for explicit domain failures alongside thrown `TesseraError`.
+
+**Next step:** **F-003** — storage ports + SQLite/filesystem adapters + conformance suite.
+
+---
+
 ## 2026-06-28 — Phase B.3: general-purpose execution skills (ECC-adapted) [F-031 done]
 **What changed** (general-purpose harness layer; the gap the lead flagged)
 - New skills (tool-agnostic, MIT-adapted from ECC — see [`NOTICE.md`](../../NOTICE.md)):

@@ -56,15 +56,16 @@
       "package": "@tessera/storage",
       "release": "R0",
       "priority": "must",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": ["F-002"],
       "acceptance": [
         "RelationalStore + BlobStore + Queue ports defined (Drizzle for SQL)",
         "SQLite, filesystem, and in-process queue adapters implemented",
         "Shared conformance suite passes for every adapter"
       ],
-      "verification": ["typecheck", "lint", "test"],
-      "effects": ["E-001"]
+      "verification": ["typecheck", "lint", "format", "test", "build"],
+      "effects": ["E-001", "E-007"],
+      "notes": "Done 2026-06-28: 3 ports + 3 local adapters (sqlite via better-sqlite3+Drizzle, filesystem, in-process), each passing a conformance suite; 13 storage tests."
     },
     {
       "id": "F-004",

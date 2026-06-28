@@ -5,6 +5,24 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-28 — F-003 DONE: storage ports + 3 adapters + conformance
+**What changed (inc 4 + close)**
+- SQLite `RelationalStore` adapter: **better-sqlite3** (^12, prebuilt — no native compile) +
+  **Drizzle** (^0.45); lifecycle (migrate/healthcheck/close) + typed `db` handle; relational
+  conformance suite + a Drizzle round-trip integration test.
+- `@tessera/storage` now: **3 ports + 3 local adapters** (sqlite, filesystem, in-process queue),
+  each validated by a shared conformance suite. Effect **E-007** (storage port ⇒ adapters + suites).
+
+**Evidence/verification (fresh, cache off):** typecheck · lint · format · build green;
+test = core 15 + storage 13 = **28**. verify-state valid.
+
+**Decisions:** SQLite driver = **better-sqlite3** (delegated to Claude; mature, Drizzle-proven,
+prebuilt binary so no Windows compile). node:sqlite was the fallback — not needed.
+
+**Next step:** **F-004** — VectorStore port + sqlite-vec adapter (semantic retrieval).
+
+---
+
 ## 2026-06-28 — F-003 inc 3: filesystem BlobStore + turbo cache fix
 **What changed**
 - Filesystem `BlobStore` adapter (`node:fs`, traversal-safe keys) + blob conformance suite

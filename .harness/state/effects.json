@@ -79,6 +79,18 @@
       "rationale": "@tessera/core is the dependency-free base every package imports; changing/removing an exported member (Id, errors, Result, config types, EventBus) can break any consumer. Change additively and review dependents.",
       "confidence": 1.0,
       "origin": "manual"
+    },
+    {
+      "id": "E-007",
+      "from": { "kind": "contract", "ref": "@tessera/storage ports (RelationalStore | BlobStore | Queue)" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/storage adapters (sqlite-relational, filesystem-blob, in-process-queue; later postgres, s3, bullmq)" },
+        { "kind": "test", "ref": "@tessera/storage tests/conformance suites (relational, blob, queue)" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "Each storage port is implemented by every adapter and validated by a shared conformance suite; changing a port interface breaks all adapters and their suites (concrete instance of E-001 for @tessera/storage).",
+      "confidence": 1.0,
+      "origin": "manual"
     }
   ]
 }

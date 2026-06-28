@@ -8,3 +8,4 @@ export * from './ports/index.js';
 export * from './adapters/in-process-queue/index.js';
 export * from './adapters/filesystem-blob/index.js';
 export * from './adapters/sqlite-relational/index.js';
+export * from './adapters/sqlite-vec/index.js';

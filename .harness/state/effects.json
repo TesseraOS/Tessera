@@ -82,10 +82,10 @@
     },
     {
       "id": "E-007",
-      "from": { "kind": "contract", "ref": "@tessera/storage ports (RelationalStore | BlobStore | Queue)" },
+      "from": { "kind": "contract", "ref": "@tessera/storage ports (RelationalStore | BlobStore | Queue | VectorStore)" },
       "to": [
-        { "kind": "module", "ref": "@tessera/storage adapters (sqlite-relational, filesystem-blob, in-process-queue; later postgres, s3, bullmq)" },
-        { "kind": "test", "ref": "@tessera/storage tests/conformance suites (relational, blob, queue)" }
+        { "kind": "module", "ref": "@tessera/storage adapters (sqlite-relational, filesystem-blob, in-process-queue, sqlite-vec; later postgres, pgvector, s3, bullmq)" },
+        { "kind": "test", "ref": "@tessera/storage tests/conformance suites (relational, blob, queue, vector)" }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "Each storage port is implemented by every adapter and validated by a shared conformance suite; changing a port interface breaks all adapters and their suites (concrete instance of E-001 for @tessera/storage).",

@@ -75,15 +75,16 @@
       "package": "@tessera/storage",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-003"],
       "acceptance": [
         "VectorStore port with upsert/query and capability flags",
         "sqlite-vec adapter passing the conformance suite",
         "Each vector records its embedding model id + dimension"
       ],
-      "verification": ["typecheck", "lint", "test"],
-      "effects": ["E-001"]
+      "verification": ["typecheck", "lint", "format", "test", "build"],
+      "effects": ["E-001", "E-007"],
+      "notes": "Done 2026-06-28: VectorStore port + sqlite-vec adapter (vec0; model+dimension per vector) passing a 6-test conformance suite."
     },
     {
       "id": "F-005",

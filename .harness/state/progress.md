@@ -5,6 +5,26 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-28 — F-004 DONE: VectorStore port + sqlite-vec adapter
+**What changed**
+- `VectorStore` port (upsert/query/delete, capabilities {metric, dimension}, **model recorded
+  per vector** — ADR-0006) in `@tessera/storage`.
+- **sqlite-vec** adapter: better-sqlite3 + sqlite-vec v0.1.9 (prebuilt, loads on Windows);
+  `vec0(id TEXT PRIMARY KEY, embedding float[N], model TEXT)`; KNN via
+  `embedding MATCH ? ORDER BY distance LIMIT ?`; upsert = replace-by-id; dimension validated.
+- Vector conformance suite (6 tests) + integration test on `:memory:`. Effect **E-007** updated
+  to include VectorStore + sqlite-vec + vector conformance (+ pgvector later).
+
+**De-risk:** smoke-tested sqlite-vec extension loading + vec0 KNN on Windows before writing the
+adapter (confirmed v0.1.9 prebuilt works; learned exact API).
+
+**Evidence/verification (fresh, cache off):** typecheck · lint · format · build green;
+test = core 15 + storage 19 = **34**. verify-state valid.
+
+**Next step:** F-005 — Embeddings port + Transformers.js adapter (Ollama optional).
+
+---
+
 ## 2026-06-28 — fix: @tessera/storage was gitignored (never committed) — now tracked
 **Bug (caught by the project lead):** a bare `.gitignore` rule `storage/` (meant for a runtime
 data dir) also matched the SOURCE package `packages/storage/`, so the **entire F-003 package was

@@ -5,6 +5,26 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-28 — F-003 (in progress): storage ports + in-process queue [inc 1-2]
+**What changed**
+- New `@tessera/storage` package. Ports: `RelationalStore` / `BlobStore` / `Queue`
+  (`src/ports/`). In-process `Queue` adapter (microtask delivery, retry up to maxAttempts,
+  drain-on-shutdown) using `@tessera/core` errors.
+- **Queue conformance suite** in `tests/conformance/` (ADR-0014) + `tests/integration` run
+  against the in-process adapter (4 contract tests).
+
+**Evidence/verification (green, executed):** typecheck · lint · format · test (core 15 +
+storage 4 = 19) · build. verify-state valid (31 features, 6 effect-links).
+
+**Remaining for F-003:** inc 3 = filesystem `BlobStore` + blob conformance; inc 4 = SQLite
+`RelationalStore` (Drizzle + a driver — leaning **better-sqlite3**, ADR at that point) +
+relational conformance + drizzle-kit migrations. Effect **E-007** (storage port ⇒ adapters +
+conformance) added when F-003 closes.
+
+**Next step:** F-003 inc 3 (filesystem `BlobStore`).
+
+---
+
 ## 2026-06-28 — Decision: test organization = hybrid (ADR-0014)
 **What changed** (convention, after research + lead's question)
 - [ADR-0014](../../docs/adr/0014-test-organization-hybrid.md): **unit tests co-located** in

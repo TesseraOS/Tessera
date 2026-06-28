@@ -5,6 +5,28 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-28 — F-005 DONE: Embeddings port + adapters (@tessera/ai)
+**What changed**
+- New `@tessera/ai`. `Embeddings` port (embed/embedBatch + {model, dimension} metadata, ADR-0006).
+- Adapters: **transformers** (Transformers.js, local default, zero keys — smoke-verified live:
+  `Xenova/all-MiniLM-L6-v2` → 384-d, ~21s first run incl. download), **ollama** (HTTP, optional),
+  **fake** (deterministic, dependency-free — drives the conformance gate offline).
+- Conformance suite runs against `fake` (4 tests, always); transformers + ollama tests **guarded**
+  by env (`TESSERA_TEST_TRANSFORMERS` / `TESSERA_TEST_OLLAMA`), skipped by default. Effect **E-008**.
+
+**De-risk:** smoke-tested a real embed before writing the adapter (confirmed model download +
+mean-pooled/normalized 384-d output on Windows).
+
+**Evidence/verification (fresh, cache off):** typecheck · lint · format · build green;
+test = core 15 + ai 4 (+8 guarded skipped) + storage 19 = **38 passing**. verify-state valid.
+
+**Note:** real adapter tests are guarded to keep gates fast/offline; transformers verified live
+once via smoke + the opt-in `TESSERA_TEST_TRANSFORMERS=1` suite.
+
+**Next step:** **F-006** — ingestion (filesystem + Git, event-driven, incremental, secret-redacted).
+
+---
+
 ## 2026-06-28 — F-004 DONE: VectorStore port + sqlite-vec adapter
 **What changed**
 - `VectorStore` port (upsert/query/delete, capabilities {metric, dimension}, **model recorded

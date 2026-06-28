@@ -91,6 +91,19 @@
       "rationale": "Each storage port is implemented by every adapter and validated by a shared conformance suite; changing a port interface breaks all adapters and their suites (concrete instance of E-001 for @tessera/storage).",
       "confidence": 1.0,
       "origin": "manual"
+    },
+    {
+      "id": "E-008",
+      "from": { "kind": "contract", "ref": "@tessera/ai Embeddings port" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/ai adapters (transformers, ollama, fake; later hosted providers)" },
+        { "kind": "test", "ref": "@tessera/ai tests/conformance (embeddings)" },
+        { "kind": "package", "ref": "consumers that embed/query: @tessera/ingestion (F-006), @tessera/retrieval (F-009)" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "Changing the Embeddings port affects every adapter, its conformance suite, and consumers; changing the embedding model/dimension also requires re-embedding stored vectors (ADR-0006).",
+      "confidence": 1.0,
+      "origin": "manual"
     }
   ]
 }

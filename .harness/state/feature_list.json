@@ -94,14 +94,16 @@
       "package": "@tessera/ai",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-002"],
       "acceptance": [
         "Embeddings port (embed/batch) with model metadata",
         "Transformers.js in-process adapter works with zero external services/keys",
         "Optional Ollama adapter behind the same port"
       ],
-      "verification": ["typecheck", "lint", "test"]
+      "verification": ["typecheck", "lint", "format", "test", "build"],
+      "effects": ["E-008"],
+      "notes": "Done 2026-06-28: Embeddings port + transformers (live smoke-verified, all-MiniLM 384-d) + ollama (optional) + fake (deterministic, drives the conformance gate); real adapters' tests guarded by env."
     },
     {
       "id": "F-006",

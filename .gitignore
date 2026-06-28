@@ -47,9 +47,11 @@ secrets/
 *.db-journal
 *.db-wal
 *.db-shm
-data/
+# NB: anchored to root / dot-prefixed so they never clash with SOURCE dirs
+# (a bare `storage/` previously matched packages/storage/ and hid the whole package).
+/data/
 .data/
-storage/
+.tessera/
 .vectordb/
 
 # Logs & telemetry dumps

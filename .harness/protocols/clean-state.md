@@ -17,6 +17,9 @@ resume from files alone**.
    to the working set.
 6. **Reconcilable git.** `git status` matches what `progress.md` describes. (Commits only
    on user request — [commit policy](../governance/commit-policy.md).)
+   - **New code is actually tracked.** A "clean" status does NOT prove a new package/dir is
+     committed (ignored files are hidden). For any new top-level/package dir, confirm with
+     `git ls-files <dir>` (lesson: a broad `.gitignore` rule once hid a whole package).
 7. **State valid.** `node scripts/verify-state.mjs` passes.
 8. **Lessons captured.** Reusable learnings recorded via
    [continuous-learning](../skills/continuous-learning/SKILL.md) into

@@ -5,6 +5,20 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-28 — fix: @tessera/storage was gitignored (never committed) — now tracked
+**Bug (caught by the project lead):** a bare `.gitignore` rule `storage/` (meant for a runtime
+data dir) also matched the SOURCE package `packages/storage/`, so the **entire F-003 package was
+excluded from git**. The earlier "F-003" commits contained the state/docs changes but **none of
+the storage code**, and `git status` showed "clean" the whole time (ignored files are hidden).
+Detected via `git ls-files packages/storage` → 0.
+**Fix:** anchored/dot-prefixed the runtime-data ignores (`/data/`, `.data/`, `.tessera/`,
+`.vectordb/`; removed bare `data/` and `storage/`); committed the package. Lesson
+[[gitignore-broad-dir-hid-package]]; clean-state protocol now requires confirming new dirs are
+tracked via `git ls-files`.
+**Verification:** `git ls-files packages/storage` > 0 after commit; gates unchanged (code identical).
+
+---
+
 ## 2026-06-28 — F-003 DONE: storage ports + 3 adapters + conformance
 **What changed (inc 4 + close)**
 - SQLite `RelationalStore` adapter: **better-sqlite3** (^12, prebuilt — no native compile) +

@@ -5,6 +5,26 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-28 — F-003 inc 3: filesystem BlobStore + turbo cache fix
+**What changed**
+- Filesystem `BlobStore` adapter (`node:fs`, traversal-safe keys) + blob conformance suite
+  (`tests/conformance/blob.conformance.ts`) + integration test (temp dirs); exported from index.
+- **Build fix:** turbo served **false-green cached** gate results for uncommitted changes
+  (input hash didn't change on working-tree edits). Set `"cache": false` on
+  build/typecheck/lint/test in `turbo.json`. Lesson captured:
+  [[turbo-cache-stale-uncommitted]].
+
+**Evidence/verification (fresh, cache bypassed):** typecheck · lint · format · build all
+execute & pass; **test: core 15 + storage 9 = 24** (storage now correctly runs both queue +
+blob suites). verify-state valid.
+
+**Remaining for F-003:** inc 4 = SQLite `RelationalStore` (Drizzle + **better-sqlite3**,
+fallback node:sqlite) + relational conformance. Effect E-007 added when F-003 closes.
+
+**Next step:** F-003 inc 4 (SQLite RelationalStore).
+
+---
+
 ## 2026-06-28 — F-003 (in progress): storage ports + in-process queue [inc 1-2]
 **What changed**
 - New `@tessera/storage` package. Ports: `RelationalStore` / `BlobStore` / `Queue`

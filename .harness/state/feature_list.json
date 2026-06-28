@@ -340,23 +340,6 @@
       "verification": ["state"],
       "notes": "CD (build/deploy) per deployment mode added later (R1 image, R2 cloud). See ADR-0010."
     },
-    { "id": "F-030", "title": "Billing & subscriptions (cloud) behind a Billing port (Dodo Payments)", "requirements": ["FR-61", "NFR-12"], "service": "api", "package": "@tessera/api", "release": "R2", "priority": "should", "status": "backlog", "notes": "Direction per ADR-0011; gated on OQ4 (license/business model)." },
-    {
-      "id": "F-031",
-      "title": "Build tooling: agy/Gemini worker integration (human-in-the-loop)",
-      "requirements": ["NFR-8"],
-      "service": "root",
-      "package": "—",
-      "release": "R0",
-      "priority": "could",
-      "status": "in_review",
-      "acceptance": [
-        "ADR-0012 + delegate-to-worker skill + guarded agy-worker.ps1/.sh wrappers present",
-        "Wrapper -Check dry-run passes; requires dedicated branch + scoped dir; never passes --dangerously-skip-permissions; sets timeout + log",
-        "End-to-end agy delegation validated by a human in a real terminal (pending; Claude can't drive agy headless)"
-      ],
-      "verification": ["state"],
-      "notes": "Build tooling only, NOT a product dependency (ADR-0012, PRD NG7). in_review until a human runs a real delegation."
-    }
+    { "id": "F-030", "title": "Billing & subscriptions (cloud) behind a Billing port (Dodo Payments)", "requirements": ["FR-61", "NFR-12"], "service": "api", "package": "@tessera/api", "release": "R2", "priority": "should", "status": "backlog", "notes": "Direction per ADR-0011; gated on OQ4 (license/business model)." }
   ]
 }

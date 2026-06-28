@@ -40,8 +40,7 @@ Agents and workers should **never see raw secrets**. The target pattern (as in O
 sandbox): credentials are withheld from the agent and **injected only on approved outbound
 requests** via a proxy. Until we have that, the fallback is the `SecretsProvider` port +
 `deny` reads of secret files + scrubbing — see [`secrets-policy.md`](secrets-policy.md).
-**Any external worker we adopt** (see the deferred Antigravity note in
-[`tool-access.md`](tool-access.md)) must follow this: no raw tokens to the worker.
+**If any external tool or worker is ever introduced**, it must follow this: no raw tokens to it.
 
 ## 3. Enforcement reality (be honest about guarantees)
 

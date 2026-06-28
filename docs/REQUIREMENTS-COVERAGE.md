@@ -111,6 +111,5 @@ rendering ✅ (DESIGN-SYSTEM §5/6/9).
   strategy · **OQ4** license/business model (gates ADR-0011) · **OQ5** symbol extraction
   (tree-sitter vs LSP) · **Auth library** specifics (OIDC direction set). See
   [`PRD.md §12`](PRD.md#12-open-questions). Each resolves via an ADR before dependent code.
-- **Build-workflow (not product):** external worker agent (Antigravity/Gemini) — **deferred**;
-  conditions to revisit recorded in
-  [`.harness/governance/tool-access.md`](../.harness/governance/tool-access.md).
+- **Build-workflow (not product):** external worker agent (agy/Gemini) was **evaluated and
+  declined** — we will not use it as a sub-agent in this project.

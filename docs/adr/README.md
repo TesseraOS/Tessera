@@ -27,7 +27,6 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0009](0009-frontend-stack-and-design-system.md) | Frontend stack & design system (responsive, not PWA) | Accepted |
 | [0010](0010-ci-cd-github-actions.md) | CI/CD via GitHub Actions | Accepted |
 | [0011](0011-billing-dodo-payments.md) | Billing via Dodo Payments (Managed Cloud, R2) | Accepted (direction) |
-| [0012](0012-agy-gemini-worker-build-tooling.md) | `agy`/Gemini as optional human-in-the-loop build worker | Accepted |
 
 ## Conventions
 

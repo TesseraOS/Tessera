@@ -6,7 +6,7 @@ One line per memory entry. Keep newest-relevant at top of each section.
 - [stack-and-architecture](decisions/stack-and-architecture.md) — the locked stack & architecture, linking ADRs 0001–0008.
 
 ## Lessons
-_(none yet — capture reusable lessons after non-trivial work)_
+- [turbo-cache-stale-uncommitted](lessons/turbo-cache-stale-uncommitted.md) — turbo gave false-green on uncommitted changes; gate tasks now `cache: false`.
 
 ## Architecture
 _(none yet — see [`../../docs/architecture/ARCHITECTURE.md`](../../docs/architecture/ARCHITECTURE.md) for the full picture)_

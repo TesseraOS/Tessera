@@ -5,6 +5,30 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-28 — Phase B.3: general-purpose execution skills (ECC-adapted) [F-031 done]
+**What changed** (general-purpose harness layer; the gap the lead flagged)
+- New skills (tool-agnostic, MIT-adapted from ECC — see [`NOTICE.md`](../../NOTICE.md)):
+  [`strategic-compact`](../skills/strategic-compact/SKILL.md) (compact at phase boundaries),
+  [`continuous-learning`](../skills/continuous-learning/SKILL.md) (lessons →
+  [`memory/lessons/`](../memory/lessons/)), [`coding-standards`](../skills/coding-standards/SKILL.md)
+  (indexes the rules).
+- Enriched [`rules/common/engineering.md`](../rules/common/engineering.md) (KISS/DRY/YAGNI,
+  small functions, no magic numbers, parallel async) + [`testing.md`](../rules/common/testing.md) (AAA).
+- **Wired into protocols** (not fragile hooks): strategic-compact in workflow + session-lifecycle;
+  continuous-learning in clean-state + definition-of-done. `.claude/skills` shims added.
+- ADR-0013 (adopt ECC-derived skills; hooks deferred; broader agents/commands added as we code).
+  ADR-0012 marked retired (agy). Memory: `ecc-harness-reference`.
+
+**Decisions** (delegated to Claude): adopt the 3 named skills only (not broader ECC
+agents/commands yet); **wire into protocols, defer executable hooks** (Windows-fragile,
+upkeep) — record as optional future enhancement.
+
+**Evidence/verification:** link-check + verify-state (this session's verify run).
+
+**Next step:** **F-002** — `@tessera/core` (ids, typed errors, config types, event bus).
+
+---
+
 ## 2026-06-28 — F-001 DONE: monorepo & toolchain scaffold
 **What changed** (first coding feature; activates the verification gates)
 - Turborepo + pnpm workspace: `package.json` (scripts→gates), `pnpm-workspace.yaml`,

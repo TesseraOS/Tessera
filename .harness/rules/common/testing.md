@@ -20,6 +20,7 @@ Tests are the evidence that a feature works. "It compiles" is not done.
 ## How
 - Deterministic and isolated; no shared mutable state, no order dependence.
 - Test behavior and contracts, not implementation details.
+- **Name tests by the behavior** they assert; structure each with **Arrange-Act-Assert (AAA)**.
 - A failing test is never "fixed" by deleting/skipping it without an explicit, recorded
   reason.
 - Tooling target: **Vitest** (unit/integration) and **Playwright** (web E2E) — wired when

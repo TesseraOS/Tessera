@@ -27,6 +27,8 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0009](0009-frontend-stack-and-design-system.md) | Frontend stack & design system (responsive, not PWA) | Accepted |
 | [0010](0010-ci-cd-github-actions.md) | CI/CD via GitHub Actions | Accepted |
 | [0011](0011-billing-dodo-payments.md) | Billing via Dodo Payments (Managed Cloud, R2) | Accepted (direction) |
+| 0012 | _retired — agy/Gemini worker (removed; see git history)_ | Retired |
+| [0013](0013-general-purpose-execution-skills-from-ecc.md) | General-purpose execution skills (adapted from ECC, MIT) | Accepted |
 
 ## Conventions
 

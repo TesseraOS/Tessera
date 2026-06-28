@@ -18,6 +18,9 @@ resume from files alone**.
 6. **Reconcilable git.** `git status` matches what `progress.md` describes. (Commits only
    on user request — [commit policy](../governance/commit-policy.md).)
 7. **State valid.** `node scripts/verify-state.mjs` passes.
+8. **Lessons captured.** Reusable learnings recorded via
+   [continuous-learning](../skills/continuous-learning/SKILL.md) into
+   [`../memory/lessons/`](../memory/lessons/) (skip only if nothing reusable came up).
 
 ## The resumption test
 Ask: *"If I lost all memory of this session right now, could I read the repo and continue

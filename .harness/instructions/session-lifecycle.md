@@ -19,15 +19,18 @@ unless every session opens and closes deterministically against files.
   `backlog` feature or a follow-up note — do **not** silently expand scope.
 - Update `progress.md` incrementally for anything a future session would need to know
   (decisions, dead-ends, partial state).
+- At phase boundaries (research→plan→implement, after a failed approach), compact context
+  deliberately ([strategic-compact](../skills/strategic-compact/SKILL.md)) — not mid-edit.
 
 ## End of session (always)
 Run the [clean-state protocol](../protocols/clean-state.md):
 1. Either finish the increment to a green, coherent state, **or** record exactly what is
    half-done and how to resume.
 2. Update `progress.md` with: what changed, verification evidence, decisions, next step.
-3. Update `feature_list.json` statuses.
-4. Ensure no stray/half-applied edits, no secrets, no debug cruft.
-5. Leave `git status` in the state your `progress.md` describes.
+3. Capture reusable lessons ([continuous-learning](../skills/continuous-learning/SKILL.md)).
+4. Update `feature_list.json` statuses.
+5. Ensure no stray/half-applied edits, no secrets, no debug cruft.
+6. Leave `git status` in the state your `progress.md` describes.
 
 > The test of a good session close: **a fresh agent, with zero memory of this session,
 > can read the files and continue correctly.**

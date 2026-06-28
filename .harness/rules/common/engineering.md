@@ -27,3 +27,16 @@ Applies to all code. Production-grade only — no toy code, PoC, or hacky shortc
 - Clear names; functions do one thing; comments explain *why*, not *what*.
 - Match the surrounding code's style and idioms.
 - Performance matters but **correctness and clarity first**; optimize with evidence.
+
+## Simplicity & concrete standards (KISS / DRY / YAGNI)
+Baseline conventions (informed by the [`coding-standards`](../../skills/coding-standards/SKILL.md)
+skill). Readability first.
+- **KISS** — the simplest design that meets the acceptance criteria; no cleverness for its own sake.
+- **DRY** — eliminate real duplication; but don't over-abstract speculatively.
+- **YAGNI** — build what the feature needs now, not anticipated futures.
+- **Descriptive names** — `marketSearchQuery`, not `q`; no single-letter names outside tiny scopes.
+- **Small functions** — aim ≤ ~50 lines; use **early returns** to cut nesting; one responsibility.
+- **No magic values** — name constants; no unexplained literals.
+- **Immutability at boundaries** — prefer pure updates (spread/derive) over in-place mutation of inputs.
+- **Parallelize independent async** — `Promise.all` for independent awaits; never serialize needlessly.
+- **Handle errors explicitly** — every `await`/IO has a deliberate failure path (typed errors).

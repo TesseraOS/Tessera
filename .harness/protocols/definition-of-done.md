@@ -19,7 +19,7 @@ item below is true. If any fails, it stays `in_progress`.
 - [ ] **No debt left silently.** No dead code, no stray TODO without a tracked follow-up,
       no secrets, no commented-out blocks.
 - [ ] **State recorded.** [`progress.md`](../state/progress.md) updated; feature status set;
-      lessons captured to [memory](../memory/) if reusable.
+      lessons captured via [continuous-learning](../skills/continuous-learning/SKILL.md) if reusable.
 - [ ] **Clean tree.** [clean-state protocol](clean-state.md) satisfied.
 
 ## Anti-patterns that are NOT done

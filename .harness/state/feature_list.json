@@ -341,6 +341,23 @@
       "verification": ["state"],
       "notes": "CD (build/deploy) per deployment mode added later (R1 image, R2 cloud). See ADR-0010."
     },
-    { "id": "F-030", "title": "Billing & subscriptions (cloud) behind a Billing port (Dodo Payments)", "requirements": ["FR-61", "NFR-12"], "service": "api", "package": "@tessera/api", "release": "R2", "priority": "should", "status": "backlog", "notes": "Direction per ADR-0011; gated on OQ4 (license/business model)." }
+    { "id": "F-030", "title": "Billing & subscriptions (cloud) behind a Billing port (Dodo Payments)", "requirements": ["FR-61", "NFR-12"], "service": "api", "package": "@tessera/api", "release": "R2", "priority": "should", "status": "backlog", "notes": "Direction per ADR-0011; gated on OQ4 (license/business model)." },
+    {
+      "id": "F-031",
+      "title": "General-purpose execution harness (strategic-compact, continuous-learning, coding-standards; ECC-adapted)",
+      "requirements": ["NFR-8"],
+      "service": "root",
+      "package": "—",
+      "release": "R0",
+      "priority": "should",
+      "status": "done",
+      "acceptance": [
+        "strategic-compact + continuous-learning + coding-standards skills present and wired into protocols (workflow, clean-state, definition-of-done)",
+        "Coding rules enriched (KISS/DRY/YAGNI, small functions, no magic numbers, parallel async, AAA tests)",
+        "MIT attribution to ECC in NOTICE.md; decision recorded in ADR-0013"
+      ],
+      "verification": ["state"],
+      "notes": "Done 2026-06-28. Harness tooling (ADR-0013); executable hooks deferred; ECC = standing reference for coding harness."
+    }
   ]
 }

@@ -7,6 +7,10 @@ The canonical loop for every unit of work. Summarized in
 initialize → select feature → plan → implement → verify → trace effects → record → clean
 ```
 
+> Manage context deliberately: at the boundaries between these phases (and after a failed
+> approach) use [`strategic-compact`](../skills/strategic-compact/SKILL.md) — never
+> mid-implementation. State lives in files, so compaction is safe.
+
 ## 1. Initialize
 Run the [initialization protocol](../protocols/initialization.md). Load: `AGENTS.md`, the
 active/next feature from [`feature_list.json`](../state/feature_list.json), the last few
@@ -43,7 +47,8 @@ follow-up) every surfaced dependent.
 
 ## 7. Record
 Update [`progress.md`](../state/progress.md) (what changed, evidence, decisions) and
-`feature_list.json` (`status`, notes). Capture reusable lessons to
+`feature_list.json` (`status`, notes). Capture reusable lessons via
+[`continuous-learning`](../skills/continuous-learning/SKILL.md) into
 [`../memory/lessons/`](../memory/lessons/). New decision → [ADR](../skills/write-adr/SKILL.md).
 
 ## 8. Clean

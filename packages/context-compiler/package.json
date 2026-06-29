@@ -1,0 +1,31 @@
+{
+  "name": "@tessera/context-compiler",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tessera/ai": "workspace:*",
+    "@tessera/core": "workspace:*",
+    "@tessera/knowledge-graph": "workspace:*",
+    "@tessera/retrieval": "workspace:*",
+    "@tessera/storage": "workspace:*",
+    "zod": "^3.23.8"
+  }
+}

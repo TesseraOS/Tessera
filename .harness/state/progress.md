@@ -5,6 +5,38 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-29 — F-010 DONE: Context Compiler (@tessera/context-compiler)
+**What changed** (the centerpiece, G1 "compile, don't dump"; ARCHITECTURE §9; FR-27/28/29/30/32)
+- New `@tessera/context-compiler` (deps: core, retrieval, knowledge-graph, storage, ai, zod).
+- **`compile(task, budget, filters)`** runs **plan → retrieve → expand → rank → resolve → dedup →
+  compress → assemble**: retrieve via the F-009 hybrid retriever; **expand** via `get_effects`
+  (effect-dependents, `expandedFrom`); **dedup** near-duplicates by word-shingle Jaccard (no
+  embeddings); **compress** = budget-fit selection that **never exceeds** the token budget (graceful
+  degradation; LLM summarization is FR-31/R1); **assemble** = kind-grouped sections, per-fragment
+  **provenance + whyIncluded** (FR-28/32).
+- **CompilationTrace** records every stage's inputs/outputs/drops for the Package Inspector (FR-44).
+- **FragmentSource** port = the corpus seam (ingestion fills it; tests use in-memory).
+- **Context Quality Score** (`quality.ts`, PRD §9) + a **naive top-k** baseline; the **beats-naive**
+  integration test passes — the compiler wins on relevance (expand reaches a doc keyword misses),
+  redundancy (dedup), and provenance. Effects **E-003** (advances it) + **E-013**.
+
+**Eval design note:** to make "beats naive" fair + deterministic, the labeled corpus puts the
+near-duplicate among *irrelevant* docs (so dedup never drops a relevant one) and makes one relevant
+doc reachable only via effect-link expansion (keyword misses it). Keyword (FTS) is the shared
+baseline retriever (deterministic; fake embeddings would be random).
+
+**Evidence/verification (fresh):** build · typecheck · lint · format green; test = core 15 +
+ai 4 (+8 skipped) + storage 19 + ingestion 25 + memory 25 + knowledge-graph 23 + retrieval 23 +
+**context-compiler 17** = **151 passing**. verify-state valid.
+
+**Lesson:** [[fair-deterministic-eval-design]] — construct labeled eval suites so the system-under-
+test wins for the *right* reasons, with deterministic backends (not random fake embeddings).
+
+**Next step:** **F-011** — REST API /v1 (Fastify) wrapping these domain services
+(search/compile/effects/memory), then **F-012** MCP server. R0 engine → interfaces.
+
+---
+
 ## 2026-06-29 — F-009 DONE: Hybrid retrieval + fusion ranker (@tessera/retrieval)
 **What changed** (ARCHITECTURE §8; FR-21/22/23/25/26)
 - New `@tessera/retrieval` (deps: core, storage, ai, knowledge-graph, drizzle-orm, zod).

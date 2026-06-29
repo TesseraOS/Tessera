@@ -189,7 +189,7 @@
       "package": "@tessera/context-compiler",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-009"],
       "acceptance": [
         "Full pipeline producing a provenance-tagged, token-budget-bounded Context Package",
@@ -198,7 +198,8 @@
         "Beats naive top-k RAG on the labeled task suite (Context Quality Score)"
       ],
       "verification": ["typecheck", "lint", "test"],
-      "effects": ["E-003"]
+      "effects": ["E-003", "E-013"],
+      "notes": "Done 2026-06-29: @tessera/context-compiler — compile(task,budget,filters) runs plan→retrieve→expand(get_effects)→rank→resolve→dedup(shingle Jaccard)→compress(budget-fit, never exceeds)→assemble. Provenance-tagged, sectioned, budget-bounded ContextPackage + per-fragment whyIncluded (FR-32) + full CompilationTrace (stage drops) for the inspector. FragmentSource = corpus seam. CQS + naiveTopK baseline; beats-naive eval test passes (compiler > naive on relevance/redundancy/provenance/overall). 17 tests. Effects E-003/E-013. LLM compression (FR-31), reproducibility/caching + pluggable-per-stage (FR-33/34) are R1 (F-019/F-020)."
     },
     {
       "id": "F-011",

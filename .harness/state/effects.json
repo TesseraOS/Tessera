@@ -119,6 +119,21 @@
       "rationale": "The ingestion contracts are the plugin SDK for sources/stages and the seam to persistence: changing Connector/Processor breaks the first-party connectors/processors + the conformance suite; changing DocumentSink/IngestionManifest breaks the worker and every downstream sink that persists documents. Redaction (FR-9) is an enforced terminal stage — never relax it.",
       "confidence": 1.0,
       "origin": "manual"
+    },
+    {
+      "id": "E-010",
+      "from": { "kind": "contract", "ref": "@tessera/memory MemoryStore port + Memory version model" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/memory adapters (in-memory, sqlite via storage Drizzle handle)" },
+        { "kind": "test", "ref": "@tessera/memory tests/conformance (memory-store) + service unit tests" },
+        { "kind": "module", "ref": "@tessera/memory service (capture/edit/supersede) — validates with Zod (validation.ts)" },
+        { "kind": "package", "ref": "consumers exposing/using memory: @tessera/api (F-011), @tessera/mcp (F-012), @tessera/knowledge-graph (F-008), @tessera/retrieval (F-009)" },
+        { "kind": "schema", "ref": "sqlite `memories` table DDL in the sqlite adapter (kept in lockstep with the Drizzle schema; migration tooling F-024)" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "MemoryStore is implemented by every adapter and validated by one conformance suite (E-001 instance); the Memory version model (immutable versions + supersede pointers, FR-12) is the contract the service and all consumers rely on. Changing the port/model breaks adapters + suite + service; changing the sqlite DDL must track the Drizzle schema. The never-silently-mutated invariant must hold across adapters.",
+      "confidence": 1.0,
+      "origin": "manual"
     }
   ]
 }

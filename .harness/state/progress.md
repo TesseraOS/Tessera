@@ -5,6 +5,36 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-29 — F-007 DONE: Memory subsystem (@tessera/memory)
+**What changed** (ARCHITECTURE §5; FR-10/11/12/13)
+- New `@tessera/memory` (deps: `@tessera/core`, `@tessera/storage`, `drizzle-orm`, **`zod`** —
+  first workspace use of Zod, per ADR-0002).
+- **Domain:** 7 `MEMORY_KINDS` (decision/lesson/incident/failure/architecture/glossary/task) +
+  `MemoryMetadata` (source/author/links/tags); `Memory` = one **immutable version** with
+  `version`, `supersedes`, `supersededBy`, `scope`, `confidence`, timestamps. Current =
+  `supersededBy === null`.
+- **Versioning (FR-12):** editing **never mutates** — it appends version N+1 that supersedes the
+  prior; only the prior's `supersededBy` back-pointer is set. Atomic in the store (sqlite: a txn).
+- **Service (FR-13):** Zod-validated `MemoryService` (`capture`/`edit`/`getCurrent`/`history`/
+  `list`) — the **API + MCP seam** (F-011/F-012 wrap this domain service; not HTTP/MCP wiring here).
+- **Port + adapters:** `MemoryStore` with **in-memory** (reference) + **sqlite** (Drizzle
+  `memories` table over storage's `SqliteStore.db`; `CREATE TABLE IF NOT EXISTS` — drizzle-kit
+  migrations are F-024) adapters, both passing one conformance suite. Effect **E-010**.
+
+**Evidence/verification (fresh):** build · typecheck · lint · format green; test = core 15 +
+ai 4 (+8 skipped) + storage 19 + ingestion 25 + **memory 25** = **88 passing** (validation,
+service versioning, both adapters' conformance, sqlite service round-trip proving persistence +
+immutability). verify-state valid.
+
+**Lesson:** [[zod-exactoptional-bridge]] — Zod `.optional()` infers `T | undefined`, which clashes
+with `exactOptionalPropertyTypes`; bridge by widening the mapper's param to `| undefined` and
+stripping undefined keys when building the domain object.
+
+**Next step:** **F-008** — Knowledge graph + effect-links + get_effects (unblocked by F-006),
+then F-009 (hybrid retrieval).
+
+---
+
 ## 2026-06-29 — F-006 DONE: Ingestion subsystem (@tessera/ingestion)
 **What changed** (the front of the pipeline — ARCHITECTURE §7; FR-1/2/3/6/7/8/9)
 - New `@tessera/ingestion` (deps: `@tessera/core`, `@tessera/storage`; **no new runtime deps**).

@@ -132,14 +132,16 @@
       "package": "@tessera/memory",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-003"],
       "acceptance": [
         "Memory kinds (decision/lesson/incident/failure/architecture/glossary/task) with metadata",
         "Versioned + supersedable (never silently mutated)",
         "Create/edit via API + MCP"
       ],
-      "verification": ["typecheck", "lint", "test"]
+      "verification": ["typecheck", "lint", "test"],
+      "effects": ["E-010"],
+      "notes": "Done 2026-06-29: @tessera/memory — 7 MemoryKinds + metadata; immutable version lineage (edit appends a superseding version, prior never mutated; FR-12); Zod-validated MemoryService (capture/edit/getCurrent/history/list) = the API/MCP-facing seam (F-011/F-012 wrap it); MemoryStore port + in-memory + sqlite (Drizzle over storage's handle, atomic supersede) adapters, both passing the conformance suite. 25 tests. Effect E-010. Auto-extraction (FR-14), retention (FR-15), migration tooling (F-024) deferred."
     },
     {
       "id": "F-008",

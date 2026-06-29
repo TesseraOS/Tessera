@@ -170,14 +170,16 @@
       "package": "@tessera/retrieval",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-004", "F-008"],
       "acceptance": [
         "Five retrievers behind a common interface; keyword via FTS, semantic via VectorStore",
         "Fusion ranker with configurable weights and per-candidate signal attribution",
         "Returns one ranked candidate set"
       ],
-      "verification": ["typecheck", "lint", "test"]
+      "verification": ["typecheck", "lint", "test"],
+      "effects": ["E-012"],
+      "notes": "Done 2026-06-29: @tessera/retrieval — Retriever interface; semantic (VectorStore), keyword (SQLite FTS5), graph (KG seed+effect-expand), symbolic (exact symbol) retrievers; weighted Reciprocal-Rank-Fusion ranker (configurable per-signal weights, per-candidate signal attribution) → one ranked set; Zod-validated hybrid service (API/MCP seam). 23 tests. Effect E-012. NOTE: requirements are FR-21/22/23/25/26 (4 retrievers + fusion) — temporal (FR-24) is R1/F-018, the 5th behind the same interface; the acceptance's 'five' counts it. Consistent cross-backend ref space for fusion is an ingestion/config seam (downstream)."
     },
     {
       "id": "F-010",

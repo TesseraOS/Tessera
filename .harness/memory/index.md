@@ -6,6 +6,7 @@ One line per memory entry. Keep newest-relevant at top of each section.
 - [stack-and-architecture](decisions/stack-and-architecture.md) — the locked stack & architecture, linking ADRs 0001–0008.
 
 ## Lessons
+- [hybrid-fusion-shared-ref-space](lessons/hybrid-fusion-shared-ref-space.md) — RRF fuses by rank (no score normalization); signals only combine when retrievers share a `ref` id space (an ingestion-wiring requirement).
 - [adapter-parity-shared-pure-core](lessons/adapter-parity-shared-pure-core.md) — when multiple adapters must return identical results, share one pure ranking/selection function; the conformance suite then proves parity.
 - [zod-exactoptional-bridge](lessons/zod-exactoptional-bridge.md) — Zod `.optional()` infers `T | undefined`, clashing with `exactOptionalPropertyTypes`; bridge in a mapper, don't loosen types.
 - [ingestion-redaction-terminal-gate](lessons/ingestion-redaction-terminal-gate.md) — enforce security invariants (secret redaction) as a fixed terminal pipeline stage, not optional config; keep emitted source ASCII-clean.

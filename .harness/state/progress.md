@@ -5,6 +5,35 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-29 — F-009 DONE: Hybrid retrieval + fusion ranker (@tessera/retrieval)
+**What changed** (ARCHITECTURE §8; FR-21/22/23/25/26)
+- New `@tessera/retrieval` (deps: core, storage, ai, knowledge-graph, drizzle-orm, zod).
+- **Common `Retriever` interface** + four retrievers: **semantic** (Embeddings → VectorStore),
+  **keyword** (SQLite **FTS5**, owns the index; `index(ref,content)`), **graph** (KG lexical seed →
+  expand via `get_effects`), **symbolic** (exact/prefix `symbol`-node lookup). Shared `extractTerms`.
+- **Fusion ranker** (`fuse`, the core, FR-26): **weighted Reciprocal Rank Fusion** — rank-based so
+  heterogeneous scores need no normalization; configurable per-signal weights (0 drops a signal);
+  **per-candidate signal attribution**; returns one ranked set. Zod-validated hybrid service runs
+  retrievers in parallel and fuses (the API/MCP search seam).
+- Effect **E-012** (Retriever + fusion ⇒ retrievers + conformance + compiler/API consumers).
+
+**Scope note (acceptance "five" vs requirements):** requirements are FR-21/22/23/25/26 = 4 retrievers
++ fusion. **Temporal (FR-24) is R1/F-018** — the 5th, behind the same interface; intentionally out of
+scope here. Meaningful fusion needs a consistent cross-backend `ref` space — an ingestion/config seam.
+
+**Evidence/verification (fresh):** build · typecheck · lint · format green; test = core 15 +
+ai 4 (+8 skipped) + storage 19 + ingestion 25 + memory 25 + knowledge-graph 23 + **retrieval 23** =
+**134 passing** (fusion math/weights/attribution, FTS5 keyword, semantic nearest, graph effect-expand,
+symbolic exact/prefix, hybrid multi-signal fusion + weights + validation). verify-state valid.
+
+**Lesson:** [[hybrid-fusion-shared-ref-space]] — RRF fuses by rank (no score normalization needed);
+but signals only combine when retrievers share a `ref` id space, which is a corpus-wiring requirement.
+
+**Next step:** **F-010** — Context Compiler (plan→retrieve→expand→rank→dedup→compress→assemble +
+provenance), consuming this retrieval + the knowledge graph; unblocked by F-009.
+
+---
+
 ## 2026-06-29 — F-008 DONE: Knowledge graph + effect-links + get_effects (@tessera/knowledge-graph)
 **What changed** (ARCHITECTURE §5/§10; FR-16/17/18/19)
 - New `@tessera/knowledge-graph` (deps: core, storage, drizzle-orm, zod).

@@ -1,5 +1,6 @@
 import { buildServer } from '@tessera/api';
 import type { Runtime } from '@tessera/config';
+import { instrumentServices, type Observability } from '@tessera/observability';
 import { createServerRuntime, type ServerRuntimeOptions } from './bootstrap.js';
 
 type ApiApp = ReturnType<typeof buildServer>;
@@ -7,8 +8,13 @@ type ApiApp = ReturnType<typeof buildServer>;
 export interface ApiServerOptions extends ServerRuntimeOptions {
   readonly host?: string;
   readonly port?: number;
-  /** Enable Fastify's Pino logger (default off; the bin turns it on). */
+  /** Enable Fastify's default logger (ignored when `observability` supplies one). */
   readonly logger?: boolean;
+  /**
+   * When provided, domain calls are traced + timed (API → service) and its Pino logger backs the
+   * server, and request latency is recorded. Omit it (tests) for a plain, quiet server.
+   */
+  readonly observability?: Observability;
 }
 
 export interface ApiServerHandle {
@@ -21,13 +27,31 @@ export interface ApiServerHandle {
 }
 
 /**
- * Boot the Local profile and serve the REST `/v1` API (F-011). Host/port come from options then
- * `HOST`/`PORT` then defaults. Returns a handle whose `close()` stops the server and closes the
- * runtime (graceful shutdown).
+ * Boot the Local profile and serve the REST `/v1` API (F-011). With `observability`, services are
+ * instrumented (F-016) and an `onResponse` hook records HTTP latency. Returns a handle whose
+ * `close()` stops the server then closes the runtime (graceful shutdown).
  */
 export async function startApiServer(options: ApiServerOptions = {}): Promise<ApiServerHandle> {
   const runtime = await createServerRuntime(options);
-  const app = buildServer(runtime.services, { logger: options.logger ?? false });
+  const obs = options.observability;
+  const services = obs === undefined ? runtime.services : instrumentServices(runtime.services, obs);
+
+  const app = buildServer(
+    services,
+    obs !== undefined ? { loggerInstance: obs.logger } : { logger: options.logger ?? false },
+  );
+
+  if (obs !== undefined) {
+    app.addHook('onResponse', (request, reply, done) => {
+      obs.instruments.httpServerDuration.record(reply.elapsedTime, {
+        method: request.method,
+        route: request.routeOptions.url ?? request.url,
+        status: reply.statusCode,
+      });
+      done();
+    });
+  }
+
   const host = options.host ?? process.env.HOST ?? '127.0.0.1';
   const port = options.port ?? Number(process.env.PORT ?? 3000);
   const url = await app.listen({ host, port });

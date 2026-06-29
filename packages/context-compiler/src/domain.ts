@@ -66,6 +66,8 @@ export interface TraceStage {
   readonly outputCount: number;
   readonly dropped: readonly TraceDrop[];
   readonly notes?: string;
+  /** Wall-clock duration of the stage in milliseconds (observability — F-016). */
+  readonly durationMs?: number;
 }
 
 /** The full compilation trace rendered by the Package Inspector (FR-44). */

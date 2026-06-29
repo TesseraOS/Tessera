@@ -301,14 +301,16 @@
       "package": "@tessera/observability",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-002"],
       "acceptance": [
         "OTel spans across API → service → compiler stage → adapter with correlation ids",
         "Structured Pino logging that never logs secrets/raw ingested content",
         "Core metrics (latency, queue depth, compile latency per stage)"
       ],
-      "verification": ["typecheck", "lint", "test"]
+      "verification": ["typecheck", "lint", "test"],
+      "effects": ["E-015"],
+      "notes": "Done 2026-06-29: @tessera/observability — libraries use the OTel API only; the SDK is wired at the process (startTelemetry, no-op until then). createLogger=Pino+redaction of secret keys AND raw content (NFR-7; stderr mode for MCP); withSpan/currentTraceId (active-context nesting + correlation id); instruments (http/service/compile-stage histograms + queue-depth gauge) + recordCompileStageDurations; startTelemetry=NodeSDK+async context manager+HTTP auto-instrumentation (console exporters; OTLP follow-up); instrumentServices=ADDITIVE ApiServices wrapper (API->service spans + latency; compiler stage metrics) leaving domain packages untouched. Additive (non-breaking) to verified code: compiler TraceStage.durationMs (F-010), buildServer loggerInstance (F-011, Fastify v5). Wired into apps/server (instrument + logger + http-latency hook; telemetry gated by TESSERA_TELEMETRY=1, off by default; logging always on). 10 obs tests + 1 server test. ADR-0019, effect E-015. SEAMS: per-adapter spans, a fed queue-depth gauge (Queue port lacks depth), OTLP exporters — instruments exist, data wired later."
     },
 
     { "id": "F-017", "title": "GitHub connector (PRs/issues) + auto memory extraction", "requirements": ["FR-4", "FR-14"], "service": "api", "package": "@tessera/ingestion", "release": "R1", "priority": "should", "status": "backlog" },

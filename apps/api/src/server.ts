@@ -1,4 +1,8 @@
-import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
+import Fastify, {
+  type FastifyBaseLogger,
+  type FastifyInstance,
+  type FastifyServerOptions,
+} from 'fastify';
 import {
   serializerCompiler,
   validatorCompiler,
@@ -15,8 +19,13 @@ import type { ApiServices } from './services.js';
 const DEFAULT_BODY_LIMIT = 1_000_000;
 
 export interface BuildServerOptions {
-  /** Pino logger config; `false` (default) keeps tests quiet. F-016 wires structured logging. */
+  /** Pino logger config; `false` (default) keeps tests quiet. */
   readonly logger?: FastifyServerOptions['logger'];
+  /**
+   * A pre-built logger instance (e.g. `@tessera/observability`'s redacting Pino logger, F-016).
+   * Mutually exclusive with `logger`; when set, it backs per-request logging + correlation ids.
+   */
+  readonly loggerInstance?: FastifyBaseLogger;
   /** Max request body size in bytes (default {@link DEFAULT_BODY_LIMIT}). */
   readonly bodyLimit?: number;
 }
@@ -35,10 +44,15 @@ export interface ListenOptions extends BuildServerOptions {
  * adapter wiring are F-015/F-025; this function is pure given its services.
  */
 export function buildServer(services: ApiServices, options: BuildServerOptions = {}): ZodFastify {
-  const app = Fastify({
-    logger: options.logger ?? false,
-    bodyLimit: options.bodyLimit ?? DEFAULT_BODY_LIMIT,
-  }).withTypeProvider<ZodTypeProvider>();
+  // Fastify forbids `logger` + `loggerInstance` together; prefer the injected instance when present.
+  const fastifyOptions: FastifyServerOptions =
+    options.loggerInstance !== undefined
+      ? {
+          loggerInstance: options.loggerInstance,
+          bodyLimit: options.bodyLimit ?? DEFAULT_BODY_LIMIT,
+        }
+      : { logger: options.logger ?? false, bodyLimit: options.bodyLimit ?? DEFAULT_BODY_LIMIT };
+  const app = Fastify(fastifyOptions).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);

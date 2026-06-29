@@ -1,9 +1,15 @@
 import type { Runtime } from '@tessera/config';
 import { startMcpStdio } from '@tessera/mcp';
+import { instrumentServices, type Observability } from '@tessera/observability';
 import { createServerRuntime, type ServerRuntimeOptions } from './bootstrap.js';
 
 /** The connected MCP server, typed through `@tessera/mcp` (no direct SDK dependency). */
 type ConnectedMcpServer = Awaited<ReturnType<typeof startMcpStdio>>;
+
+export interface McpServerOptions extends ServerRuntimeOptions {
+  /** When provided, tool calls are traced + timed (F-016). */
+  readonly observability?: Observability;
+}
 
 export interface McpServerHandle {
   readonly runtime: Runtime;
@@ -16,9 +22,13 @@ export interface McpServerHandle {
  * Boot the Local profile and serve the MCP tools (F-012) over **stdio** — the transport agent
  * clients launch. Nothing is written to stdout except the protocol; logs go to stderr.
  */
-export async function startMcpServer(options: ServerRuntimeOptions = {}): Promise<McpServerHandle> {
+export async function startMcpServer(options: McpServerOptions = {}): Promise<McpServerHandle> {
   const runtime = await createServerRuntime(options);
-  const server = await startMcpStdio(runtime.services);
+  const services =
+    options.observability === undefined
+      ? runtime.services
+      : instrumentServices(runtime.services, options.observability);
+  const server = await startMcpStdio(services);
 
   return {
     runtime,

@@ -5,6 +5,51 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-29 — F-016 DONE: Observability baseline (@tessera/observability)
+**What changed** (cross-cutting traces + logs + metrics, kept additive; ARCHITECTURE §obs; NFR-7)
+- New **`@tessera/observability`**: a toolkit where **libraries use the OTel API only** and the SDK is
+  wired at the process (`startTelemetry`, no-op until then).
+  - **`createLogger`** — Pino + **redaction** of secret keys *and* raw content (never logged, NFR-7);
+    `silentLogger`; `stderr` mode for MCP (stdout is the protocol).
+  - **`withSpan`/`currentTraceId`** — active-context spans (children nest); correlation id.
+  - **`createInstruments`/`recordCompileStageDurations`/`registerQueueDepthGauge`** — http / service /
+    **compile-stage** latency histograms (+ queue-depth gauge).
+  - **`startTelemetry`** — NodeSDK (providers + async context manager + **HTTP auto-instrumentation** so
+    requests get server spans that service spans nest under); console exporters (OTLP = follow-up).
+  - **`instrumentServices(services, obs)`** — **additive** ApiServices wrapper: every call → child span +
+    latency; compiler records per-stage metrics. **Domain packages untouched.**
+- **Additive enhancements to verified features (no breakage):** compiler (F-010) times each stage into
+  the trace (`TraceStage.durationMs?`); `buildServer` (F-011) gains an optional **`loggerInstance`** so
+  the redacting Pino logger backs per-request logging + correlation (Fastify v5 wants `loggerInstance`,
+  not `logger`). The REST/MCP response schemas simply strip the new optional trace field.
+- **Wired into `apps/server` (F-032):** `startApiServer`/`startMcpServer` take `observability` →
+  instrument services, use the logger, REST records HTTP latency in an `onResponse` hook. Bins build
+  observability from `config.logLevel`; telemetry starts only when **`TESSERA_TELEMETRY=1`** (off by
+  default → no console spam; logging always on). MCP logs to **stderr**.
+
+**Scope honesty:** **seams** (instrument provided, data wired later) — per-adapter spans, a fed
+queue-depth gauge (the Queue port exposes no depth), OTLP exporters via config. New effect **E-015**;
+additive ripples on **E-013** (compiler trace) + **E-003** (buildServer option). ADR-0019.
+
+**Evidence/verification (fresh, all green):** state (32 features, **15 effect-links**) · typecheck
+(24/24) · lint (13/13) · format:check (all matched) · **test = prior 179 + observability 10 + server 1**
+= **190 passing** (logger redaction incl. nested; withSpan create/nest/error/currentTraceId; compile-stage
+histogram; instrumentServices passthrough + spans; startTelemetry start/shutdown; compiler durationMs;
+plus a server test booting the instrumented REST path) · test:e2e = api 14 + mcp 7 = 21 · build (13/13).
+
+**Decisions (delegated to Claude, recorded ADR-0019):** OTel API in libs / SDK at the process; wrap
+(`instrumentServices`) rather than retrofit; additive-only changes to F-010/F-011; telemetry off by
+default (`TESSERA_TELEMETRY=1`).
+
+**Lesson:** [[observability-additive-otel-api-in-libs]] — add a cross-cutting concern over verified
+code via a composition-layer wrapper + optional hooks (API-only libs, SDK at the process), never by
+threading params through every layer.
+
+**Next step:** R0 remaining — **F-029** (CI/CD running the gates + audit/secret scanning), **F-013**
+(Plugin SDK + plugin-host), or the R0 UI (**F-028** → **F-014**). Engine is bootable + observable.
+
+---
+
 ## 2026-06-29 — F-032 DONE: Runnable server entrypoints (@tessera/server)
 **What changed** (the payoff — the engine is now bootable end-to-end; ADR-0018 deferred this thin bin)
 - New **`apps/server`** (`@tessera/server`): boots the Local profile and serves both surfaces.

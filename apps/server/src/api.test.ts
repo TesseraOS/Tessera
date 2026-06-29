@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createObservability } from '@tessera/observability';
 import { afterEach, describe, expect, it } from 'vitest';
 import { startApiServer, type ApiServerHandle } from './api.js';
 
@@ -38,5 +39,28 @@ describe('startApiServer', () => {
     const openapi = await fetch(`${handle.url}/v1/openapi.json`);
     expect(openapi.status).toBe(200);
     expect(((await openapi.json()) as { openapi: string }).openapi).toMatch(/^3\./);
+  });
+
+  it('serves an observability-instrumented server (F-016 wiring)', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'tessera-server-obs-'));
+    handle = await startApiServer({
+      port: 0,
+      observability: createObservability({ logger: { level: 'silent' } }),
+      config: {
+        storage: { sqlitePath: ':memory:', vectorPath: ':memory:', blobRoot: join(dir, 'blobs') },
+        embeddings: { provider: 'fake', dimension: 8 },
+      },
+    });
+
+    const health = await fetch(`${handle.url}/health`);
+    expect(health.status).toBe(200);
+
+    const search = await fetch(`${handle.url}/v1/search`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query: 'anything' }),
+    });
+    expect(search.status).toBe(200);
+    expect(await search.json()).toHaveProperty('results');
   });
 });

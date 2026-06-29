@@ -52,6 +52,8 @@ describe('context compiler pipeline', () => {
     ]);
     const dedup = pkg.trace.stages.find((s) => s.stage === 'dedup');
     expect(dedup?.dropped.length).toBe(1);
+    // Each stage is timed for observability (F-016).
+    expect(pkg.trace.stages.every((s) => typeof s.durationMs === 'number')).toBe(true);
   });
 
   it('never exceeds a tight budget (graceful degradation)', async () => {

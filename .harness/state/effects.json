@@ -196,6 +196,20 @@
       "rationale": "@tessera/config is the composition root: the config schema + Local profile select and wire every adapter (sqlite/sqlite-vec/filesystem/in-process/transformers) into the ApiServices both surfaces consume. Changing the config schema, the profile wiring, the SecretsProvider port, or the blob FragmentSource convention ripples to whoever boots a runtime and to the future Postgres/cloud profile (F-023). The embedding dimension flows from the provider to the vector store (ADR-0006). ApiServices is imported type-only so api never depends on config (no cycle).",
       "confidence": 1.0,
       "origin": "manual"
+    },
+    {
+      "id": "E-015",
+      "from": { "kind": "contract", "ref": "@tessera/observability toolkit (createLogger+redaction, withSpan/currentTraceId, Instruments, startTelemetry, instrumentServices)" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/server bins/startApiServer/startMcpServer — wire the logger, instrumentServices, the http-latency hook, and env-gated startTelemetry" },
+        { "kind": "module", "ref": "@tessera/api buildServer loggerInstance option (additive) — the redacting Pino logger backs per-request logging + correlation (additive on E-003)" },
+        { "kind": "module", "ref": "@tessera/context-compiler TraceStage.durationMs (additive on E-013) — feeds recordCompileStageDurations (compile latency per stage)" },
+        { "kind": "package", "ref": "seams (instrument provided, not yet fed): per-adapter spans; registerQueueDepthGauge needs a Queue depth source; OTLP exporters via config" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "Observability is cross-cutting but kept additive: libraries use the OTel API only (no-op until startTelemetry registers the SDK at the process), instrumentServices wraps ApiServices without touching domain packages, and redaction keeps secrets/content out of logs (NFR-7). Changing the instruments, the span/log contract, or the redaction policy affects the server wiring and any future surface that boots a runtime. The compiler's durationMs and buildServer's loggerInstance are additive — the surfaces' response schemas ignore the new optional trace field. Deepening to per-adapter spans / a fed queue-depth gauge must preserve these seams.",
+      "confidence": 0.9,
+      "origin": "manual"
     }
   ]
 }

@@ -73,9 +73,16 @@ export function createContextCompiler(options: ContextCompilerOptions): ContextC
       }
 
       const stages: TraceStage[] = [];
+      // Time each stage (F-016): attribute the elapsed time since the previous stage to this one.
+      let mark = performance.now();
+      const pushStage = (stage: Omit<TraceStage, 'durationMs'>): void => {
+        const now = performance.now();
+        stages.push({ ...stage, durationMs: Math.round((now - mark) * 1000) / 1000 });
+        mark = now;
+      };
 
       const needs = planNeeds(request);
-      stages.push({ stage: 'plan', inputCount: 1, outputCount: needs.length, dropped: [] });
+      pushStage({ stage: 'plan', inputCount: 1, outputCount: needs.length, dropped: [] });
 
       const limit = request.retrievalLimit ?? DEFAULT_RETRIEVAL_LIMIT;
       const byRef = new Map<string, WorkingCandidate>();
@@ -92,7 +99,7 @@ export function createContextCompiler(options: ContextCompilerOptions): ContextC
         }
       }
       let candidates: WorkingCandidate[] = [...byRef.values()];
-      stages.push({
+      pushStage({
         stage: 'retrieve',
         inputCount: needs.length,
         outputCount: candidates.length,
@@ -105,7 +112,7 @@ export function createContextCompiler(options: ContextCompilerOptions): ContextC
           graphStore,
           options.expandDepth === undefined ? {} : { maxDepth: options.expandDepth },
         );
-        stages.push({
+        pushStage({
           stage: 'expand',
           inputCount: candidates.length,
           outputCount: expanded.candidates.length,
@@ -114,7 +121,7 @@ export function createContextCompiler(options: ContextCompilerOptions): ContextC
         });
         candidates = expanded.candidates;
       } else {
-        stages.push({
+        pushStage({
           stage: 'expand',
           inputCount: candidates.length,
           outputCount: candidates.length,
@@ -129,7 +136,7 @@ export function createContextCompiler(options: ContextCompilerOptions): ContextC
           ? {}
           : { multiSignalBonus: options.multiSignalBonus },
       );
-      stages.push({
+      pushStage({
         stage: 'rank',
         inputCount: candidates.length,
         outputCount: ranked.length,
@@ -137,7 +144,7 @@ export function createContextCompiler(options: ContextCompilerOptions): ContextC
       });
 
       const resolved = await resolveFragments(ranked, fragmentSource, request.filters);
-      stages.push({
+      pushStage({
         stage: 'resolve',
         inputCount: ranked.length,
         outputCount: resolved.resolved.length,
@@ -145,7 +152,7 @@ export function createContextCompiler(options: ContextCompilerOptions): ContextC
       });
 
       const deduped = dedupeFragments(resolved.resolved, options.dedupThreshold);
-      stages.push({
+      pushStage({
         stage: 'dedup',
         inputCount: resolved.resolved.length,
         outputCount: deduped.kept.length,
@@ -153,14 +160,14 @@ export function createContextCompiler(options: ContextCompilerOptions): ContextC
       });
 
       const compressed = fitToBudget(deduped.kept, request.budget);
-      stages.push({
+      pushStage({
         stage: 'compress',
         inputCount: deduped.kept.length,
         outputCount: compressed.selected.length,
         dropped: compressed.dropped,
       });
 
-      stages.push({
+      pushStage({
         stage: 'assemble',
         inputCount: compressed.selected.length,
         outputCount: compressed.selected.length,

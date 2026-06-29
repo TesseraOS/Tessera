@@ -29,6 +29,7 @@
   "dependencies": {
     "@tessera/api": "workspace:*",
     "@tessera/config": "workspace:*",
-    "@tessera/mcp": "workspace:*"
+    "@tessera/mcp": "workspace:*",
+    "@tessera/observability": "workspace:*"
   }
 }

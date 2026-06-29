@@ -6,6 +6,7 @@ One line per memory entry. Keep newest-relevant at top of each section.
 - [stack-and-architecture](decisions/stack-and-architecture.md) — the locked stack & architecture, linking ADRs 0001–0008.
 
 ## Lessons
+- [ingestion-redaction-terminal-gate](lessons/ingestion-redaction-terminal-gate.md) — enforce security invariants (secret redaction) as a fixed terminal pipeline stage, not optional config; keep emitted source ASCII-clean.
 - [turbo-cache-stale-uncommitted](lessons/turbo-cache-stale-uncommitted.md) — turbo gave false-green on uncommitted changes; gate tasks now `cache: false`.
 - [gitignore-broad-dir-hid-package](lessons/gitignore-broad-dir-hid-package.md) — bare `storage/` ignore rule excluded the whole `packages/storage` package; anchor ignore patterns + verify `git ls-files`.
 

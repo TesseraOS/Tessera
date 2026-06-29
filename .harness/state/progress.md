@@ -5,6 +5,43 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-29 — F-006 DONE: Ingestion subsystem (@tessera/ingestion)
+**What changed** (the front of the pipeline — ARCHITECTURE §7; FR-1/2/3/6/7/8/9)
+- New `@tessera/ingestion` (deps: `@tessera/core`, `@tessera/storage`; **no new runtime deps**).
+- **Ports (plugin SDK + persistence seam):** `Connector` (`list`/`resolve`), `Processor` +
+  `runPipeline`, `DocumentSink`, `IngestionManifest` (content-hash index). ADR-0015.
+- **Connectors:** `filesystem` (recursive walk, ignores `.git`/`node_modules`/`dist`/`.turbo`,
+  traversal-guarded keys) + `git` (shells out to the `git` CLI — `ls-files -z` tracked files
+  honoring `.gitignore`; repo provenance: branch/HEAD commit/authorship/tags). Shared
+  `diffEntries` computes added/modified/removed.
+- **Processors:** `normalize` (BOM strip, CRLF→LF, content-preserving) + `redact`. **Redaction is
+  appended by the worker as a terminal, non-bypassable stage** so secrets are scrubbed before any
+  persist (FR-9). `redactSecrets` = curated, ReDoS-safe detectors (AWS/GitHub/Slack/Google/Stripe
+  tokens, PEM private keys, JWT, bearer, basic-auth URLs, quoted credential assignments); findings
+  are **counts only**, never the secret value.
+- **Pipeline:** `coordinator.scan()` diffs source vs manifest → enqueues **only changes** on the
+  `Queue` port; `worker` consumes, resolves via connector, runs `normalize → … → redact`, and
+  upserts to the sink **only if the content hash is new** (idempotent + incremental — no full
+  re-index). Deterministic `documentIdFor` keeps upserts stable. In-memory sink + manifest adapters.
+
+**Scope honesty:** embedding/vector/relational/graph **persistence** is the `DocumentSink` seam for
+F-007/8/9 (not wired here); full git history/diff/blame + `fs.watch` deferred (ADR-0015). E-008
+(ingestion as Embeddings consumer) realized at the later embed-processor increment.
+
+**Evidence/verification (fresh):** build · typecheck · lint · format green; test =
+core 15 + ai 4 (+8 guarded skipped) + storage 19 + **ingestion 25** = **63 passing** (connector
+conformance, fs + **git** integration [ran for real], full pipeline lifecycle proving
+incremental/idempotent/redaction). verify-state valid. Effect **E-009** added.
+
+**Lesson:** [[ingestion-redaction-terminal-gate]] — make security invariants structural (enforced
+pipeline stage), not advisory. Also: a stray NUL crept into a generated source file once; rewrote
+it clean (watch for non-ASCII/control chars in emitted code).
+
+**Next step:** **F-007** — Memory subsystem (types, metadata, versioning, manual capture), or
+**F-008** (knowledge graph + effect-links, now unblocked by F-006).
+
+---
+
 ## 2026-06-28 — F-005 DONE: Embeddings port + adapters (@tessera/ai)
 **What changed**
 - New `@tessera/ai`. `Embeddings` port (embed/embedBatch + {model, dimension} metadata, ADR-0006).

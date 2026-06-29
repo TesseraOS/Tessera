@@ -47,6 +47,15 @@ importers:
 
   packages/core: {}
 
+  packages/ingestion:
+    dependencies:
+      '@tessera/core':
+        specifier: workspace:*
+        version: link:../core
+      '@tessera/storage':
+        specifier: workspace:*
+        version: link:../storage
+
   packages/storage:
     dependencies:
       '@tessera/core':

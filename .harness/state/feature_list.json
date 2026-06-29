@@ -113,14 +113,16 @@
       "package": "@tessera/ingestion",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-003", "F-004", "F-005"],
       "acceptance": [
         "Filesystem + Git connectors emit change events; workers process via Queue port",
         "Incremental + idempotent (content-hash diffing); no full re-index on small changes",
         "Secret scrubbing before persist; processors are plugins"
       ],
-      "verification": ["typecheck", "lint", "test"]
+      "verification": ["typecheck", "lint", "test"],
+      "effects": ["E-008", "E-009"],
+      "notes": "Done 2026-06-29: @tessera/ingestion — Connector/Processor/DocumentSink/IngestionManifest ports; filesystem + git (CLI, repo provenance) connectors; normalize + enforced-terminal redaction processors; content-hash diff → coordinator enqueues only changes → worker consumes via Queue port, idempotent/incremental. ADR-0015. 25 tests (connector conformance, fs + git integration, full pipeline lifecycle). Embedding/vector/graph persistence is the DocumentSink seam for F-007/8/9; full git history/diff/blame + fs.watch deferred."
     },
     {
       "id": "F-007",

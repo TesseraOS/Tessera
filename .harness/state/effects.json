@@ -104,6 +104,21 @@
       "rationale": "Changing the Embeddings port affects every adapter, its conformance suite, and consumers; changing the embedding model/dimension also requires re-embedding stored vectors (ADR-0006).",
       "confidence": 1.0,
       "origin": "manual"
+    },
+    {
+      "id": "E-009",
+      "from": { "kind": "contract", "ref": "@tessera/ingestion ports (Connector | Processor | DocumentSink | IngestionManifest)" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/ingestion connectors (filesystem, git; later github, etc.) + processors (normalize, redact; later chunk/extract/embed)" },
+        { "kind": "test", "ref": "@tessera/ingestion tests/conformance (connector) + the pipeline integration test" },
+        { "kind": "module", "ref": "@tessera/ingestion pipeline (coordinator + worker) — enqueue/consume via the @tessera/storage Queue port" },
+        { "kind": "package", "ref": "downstream DocumentSink implementers: @tessera/memory (F-007), @tessera/knowledge-graph (F-008), @tessera/retrieval (F-009)" },
+        { "kind": "decision", "ref": "docs/adr/0015-ingestion-connector-contracts-and-git-cli.md" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "The ingestion contracts are the plugin SDK for sources/stages and the seam to persistence: changing Connector/Processor breaks the first-party connectors/processors + the conformance suite; changing DocumentSink/IngestionManifest breaks the worker and every downstream sink that persists documents. Redaction (FR-9) is an enforced terminal stage — never relax it.",
+      "confidence": 1.0,
+      "origin": "manual"
     }
   ]
 }

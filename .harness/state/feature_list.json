@@ -2,7 +2,7 @@
   "$schemaRef": "./schemas/feature_list.schema.json",
   "version": 1,
   "project": "tessera",
-  "updated": "2026-06-27",
+  "updated": "2026-06-29",
   "policy": {
     "wip_limit": 1,
     "ordering": "by release, then id; respect blockedBy"
@@ -209,7 +209,7 @@
       "package": "@tessera/api",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-010", "F-007"],
       "acceptance": [
         "Versioned /v1 routes for search/compile/effects/memory; Zod validation at boundary",
@@ -217,7 +217,8 @@
         "/health and /ready endpoints"
       ],
       "verification": ["typecheck", "lint", "test", "e2e"],
-      "effects": ["E-003"]
+      "effects": ["E-003"],
+      "notes": "Done 2026-06-29: apps/api (@tessera/api) — Fastify v5 + fastify-type-provider-zod (Zod-v4 bridge: one schema drives validation+serialization+OpenAPI) + @fastify/swagger at GET /v1/openapi.json. Thin /v1 routes wrap the F-007..F-010 services: POST /v1/search, POST /v1/compile, GET /v1/effects, POST/GET/PATCH /v1/memory(/:lineageId[/history]). Consistent error envelope {error:{code,message,details?}} via one setErrorHandler (TesseraError.code->status; 5xx masked; Zod->400) + setNotFoundHandler. /health + /ready (injected readiness probe; 503 until ready). buildServer(services) is pure DI — the ApiServices composition seam F-015 fills with the real local profile (no shipped boot/toy wiring here); MCP (F-012) wraps the same services. e2e gate (gate 6) ACTIVATED: root test:e2e -> turbo; CI step added (effect E-005); 14 app.inject e2e + 11 unit (error-map + schema). ADR-0016. Effect E-003 realized (REST half). Auth/CORS/rate-limit=F-025/F-016, SSE=F-021, SDK=F-022."
     },
     {
       "id": "F-012",

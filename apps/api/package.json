@@ -1,0 +1,35 @@
+{
+  "name": "@tessera/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts"
+  },
+  "dependencies": {
+    "@fastify/swagger": "^9.5.1",
+    "@tessera/context-compiler": "workspace:*",
+    "@tessera/core": "workspace:*",
+    "@tessera/knowledge-graph": "workspace:*",
+    "@tessera/memory": "workspace:*",
+    "@tessera/retrieval": "workspace:*",
+    "fastify": "^5.5.0",
+    "fastify-type-provider-zod": "^5.1.0",
+    "zod": "^3.25.67"
+  }
+}

@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-06-27",
+  "updated": "2026-06-29",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -35,12 +35,15 @@
       "id": "E-003",
       "from": { "kind": "contract", "ref": "REST /v1 + MCP tool contracts (@tessera/api, @tessera/mcp)" },
       "to": [
-        { "kind": "artifact", "ref": "generated OpenAPI document" },
-        { "kind": "package", "ref": "@tessera/sdk (generated TS client)" },
-        { "kind": "module", "ref": "@tessera/web (dashboard API calls)" }
+        { "kind": "module", "ref": "@tessera/api route Zod schemas (apps/api/src/schemas/*) — the single source for validation + serialization + OpenAPI" },
+        { "kind": "artifact", "ref": "generated OpenAPI document (GET /v1/openapi.json via @fastify/swagger)" },
+        { "kind": "package", "ref": "@tessera/mcp (F-012) — wraps the SAME domain services as REST (one engine, two surfaces)" },
+        { "kind": "package", "ref": "@tessera/sdk (generated TS client, F-022)" },
+        { "kind": "module", "ref": "@tessera/web (dashboard API calls + Package Inspector, F-014)" },
+        { "kind": "decision", "ref": "docs/adr/0016-rest-api-fastify-zod-bridge.md" }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "The public API/MCP contract is the source for OpenAPI + the generated SDK + the dashboard; any contract change must regenerate and update all three (API is additive/versioned).",
+      "rationale": "F-011 REALIZES the REST half: the @tessera/api route Zod schemas (zod/v4, fastify-type-provider-zod) are the single source for validation, serialization, and the generated OpenAPI document. Changing a route schema or the consistent error envelope must regenerate OpenAPI and ripple to the SDK, the dashboard, and the MCP surface that wraps the same services — the API is additive/versioned (NFR-11). buildServer takes injected ApiServices; the deployment-profile wiring is F-015.",
       "confidence": 1.0,
       "origin": "manual"
     },

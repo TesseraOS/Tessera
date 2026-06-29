@@ -31,6 +31,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0013](0013-general-purpose-execution-skills-from-ecc.md) | General-purpose execution skills (adapted from ECC, MIT) | Accepted |
 | [0014](0014-test-organization-hybrid.md) | Test organization — co-located unit, separate integration/e2e | Accepted |
 | [0015](0015-ingestion-connector-contracts-and-git-cli.md) | Ingestion connector/processor contracts & Git via the `git` CLI | Accepted |
+| [0016](0016-rest-api-fastify-zod-bridge.md) | REST API — Fastify + fastify-type-provider-zod (Zod-v4 bridge), injected services, e2e gate | Accepted |
 
 ## Conventions
 

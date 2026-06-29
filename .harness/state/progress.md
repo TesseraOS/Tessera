@@ -5,6 +5,52 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-29 — F-011 DONE: REST API /v1 (@tessera/api)
+**What changed** (the engine gets its first interface — ARCHITECTURE §11; FR-37, NFR-1/6/11)
+- New **`apps/api`** (`@tessera/api`): **Fastify v5** with the **plugin + encapsulation** model.
+  Routes are **thin** (validate → call a domain service → map result); they wrap the F-007…F-010
+  services (memory, knowledge-graph, hybrid retrieval, context compiler). MCP (F-012) will wrap the
+  **same** services — one engine, two surfaces.
+- **Schema-first bridge (ADR-0016):** **`fastify-type-provider-zod@5.1`** + **`@fastify/swagger@9`** —
+  **one Zod schema per route drives validation + serialization + OpenAPI** (served at
+  **`GET /v1/openapi.json`**). The lib resolves schemas via Zod's **v4 core**, so the api package's
+  boundary schemas use **`zod/v4`** (same physical `zod@3.25.x`; v4 subpath). Domain packages keep
+  classic Zod-3 — only plain validated JSON crosses the boundary.
+- **Routes:** `POST /v1/search`, `POST /v1/compile`, `GET /v1/effects?kind&key&maxDepth`, and
+  `POST`/`GET` `/v1/memory`, `GET`/`PATCH` `/v1/memory/:lineageId`, `GET /v1/memory/:lineageId/history`.
+  Operational (unversioned): `GET /health` + `GET /ready` (injected readiness probe → **503** until ready).
+- **Consistent error envelope** (NFR-6): `{ error: { code, message, details? } }` via one
+  `setErrorHandler` (`TesseraError.code → HTTP status`; **5xx masked**, no leak; Zod request failures
+  → 400) + `setNotFoundHandler`. `mapError` is pure + unit-tested.
+- **DI seam:** `buildServer(services)` takes injected `ApiServices` (+ optional `readiness()`). Real
+  adapter wiring from a deployment profile (SQLite+sqlite-vec+filesystem+Transformers.js) and the
+  bootable process are **F-015** — intentionally not here (no shipped toy composition).
+- **e2e gate ACTIVATED (gate 6):** root `test:e2e` → `turbo run test:e2e`; turbo task added; **CI
+  workflow runs it** (effect **E-005** honored — gates.json ⇄ ci.yml in lockstep). E2E uses
+  `app.inject()` over an in-memory composition (test support).
+
+**Scope honesty:** auth/CORS/helmet/rate-limit (per profile) = F-025 / observability F-016; realtime
+SSE = F-021; generated SDK = F-022; the bootable local server + config loader = F-015. Effect
+**E-003** *realized* (the REST half): the route schemas are the OpenAPI source for SDK + web + MCP.
+
+**Evidence/verification (fresh, all green):** state (31 features, 13 effect-links) · typecheck
+(16/16) · lint (9/9) · format:check (all matched) · **test (16 pkg tasks)** = prior 151 + **api 11**
+(error-map + boundary-schema) = **162 passing** · **test:e2e = api 14** (`app.inject`: health/ready/503,
+openapi doc lists routes, search ranked, compile budget-bounded+provenance+trace, effects ranked +
+404, memory capture→read→edit(v2)→history→list + 404 + 400, not-found envelope) · build (9/9).
+
+**Decisions (delegated to Claude, recorded ADR-0016):** Zod⇄Fastify bridge = fastify-type-provider-zod
+(fulfils ADR-0002's bridge follow-up); inject services (don't wire adapters here); activate e2e now.
+
+**Lesson:** [[fastify-type-provider-zod-v4-bridge]] — ftpz@5 needs `zod/v4` schemas even on a Zod-3
+install (every route 500'd until switched); plus never `await app.register` (boots `ready()` early),
+and register swagger before routes.
+
+**Next step:** **F-012** — MCP server (search / compile_context / get_effects / capture_memory /
+explain) wrapping the same domain services (unblocked by F-011). R0 engine → second surface.
+
+---
+
 ## 2026-06-29 — F-010 DONE: Context Compiler (@tessera/context-compiler)
 **What changed** (the centerpiece, G1 "compile, don't dump"; ARCHITECTURE §9; FR-27/28/29/30/32)
 - New `@tessera/context-compiler` (deps: core, retrieval, knowledge-graph, storage, ai, zod).

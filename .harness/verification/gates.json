@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updated": "2026-06-28",
-  "description": "Ordered verification gates. Run in order; stop at first failure. Code gates went 'active' with the F-001 scaffold. 'e2e' activates with the first user-facing feature.",
+  "updated": "2026-06-29",
+  "description": "Ordered verification gates. Run in order; stop at first failure. Code gates went 'active' with the F-001 scaffold. 'e2e' went 'active' with F-011 (the REST API — first user-facing surface).",
   "gates": [
     {
       "id": "state",
@@ -54,10 +54,10 @@
     {
       "id": "e2e",
       "order": 6,
-      "status": "pending-toolchain",
+      "status": "active",
       "command": "pnpm -w test:e2e",
       "requiredFor": ["user-facing"],
-      "description": "End-to-end tests over the MCP/REST surface and dashboard (activates with the first user-facing feature)."
+      "description": "End-to-end tests over the MCP/REST surface and dashboard (active since F-011; @tessera/api runs HTTP-surface e2e via app.inject)."
     }
   ]
 }

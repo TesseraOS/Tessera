@@ -51,7 +51,8 @@ jobs:
       - name: Build (gate 5)
         run: pnpm build
 
-      # gate 6 (e2e) activates with the first user-facing feature.
+      - name: E2E (gate 6)
+        run: pnpm test:e2e
 
   security:
     runs-on: ubuntu-latest

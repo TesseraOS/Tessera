@@ -151,7 +151,7 @@
       "package": "@tessera/knowledge-graph",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-006"],
       "acceptance": [
         "Nodes/edges model (relational, recursive-CTE traversal) for files/symbols/modules/people/decisions",
@@ -159,7 +159,8 @@
         "get_effects(symbol) returns ranked dependents with paths"
       ],
       "verification": ["typecheck", "lint", "test"],
-      "effects": ["E-002"]
+      "effects": ["E-002", "E-011"],
+      "notes": "Done 2026-06-29: @tessera/knowledge-graph — node/edge model (file/symbol/module/person/decision/memory); typed effect-links (rationale/confidence/origin) asserted manually + derived statically by inverting import/call/reference edges (FR-18); get_effects = ranked, path-bearing traversal of dependents (FR-19). GraphStore port + in-memory (BFS) + sqlite (recursive CTE, cycle-guarded) adapters, both ranked through one shared selectBestRanked for parity; passing one conformance suite. Zod-validated service = API/MCP seam. 23 tests. Effects E-002/E-011. Symbol extraction to populate nodes (OQ5) is downstream ingestion."
     },
     {
       "id": "F-009",

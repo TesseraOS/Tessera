@@ -134,6 +134,20 @@
       "rationale": "MemoryStore is implemented by every adapter and validated by one conformance suite (E-001 instance); the Memory version model (immutable versions + supersede pointers, FR-12) is the contract the service and all consumers rely on. Changing the port/model breaks adapters + suite + service; changing the sqlite DDL must track the Drizzle schema. The never-silently-mutated invariant must hold across adapters.",
       "confidence": 1.0,
       "origin": "manual"
+    },
+    {
+      "id": "E-011",
+      "from": { "kind": "contract", "ref": "@tessera/knowledge-graph GraphStore port + node/edge/effect-link model + get_effects" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/knowledge-graph adapters (in-memory BFS, sqlite recursive-CTE)" },
+        { "kind": "test", "ref": "@tessera/knowledge-graph tests/conformance (graph-store, incl. get_effects) + unit tests" },
+        { "kind": "module", "ref": "@tessera/knowledge-graph effects (static-derivation, ranking — shared by both adapters for parity) + service" },
+        { "kind": "package", "ref": "consumers: @tessera/retrieval graph-retriever (F-009), @tessera/api/mcp get_effects (F-011/F-012), @tessera/web graph/effects views (F-014)" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "Concrete instance of E-002: GraphStore is implemented by every adapter and validated by one conformance suite; the shared ranking/static-derivation make the two adapters' get_effects identical (change one → re-verify both). The effect-link model mirrors the harness effects.schema (E-002). Node-population from code (symbol extraction) is a downstream ingestion concern, not part of this contract.",
+      "confidence": 1.0,
+      "origin": "manual"
     }
   ]
 }

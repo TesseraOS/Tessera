@@ -5,6 +5,35 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-29 — F-008 DONE: Knowledge graph + effect-links + get_effects (@tessera/knowledge-graph)
+**What changed** (ARCHITECTURE §5/§10; FR-16/17/18/19)
+- New `@tessera/knowledge-graph` (deps: core, storage, drizzle-orm, zod).
+- **Model:** `GraphNode` (file/symbol/module/person/decision/memory) + `GraphEdge` (imports/calls/
+  references/contains/owns/defines/supersedes/**EFFECT_LINK**); deterministic `nodeIdFor`/`edgeIdFor`
+  for idempotent upserts. Effect-links carry rationale/confidence/origin (static|manual|learned).
+- **Effect-links (FR-17/18):** asserted **manually** via the service, and **derived statically** by
+  inverting dependency edges (`A imports B` ⇒ `B --EFFECT_LINK--> A`, origin static).
+- **get_effects (FR-19):** ranked, path-bearing traversal of dependents. Score = product of edge
+  confidences; ranked score desc → distance asc → id asc.
+- **GraphStore port + adapters:** in-memory (cycle-guarded BFS) + **sqlite (recursive CTE**,
+  ARCHITECTURE §10, path-string cycle guard); both feed one shared `selectBestRanked` so results are
+  identical (parity). One conformance suite covers both. Zod-validated service = the API/MCP seam.
+- Effects **E-002** (realized) + **E-011** (GraphStore ⇒ adapters + conformance + service).
+
+**Evidence/verification (fresh):** build · typecheck · lint · format green; test = core 15 +
+ai 4 (+8 skipped) + storage 19 + ingestion 25 + memory 25 + **knowledge-graph 23** = **111 passing**
+(ranking, static-derivation, service incl. get_effects ranking/paths/NotFound, both adapters'
+conformance, sqlite CTE multi-hop). verify-state valid.
+
+**Lesson:** [[adapter-parity-shared-pure-core]] — when two adapters must return identical results
+(in-memory vs SQL traversal), factor the ranking/selection into one pure function both call; the
+conformance suite then proves parity instead of re-deriving it per adapter.
+
+**Next step:** **F-009** — Hybrid retrieval (semantic + keyword + graph + symbolic + fusion;
+unblocked by F-004 + F-008), then F-010 (context compiler).
+
+---
+
 ## 2026-06-29 — F-007 DONE: Memory subsystem (@tessera/memory)
 **What changed** (ARCHITECTURE §5; FR-10/11/12/13)
 - New `@tessera/memory` (deps: `@tessera/core`, `@tessera/storage`, `drizzle-orm`, **`zod`** —

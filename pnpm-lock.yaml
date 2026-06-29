@@ -56,6 +56,21 @@ importers:
         specifier: workspace:*
         version: link:../storage
 
+  packages/knowledge-graph:
+    dependencies:
+      '@tessera/core':
+        specifier: workspace:*
+        version: link:../core
+      '@tessera/storage':
+        specifier: workspace:*
+        version: link:../storage
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.11.1)
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+
   packages/memory:
     dependencies:
       '@tessera/core':

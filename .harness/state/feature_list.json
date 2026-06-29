@@ -228,7 +228,7 @@
       "package": "@tessera/mcp",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-011"],
       "acceptance": [
         "MCP tools wrap the same domain services as REST",
@@ -236,7 +236,8 @@
         "Tool inputs validated; errors surfaced cleanly"
       ],
       "verification": ["typecheck", "lint", "test", "e2e"],
-      "effects": ["E-003"]
+      "effects": ["E-003"],
+      "notes": "Done 2026-06-29: apps/mcp (@tessera/mcp) — @modelcontextprotocol/sdk@1.29 McpServer; buildMcpServer(services) registers search/compile_context/get_effects/capture_memory/explain, wrapping the SAME F-007..F-010 services as REST via a TYPE-ONLY ApiServices import from @tessera/api (no Fastify in the MCP runtime — verified). Inputs validated by the SDK (classic Zod 3 raw shapes); results = text JSON + structuredContent, no outputSchema; errors masked into {error:{code,message,details?}} (same policy as REST). explain = compile -> project whyIncluded+provenance+trace (no bodies; pure buildExplanation). startMcpStdio = stdio transport. e2e drives a REAL SDK Client over InMemoryTransport.createLinkedPair (5 tools + clean NOT_FOUND + input rejection). 2 unit + 7 e2e. ADR-0017. Effect E-003 realized (MCP half). Gateway auth/quotas=F-026; bootable process+config=F-015."
     },
     {
       "id": "F-013",

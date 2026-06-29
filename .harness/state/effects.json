@@ -37,13 +37,14 @@
       "to": [
         { "kind": "module", "ref": "@tessera/api route Zod schemas (apps/api/src/schemas/*) — the single source for validation + serialization + OpenAPI" },
         { "kind": "artifact", "ref": "generated OpenAPI document (GET /v1/openapi.json via @fastify/swagger)" },
-        { "kind": "package", "ref": "@tessera/mcp (F-012) — wraps the SAME domain services as REST (one engine, two surfaces)" },
+        { "kind": "module", "ref": "@tessera/mcp tools (apps/mcp/src/server.ts: search/compile_context/get_effects/capture_memory/explain) — wrap the SAME domain services as REST via a type-only ApiServices import (F-012, one engine/two surfaces)" },
         { "kind": "package", "ref": "@tessera/sdk (generated TS client, F-022)" },
         { "kind": "module", "ref": "@tessera/web (dashboard API calls + Package Inspector, F-014)" },
-        { "kind": "decision", "ref": "docs/adr/0016-rest-api-fastify-zod-bridge.md" }
+        { "kind": "decision", "ref": "docs/adr/0016-rest-api-fastify-zod-bridge.md" },
+        { "kind": "decision", "ref": "docs/adr/0017-mcp-server-surface.md" }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "F-011 REALIZES the REST half: the @tessera/api route Zod schemas (zod/v4, fastify-type-provider-zod) are the single source for validation, serialization, and the generated OpenAPI document. Changing a route schema or the consistent error envelope must regenerate OpenAPI and ripple to the SDK, the dashboard, and the MCP surface that wraps the same services — the API is additive/versioned (NFR-11). buildServer takes injected ApiServices; the deployment-profile wiring is F-015.",
+      "rationale": "BOTH surfaces now realized. REST (F-011): @tessera/api route Zod schemas (zod/v4, fastify-type-provider-zod) are the single source for validation + serialization + OpenAPI (GET /v1/openapi.json). MCP (F-012): @tessera/mcp tools wrap the SAME domain services (type-only ApiServices import, so no Fastify in the MCP runtime) with the same masked error-envelope policy. Changing a shared domain service, the error-envelope shape, or a route/tool contract must be reflected across REST + MCP + the regenerated OpenAPI + the SDK + the dashboard — additive/versioned (NFR-11). Both surfaces take injected services; deployment-profile wiring + the bootable processes are F-015.",
       "confidence": 1.0,
       "origin": "manual"
     },

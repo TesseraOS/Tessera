@@ -5,6 +5,48 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-29 — F-012 DONE: MCP server (@tessera/mcp)
+**What changed** (the second surface — "one engine, two surfaces"; FR-35)
+- New **`apps/mcp`** (`@tessera/mcp`): `@modelcontextprotocol/sdk@1.29` `McpServer`.
+  **`buildMcpServer(services)`** registers five tools — **`search`, `compile_context`, `get_effects`,
+  `capture_memory`, `explain`** — whose thin handlers wrap the **same** F-007…F-010 services the REST
+  API wraps. The shared contract is expressed by a **type-only** `ApiServices` import from
+  `@tessera/api` (zero runtime coupling — **no Fastify in the MCP runtime**; verified the dist has no
+  value import of `@tessera/api`).
+- **Inputs validated** by the SDK against **classic Zod 3** raw shapes (the SDK's API; consistent with
+  the domain packages — only `@tessera/api` uses `zod/v4`). **Results** carry text JSON + typed
+  `structuredContent`; **no `outputSchema`** (avoids output re-validation; services are the truth).
+  **Errors surfaced cleanly** via a local masked envelope (`{error:{code,message,details?}}`, INTERNAL
+  masked) matching REST's policy.
+- **`explain`** = compile then project to per-fragment `whyIncluded` + provenance + the stage trace
+  (FR-32/44), without fragment bodies. Pure `buildExplanation` (unit-tested).
+- **Transport:** `startMcpStdio(services)` (stdio — what agent clients launch). Real adapter wiring +
+  the launchable process are **F-015**; `buildMcpServer` is a pure factory.
+
+**Scope honesty:** multi-client auth + quotas (MCP **gateway**) = F-026 (R2); the bootable stdio
+process + config-driven adapters = F-015. Effect **E-003** *realized* (MCP half) — both surfaces now
+wrap the same services; the error-envelope shape is shared policy.
+
+**Evidence/verification (fresh, all green):** state (31 features, 13 effect-links) · typecheck (18/18)
+· lint (10/10) · format:check (all matched) · **test = prior 162 + mcp 2** (`buildExplanation`
+projection) = **164 passing** · **test:e2e = api 14 + mcp 7 = 21** (mcp: a real SDK `Client` over a
+linked `InMemoryTransport` — `tools/list` lists the five; search/compile/effects/capture/explain happy
+paths; `get_effects` unknown → clean `NOT_FOUND` isError; invalid input rejected) · build (10/10).
+
+**Decisions (delegated to Claude, recorded ADR-0017):** type-only `ApiServices` import (twin surface
+without runtime coupling); classic Zod 3 tool schemas; no `outputSchema`; stdio transport; prove with
+an in-memory real-client e2e.
+
+**Lesson:** [[mcp-twin-surface-type-only-and-inmemory-e2e]] — a second surface over shared services
+should import the services contract **type-only** (compile-time guarantee, zero runtime cost) and be
+proven with the SDK's own `Client` over `InMemoryTransport`.
+
+**Next step:** **F-013** — Plugin SDK + plugin-host (discovery, config schema, lifecycle, isolation;
+unblocked by F-006), or **F-015** (deployment profile/config loader) which makes both surfaces
+bootable. R0 surfaces done; engine now reachable over REST + MCP.
+
+---
+
 ## 2026-06-29 — F-011 DONE: REST API /v1 (@tessera/api)
 **What changed** (the engine gets its first interface — ARCHITECTURE §11; FR-37, NFR-1/6/11)
 - New **`apps/api`** (`@tessera/api`): **Fastify v5** with the **plugin + encapsulation** model.

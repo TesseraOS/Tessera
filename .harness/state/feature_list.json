@@ -282,14 +282,16 @@
       "package": "@tessera/config",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-003"],
       "acceptance": [
         "Validated config schema selects adapters/providers/budgets by profile",
         "Local profile wires SQLite+sqlite-vec+filesystem+Transformers.js with zero external deps",
         "Secrets via SecretsProvider port (env/file locally)"
       ],
-      "verification": ["typecheck", "lint", "test"]
+      "verification": ["typecheck", "lint", "test"],
+      "effects": ["E-014"],
+      "notes": "Done 2026-06-29: @tessera/config — composition root. configSchema (classic Zod 3) + loadConfig(env,overrides) with TESSERA_* overrides (merged per section, validated, fail-fast). SecretsProvider port + env(prefixed process.env)/file(JSON map) adapters; require fails fast without echoing the value. createLocalRuntime(config) wires SQLite+sqlite-vec+filesystem+in-process queue+Transformers.js (zero external deps) → composes ApiServices (memory/graph/hybrid-search/compiler) + Runtime{stores,embeddings,keyword,readiness,close}; embedding dimension flows provider→vector store (ADR-0006); non-local profiles throw (F-023). Compiler corpus seam = blob-backed FragmentSource (createBlobFragmentSource/putFragment, JSON {kind,text,metadata}). ApiServices imported TYPE-ONLY (no api<->config cycle); runnable process bin kept outside both (follow-up). 13 tests incl. an integration test booting the real Local profile (:memory: + fake embeddings) exercising memory/graph/search/compile; real transformers env-guarded. ADR-0018, effect E-014. Budgets validated/exposed (applied at request layer); Postgres/cloud profile=F-023."
     },
     {
       "id": "F-016",

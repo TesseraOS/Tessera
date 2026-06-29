@@ -5,6 +5,53 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-29 — F-015 DONE: Deployment profile & config loader (@tessera/config)
+**What changed** (the composition root — makes the engine bootable; ARCHITECTURE §16/§132; FR-50/53)
+- New **`@tessera/config`**: a validated config + the **Local** profile that wires the real local
+  stack into the `ApiServices` the REST (F-011) and MCP (F-012) surfaces consume.
+- **Config schema + loader** (`schema.ts`/`load.ts`, classic Zod 3): `TesseraConfig` (profile, env,
+  logLevel, storage paths, embeddings{provider/model/dimension/ollamaUrl}, budgets, secrets) with
+  defaults; `loadConfig(env, overrides)` applies **`TESSERA_*`** env overrides (merged per section,
+  explicit overrides win) and validates — throws a typed `ValidationError` at startup (fail fast).
+- **SecretsProvider port** (`secrets/`): `{ get, require }` with **env** (prefixed `process.env`) and
+  **file** (JSON map) adapters; `require` fails fast without echoing the value. KMS/vault = cloud.
+- **`createLocalRuntime(config)`** wires SQLite + sqlite-vec + filesystem + in-process queue +
+  Transformers.js (zero external deps), composes memory/graph/hybrid-search/compiler → `ApiServices`,
+  and returns a `Runtime` (stores, embeddings, keyword retriever for indexing, readiness probe,
+  `close()`). The **embedding dimension flows from the provider into the vector store** (ADR-0006).
+  Non-`local` profiles throw until F-023.
+- **Compiler corpus seam** = a **blob-backed `FragmentSource`** (`createBlobFragmentSource`/
+  `putFragment`): a `ref` → a blob holding JSON `{kind,text,metadata?}`. Ingestion's persistent
+  DocumentSink writes these (downstream).
+- **No `api↔config` cycle:** `ApiServices` is imported **type-only** (api never imports config; the
+  runnable process bin that wires `config → startServer`/`startMcpStdio` lives outside both — a
+  thin follow-up). New effect **E-014**. ADR-0018.
+
+**Scope honesty:** the runnable REST/MCP process bin = small follow-up (kept out to stay acyclic);
+Postgres+pgvector `self-hosted`/`cloud` profile = F-023; budgets are validated/exposed but applied
+at the request layer; the blob FragmentSource convention is provisional until ingestion persistence.
+
+**Evidence/verification (fresh, all green):** state (31 features, **14 effect-links**) · typecheck
+(19/19) · lint (11/11) · format:check (all matched) · **test = prior 164 + config 13** = **177
+passing** (schema defaults/overrides/validation, env+file secrets, and an **integration test that
+boots the real Local profile** over `:memory:` SQLite+sqlite-vec + a temp blob dir with the **fake**
+provider and exercises memory/graph/search/compile + readiness) · test:e2e = api 14 + mcp 7 = 21 ·
+build (11/11). Real Transformers.js wiring covered by an env-guarded test (`TESSERA_TEST_TRANSFORMERS=1`).
+
+**Decisions (delegated to Claude, recorded ADR-0018):** config is the composition root (type-only
+ApiServices → no cycle); embedding dimension drives the vector store; FragmentSource over the blob
+store; prove real wiring offline with the fake provider.
+
+**Lesson:** [[composition-root-type-only-and-fake-provider]] — a composition root references the
+surface contract **type-only** (no cycle) and proves real wiring by swapping only the slow/external
+leaf (embeddings → fake, stores → in-memory/temp).
+
+**Next step:** the **runnable process bin** (a tiny entry: `createLocalRuntime(loadConfig())` →
+`startServer`/`startMcpStdio`), or **F-013** (Plugin SDK + plugin-host), **F-016** (observability),
+or **F-028/F-029** (UI foundation / CI). R0 engine is now bootable over REST + MCP.
+
+---
+
 ## 2026-06-29 — F-012 DONE: MCP server (@tessera/mcp)
 **What changed** (the second surface — "one engine, two surfaces"; FR-35)
 - New **`apps/mcp`** (`@tessera/mcp`): `@modelcontextprotocol/sdk@1.29` `McpServer`.

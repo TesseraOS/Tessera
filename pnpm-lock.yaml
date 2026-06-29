@@ -102,6 +102,36 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/config:
+    dependencies:
+      '@tessera/ai':
+        specifier: workspace:*
+        version: link:../ai
+      '@tessera/api':
+        specifier: workspace:*
+        version: link:../../apps/api
+      '@tessera/context-compiler':
+        specifier: workspace:*
+        version: link:../context-compiler
+      '@tessera/core':
+        specifier: workspace:*
+        version: link:../core
+      '@tessera/knowledge-graph':
+        specifier: workspace:*
+        version: link:../knowledge-graph
+      '@tessera/memory':
+        specifier: workspace:*
+        version: link:../memory
+      '@tessera/retrieval':
+        specifier: workspace:*
+        version: link:../retrieval
+      '@tessera/storage':
+        specifier: workspace:*
+        version: link:../storage
+      zod:
+        specifier: ^3.25.67
+        version: 3.25.76
+
   packages/context-compiler:
     dependencies:
       '@tessera/ai':

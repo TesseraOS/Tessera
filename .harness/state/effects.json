@@ -180,6 +180,22 @@
       "rationale": "The ContextPackage shape (sections/provenance/whyIncluded), the CompilationTrace, and the CompileRequest are the contract REST/MCP `compile_context` returns and the web Package Inspector renders (concretely advances E-003); changing them ripples to API/MCP/web. The compiler consumes the retrieval + graph contracts. CQS (PRD §9) is the regression guard that compilation beats naive top-k. FragmentSource is the corpus seam ingestion fills.",
       "confidence": 1.0,
       "origin": "manual"
+    },
+    {
+      "id": "E-014",
+      "from": { "kind": "contract", "ref": "@tessera/config config schema (TesseraConfig) + Local profile composition (createLocalRuntime) + SecretsProvider port" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/config Local profile wiring (profiles/local.ts) — constructs every storage/ai/domain adapter and composes ApiServices" },
+        { "kind": "module", "ref": "@tessera/config blob-backed FragmentSource (fragment-source.ts) — the compiler's corpus seam over the filesystem BlobStore; ingestion's persistent DocumentSink must write the same {kind,text,metadata} convention" },
+        { "kind": "module", "ref": "@tessera/config secrets adapters (env, file) implementing the SecretsProvider port (KMS/vault for cloud)" },
+        { "kind": "package", "ref": "consumers: the runnable REST/MCP process bins that boot from a Runtime; type-only on @tessera/api ApiServices (E-003)" },
+        { "kind": "package", "ref": "@tessera/storage Postgres+pgvector adapters (F-023) add a self-hosted/cloud profile branch behind the same Runtime/config — no domain change" },
+        { "kind": "decision", "ref": "docs/adr/0018-config-loader-and-local-profile.md" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "@tessera/config is the composition root: the config schema + Local profile select and wire every adapter (sqlite/sqlite-vec/filesystem/in-process/transformers) into the ApiServices both surfaces consume. Changing the config schema, the profile wiring, the SecretsProvider port, or the blob FragmentSource convention ripples to whoever boots a runtime and to the future Postgres/cloud profile (F-023). The embedding dimension flows from the provider to the vector store (ADR-0006). ApiServices is imported type-only so api never depends on config (no cycle).",
+      "confidence": 1.0,
+      "origin": "manual"
     }
   ]
 }

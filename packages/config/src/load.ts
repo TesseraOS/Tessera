@@ -1,0 +1,100 @@
+import { ValidationError } from '@tessera/core';
+import { configSchema, type ConfigInput, type TesseraConfig } from './schema.js';
+
+/** A read-only view of environment variables. */
+export type Env = Record<string, string | undefined>;
+
+function num(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : value === '' ? undefined : Number.NaN;
+}
+
+/** Drop `undefined` values so a section only carries the keys actually provided. */
+function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) out[key] = value;
+  }
+  return out as Partial<T>;
+}
+
+function section<T extends Record<string, unknown>>(obj: T): Partial<T> | undefined {
+  const cleaned = clean(obj);
+  return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+}
+
+/**
+ * Build a partial {@link ConfigInput} from `TESSERA_*` environment variables. Only present variables
+ * are set, so schema defaults still apply. Values are validated by {@link loadConfig} (a bad number
+ * becomes `NaN` so the schema rejects it rather than silently defaulting).
+ */
+export function configFromEnv(env: Env = process.env): ConfigInput {
+  const input: Record<string, unknown> = clean({
+    profile: env.TESSERA_PROFILE,
+    env: env.TESSERA_ENV,
+    logLevel: env.TESSERA_LOG_LEVEL,
+  });
+
+  const storage = section({
+    sqlitePath: env.TESSERA_SQLITE_PATH,
+    vectorPath: env.TESSERA_VECTOR_PATH,
+    blobRoot: env.TESSERA_BLOB_ROOT,
+  });
+  const embeddings = section({
+    provider: env.TESSERA_EMBEDDINGS_PROVIDER,
+    model: env.TESSERA_EMBEDDINGS_MODEL,
+    dimension: num(env.TESSERA_EMBEDDINGS_DIMENSION),
+    ollamaUrl: env.TESSERA_OLLAMA_URL,
+  });
+  const budgets = section({
+    defaultContextTokens: num(env.TESSERA_CONTEXT_BUDGET),
+    retrievalLimit: num(env.TESSERA_RETRIEVAL_LIMIT),
+  });
+  const secrets = section({
+    provider: env.TESSERA_SECRETS_PROVIDER,
+    file: env.TESSERA_SECRETS_FILE,
+    envPrefix: env.TESSERA_SECRET_PREFIX,
+  });
+
+  if (storage !== undefined) input.storage = storage;
+  if (embeddings !== undefined) input.embeddings = embeddings;
+  if (budgets !== undefined) input.budgets = budgets;
+  if (secrets !== undefined) input.secrets = secrets;
+  return input as ConfigInput;
+}
+
+/** Shallow-per-section merge; `over` wins over `base`. */
+function mergeConfig(base: ConfigInput, over: ConfigInput): ConfigInput {
+  return {
+    ...base,
+    ...over,
+    ...((base.storage ?? over.storage) ? { storage: { ...base.storage, ...over.storage } } : {}),
+    ...((base.embeddings ?? over.embeddings)
+      ? { embeddings: { ...base.embeddings, ...over.embeddings } }
+      : {}),
+    ...((base.budgets ?? over.budgets) ? { budgets: { ...base.budgets, ...over.budgets } } : {}),
+    ...((base.secrets ?? over.secrets) ? { secrets: { ...base.secrets, ...over.secrets } } : {}),
+  };
+}
+
+/** Identity helper for authoring typed config inline. */
+export function defineConfig(config: ConfigInput): ConfigInput {
+  return config;
+}
+
+/**
+ * Load and validate configuration: `TESSERA_*` env overrides merged with explicit `overrides`
+ * (which win), validated against {@link configSchema}. Throws a typed {@link ValidationError} on
+ * invalid input — fail fast at startup rather than mis-wire adapters.
+ */
+export function loadConfig(env: Env = process.env, overrides: ConfigInput = {}): TesseraConfig {
+  const merged = mergeConfig(configFromEnv(env), overrides);
+  const result = configSchema.safeParse(merged);
+  if (!result.success) {
+    throw new ValidationError('invalid configuration', {
+      details: { issues: result.error.issues },
+    });
+  }
+  return result.data;
+}

@@ -33,6 +33,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0015](0015-ingestion-connector-contracts-and-git-cli.md) | Ingestion connector/processor contracts & Git via the `git` CLI | Accepted |
 | [0016](0016-rest-api-fastify-zod-bridge.md) | REST API — Fastify + fastify-type-provider-zod (Zod-v4 bridge), injected services, e2e gate | Accepted |
 | [0017](0017-mcp-server-surface.md) | MCP server surface — same services as REST, stdio transport, results without outputSchema | Accepted |
+| [0018](0018-config-loader-and-local-profile.md) | Config loader & Local profile — composition root, secrets port, blob-backed corpus | Accepted |
 
 ## Conventions
 

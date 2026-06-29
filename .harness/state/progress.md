@@ -5,6 +5,41 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-29 — F-032 DONE: Runnable server entrypoints (@tessera/server)
+**What changed** (the payoff — the engine is now bootable end-to-end; ADR-0018 deferred this thin bin)
+- New **`apps/server`** (`@tessera/server`): boots the Local profile and serves both surfaces.
+  Depends on `config` + `api` + `mcp`; **nothing depends on it** → the `api↔config` cycle (avoided by
+  the type-only `ApiServices` import) is never reintroduced.
+- `createServerRuntime` = `loadConfig`(env + overrides) → `createLocalRuntime` (shared by both bins).
+- **`startApiServer`** builds the F-011 server over `runtime.services`, `listen`s (`HOST`/`PORT`,
+  default `127.0.0.1:3000`), returns a handle whose `close()` stops the server then the runtime.
+- **`startMcpServer`** = `startMcpStdio(runtime.services)`; the connected-server type is derived via
+  `Awaited<ReturnType<typeof startMcpStdio>>` so there's **no direct MCP-SDK dependency**.
+- Executable bins `src/bin/{api,mcp}.ts` (`#!/usr/bin/env node`; `package.json#bin` = `tessera-api` /
+  `tessera-mcp`) with `SIGINT`/`SIGTERM` graceful shutdown. The MCP bin logs to **stderr only**
+  (stdout is the protocol). Shebang preserved through the tsc build.
+
+**Scope note:** added as a tracked R0 feature (F-032) — the runnable bin explicitly deferred from
+F-011/F-015. Realizes the "runnable REST/MCP process bins" consumer already recorded on effect E-014
+(no effects change). No new ADR (covered by ADR-0018).
+
+**Evidence/verification (fresh, all green):** state (**32 features**, 14 effect-links) · typecheck
+(22/22) · lint (12/12) · format:check (all matched) · **test = prior 177 + server 2** = **179
+passing** — the REST test **boots the real Local profile on an ephemeral port and answers
+`/health`,`/ready`,`/v1/openapi.json` over actual HTTP** (offline, fake embeddings); the MCP test
+covers the runtime→server composition · test:e2e = api 14 + mcp 7 = 21 · build (12/12). Bin shebang
+verified in `dist/bin/api.js`.
+
+**Decisions (delegated to Claude):** track the deferred bin as F-032; keep it in a separate app to
+stay acyclic; derive the connected-server type through `@tessera/mcp` (no phantom SDK dep); smoke-test
+the REST bin with a real socket on port 0.
+
+**Next step:** R0 hardening — **F-016** (observability: OTel + Pino + metrics), **F-029** (CI/CD
+running the gates), or the R0 UI (**F-028** foundation → **F-014** dashboard). The R0 engine is
+bootable over REST + MCP from a config-driven Local profile.
+
+---
+
 ## 2026-06-29 — F-015 DONE: Deployment profile & config loader (@tessera/config)
 **What changed** (the composition root — makes the engine bootable; ARCHITECTURE §16/§132; FR-50/53)
 - New **`@tessera/config`**: a validated config + the **Local** profile that wires the real local

@@ -376,6 +376,25 @@
       ],
       "verification": ["state"],
       "notes": "Done 2026-06-28. Harness tooling (ADR-0013); executable hooks deferred; ECC = standing reference for coding harness."
+    },
+    {
+      "id": "F-032",
+      "title": "Runnable server entrypoints (REST + MCP) wiring the Local profile",
+      "requirements": ["FR-37", "FR-35", "FR-50"],
+      "service": "api",
+      "package": "@tessera/server",
+      "release": "R0",
+      "priority": "should",
+      "status": "done",
+      "blockedBy": ["F-011", "F-012", "F-015"],
+      "acceptance": [
+        "A REST entrypoint boots the Local profile (createLocalRuntime) and serves the /v1 API; graceful shutdown closes the runtime",
+        "An MCP entrypoint boots the Local profile and serves the tools over stdio",
+        "Lives outside @tessera/api and @tessera/config so the dependency graph stays acyclic"
+      ],
+      "verification": ["typecheck", "lint", "test"],
+      "effects": ["E-014"],
+      "notes": "Done 2026-06-29: apps/server (@tessera/server) — the runnable bin deferred from F-011/F-015 (ADR-0018). createServerRuntime = loadConfig(env+overrides) -> createLocalRuntime; startApiServer builds the F-011 server over runtime.services + listen (HOST/PORT, default 127.0.0.1:3000) + graceful close; startMcpServer = startMcpStdio (connected-server type derived via Awaited<ReturnType<...>> so no direct SDK dep). Executable bins src/bin/{api,mcp}.ts (#!/usr/bin/env node, package.json#bin tessera-api/tessera-mcp) with SIGINT/SIGTERM shutdown; MCP bin logs to stderr only. Depends on config+api+mcp; nothing depends on it -> acyclic. 2 tests: REST boots the real Local profile on an ephemeral port and answers /health,/ready,/v1/openapi.json over HTTP (offline, fake embeddings); MCP composition. Realizes the runnable-bins consumer on effect E-014. The engine is now bootable end-to-end."
     }
   ]
 }

@@ -1,0 +1,34 @@
+{
+  "name": "@tessera/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "tessera-api": "./dist/bin/api.js",
+    "tessera-mcp": "./dist/bin/mcp.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "start": "node dist/bin/api.js",
+    "start:mcp": "node dist/bin/mcp.js"
+  },
+  "dependencies": {
+    "@tessera/api": "workspace:*",
+    "@tessera/config": "workspace:*",
+    "@tessera/mcp": "workspace:*"
+  }
+}

@@ -93,6 +93,18 @@ importers:
         specifier: ^3.25.67
         version: 3.25.76
 
+  apps/server:
+    dependencies:
+      '@tessera/api':
+        specifier: workspace:*
+        version: link:../api
+      '@tessera/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@tessera/mcp':
+        specifier: workspace:*
+        version: link:../mcp
+
   packages/ai:
     dependencies:
       '@huggingface/transformers':

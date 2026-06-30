@@ -9,6 +9,12 @@ export default tseslint.config(
   {
     ignores: ['**/dist/**', '**/node_modules/**', '**/.turbo/**', 'logs/**', '**/*.d.ts'],
   },
+  {
+    // Disambiguate the TSConfig root in this monorepo (typescript-eslint#10841).
+    languageOptions: {
+      parserOptions: { tsconfigRootDir: import.meta.dirname },
+    },
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

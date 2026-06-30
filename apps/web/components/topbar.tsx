@@ -11,7 +11,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
   const setOpen = useCommandMenu((state) => state.setOpen);
 
   return (
-    <header className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30 flex h-14 items-center gap-2 border-b px-4 backdrop-blur">
+    <header className="bg-background/80 supports-[backdrop-filter]:bg-background/65 sticky top-0 z-30 flex h-16 items-center gap-3 border-b px-4 backdrop-blur lg:px-6">
       <Button
         variant="ghost"
         size="icon"
@@ -26,11 +26,11 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open command palette"
-        className="text-muted-foreground bg-muted/50 hover:bg-muted ring-offset-background focus-visible:ring-ring inline-flex h-9 w-full max-w-xs items-center gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:max-w-sm"
+        className="group text-muted-foreground bg-muted/60 hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex h-9 w-full max-w-md items-center gap-2 rounded-lg border border-transparent px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
       >
         <Search className="size-4" />
         <span>Search…</span>
-        <kbd className="bg-background ml-auto hidden rounded border px-1.5 font-mono text-[10px] sm:inline">
+        <kbd className="bg-background text-muted-foreground ml-auto hidden items-center rounded border px-1.5 py-0.5 font-mono text-[10px] sm:inline-flex">
           ⌘K
         </kbd>
       </button>

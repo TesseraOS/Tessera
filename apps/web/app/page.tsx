@@ -16,24 +16,29 @@ const stats = [
 
 export default function OverviewPage() {
   return (
-    <div className="space-y-8">
-      <header className="space-y-1">
+    <div className="mx-auto max-w-6xl space-y-8">
+      <header className="space-y-1.5">
         <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
         <p className="text-muted-foreground text-sm">
           The control panel for your Context &amp; Memory OS. Press{' '}
-          <kbd className="bg-muted rounded px-1.5 py-0.5 font-mono text-xs">⌘K</kbd> to search.
+          <kbd className="bg-muted text-muted-foreground rounded border px-1.5 py-0.5 font-mono text-[11px]">
+            ⌘K
+          </kbd>{' '}
+          to search.
         </p>
       </header>
 
       <section aria-label="Key metrics" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map(({ label, value, hint, icon: Icon }) => (
-          <Card key={label}>
+          <Card key={label} className="gap-3">
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
               <CardTitle className="text-muted-foreground text-sm font-medium">{label}</CardTitle>
-              <Icon className="text-muted-foreground size-4" aria-hidden="true" />
+              <span className="bg-primary/10 text-primary grid size-8 shrink-0 place-items-center rounded-lg">
+                <Icon className="size-4" aria-hidden="true" />
+              </span>
             </CardHeader>
             <CardContent className="space-y-1">
-              <div className="text-2xl font-semibold tabular-nums">{value}</div>
+              <div className="text-3xl font-semibold tracking-tight tabular-nums">{value}</div>
               <p className="text-muted-foreground text-xs">{hint}</p>
             </CardContent>
           </Card>

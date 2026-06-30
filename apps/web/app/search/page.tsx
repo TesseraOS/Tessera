@@ -4,8 +4,8 @@ export const metadata = { title: 'Search' };
 
 export default function SearchPage() {
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
+    <div className="mx-auto max-w-5xl space-y-6">
+      <header className="space-y-1.5">
         <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
         <p className="text-muted-foreground text-sm">
           Global search across code, memory, and the knowledge graph — every result shows its

@@ -12,3 +12,7 @@ next-env.d.ts
 
 # Turbo
 /.turbo
+
+# Local env (keep .env.example tracked)
+.env
+.env*.local

@@ -5,6 +5,34 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-30 — Fixes + UI design overhaul (apps/web) — enterprise-grade pass
+Refinement of the R0 UI (no feature-status change) addressing reviewer feedback + DX gaps.
+- **Lint:** set `tsconfigRootDir: import.meta.dirname` in the web + root flat ESLint configs —
+  fixes the IDE "multiple candidate TSConfigRootDirs" parser error (typescript-eslint#10841).
+- **DX:** added `@tessera/server` `dev`/`dev:mcp` scripts (`tsx watch src/bin/*`) so
+  `pnpm --filter @tessera/server dev` works (first run downloads the embedding model — local-first;
+  same as `start`). Added [`apps/web/.env.example`](../../apps/web/.env.example)
+  (`NEXT_PUBLIC_API_BASE_URL`) + gitignored local env files.
+- **UI overhaul** (the dashboard looked generic/"washed-out"): refined the token palette (cool
+  neutrals + a restrained violet accent, off-white canvas, white cards, deeper cool-slate dark),
+  adopted the **Geist** typeface (bundled — offline-safe), polished the sidebar (gradient brand
+  mark, "Platform" section, profile footer), refined the topbar, and gave KPI cards icon chips +
+  stronger hierarchy. **Removed the content fade-in** — it flashed washed-out on first paint and
+  was the root cause of the "worst UI" report (and of axe contrast failures: axe saw the
+  mid-animation blended color).
+- **a11y:** fixed two axe contrast violations the new palette/fade exposed — the sidebar section
+  label (dropped the `/70` opacity) and the primary button (deepened the violet so white text
+  clears 4.5:1).
+
+**Evidence (all green, workspace-wide):** typecheck (27) · lint (15) · format · test (27) · build
+(15) · **e2e (15) incl. axe WCAG A/AA = 0 violations on home/search/inspector (light + dark)**.
+**Verified visually** by screenshotting the running prod build in light + dark.
+
+**Lesson:** [[frontend-quality-bar]] — gates green ≠ good UI; render + screenshot before declaring
+UI done. [[e2e-against-prod-build]] — and avoid decorative opacity page-fades (FOUC + a11y flake).
+
+---
+
 ## 2026-06-30 — F-014 DONE: Dashboard — global search + Context Package inspector (R0 UI arc complete)
 **What changed** (the dashboard now drives the real engine — FR-41/FR-44/FR-49, NFR-9; ADR-0022)
 - **Data layer (ADR-0022 — production-real, no mock data in the app):** `apps/web/lib/api` —

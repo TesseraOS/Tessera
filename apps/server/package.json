@@ -23,6 +23,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
+    "dev": "tsx watch src/bin/api.ts",
+    "dev:mcp": "tsx watch src/bin/mcp.ts",
     "start": "node dist/bin/api.js",
     "start:mcp": "node dist/bin/mcp.js"
   },
@@ -31,5 +33,8 @@
     "@tessera/config": "workspace:*",
     "@tessera/mcp": "workspace:*",
     "@tessera/observability": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.4"
   }
 }

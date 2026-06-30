@@ -2,18 +2,14 @@
 
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { usePathname } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { CommandPalette } from '@/components/command-palette';
 import { SidebarContent } from '@/components/sidebar';
 import { Topbar } from '@/components/topbar';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
-import { fadeInUp } from '@/lib/motion';
 
 /** The application shell: sidebar + topbar + content, with a mobile drawer and ⌘K palette. */
 export function AppShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const pathname = usePathname();
 
   return (
     <div className="flex min-h-screen">
@@ -39,9 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Sheet>
 
         <main id="main" className="flex-1 p-6 lg:p-8">
-          <motion.div key={pathname} variants={fadeInUp} initial="hidden" animate="visible">
-            {children}
-          </motion.div>
+          {children}
         </main>
       </div>
 

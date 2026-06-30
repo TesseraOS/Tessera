@@ -6,7 +6,7 @@ test.describe('Dashboard shell', () => {
     await page.goto('/');
 
     await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Overview' })).toBeVisible();
   });
 
   test('opens the command palette with the keyboard', async ({ page }) => {

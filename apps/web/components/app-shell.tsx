@@ -1,45 +1,29 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { AppHeader } from '@/components/app-header';
+import { AppSidebar } from '@/components/app-sidebar';
 import { CommandPalette } from '@/components/command-palette';
-import { SidebarContent } from '@/components/sidebar';
-import { Topbar } from '@/components/topbar';
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 
-/** The application shell: sidebar + topbar + content, with a mobile drawer and ⌘K palette. */
+/** The application shell: shadcn Sidebar (collapsible) + inset header/content + ⌘K palette. */
 export function AppShell({ children }: { children: ReactNode }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-
   return (
-    <div className="flex min-h-screen">
+    <SidebarProvider>
       <a
         href="#main"
-        className="focus:bg-background sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:not-sr-only focus:rounded-md focus:px-3 focus:py-2 focus:shadow"
+        className="bg-background focus:ring-ring sr-only z-50 rounded-md px-3 py-2 shadow focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:ring-2"
       >
         Skip to content
       </a>
-
-      <aside className="bg-sidebar border-sidebar-border hidden w-64 shrink-0 border-r md:block">
-        <SidebarContent />
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar onOpenMobileNav={() => setMobileOpen(true)} />
-
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetContent side="left" className="bg-sidebar w-64 p-0">
-            <SheetTitle className="sr-only">Navigation</SheetTitle>
-            <SidebarContent onNavigate={() => setMobileOpen(false)} />
-          </SheetContent>
-        </Sheet>
-
-        <main id="main" className="flex-1 p-6 lg:p-8">
+      <AppSidebar />
+      <SidebarInset>
+        <AppHeader />
+        <main id="main" className="flex flex-1 flex-col gap-4 p-4 md:p-6">
           {children}
         </main>
-      </div>
-
+      </SidebarInset>
       <CommandPalette />
-    </div>
+    </SidebarProvider>
   );
 }

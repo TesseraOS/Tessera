@@ -266,7 +266,7 @@
       "package": "@tessera/web",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-011", "F-028"],
       "acceptance": [
         "Global search across code/memory/graph with provenance",
@@ -274,7 +274,8 @@
         "UX baseline: ⌘K, themes, skeleton/empty/error states, toasts, virtualized lists; WCAG AA"
       ],
       "verification": ["typecheck", "lint", "test", "e2e"],
-      "effects": ["E-003"]
+      "effects": ["E-003"],
+      "notes": "Done 2026-06-30: the dashboard now consumes the real engine (ADR-0022, production-real — no mock data in the app). Data layer: apps/web/lib/api — apiFetch (base URL via NEXT_PUBLIC_API_BASE_URL, default http://localhost:3000/v1; parses the {error} envelope → TesseraApiError) + typed methods mirroring the /v1 Zod schemas + TanStack Query hooks (useSearch/useCompile); QueryClientProvider wired in providers. The interim client is a drop-in seam the F-022 @tessera/sdk replaces. SEARCH surface (FR-41): debounced query, ranked results, each showing provenance — the contributing signals (semantic/keyword/graph/symbolic) with per-signal rank/score/weight on hover; full loading/empty/error states. INSPECTOR surface (FR-44, flagship): task+budget form → POST /v1/compile → renders the ContextPackage — package scores (budget adherence/provenance coverage/redundancy via accessible progress bars), sections→fragments (kind, tokens, score, per-fragment 'why included', provenance signals + expandedFrom), and the full CompilationTrace (per-stage input→output + drops with reasons). Provenance-first throughout (DESIGN-SYSTEM §7). Added the Inspector nav item; replaced the /search stub. Verification (all green, workspace-wide): typecheck (27 tasks) · lint (15) · format · test (web 13 component/unit — client envelope parsing, search+inspector RTL; workspace 27) · build (next build, 9 routes incl. /inspector; workspace 15) · e2e (web 5 Playwright incl. @axe-core WCAG A/AA on home/search/inspector = 0 violations; workspace 15). e2e now serves the production build (next build && next start) to remove dev-compiler flakiness. Effect E-003 advanced (REST consumer realized in web). ADR-0022. R0 UI arc COMPLETE."
     },
     {
       "id": "F-015",

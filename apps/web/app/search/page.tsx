@@ -1,12 +1,18 @@
-import { ComingSoon } from '@/components/coming-soon';
+import { SearchView } from '@/components/search/search-view';
 
 export const metadata = { title: 'Search' };
 
 export default function SearchPage() {
   return (
-    <ComingSoon
-      title="Search"
-      description="Global search across code, memory, and the knowledge graph — with provenance — lands in F-014."
-    />
+    <div className="space-y-6">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
+        <p className="text-muted-foreground text-sm">
+          Global search across code, memory, and the knowledge graph — every result shows its
+          provenance.
+        </p>
+      </header>
+      <SearchView />
+    </div>
   );
 }

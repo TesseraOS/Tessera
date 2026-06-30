@@ -5,6 +5,51 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-30 — F-014 DONE: Dashboard — global search + Context Package inspector (R0 UI arc complete)
+**What changed** (the dashboard now drives the real engine — FR-41/FR-44/FR-49, NFR-9; ADR-0022)
+- **Data layer (ADR-0022 — production-real, no mock data in the app):** `apps/web/lib/api` —
+  `apiFetch` (base URL via `NEXT_PUBLIC_API_BASE_URL`, default `http://localhost:3000/v1`; parses
+  the `{ error: { code, message } }` envelope → `TesseraApiError`) + typed methods mirroring the
+  `/v1` Zod schemas + **TanStack Query** hooks (`useSearch`/`useCompile`); `QueryClientProvider`
+  wired in `app/providers.tsx`. It is a **drop-in seam** the F-022 `@tessera/sdk` replaces.
+- **Search (FR-41):** debounced query → `POST /v1/search`; ranked results, each showing
+  **provenance** — the contributing signals (semantic/keyword/graph/symbolic) with per-signal
+  rank/score/weight on hover. Loading/empty/error states.
+- **Context Package Inspector (FR-44, flagship):** task+budget form → `POST /v1/compile` →
+  renders the `ContextPackage`: package **scores** (budget adherence / provenance coverage /
+  redundancy as accessible progress bars), **sections → fragments** (kind, tokens, score,
+  per-fragment **"why included"**, provenance signals + `expandedFrom`), and the full
+  **CompilationTrace** (per-stage input→output + drops with reasons). Provenance-first throughout.
+- Added the **Inspector** nav item; replaced the `/search` stub.
+
+**Decision (recorded ADR-0022):** the lead required a production system with **no dummy data**.
+ADR-0009 mandates data via the generated SDK, but `@tessera/sdk` is F-022 (R1). Rather than
+reorder the roadmap or ship fixtures, F-014 uses a **real, typed, centralized `/v1` client**
+(`lib/api`) behind TanStack Query — production-real, "no scattered fetch", and a localized swap
+for the SDK at F-022. Tests stub at the network/client boundary (test infra, not app data).
+
+**Evidence/verification (all green, workspace-wide):** state (33 features, 16 effect-links) ·
+typecheck (27) · lint (15) · format · test (web **13** — `lib/api` envelope parsing + search +
+inspector via Vitest/RTL; workspace 27) · build (`next build`, **9 routes** incl. `/inspector`;
+workspace 15) · **e2e (web 5 Playwright incl. `@axe-core` WCAG A/AA on home/search/inspector = 0
+violations; workspace 15)**. e2e now serves the **production build** (`next build && next start`)
+instead of the dev server — removes Turbopack cold-compile flakiness on this slow filesystem.
+
+**Lesson:** [[e2e-against-prod-build]] — drive UI e2e against `next start` (prebuilt static pages),
+not `next dev`; the dev compiler's mid-test cold-compile is the flake source under parallel load.
+Centralize the data path behind one typed client + React Query so swapping the hand-client for the
+generated SDK (F-022) is a localized change.
+
+**Milestone:** the **R0 UI arc is complete** (F-033 harness → F-028 foundation → F-014 dashboard).
+With the full R0 backend already done, **all of R0 is now done** except F-022's SDK swap is an R1
+follow-up that supersedes `lib/api`.
+
+**Next step:** R1 — e.g. **F-022** (generated SDK, supersedes `lib/api`), **F-017/F-018/F-019/
+F-020** (GitHub connector + auto-memory, temporal retriever, compiler compression/caching),
+**F-023** (Postgres + pgvector). Pick per release order.
+
+---
+
 ## 2026-06-30 — F-028 DONE: UI foundation (Next.js dashboard shell, tokens/theming, shadcn, ⌘K)
 **What changed** (the dashboard foundation — FR-49, NFR-9; ADR-0009; built on the F-033 harness)
 - **`apps/web` (`@tessera/web`) stood up**: Next.js 16 (App Router, React Server Components) +

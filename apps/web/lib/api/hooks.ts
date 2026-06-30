@@ -1,0 +1,23 @@
+'use client';
+
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { api } from './client';
+import type { CompileBody } from './types';
+
+/** Debounced global search (FR-41). The caller debounces `query`; the hook runs when non-empty. */
+export function useSearch(query: string, limit?: number) {
+  const trimmed = query.trim();
+  return useQuery({
+    queryKey: ['search', trimmed, limit ?? null],
+    queryFn: () => api.search(limit === undefined ? { query: trimmed } : { query: trimmed, limit }),
+    enabled: trimmed.length > 0,
+    staleTime: 30_000,
+  });
+}
+
+/** Compile a Context Package (FR-44) — a mutation (explicit submit, not auto-run). */
+export function useCompile() {
+  return useMutation({
+    mutationFn: (body: CompileBody) => api.compile(body),
+  });
+}

@@ -1,4 +1,12 @@
-import { BookText, Boxes, LayoutDashboard, Network, Search, Settings } from 'lucide-react';
+import {
+  BookText,
+  Boxes,
+  FileSearch,
+  LayoutDashboard,
+  Network,
+  Search,
+  Settings,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface NavItem {
@@ -11,6 +19,7 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { title: 'Overview', href: '/', icon: LayoutDashboard },
   { title: 'Search', href: '/search', icon: Search },
+  { title: 'Inspector', href: '/inspector', icon: FileSearch },
   { title: 'Knowledge graph', href: '/graph', icon: Network },
   { title: 'Memory', href: '/memory', icon: BookText },
   { title: 'Sources', href: '/sources', icon: Boxes },

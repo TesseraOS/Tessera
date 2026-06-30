@@ -247,14 +247,16 @@
       "package": "@tessera/plugin-host",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-006"],
       "acceptance": [
         "Stable contracts for Connector/Processor/AIProvider/StorageBackend/RetrievalStrategy",
         "Host: discovery + config validation + lifecycle + failure isolation",
         "First-party connectors/embeddings use the same contracts as third parties"
       ],
-      "verification": ["typecheck", "lint", "test"]
+      "verification": ["typecheck", "lint", "test"],
+      "effects": ["E-016"],
+      "notes": "Done 2026-06-29: @tessera/plugin-host — a uniform Plugin SDK ENVELOPE over the existing extension-point ports (does not re-define them) + a host. SDK: PluginKind (connector/processor/ai-provider/storage-backend/retrieval-strategy); Plugin<TConfig,TCapability> = manifest (id/kind/name/version + Zod configSchema) + setup(config,ctx)->PluginInstance whose capability IS the existing port; lifecycle hooks; PluginContext. createPluginHost: register(unique ids)/load(validate config->setup)/start/startAll/stop/stopAll/dispose/capability<T>/list({kind}). Failure isolation (FR-58): invalid config + setup/lifecycle errors -> failed (never throws out / never stops others); only unknown id throws. Heterogeneous plugins type-erased behind one localized cast (no any). First-party dogfooding: filesystemConnectorPlugin + fake/transformers embeddings plugins wrap the existing factories on the same contract; live in plugin-host (one-way dep on ingestion/ai; no cycle; domain packages untouched). 10 tests (7 host + 3 first-party integration). ADR-0020, effect E-016. SEAMS: error (not process/sandbox) isolation; a split plugin-sdk/plugin-host + wiring F-015 via the host are follow-ups."
     },
     {
       "id": "F-014",

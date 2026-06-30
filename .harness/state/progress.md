@@ -5,6 +5,50 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-29 — F-013 DONE: Plugin SDK + plugin-host (@tessera/plugin-host)
+**What changed** (the extensibility layer — ARCHITECTURE §12; FR-40/58)
+- New **`@tessera/plugin-host`**: a **uniform envelope** over Tessera's existing extension-point ports
+  (it does NOT re-define them) + a host with discovery / config validation / lifecycle / failure
+  isolation.
+- **SDK** (`domain.ts`): `PluginKind` (connector/processor/ai-provider/storage-backend/
+  retrieval-strategy); `Plugin<TConfig, TCapability>` = `manifest` (id/kind/name/version + **Zod
+  `configSchema`**) + `setup(config, ctx) → PluginInstance` whose **`capability` is the existing port**
+  (Connector, Embeddings, Retriever, …); `PluginInstance` (capability + optional start/stop/dispose);
+  `PluginContext` (optional structural logger); `PluginInfo`/`PluginStatus`.
+- **Host** (`createPluginHost`): `register` (unique ids) · `load` (validate config → `setup`) ·
+  `start`/`startAll`/`stop`/`stopAll`/`dispose` · `capability<T>` · `list({kind})`. **Failure
+  isolation (FR-58):** invalid config + setup/lifecycle errors → `failed` (with message), **never
+  throws out of the host** or stops other plugins; only an *unknown id* throws. Heterogeneous plugins
+  stored type-erased behind one localized cast (no `any`).
+- **First-party plugins (dogfooding):** `filesystemConnectorPlugin` (wraps the ingestion filesystem
+  connector) + `fakeEmbeddingsPlugin`/`transformersEmbeddingsPlugin` (wrap the AI embeddings) — same
+  contract a third party uses. They live in plugin-host so it depends on ingestion/ai **one-way**
+  (no cycle; domain packages untouched).
+
+**Scope honesty:** error isolation, **not** process/sandbox isolation (R0). A split `plugin-sdk`/
+`plugin-host` (so domain packages export their own plugins) + wiring F-015 via the host are follow-ups.
+New effect **E-016**; the PluginKinds stay aligned with the underlying ports (E-007/8/9/12). ADR-0020.
+
+**Evidence/verification (fresh, all green):** state (32 features, **16 effect-links**) · typecheck
+(26/26) · lint (14/14) · format:check (all matched) · **test = prior 190 + plugin-host 10** = **200
+passing** (host: config validation, duplicate/unknown id, setup + start failure isolation,
+load→start→stop→dispose lifecycle, `startAll` isolation, list filter; integration: first-party
+filesystem connector + fake embeddings load through the host and their capabilities work) ·
+test:e2e = api 14 + mcp 7 = 21 · build (14/14).
+
+**Decisions (delegated to Claude, recorded ADR-0020):** wrap existing ports (don't re-define);
+first-party wrappers in the host (no cycle); failure isolation over throwing.
+
+**Lesson:** [[plugin-sdk-envelope-over-ports]] — a plugin SDK over code that already has ports is a
+uniform envelope (capability = the existing port); dogfood first-party wrappers in the host to avoid
+cycles; isolate failures so a bad plugin can't crash startup.
+
+**Next step:** R0 remaining is the **UI arc** — **F-028** (UI foundation: Next.js, design tokens,
+shadcn, app shell, command palette) → **F-014** (dashboard: global search + Package Inspector). The
+entire R0 **backend** (engine + surfaces + config + observability + plugins + CI) is now complete.
+
+---
+
 ## 2026-06-29 — F-029 DONE: CI/CD pipeline running the verification gates (.github/workflows)
 **What changed** (verification at scale — ADR-0010; NFR-15)
 - The `verify` job already mirrored all **seven gates** (state → typecheck → lint → format → test →

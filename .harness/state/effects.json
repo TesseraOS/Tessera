@@ -210,6 +210,20 @@
       "rationale": "Observability is cross-cutting but kept additive: libraries use the OTel API only (no-op until startTelemetry registers the SDK at the process), instrumentServices wraps ApiServices without touching domain packages, and redaction keeps secrets/content out of logs (NFR-7). Changing the instruments, the span/log contract, or the redaction policy affects the server wiring and any future surface that boots a runtime. The compiler's durationMs and buildServer's loggerInstance are additive — the surfaces' response schemas ignore the new optional trace field. Deepening to per-adapter spans / a fed queue-depth gauge must preserve these seams.",
       "confidence": 0.9,
       "origin": "manual"
+    },
+    {
+      "id": "E-016",
+      "from": { "kind": "contract", "ref": "@tessera/plugin-host Plugin SDK (Plugin/PluginManifest/PluginInstance/PluginKind) + PluginHost" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/plugin-host first-party plugins (filesystem connector, fake/transformers embeddings) — wrap the existing factories on the same contract" },
+        { "kind": "contract", "ref": "the existing extension-point ports the PluginKinds map to: Connector/Processor (@tessera/ingestion E-009), Embeddings (@tessera/ai E-008), storage ports (@tessera/storage E-007), Retriever (@tessera/retrieval E-012)" },
+        { "kind": "test", "ref": "@tessera/plugin-host host.test (config validation/lifecycle/isolation) + first-party-plugins integration test" },
+        { "kind": "package", "ref": "third-party plugins import the SDK; the deployment profile (F-015) may later wire adapters via the host" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "The Plugin SDK is a uniform ENVELOPE over the existing ports — it does not re-define them. Changing the Plugin/Manifest/Instance contract or the host (load/lifecycle/isolation semantics) breaks every first-party + third-party plugin and the conformance tests; the PluginKinds must stay aligned with the underlying ports (E-007/8/9/12). First-party wrappers live in plugin-host so it depends on ingestion/ai one-way (no cycle); domain packages are untouched. Failure isolation (config-invalid + setup/lifecycle errors → failed, never crash the host) is the FR-58 invariant.",
+      "confidence": 1.0,
+      "origin": "manual"
     }
   ]
 }

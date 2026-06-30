@@ -35,6 +35,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0017](0017-mcp-server-surface.md) | MCP server surface — same services as REST, stdio transport, results without outputSchema | Accepted |
 | [0018](0018-config-loader-and-local-profile.md) | Config loader & Local profile — composition root, secrets port, blob-backed corpus | Accepted |
 | [0019](0019-observability-baseline.md) | Observability baseline — OTel API in libraries, SDK at the process, additive instrumentation | Accepted |
+| [0020](0020-plugin-sdk-and-host.md) | Plugin SDK & host — uniform envelope over existing ports, isolated lifecycle, first-party dogfooding | Accepted |
 
 ## Conventions
 

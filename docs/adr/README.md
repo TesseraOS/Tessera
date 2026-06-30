@@ -36,6 +36,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0018](0018-config-loader-and-local-profile.md) | Config loader & Local profile — composition root, secrets port, blob-backed corpus | Accepted |
 | [0019](0019-observability-baseline.md) | Observability baseline — OTel API in libraries, SDK at the process, additive instrumentation | Accepted |
 | [0020](0020-plugin-sdk-and-host.md) | Plugin SDK & host — uniform envelope over existing ports, isolated lifecycle, first-party dogfooding | Accepted |
+| [0021](0021-frontend-harness-and-design-skill-adaptation.md) | Frontend execution harness, design-skill adaptation & Astryx evaluation (keep shadcn) | Accepted |
 
 ## Conventions
 

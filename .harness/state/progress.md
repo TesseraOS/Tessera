@@ -5,6 +5,56 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-30 — F-033 DONE: Frontend execution harness (UI skills + web gates + design manifest)
+**What changed** (the frontend harness, built BEFORE the UI arc so it is actually used — ADR-0021)
+- **Decision — keep shadcn/ui; defer Astryx.** Evaluated **Meta Astryx** (open-sourced
+  2026-06-27, MIT; React on **StyleX**; CLI + **MCP server + JSON manifest** "agent-ready"; 150+
+  components; coexists with Tailwind via precompiled CSS + cascade layers). **Deferred to an R1
+  watch-item** and **ratified [ADR-0009](../../docs/adr/0009-frontend-stack-and-design-system.md)**:
+  a 3-day-old public dep fails the production-grade bar, would replace shadcn and orphan the
+  tweakcn token workflow + the curated reference set, and trades owned-in-repo control for an
+  external dependency.
+- **Stole Astryx's best idea** — a **machine-readable design manifest**:
+  [`docs/design/design-system.manifest.json`](../../docs/design/design-system.manifest.json)
+  projects `DESIGN-SYSTEM.md` (token roles, themes, component inventory, motion params, UX
+  baseline, a11y + perf budgets) for the harness. DESIGN-SYSTEM.md stays the source of truth;
+  token *values* land at F-028 (tweakcn export).
+- **Four frontend skills** in `.harness/skills/` (+ `.claude/` shims), **subordinate to
+  DESIGN-SYSTEM.md**, attributed in [`NOTICE.md`](../../NOTICE.md) (ECC pattern):
+  **`build-ui`** (UI orchestrator: server-first, tokens, compose, UX baseline, provenance, a11y),
+  **`shadcn`** (from the official shadcn skill, MIT), **`frontend-craft`** (from Anthropic
+  `frontend-design` Apache-2.0 + Leonxlnx `taste-skill` MIT — explicitly capped by "restraint over
+  richness"), **`motion`** (from Emil Kowalski's skill, MIT).
+- **Web verification gates** registered in
+  [`gates.json`](../../.harness/verification/gates.json): **`a11y`** (axe / WCAG 2.1 AA) and
+  **`web-perf`** (bundle/perf budget), **status `planned`** — activate with F-028 (mirroring how
+  `e2e` activated with F-011). Refreshed [`apps/web/AGENTS.md`](../../apps/web/AGENTS.md).
+
+**Auth — confirmed out of scope for R0.** R0 local mode is **auth: none/local** (PRD deployment
+matrix). OIDC + org RBAC + scoped tokens is the hosted direction (NFR-2; `AuthProvider` port in
+ARCHITECTURE), built in **F-025/F-026 @ R2**; the specific library (Better Auth/Auth.js vs
+Keycloak) is an **open ADR @ R2**. F-028/F-014 need **no login** — only a placeholder user/org
+slot in the topbar.
+
+**Evidence/verification:** `node scripts/verify-state.mjs` green (33 features, 16 effect-links,
+wip_limit 1). Docs/harness-only change (no code) — code gates unaffected; format:check excludes
+docs/harness. ADR-0021 added to the index.
+
+**Decisions (delegated to Claude, recorded ADR-0021):** keep shadcn (defer Astryx to R1); adapt
+skills into the harness rather than `npx skills add` (harness stays canonical); add an
+agent-readable manifest; web gates planned until F-028.
+
+**Lesson:** [[frontend-harness-before-ui]] — build the design harness (skills + machine-readable
+manifest + gates) before the first UI feature so the design system is *executable* for agents,
+not just prose; resist swapping a locked, sound foundation for a brand-new framework (production
+bar) but steal its best idea.
+
+**Next step:** **F-028** (UI foundation: Next.js app, tokens/theming, base shadcn, app shell,
+⌘K) — built with [`build-ui`](../../.harness/skills/build-ui/SKILL.md). Then **F-014** (dashboard:
+global search + Context Package inspector).
+
+---
+
 ## 2026-06-29 — F-013 DONE: Plugin SDK + plugin-host (@tessera/plugin-host)
 **What changed** (the extensibility layer — ARCHITECTURE §12; FR-40/58)
 - New **`@tessera/plugin-host`**: a **uniform envelope** over Tessera's existing extension-point ports

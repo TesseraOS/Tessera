@@ -11,6 +11,11 @@
 > Every UI feature (starting F-028 UI foundation, then F-014) must conform. It operationalizes
 > the UI/UX requirements in [`../PRD.md`](../PRD.md) (FR-49, NFR-9) and the references the
 > project lead provided (see [§10](#10-references)).
+>
+> **Machine-readable projection:** [`design-system.manifest.json`](./design-system.manifest.json)
+> — the agent/harness-facing contract (token roles, component inventory, motion, budgets). This
+> document is the source of truth; the manifest is its projection. See
+> [ADR-0021](../adr/0021-frontend-harness-and-design-skill-adaptation.md).
 
 ---
 

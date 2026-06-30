@@ -1,0 +1,119 @@
+{
+  "$comment": "Machine-readable projection of docs/design/DESIGN-SYSTEM.md. DESIGN-SYSTEM.md is the human source of truth; this file is the agent/harness-facing contract. Concrete token VALUES are populated by F-028 via tweakcn export.",
+  "name": "tessera-design-system",
+  "version": "1.0.0-draft",
+  "status": "draft",
+  "source": "docs/design/DESIGN-SYSTEM.md",
+  "authority": ["docs/adr/0009-frontend-stack-and-design-system.md", "docs/adr/0021-frontend-harness-and-design-skill-adaptation.md"],
+  "updated": "2026-06-30",
+  "principles": [
+    "Restraint over richness",
+    "Legibility as luxury",
+    "Functional motion",
+    "Trust through consistency",
+    "Provenance-first",
+    "Performance is a feature"
+  ],
+  "stack": {
+    "framework": "next",
+    "language": "typescript",
+    "styling": "tailwind",
+    "components": "shadcn/ui",
+    "serverState": "@tanstack/react-query",
+    "clientState": "zustand",
+    "forms": "react-hook-form + zod",
+    "motion": "framer-motion",
+    "graph": "react-flow",
+    "editor": "monaco",
+    "charts": "recharts/tremor",
+    "dataAccess": "@tessera/sdk"
+  },
+  "tokens": {
+    "valuesPopulatedBy": "F-028 (tweakcn export)",
+    "rule": "Components reference semantic CSS variables only — never hardcode color/spacing/radius/shadow.",
+    "color": {
+      "roles": [
+        "background/foreground",
+        "card/card-foreground",
+        "popover/popover-foreground",
+        "primary/primary-foreground",
+        "secondary/secondary-foreground",
+        "muted/muted-foreground",
+        "accent/accent-foreground",
+        "destructive/destructive-foreground",
+        "border",
+        "input",
+        "ring",
+        "chart-1..chart-5",
+        "sidebar-*"
+      ],
+      "contrast": "WCAG 2.1 AA — body >= 4.5:1, large >= 3:1"
+    },
+    "radius": { "base": "--radius", "derived": ["sm", "md", "lg", "xl"] },
+    "typography": {
+      "families": { "sans": "one display+body family", "mono": "code/IDs/provenance" },
+      "scale": ["xs", "sm", "base", "lg", "xl", "2xl", "3xl"]
+    },
+    "spacing": { "scale": "tailwind 4px base", "rule": "consistent component padding rhythm" },
+    "elevation": ["sm", "md", "lg"],
+    "zIndexLadder": ["base", "dropdown", "sticky", "overlay", "toast"],
+    "breakpoints": "tailwind defaults"
+  },
+  "themes": ["light", "dark", "system"],
+  "themeMechanism": ".dark class on :root; all roles defined for both; never branch on theme in components",
+  "components": {
+    "forms": ["Field", "Fieldset", "Form", "Input", "Textarea", "Checkbox", "RadioGroup", "Select", "Switch", "Slider"],
+    "overlays": ["Dialog", "Drawer", "Sheet", "Popover", "Tooltip", "ContextMenu", "DropdownMenu", "Command"],
+    "dataDisplay": ["Table", "Card", "Badge", "Progress", "Tabs", "Accordion", "Chart"],
+    "feedback": ["Toast", "Skeleton", "EmptyState", "ErrorState"],
+    "specialized": ["ReactFlowGraph", "MonacoEditor"]
+  },
+  "appShell": {
+    "sidebar": "collapsible, sidebar-* tokens, collapses to a drawer on mobile",
+    "topbar": ["search", "command-palette", "theme-toggle", "user/org (placeholder until R2 auth — F-025)"]
+  },
+  "motion": {
+    "library": "framer-motion",
+    "durationMsRange": [150, 250],
+    "easing": "ease-out for entrances",
+    "interruptible": true,
+    "reducedMotion": "every animation has a prefers-reduced-motion fallback",
+    "principle": "communicate state and causality, never decoration"
+  },
+  "uxBaseline": {
+    "requirement": "FR-49",
+    "checklist": [
+      "loading skeleton / empty / error states on every async surface",
+      "command palette (cmd+K) + keyboard operability",
+      "optimistic updates with rollback",
+      "toasts for async outcomes",
+      "virtualized long lists/tables",
+      "light/dark/system themes",
+      "purposeful motion (prefers-reduced-motion safe)",
+      "drag-and-drop / context menus where they aid the task"
+    ]
+  },
+  "accessibility": {
+    "requirement": "NFR-9",
+    "standard": "WCAG 2.1 AA",
+    "gate": "a11y (axe in e2e)",
+    "checks": ["semantic HTML", "labelled controls", "managed focus", "visible focus rings", "AA contrast", "full keyboard paths"]
+  },
+  "performance": {
+    "gate": "web-perf",
+    "rules": ["code-split heavy views (react-flow, monaco, charts)", "virtualize large tables/lists", "stream/SSR for first paint", "measure bundle with evidence"]
+  },
+  "provenanceSurfaces": {
+    "principle": "any view that shows context shows sources/scores/why-included",
+    "flagship": "Context Package inspector (FR-44): stages, candidates, scores, drops, per-fragment why-included",
+    "others": ["knowledge graph / architecture (react-flow incl. effect-links)", "timelines", "memory/ADR authoring (monaco)"]
+  },
+  "skills": ["build-ui", "shadcn", "frontend-craft", "motion"],
+  "watchlist": {
+    "astryx": {
+      "url": "https://github.com/facebook/astryx",
+      "status": "deferred to R1 (see ADR-0021)",
+      "note": "Meta StyleX design system, agent-ready (MCP/manifest); re-evaluate once matured."
+    }
+  }
+}

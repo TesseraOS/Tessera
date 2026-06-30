@@ -43,3 +43,24 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Frontend design skills
+
+Portions of Tessera's **frontend harness** — the skills
+[`shadcn`](.harness/skills/shadcn/SKILL.md),
+[`frontend-craft`](.harness/skills/frontend-craft/SKILL.md), and
+[`motion`](.harness/skills/motion/SKILL.md) — are **adapted** (ideas/principles, not copied
+verbatim) from the open-source skills below, and are used **subordinate to**
+[`docs/design/DESIGN-SYSTEM.md`](docs/design/DESIGN-SYSTEM.md). See
+[ADR-0021](docs/adr/0021-frontend-harness-and-design-skill-adaptation.md) for the adoption
+decision.
+
+| Adapted into | Source | Author / © | License |
+|---|---|---|---|
+| `shadcn` | [shadcn/ui skill](https://ui.shadcn.com/docs/skills) | shadcn | MIT |
+| `frontend-craft` | [anthropics/skills — `frontend-design`](https://github.com/anthropics/skills) | Anthropic | Apache-2.0 |
+| `frontend-craft` | [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) | © 2026 Leonxlnx | MIT |
+| `motion` | [emilkowalski/skill](https://github.com/emilkowalski/skill) | Emil Kowalski | MIT |
+
+These are adaptations of ideas grounded in our own DESIGN-SYSTEM.md, not redistributions of the
+original files. The upstream license texts (MIT / Apache-2.0) apply to their respective sources.

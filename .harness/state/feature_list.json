@@ -2,7 +2,7 @@
   "$schemaRef": "./schemas/feature_list.schema.json",
   "version": 1,
   "project": "tessera",
-  "updated": "2026-06-29",
+  "updated": "2026-06-30",
   "policy": {
     "wip_limit": 1,
     "ordering": "by release, then id; respect blockedBy"
@@ -399,6 +399,24 @@
       "verification": ["typecheck", "lint", "test"],
       "effects": ["E-014"],
       "notes": "Done 2026-06-29: apps/server (@tessera/server) — the runnable bin deferred from F-011/F-015 (ADR-0018). createServerRuntime = loadConfig(env+overrides) -> createLocalRuntime; startApiServer builds the F-011 server over runtime.services + listen (HOST/PORT, default 127.0.0.1:3000) + graceful close; startMcpServer = startMcpStdio (connected-server type derived via Awaited<ReturnType<...>> so no direct SDK dep). Executable bins src/bin/{api,mcp}.ts (#!/usr/bin/env node, package.json#bin tessera-api/tessera-mcp) with SIGINT/SIGTERM shutdown; MCP bin logs to stderr only. Depends on config+api+mcp; nothing depends on it -> acyclic. 2 tests: REST boots the real Local profile on an ephemeral port and answers /health,/ready,/v1/openapi.json over HTTP (offline, fake embeddings); MCP composition. Realizes the runnable-bins consumer on effect E-014. The engine is now bootable end-to-end."
+    },
+    {
+      "id": "F-033",
+      "title": "Frontend execution harness: UI skills, web verification gates, design manifest (+ design-skill adaptation, Astryx evaluation)",
+      "requirements": ["NFR-8", "NFR-9", "FR-49"],
+      "service": "root",
+      "package": "—",
+      "release": "R0",
+      "priority": "should",
+      "status": "done",
+      "blockedBy": [],
+      "acceptance": [
+        "Frontend skills (build-ui, shadcn, frontend-craft, motion) present in .harness/skills + .claude shims, subordinate to docs/design/DESIGN-SYSTEM.md",
+        "Machine-readable design manifest (docs/design/design-system.manifest.json) projects tokens/components/motion/UX-baseline/budgets for the harness",
+        "Web verification gates (a11y, web-perf) registered as 'planned' (activate with F-028); external skills attributed in NOTICE.md; decision in ADR-0021"
+      ],
+      "verification": ["state"],
+      "notes": "Done 2026-06-30: built the frontend harness BEFORE the UI arc so it is actually used. Evaluated Meta Astryx (open-sourced 2026-06-27, StyleX, agent-ready MCP/manifest) and DEFERRED it to an R1 watch-item — kept shadcn/ui (ratified ADR-0009): a 3-day-old public dep vs the production-grade bar, and it would orphan the tweakcn workflow. Adopted Astryx's best idea instead: a machine-readable design manifest (docs/design/design-system.manifest.json) projecting DESIGN-SYSTEM.md for agents. Adapted 4 external design skills into .harness/skills (+ .claude shims), subordinate to DESIGN-SYSTEM.md, attributed in NOTICE.md: build-ui (orchestrator), shadcn (official shadcn skill, MIT), frontend-craft (Anthropic frontend-design Apache-2.0 + Leonxlnx taste-skill MIT — capped by 'restraint over richness'), motion (Emil Kowalski MIT). Registered web gates a11y + web-perf as 'planned' (activate with F-028, mirroring e2e@F-011). Refreshed apps/web/AGENTS.md; ADR-0021. Auth confirmed out-of-scope for R0 (none/local; OIDC+RBAC = F-025/F-026 @ R2, library = ADR @ R2). Next: F-028 (UI foundation) on this harness."
     }
   ]
 }

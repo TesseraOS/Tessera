@@ -3,6 +3,8 @@ import { sql } from 'drizzle-orm';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import type { RelationalStore } from '../../ports/relational.js';
+import fs from 'node:fs';
+import path from 'node:path';
 
 export interface SqliteStoreOptions {
   /** File path, or ':memory:' for an ephemeral database. */
@@ -21,6 +23,9 @@ export interface SqliteStore extends RelationalStore {
  * Drizzle. A Postgres adapter implements the same lifecycle for cloud.
  */
 export function createSqliteStore(options: SqliteStoreOptions): SqliteStore {
+  if (options.path !== ':memory:') {
+    fs.mkdirSync(path.dirname(options.path), { recursive: true });
+  }
   const sqlite = new Database(options.path);
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('foreign_keys = ON');

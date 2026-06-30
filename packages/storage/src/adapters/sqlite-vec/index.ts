@@ -8,6 +8,8 @@ import type {
   VectorStore,
   VectorStoreCapabilities,
 } from '../../ports/vector.js';
+import fs from 'node:fs';
+import path from 'node:path';
 
 export interface SqliteVecStoreOptions {
   /** File path, or ':memory:' for an ephemeral index. */
@@ -32,8 +34,11 @@ interface MatchRow {
  * implements the same {@link VectorStore} contract for cloud.
  */
 export function createSqliteVecStore(options: SqliteVecStoreOptions): VectorStore {
-  const { path, dimension, metric = 'l2', table = 'vectors' } = options;
-  const sqlite = new Database(path);
+  const { path: dbPath, dimension, metric = 'l2', table = 'vectors' } = options;
+  if (dbPath !== ':memory:') {
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  }
+  const sqlite = new Database(dbPath);
   sqliteVec.load(sqlite);
 
   const metricClause = metric === 'cosine' ? ' distance_metric=cosine' : '';

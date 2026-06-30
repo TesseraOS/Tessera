@@ -5,8 +5,8 @@ test.describe('Dashboard shell', () => {
   test('renders the overview with sidebar navigation', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Overview' })).toBeVisible();
+    await expect(page.getByText('Indexed documents')).toBeVisible();
   });
 
   test('opens the command palette with the keyboard', async ({ page }) => {

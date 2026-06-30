@@ -1,0 +1,20 @@
+# Gitleaks configuration (F-029 / ADR-0010). Secret scanning in CI (NFR-1/NFR-15).
+# Extends the bundled default rules; allowlists places that legitimately contain
+# secret-SHAPED placeholder strings (test fixtures, examples) or secret-pattern
+# definitions (the ingestion redaction detectors) — never real secrets.
+
+title = "Tessera secret scan"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Tests, examples, docs/plans, and the redaction detectors hold secret-shaped placeholders, not real secrets. Production source is still scanned."
+paths = [
+  '''.*\.test\.ts$''',
+  '''(^|/)tests/''',
+  '''(^|/)\.env\.example$''',
+  '''packages/ingestion/src/.*[Rr]edact.*''',
+  '''(^|/)\.harness/''',
+  '''(^|/)docs/''',
+]

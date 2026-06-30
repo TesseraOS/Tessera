@@ -1,7 +1,11 @@
 name: CI
 
 # Runs the harness verification gates on every change (ADR-0010, NFR-15).
-# Steps mirror .harness/verification/gates.json — keep them in lockstep.
+# Steps mirror .harness/verification/gates.json — keep them in lockstep (effect E-005).
+#
+# Activation: this workflow runs once the repo has a GitHub remote (today there is none).
+# Branch protection on `main` should require the `verify`, `security`, and `secret-scan`
+# jobs to pass before merge, so the gates can never be skipped (ADR-0010).
 
 on:
   push:
@@ -68,3 +72,16 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Dependency audit (high+)
         run: pnpm audit --audit-level=high
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the scan covers every commit, not just the tip.
+          fetch-depth: 0
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+          # Free for personal/public repos; GitHub organisations set GITLEAKS_LICENSE.

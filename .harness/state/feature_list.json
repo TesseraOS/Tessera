@@ -351,7 +351,7 @@
       "package": "—",
       "release": "R0",
       "priority": "should",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-001"],
       "acceptance": [
         "Workflow runs verify-state + typecheck/lint/format/test/build (+e2e) on Node 22/pnpm",
@@ -359,7 +359,7 @@
         "Activates when a Git remote exists; branch protection requires green CI"
       ],
       "verification": ["state"],
-      "notes": "CD (build/deploy) per deployment mode added later (R1 image, R2 cloud). See ADR-0010."
+      "notes": "Done 2026-06-29: .github/workflows/ci.yml — verify job mirrors all 7 gates (state→typecheck→lint→format→test→build→e2e) on Node 22.16.0+pnpm 9 (effect E-005); security job = pnpm audit --audit-level=high; NEW secret-scan job = gitleaks-action@v2 over full history with a scoped .gitleaks.toml allowlist (tests/examples/docs/redaction-detectors excluded — production source still scanned; verified the only secret-format strings in the repo are in allowlisted tests/plans). Header documents activation-on-remote + branch protection requiring verify+security+secret-scan. ADR-0010 (no new ADR). CD (build/deploy) = R1 image/R2 cloud."
     },
     { "id": "F-030", "title": "Billing & subscriptions (cloud) behind a Billing port (Dodo Payments)", "requirements": ["FR-61", "NFR-12"], "service": "api", "package": "@tessera/api", "release": "R2", "priority": "should", "status": "backlog", "notes": "Direction per ADR-0011; gated on OQ4 (license/business model)." },
     {

@@ -5,6 +5,35 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-29 — F-029 DONE: CI/CD pipeline running the verification gates (.github/workflows)
+**What changed** (verification at scale — ADR-0010; NFR-15)
+- The `verify` job already mirrored all **seven gates** (state → typecheck → lint → format → test →
+  build → e2e) on **Node 22.16.0 + pnpm 9** (F-001 + F-011). F-029 completes the plan ADR-0010 set:
+- **Secret scanning** — new **`secret-scan`** job running **`gitleaks/gitleaks-action@v2`** over full
+  history (`fetch-depth: 0`), with a scoped **`.gitleaks.toml`** (default rules + allowlist). The
+  allowlist excludes secret-SHAPED placeholders in **tests / examples / docs+plans / the ingestion
+  redaction detectors** — while still scanning **production source** (where a real leaked key matters).
+  Verified the only secret-format strings in the repo live in allowlisted tests/plans, so the scan
+  passes on first run.
+- **Dependency audit** — the existing `security` job (`pnpm audit --audit-level=high`).
+- **Activation + branch protection** — documented in the workflow header: activates on a GitHub remote
+  (none today); branch protection on `main` should require `verify` + `security` + `secret-scan`.
+
+**Scope note:** E-005 (gates.json ⇄ ci.yml ⇄ verification.md) preserved — the seven **gate steps**
+still mirror `gates.json`; `security` + `secret-scan` are *additional* checks (ADR-0010), not gates.
+No new ADR (ADR-0010 already specified gates + dependency audit + secret scanning + branch protection).
+CD (build/publish/deploy) stays out of scope (R1 image / R2 cloud).
+
+**Evidence/verification:** `state` valid (32 features, 15 effect-links) — F-029's gate; `format:check`
+green (prettier governs `ci.yml`; YAML parses). The workflow's live run is on GitHub once a remote
+exists — that is its activation (ADR-0010). No code changed, so the code gates are unaffected.
+
+**Next step:** R0 remaining — **F-013** (Plugin SDK + plugin-host), then the R0 UI arc (**F-028**
+foundation → **F-014** dashboard). The backend R0 (engine + surfaces + config + observability + CI)
+is complete.
+
+---
+
 ## 2026-06-29 — F-016 DONE: Observability baseline (@tessera/observability)
 **What changed** (cross-cutting traces + logs + metrics, kept additive; ARCHITECTURE §obs; NFR-7)
 - New **`@tessera/observability`**: a toolkit where **libraries use the OTel API only** and the SDK is

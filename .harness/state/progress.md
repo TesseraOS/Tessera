@@ -5,6 +5,52 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-30 — F-028 DONE: UI foundation (Next.js dashboard shell, tokens/theming, shadcn, ⌘K)
+**What changed** (the dashboard foundation — FR-49, NFR-9; ADR-0009; built on the F-033 harness)
+- **`apps/web` (`@tessera/web`) stood up**: Next.js 16 (App Router, React Server Components) +
+  React 19 + TypeScript strict + Tailwind v4 + shadcn/ui, wired into the workspace toolchain
+  (turbo typecheck/lint/test/build/e2e). Built with the [`build-ui`](../skills/build-ui/SKILL.md)
+  skill against [`DESIGN-SYSTEM.md`](../../docs/design/DESIGN-SYSTEM.md) + its manifest.
+- **Design tokens + theming**: semantic CSS variables (OKLCH) in `app/globals.css`
+  (`:root` + `.dark`) mapped via Tailwind v4 `@theme`; **light/dark/system** via `next-themes`
+  (system default). Components reference tokens only — never hardcode (E-004).
+- **Base shadcn primitives** (owned in-repo, `components/ui/*`): button, card, input, badge,
+  separator, skeleton, tooltip, dialog, dropdown-menu, sheet, command, sonner.
+- **App shell**: collapsible sidebar (`--sidebar-*`) + sticky topbar (command-palette search,
+  theme toggle, **user/org placeholder — auth is R2/F-025**), responsive mobile drawer (Sheet),
+  skip-link + landmarks. **⌘K command palette** (cmdk) with nav + theme actions, a Zustand store,
+  and a global Ctrl/⌘-K listener.
+- **UX-baseline primitives** (FR-49): `EmptyState`/`ErrorState`, `Skeleton`, sonner toasts;
+  **functional motion** (`lib/motion` + Framer `MotionConfig reducedMotion="user"` + a CSS
+  reduced-motion fallback). Navigable stub pages for the remaining nav routes.
+
+**Scope honesty:** foundation only — **no data layer** (the generated `@tessera/sdk` is F-022/R1;
+F-014 wires real data + the Context Package inspector). Next 16/Tailwind v4 are latest-stable
+within the locked stack (no new stack ADR). `next-env.d.ts` is Next-generated (gitignored); the
+web `typecheck` runs `next typegen` first so the gate is self-sufficient before the build gate.
+
+**Evidence/verification (all green, workspace-wide):** state (33 features, 16 effect-links) ·
+typecheck (27 tasks; web = `next typegen` + `tsc`) · lint (15) · format · test (web **7**
+component tests — Vitest+RTL+jsdom: cn, EmptyState, ThemeToggle, CommandPalette; workspace 27) ·
+build (`next build`, 8 routes prerendered; workspace 15) · **e2e (web 3 Playwright incl.
+`@axe-core` WCAG A/AA = 0 violations; workspace 15)**. The **`a11y` gate is now active**
+(ADR-0021); CI installs the Playwright browser before gate 6 (E-005 lockstep).
+
+**Decisions (delegated to Claude, under ADR-0009/0021):** Next 16 + Tailwind v4 (latest stable);
+shadcn owned-in-repo; Zustand for the ⌘K open-state; axe-in-Playwright as the a11y gate;
+`next typegen` to make web typecheck order-independent.
+
+**Lesson:** [[next-typegen-before-tsc]] — for a Next app under a typecheck-before-build gate
+order, run `next typegen` inside the typecheck script and gitignore `next-env.d.ts`, so the gate
+is self-sufficient on a clean tree. Adding a browser-based e2e means CI must `playwright install`
+before the e2e gate (keep gates.json ↔ ci.yml in lockstep, E-005).
+
+**Next step:** **F-014** (dashboard: global search + **Context Package inspector** + UX baseline)
+— now unblocked (F-028 + F-011 done). It adds the data layer (interim typed client until the
+F-022 SDK) and the provenance-first inspector.
+
+---
+
 ## 2026-06-30 — F-033 DONE: Frontend execution harness (UI skills + web gates + design manifest)
 **What changed** (the frontend harness, built BEFORE the UI arc so it is actually used — ADR-0021)
 - **Decision — keep shadcn/ui; defer Astryx.** Evaluated **Meta Astryx** (open-sourced

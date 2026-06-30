@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-06-29",
+  "updated": "2026-06-30",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -52,13 +52,15 @@
       "id": "E-004",
       "from": { "kind": "contract", "ref": "docs/design/DESIGN-SYSTEM.md design tokens (semantic CSS variables / theme)" },
       "to": [
-        { "kind": "module", "ref": "@tessera/web: all components + app shell" },
-        { "kind": "module", "ref": "@tessera/web: charts (Recharts/Tremor using the --chart-* palette)" },
-        { "kind": "artifact", "ref": "light/dark theme definitions" }
+        { "kind": "file", "ref": "apps/web/app/globals.css — token definitions (:root + .dark) + @theme mapping + reduced-motion (F-028)" },
+        { "kind": "module", "ref": "@tessera/web components/ui/* + app shell (sidebar/topbar/command palette) — consume tokens only, never hardcode" },
+        { "kind": "module", "ref": "@tessera/web app/providers.tsx — next-themes light/dark/system + Framer MotionConfig" },
+        { "kind": "module", "ref": "@tessera/web charts (Recharts/Tremor using the --chart-* palette, F-014+)" },
+        { "kind": "artifact", "ref": "docs/design/design-system.manifest.json — machine-readable token/component contract (human source is DESIGN-SYSTEM.md; ADR-0021)" }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "Components consume design tokens only; changing a token or the theme contract affects every component, the chart palette, and both themes, so token changes must be reviewed across the UI.",
-      "confidence": 0.9,
+      "rationale": "Realized by F-028: components consume design tokens only (semantic CSS vars mapped via Tailwind v4 @theme), so changing a token or the theme contract affects every component, the app shell, the chart palette, and both light/dark themes — token changes must be reviewed across the UI. The manifest is the agent-facing projection of the same contract and must stay in sync.",
+      "confidence": 0.95,
       "origin": "manual"
     },
     {

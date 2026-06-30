@@ -335,7 +335,7 @@
       "package": "@tessera/web",
       "release": "R0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "blockedBy": ["F-001"],
       "acceptance": [
         "Design tokens (semantic CSS vars) + light/dark/system theming per docs/design/DESIGN-SYSTEM.md",
@@ -343,7 +343,8 @@
         "Skeleton/empty/error primitives, toasts, motion primitives; WCAG AA baseline"
       ],
       "verification": ["typecheck", "lint", "test", "e2e"],
-      "effects": ["E-004"]
+      "effects": ["E-004"],
+      "notes": "Done 2026-06-30: apps/web (@tessera/web) — Next.js 16 (App Router, RSC) + React 19 + TS strict + Tailwind v4 + shadcn/ui, built with the F-033 frontend harness (build-ui skill). Design tokens = semantic CSS vars (OKLCH) in app/globals.css (:root + .dark) mapped via Tailwind v4 @theme; light/dark/system via next-themes (system default). Base shadcn primitives owned in-repo (button/card/input/badge/separator/skeleton/tooltip/dialog/dropdown-menu/sheet/command/sonner). App shell = collapsible sidebar + sticky topbar (command-palette search, theme toggle, user/org placeholder — auth is R2) + responsive mobile drawer (Sheet) + skip-link/landmarks. ⌘K command palette (cmdk) with nav+theme actions, Zustand store, global Ctrl/⌘-K listener. UX-baseline primitives: EmptyState/ErrorState, Skeleton, sonner toasts; functional motion (lib/motion + Framer MotionConfig reducedMotion=user + CSS reduced-motion). Data layer deferred (no @tessera/sdk until F-022) — foundation only; navigable stub pages for search/graph/memory/sources/settings. Verification (all green): typecheck (27 tasks; web typecheck = next typegen + tsc), lint (15), format, test (web 7 component tests via Vitest+RTL+jsdom; workspace 27 tasks), build (next build, 8 routes prerendered; workspace 15), e2e (web 3 Playwright incl. @axe-core WCAG A/AA = 0 violations; workspace 15). a11y gate activated (ADR-0021); CI installs the Playwright browser before e2e. Effect E-004 realized. Next: F-014 (dashboard: global search + Context Package inspector) now unblocked."
     },
     {
       "id": "F-029",

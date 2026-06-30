@@ -57,15 +57,15 @@
       "status": "active",
       "command": "pnpm -w test:e2e",
       "requiredFor": ["user-facing"],
-      "description": "End-to-end tests over the MCP/REST surface and dashboard (active since F-011; @tessera/api runs HTTP-surface e2e via app.inject)."
+      "description": "End-to-end tests across surfaces. api/mcp run HTTP-/SDK-surface e2e (app.inject / in-memory transport; active since F-011). Web (since F-028) runs Playwright against its own dev server, including @axe-core WCAG A/AA assertions. CI installs the Playwright browser before this gate."
     },
     {
       "id": "a11y",
       "order": 7,
-      "status": "planned",
-      "command": "pnpm -w test:a11y",
+      "status": "active",
+      "command": "pnpm --filter @tessera/web test:e2e",
       "requiredFor": ["web"],
-      "description": "Accessibility checks (axe / WCAG 2.1 AA) for apps/web. Planned (ADR-0021); activates with F-028 when the dashboard lands — runs within the Playwright e2e flow. Exact command finalized at F-028."
+      "description": "Accessibility (axe / WCAG 2.1 AA) for apps/web — active since F-028 (ADR-0021). Asserted inside the web Playwright e2e (gate 6); CI's e2e step covers it, so no separate CI step is needed. Listed here for traceability."
     },
     {
       "id": "web-perf",

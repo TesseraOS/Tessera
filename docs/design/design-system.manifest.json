@@ -29,7 +29,7 @@
     "dataAccess": "@tessera/sdk"
   },
   "tokens": {
-    "valuesPopulatedBy": "F-028 (tweakcn export)",
+    "valuesImplementedIn": "apps/web/app/globals.css (F-028) — a neutral OKLCH base; refine per brand via tweakcn without touching components.",
     "rule": "Components reference semantic CSS variables only — never hardcode color/spacing/radius/shadow.",
     "color": {
       "roles": [

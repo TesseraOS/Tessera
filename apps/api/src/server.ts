@@ -3,6 +3,7 @@ import Fastify, {
   type FastifyInstance,
   type FastifyServerOptions,
 } from 'fastify';
+import cors from '@fastify/cors';
 import {
   serializerCompiler,
   validatorCompiler,
@@ -58,6 +59,32 @@ export function buildServer(services: ApiServices, options: BuildServerOptions =
   app.setSerializerCompiler(serializerCompiler);
 
   registerErrorHandling(app);
+
+  app.register(cors, {
+    origin: (origin, cb) => {
+      if (!origin) {
+        cb(null, true);
+        return;
+      }
+      try {
+        const url = new URL(origin);
+        if (
+          url.hostname === 'localhost' ||
+          url.hostname === '127.0.0.1' ||
+          url.hostname.endsWith('.localhost')
+        ) {
+          cb(null, true);
+          return;
+        }
+      } catch {
+        // ignore invalid urls
+      }
+      cb(new Error('Not allowed by CORS'), false);
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  });
 
   // Must precede route registration so the OpenAPI collector sees every route.
   registerOpenapi(app);

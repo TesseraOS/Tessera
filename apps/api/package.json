@@ -22,6 +22,7 @@
     "test:e2e": "vitest run --config vitest.e2e.config.ts"
   },
   "dependencies": {
+    "@fastify/cors": "^11.2.0",
     "@fastify/swagger": "^9.5.1",
     "@tessera/context-compiler": "workspace:*",
     "@tessera/core": "workspace:*",

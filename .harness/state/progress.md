@@ -3,6 +3,26 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-06-30 — Solidify Dashboard: Remove Fake Data, Align Exact Theme Colors & Refine Layout
+Refined the dashboard implementation to remove all hardcoded mock data, align colors, customize scrollbars, and optimize layout margins/paddings.
+- **Removed Fake Data & Structured Zeroth UI:** Updated all dashboard components to accept dynamic data props. Designed a flexible-height, accessible zeroth UI blueprint for Recent Compilations showing empty metadata and file paths (`0 tokens`, `0.00s compile time`) with a clear call-to-action button, satisfying WCAG AA color contrast rules.
+- **Tessera Geometric Logo:** Replaced logo paths in `logo.tsx` with a highly polished mathematical, floating isometric cube made of 3 rhombuses representing mosaic pieces (tesserae) separated by precise parallel gaps.
+- **Exact Color Palette Alignment:** Updated card and popover variables in `globals.css` to `#171717` (exactly matching the sidebar background color) and removed borders on all dashboard components.
+- **Layout and Padding Fixes:**
+  - Removed `h-full` from `SidebarInset` in `app-shell.tsx` to prevent vertical overflow clipping and show rounded corners at the bottom.
+  - Flattened stats card markup to direct flex children under Card with a uniform `gap-4` spacing.
+  - Reduced collapsed sidebar outer padding to `p-1` and width to `50px`, hiding the search button when collapsed so the Quick Create button centers perfectly.
+- **Evidence:** Typecheck, build, and E2E Playwright tests (5/5 tests, including WCAG A/AA Axe checks) pass green.
+
+---
+
+## 2026-06-30 — Align Dashboard with efferd's Dashboard 3 (F-014/F-028 alignment complete)
+Completed the alignment of the frontend UI/UX and design system with efferd's Dashboard 3 using the fetched registry sources.
+- **Implemented Shell Components:** Created `custom-sidebar-trigger.tsx`, `latest-change.tsx`, `nav-user.tsx` (wrapped in focusable button), `app-shared.tsx` (dynamic navigation), `app-sidebar.tsx` (collapsible grouped navigation + latest change), `app-header.tsx` (trigger + breadcrumbs + theme toggle + search + user menu), and updated `app-shell.tsx`.
+- **Implemented Dashboard 3 Visuals:** Created `dashboard.tsx` rendering `DashboardStats` (Tessera empty/onboarding states), `ConversationVolumeChart` (Area), `ChannelBreakdownChart` (Pie), `CsatResponsesChart` (Stacked Bar), `FirstReplyTimeChart` (Line), `TeamOnDuty` (List + Dropdown), `RecentConversations` (Table), and `SupportActivity` (operational signals).
+- **a11y & TS Fixes:** Fixed `exactOptionalPropertyTypes` compatibility across components. Fixed all Playwright/Axe a11y violations: wrapped Avatar trigger in `<Button>` (`aria-allowed-attr`), added `aria-label` to latest-change close button (`button-name`), wrapped sidebar items in `<SidebarMenu>` (`listitem`), and added focus/label to Table scroll container (`scrollable-region-focusable`). Fixed Playwright E2E link strict-mode violation.
+- **Evidence:** Typecheck, lint, format, unit tests (13/13 web, 27/27 total), and E2E Playwright tests (5/5 including Axe-core WCAG A/AA verification) all pass green.
+
 ---
 
 ## 2026-06-30 — Dashboard redesign: efferd Dashboard 3 as the binding design reference

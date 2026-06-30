@@ -38,6 +38,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0020](0020-plugin-sdk-and-host.md) | Plugin SDK & host — uniform envelope over existing ports, isolated lifecycle, first-party dogfooding | Accepted |
 | [0021](0021-frontend-harness-and-design-skill-adaptation.md) | Frontend execution harness, design-skill adaptation & Astryx evaluation (keep shadcn) | Accepted |
 | [0022](0022-interim-dashboard-data-client.md) | Interim dashboard data client until the generated SDK (F-022) | Accepted |
+| [0023](0023-adopt-efferd-dashboard-3-design-reference.md) | Adopt efferd Dashboard 3 as the binding dashboard design reference (dark-first, shadcn) | Accepted |
 
 ## Conventions
 

@@ -19,6 +19,28 @@
 
 ---
 
+## 0. Reference implementation — efferd Dashboard 3 (BINDING)
+
+> **This is the authority for the dashboard's look & feel** ([ADR-0023](../adr/0023-adopt-efferd-dashboard-3-design-reference.md)).
+> We follow **efferd Dashboard 3** + its app-shell (shadcn blocks: `@efferd/dashboard-3`,
+> `@efferd/app-shell-3`). Deviating requires a superseding ADR. The principles in §1+ still apply;
+> where they conflict, this section wins.
+
+- **Theme:** **dark-first** (default `dark`), near-black canvas; light theme is a clean inverse.
+- **Surfaces:** flat **bordered** cards — `shadow-none`, never drop-shadowed.
+- **Color:** **monochrome** UI + a monochrome `--chart-*` ramp. The **only** functional accent is
+  **emerald-up / red-down**, via the [`Delta`](../../apps/web/components/delta.tsx) chip. No brand
+  hue, no gradients-for-decoration.
+- **Icons:** **Lucide** only. **Logo:** the Tessera **mosaic** mark
+  ([`logo.tsx`](../../apps/web/components/logo.tsx)).
+- **Shell:** shadcn **Sidebar** (inset, collapsible, **grouped** nav with section labels) +
+  breadcrumb header + ⌘K search + theme/user — see
+  [`app-shell.tsx`](../../apps/web/components/app-shell.tsx).
+- **Data viz:** shadcn **Charts** (Recharts); KPI **stat cards** (label / value / `Delta` /
+  footnote); **tables** + divided lists.
+- **Honesty:** **no fabricated data** — surfaces show first-class **empty/zero states** until real
+  data exists (then charts/Delta trends fill in).
+
 ## 1. Design principles
 
 Distilled from the reference set (unabyss, ui-skills, coss/ui, efferd) into rules we hold:

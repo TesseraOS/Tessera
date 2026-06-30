@@ -5,6 +5,38 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ---
 
+## 2026-06-30 — Dashboard redesign: efferd Dashboard 3 as the binding design reference
+Second, deeper UI overhaul after the reviewer rejected the prior look as generic. Researched the
+references (efferd/coss-ui/shadcnblocks are all **shadcn blocks**; Aceternity = marketing pages;
+Astryx = immature) and **viewed efferd via the Claude-in-Chrome extension** to pick a dashboard.
+- **Decision (ADR-0023):** stay on shadcn/ui (ratifies ADR-0009/0021); **bind efferd Dashboard 3**
+  as the concrete reference, extracted from its real registry source (`@efferd/dashboard-3` +
+  `@efferd/app-shell-3`). Locked in [`DESIGN-SYSTEM.md` §0](../../docs/design/DESIGN-SYSTEM.md).
+- **Implemented (3 commits):** (1) added the shadcn primitives via the official CLI — Sidebar,
+  Chart (Recharts), Table, Select, Avatar, Breadcrumb, Collapsible, Kbd (import + fine-tune, as
+  the lead wanted); (2) **dark-first design system** (near-black, flat `shadow-none` cards,
+  monochrome `--chart-*` ramp, emerald-up/red-down `Delta` as the only accent) + **shell rebuilt
+  on the shadcn Sidebar** (inset, grouped nav with section labels, **mosaic logo**, breadcrumb
+  header) + signature components (`Delta`/`Logo`/`StatusIndicator`/formatters); (3) **Overview**
+  rebuilt to efferd's stat-card grid with honest empty/onboarding states (no fabricated data).
+- **Also fixed earlier:** eslint `tsconfigRootDir` (typescript-eslint#10841), `@tessera/server`
+  `dev`/`dev:mcp` scripts (tsx), `apps/web/.env.example`.
+
+**Evidence (all green, every commit):** typecheck (27) · lint (15) · format · test (web 13;
+workspace 27) · build · **e2e (5 incl. axe WCAG A/AA on home/search/inspector)**. Verified
+**visually in dark + light** by screenshot each step (no washout). Commits 8999db9, dfa077d,
+2a81f0b.
+
+**Lesson:** [[frontend-quality-bar]] — follow a concrete, proven reference (a real shadcn block
+like efferd) rather than inventing taste; pull its actual registry source for fidelity; the
+component library was never the problem (we were already on shadcn — efferd IS shadcn).
+
+**Next:** data-rich chart cards (activity area / breakdown donut / recent table) as real metrics
+endpoints land; pull efferd Pro blocks (7/8/9) if desired. (Refinement of F-014/F-028 — no
+feature-status change.)
+
+---
+
 ## 2026-06-30 — Fixes + UI design overhaul (apps/web) — enterprise-grade pass
 Refinement of the R0 UI (no feature-status change) addressing reviewer feedback + DX gaps.
 - **Lint:** set `tsconfigRootDir: import.meta.dirname` in the web + root flat ESLint configs —

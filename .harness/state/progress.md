@@ -3,6 +3,16 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-01 — Align All Route Pages with Dashboard 3 Design System
+Aligned all routes and views (Search, Inspector, Graph, Memory, Settings, Sources) with the flat, borderless, matching-card-background theme.
+- **Global Card Styles:** Removed default borders from the global `Card` component in `ui/card.tsx` to automatically render all cards across the application flat and borderless.
+- **Unified Page Layout & Headers:** Removed duplicate H1 page headers from `search/page.tsx` and `inspector/page.tsx`, and wrapped their views in the same `max-w-4xl w-full space-y-4` layout used by the Dashboard.
+- **Search & Inspector UI Overhaul:** Wrapped the Compile form and Search input inside their own unified `border-none bg-sidebar p-4` cards. Refined inner card lists, margins, code pre elements, and indicators to use compact typography and colors matching the homepage. Replaced Lucide icons with cohesive `IconPlaceholder` references.
+- **ComingSoon & EmptyState Refinement:** Updated `EmptyState` and `ErrorState` components to be borderless, use `bg-card` (#171717), and have compact typography/padding. Refined `ComingSoon` to use `IconPlaceholder` and a subtle animated active construction badge.
+- **Evidence:** Clean typecheck, production build, and all 5 E2E Playwright tests (including WCAG A/AA Axe scans) pass green.
+
+---
+
 ## 2026-06-30 — Solidify Dashboard: Remove Fake Data, Align Exact Theme Colors & Refine Layout
 Refined the dashboard implementation to remove all hardcoded mock data, align colors, customize scrollbars, and optimize layout margins/paddings.
 - **Removed Fake Data & Structured Zeroth UI:** Updated all dashboard components to accept dynamic data props. Designed a flexible-height, accessible zeroth UI blueprint for Recent Compilations showing empty metadata and file paths (`0 tokens`, `0.00s compile time`) with a clear call-to-action button, satisfying WCAG AA color contrast rules.

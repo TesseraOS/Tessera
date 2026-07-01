@@ -1,16 +1,27 @@
-import { Construction } from 'lucide-react';
-import { EmptyState } from '@/components/empty-state';
+import { EmptyState } from "@/components/empty-state";
+import { IconPlaceholder } from "@/components/icon-placeholder";
 
 /** Placeholder surface for routes a later feature fills in (keeps navigation real). */
 export function ComingSoon({ title, description }: { title: string; description?: string }) {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-      <EmptyState
-        icon={Construction}
-        title={`${title} is coming soon`}
-        description={description ?? 'This surface arrives in a later feature.'}
-      />
-    </div>
-  );
+	return (
+		<div className="mx-auto max-w-4xl w-full">
+			<EmptyState
+				title={`${title} is coming soon`}
+				description={description ?? "This surface arrives in a later release."}
+				action={
+					<div className="flex items-center gap-2 mt-2 select-none opacity-40">
+						<IconPlaceholder
+							hugeicons="SourceCodeIcon"
+							lucide="CodeIcon"
+							phosphor="CodeIcon"
+							remixicon="RiCodeLine"
+							tabler="IconCode"
+							className="size-4 animate-pulse"
+						/>
+						<span className="text-[10px] font-mono tracking-widest uppercase">Under Active Construction</span>
+					</div>
+				}
+			/>
+		</div>
+	);
 }

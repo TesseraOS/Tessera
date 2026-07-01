@@ -36,11 +36,11 @@ export function SupportActivity({
 
 	return (
 		<Card className={cn("gap-0 shadow-none dark:ring-0", className)} {...props}>
-			<CardHeader className="border-b">
+			<CardHeader className="p-0 pb-3">
 				<CardTitle>{title}</CardTitle>
 				<CardDescription>{description}</CardDescription>
 			</CardHeader>
-			<CardContent className={cn("px-0", !hasItems && "p-6")}>
+			<CardContent className={cn("p-0 pt-4 px-0", !hasItems && "p-6")}>
 				{hasItems ? (
 					<>
 						<ul className="flex flex-col divide-y divide-border">

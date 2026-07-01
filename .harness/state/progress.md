@@ -5,10 +5,13 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 
 ## 2026-07-01 — Align All Route Pages with Dashboard 3 Design System
 Aligned all routes and views (Search, Inspector, Graph, Memory, Settings, Sources) with the flat, borderless, matching-card-background theme.
-- **Global Card Styles:** Removed default borders from the global `Card` component in `ui/card.tsx` to automatically render all cards across the application flat and borderless.
+- **Global Card Styles:** Removed default borders from the global `Card` component in `ui/card.tsx` to automatically render all cards across the application flat and borderless. Removed `border-b` horizontal dividers from card headers in `dashboard.tsx`, `inspector-view.tsx`, `search-view.tsx`, `recent-conversations.tsx`, `support-activity.tsx`, and `team-on-duty.tsx` to match efferd's flat aesthetic.
 - **Unified Page Layout & Headers:** Removed duplicate H1 page headers from `search/page.tsx` and `inspector/page.tsx`, and wrapped their views in the same `max-w-4xl w-full space-y-4` layout used by the Dashboard.
+- **Header Separator & Buttons UI/UX:** Replaced stretched Radix vertical separator components in `app-header.tsx` with clean CSS separators of exact `h-4 w-px` bounds. Standardized all action buttons in the header to `variant="ghost" size="icon-sm"` to remove cluttered borders.
 - **Search & Inspector UI Overhaul:** Wrapped the Compile form and Search input inside their own unified `border-none bg-sidebar p-4` cards. Refined inner card lists, margins, code pre elements, and indicators to use compact typography and colors matching the homepage. Replaced Lucide icons with cohesive `IconPlaceholder` references.
-- **ComingSoon & EmptyState Refinement:** Updated `EmptyState` and `ErrorState` components to be borderless, use `bg-card` (#171717), and have compact typography/padding. Refined `ComingSoon` to use `IconPlaceholder` and a subtle animated active construction badge.
+- **ComingSoon & EmptyState Refinement:** Updated `EmptyState` and `ErrorState` components to be borderless, use `bg-card` (#171717), and have compact typography/padding. Refined `ComingSoon` to stretch and align itself vertically and horizontally at the exact center of the page.
+- **Button Physics & Micro-Animations:** Embedded `active:translate-y-[1px]` to standard buttons to create clickable physics, and implemented tailwind color-mix variables for hover outlines.
+- **Global Cursor Rules:** Configured global cursor-pointer styles on buttons and interactive roles, and cursor-not-allowed on disabled states.
 - **Evidence:** Clean typecheck, production build, and all 5 E2E Playwright tests (including WCAG A/AA Axe scans) pass green.
 
 ---

@@ -143,6 +143,18 @@
       'calt' 1;
   }
 
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"]:disabled,
+  button[disabled],
+  [role="button"][disabled] {
+    cursor: not-allowed;
+  }
+
   /* Sleek custom scrollbars (efferd-style) */
   ::-webkit-scrollbar {
     width: 5px;

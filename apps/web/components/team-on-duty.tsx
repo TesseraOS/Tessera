@@ -78,11 +78,11 @@ export function TeamOnDuty({
 
 	return (
 		<Card className={cn("shadow-none dark:ring-0", className)} {...props}>
-			<CardHeader className="border-b">
+			<CardHeader className="p-0 pb-3">
 				<CardTitle>{title}</CardTitle>
 				<CardDescription>{description}</CardDescription>
 			</CardHeader>
-			<CardContent className={cn("p-0", !hasMembers && "p-6")}>
+			<CardContent className={cn("p-0 pt-4", !hasMembers && "p-6")}>
 				{hasMembers ? (
 					<ul className="flex flex-col divide-y divide-border">
 						{teammates.map((t) => (

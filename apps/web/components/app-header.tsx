@@ -26,15 +26,12 @@ export function AppHeader() {
 		>
 			<div className="flex items-center gap-3">
 				<CustomSidebarTrigger />
-				<Separator
-					className="mr-2 h-4 data-[orientation=vertical]:self-center"
-					orientation="vertical"
-				/>
+				<div className="mx-1.5 h-4 w-px bg-border shrink-0" />
 				<AppBreadcrumbs page={activeItem ?? null} />
 			</div>
 			<div className="flex items-center gap-3">
 				<Button
-					variant="outline"
+					variant="ghost"
 					size="icon-sm"
 					onClick={() => setOpen(true)}
 					aria-label="Open command palette"
@@ -48,7 +45,7 @@ export function AppHeader() {
 					/>
 				</Button>
 				<ThemeToggle />
-				<Button size="icon-sm" variant="outline" aria-label="Quick Actions">
+				<Button size="icon-sm" variant="ghost" aria-label="Quick Actions">
 					<IconPlaceholder
 						hugeicons="Navigation03Icon"
 						lucide="SendIcon"
@@ -57,7 +54,7 @@ export function AppHeader() {
 						tabler="IconSend"
 					/>
 				</Button>
-				<Button aria-label="Notifications" size="icon-sm" variant="outline">
+				<Button aria-label="Notifications" size="icon-sm" variant="ghost">
 					<IconPlaceholder
 						hugeicons="Notification03Icon"
 						lucide="BellIcon"
@@ -66,10 +63,7 @@ export function AppHeader() {
 						tabler="IconBell"
 					/>
 				</Button>
-				<Separator
-					className="h-4 data-[orientation=vertical]:self-center"
-					orientation="vertical"
-				/>
+				<div className="h-4 w-px bg-border shrink-0 mx-1.5" />
 				<NavUser />
 			</div>
 		</header>

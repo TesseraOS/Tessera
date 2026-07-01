@@ -119,7 +119,7 @@ export function RecentConversations({
 			className={cn("gap-0 border-none bg-sidebar p-4 shadow-none dark:ring-0", className)}
 			{...props}
 		>
-			<CardHeader className="p-0 pb-3 border-b">
+			<CardHeader className="p-0 pb-3">
 				<CardTitle>{title}</CardTitle>
 				<CardDescription>{description}</CardDescription>
 			</CardHeader>

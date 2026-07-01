@@ -24,7 +24,7 @@ export function SearchView() {
 	return (
 		<div className="space-y-4">
 			<Card className="border-none bg-sidebar p-4 shadow-none dark:ring-0">
-				<CardHeader className="p-0 pb-3 border-b">
+				<CardHeader className="p-0 pb-3">
 					<CardTitle>Workspace Search</CardTitle>
 					<CardDescription>
 						Query files, symbols, and memories across your workspace knowledge graph

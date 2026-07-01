@@ -32,7 +32,7 @@ export function InspectorView() {
 	return (
 		<div className="space-y-4">
 			<Card className="border-none bg-sidebar p-4 shadow-none dark:ring-0">
-				<CardHeader className="p-0 pb-3 border-b">
+				<CardHeader className="p-0 pb-3">
 					<CardTitle>Context Package Compiler</CardTitle>
 					<CardDescription>
 						Compile a token-budget-bounded context package from files, graph edges, and memories
@@ -111,7 +111,7 @@ function PackageView({ pkg }: { pkg: ContextPackage }) {
 	return (
 		<div className="space-y-4">
 			<Card className="border-none bg-sidebar p-4 shadow-none dark:ring-0">
-				<CardHeader className="p-0 pb-3 border-b">
+				<CardHeader className="p-0 pb-3">
 					<CardTitle className="text-sm font-semibold">Package scores</CardTitle>
 				</CardHeader>
 				<CardContent className="p-0 pt-4 flex flex-col gap-4">
@@ -133,7 +133,7 @@ function PackageView({ pkg }: { pkg: ContextPackage }) {
 
 			{pkg.sections.map((section, idx) => (
 				<Card className="border-none bg-sidebar p-4 shadow-none dark:ring-0" key={`${section.title}-${idx}`}>
-					<CardHeader className="p-0 pb-3 border-b">
+					<CardHeader className="p-0 pb-3">
 						<CardTitle className="text-sm font-semibold">{section.title}</CardTitle>
 					</CardHeader>
 					<CardContent className="p-0 pt-4 flex flex-col gap-3">
@@ -186,7 +186,7 @@ function PackageView({ pkg }: { pkg: ContextPackage }) {
 			))}
 
 			<Card className="border-none bg-sidebar p-4 shadow-none dark:ring-0">
-				<CardHeader className="p-0 pb-3 border-b">
+				<CardHeader className="p-0 pb-3">
 					<CardTitle className="text-sm font-semibold">Compilation trace</CardTitle>
 				</CardHeader>
 				<CardContent className="p-0 pt-4 flex flex-col gap-3">

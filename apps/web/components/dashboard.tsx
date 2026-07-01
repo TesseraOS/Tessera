@@ -26,7 +26,7 @@ export function Dashboard() {
 
 				{/* Get Started Guide (takes 1 col) */}
 				<Card className="border-none bg-sidebar p-4 gap-4 shadow-none dark:ring-0">
-					<CardHeader className="p-0 pb-3 border-b">
+					<CardHeader className="p-0 pb-3">
 						<CardTitle>Getting Started</CardTitle>
 						<CardDescription>Follow these steps to configure Tessera</CardDescription>
 					</CardHeader>

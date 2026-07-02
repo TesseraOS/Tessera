@@ -1,0 +1,27 @@
+# Tessera self-hosted stack (F-023 / FR-51). Provides Postgres + pgvector for the
+# @tessera/storage Postgres/pgvector adapters.
+#
+#   docker compose up -d postgres
+#   TESSERA_TEST_POSTGRES=1 pnpm --filter @tessera/storage test   # run the guarded conformance
+#
+# Default credentials are for local development only.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: tessera-postgres
+    environment:
+      POSTGRES_USER: tessera
+      POSTGRES_PASSWORD: tessera
+      POSTGRES_DB: tessera
+    ports:
+      - '5432:5432'
+    volumes:
+      - tessera-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tessera -d tessera']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  tessera-postgres-data:

@@ -732,10 +732,26 @@
       "package": "@tessera/storage",
       "release": "R1",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
+      "blockedBy": [
+        "F-003",
+        "F-004"
+      ],
+      "acceptance": [
+        "Postgres RelationalStore adapter (pg + drizzle node-postgres) and a pgvector VectorStore adapter, each implementing the existing storage ports and passing the SHARED conformance suites",
+        "A Docker Compose stack (pgvector/pgvector image) stands up Postgres+pgvector for self-hosted; the adapters are verified against it",
+        "Postgres conformance is env-guarded (skipped without a reachable DB, like the transformers/ollama pattern) so default gates stay green; verified green against the real container; ADR records the choice"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test"
+      ],
       "effects": [
-        "E-001"
-      ]
+        "E-001",
+        "E-007"
+      ],
+      "notes": "Done 2026-07-03 (R1 must; unblocked once Docker Desktop was installed): Postgres + pgvector storage adapters under the EXISTING ports — no port/consumer change (ADR-0026). createPostgresStore (pg + drizzle-orm/node-postgres; Drizzle db handle, migrate/healthcheck/close) mirrors the SQLite RelationalStore. createPgVectorStore implements VectorStore over pgvector via RAW SQL (vector(N) column; <-> L2 / <=> cosine; vectors as $n::vector text literals — NO pgvector npm dep, only pg added; lazy CREATE EXTENSION+table; identifier-validated table name; ON CONFLICT upsert; dimension validation). Both pass the SAME shared conformance suites (port parity with SQLite). docker-compose.yml = pgvector/pgvector:pg16 service (healthcheck+volume) — the self-hosted stack. Conformance is ENV-GUARDED (TESSERA_TEST_POSTGRES=1 + DATABASE_URL, default postgres://tessera:tessera@127.0.0.1:5432/tessera; F-005 pattern) so default gates stay offline-green. VERIFIED green against the live container: `docker compose up -d --wait postgres` → 10 guarded tests pass (pgvector 6 VectorStore + postgres-relational 4 RelationalStore/Drizzle round-trip); all 29 storage tests green with PG enabled. Effects E-001/E-007 realized. Deferred (E-014): a full self-hosted PROFILE also needs Postgres-backed graph/memory stores (current ones are SQLite-specific) so createLocalRuntime still throws for non-local; backup/migrations = F-024. Gates green (default, PG skips): typecheck 28 · lint 16 · format · test 28 · build 16. New dep: pg (+ @types/pg dev); pnpm-lock updated. NOTE: Docker Hub CDN DNS was intermittently flaky — the image pull needed one retry."
     },
     {
       "id": "F-024",

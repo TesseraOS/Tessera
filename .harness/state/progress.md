@@ -3,6 +3,51 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-03 — F-023 DONE (R1 must): Postgres + pgvector adapters + Docker Compose (@tessera/storage)
+**Unblocked:** the R1 `must` was previously deferred (no Docker/Postgres/CI here). The user installed
+Docker Desktop → verified for real. Plan: [`F-023`](../plans/F-023-postgres-pgvector-docker.md); ADR-0026.
+
+**What changed** (FR-51 — the self-hosted/cloud storage backends, under the *existing* ports; no port or
+consumer change).
+- **Postgres `RelationalStore`** (`createPostgresStore`, `pg` + `drizzle-orm/node-postgres`) — Drizzle `db`
+  handle + migrate/healthcheck/close, mirroring the SQLite adapter.
+- **pgvector `VectorStore`** (`createPgVectorStore`) over Postgres + the pgvector extension via **raw SQL**:
+  a `vector(N)` column, kNN with `<->`(L2)/`<=>`(cosine), vectors as `$n::vector` **text literals** — **no
+  `pgvector` npm dep** (only `pg` added); lazy `CREATE EXTENSION`+table; identifier-validated table name;
+  `ON CONFLICT` upsert; dimension validation.
+- Both pass the **same** `runRelationalConformance` / `runVectorConformance` suites (port parity with SQLite).
+- **`docker-compose.yml`** = `pgvector/pgvector:pg16` service (healthcheck + volume) — the self-hosted stack.
+- Conformance is **env-guarded** (`TESSERA_TEST_POSTGRES=1` + `DATABASE_URL`; F-005 pattern), **skipped by
+  default** so the offline gate stays green.
+
+**Decision (ADR-0026):** `pg` + drizzle node-postgres; pgvector through raw SQL (no extra dep); env-guarded
+conformance verified against a Compose container. A full self-hosted **profile** also needs Postgres-backed
+graph/memory stores (current ones are SQLite-specific), so `createLocalRuntime` still throws for non-local —
+F-023 ships the adapters + stack a later profile composes (E-014). Backup/migrations = F-024.
+
+**Evidence/verification:** state (33 features, 17 effect-links). **Guarded, against the LIVE container**
+(`docker compose up -d --wait postgres` → healthy): **10 tests green** — pgvector **6/6** (VectorStore) +
+postgres-relational **4/4** (RelationalStore + Drizzle round-trip); all **29** storage tests pass with PG
+enabled. **Default gates (PG skips):** typecheck (28) · lint (16) · format · test (28) · build (16).
+
+**Effects:** E-001 / E-007 realized — the storage ports now have Postgres/pgvector adapters passing the
+shared conformance suites (both effects already anticipated "later postgres, pgvector").
+
+**Lesson:** [[verify-cloud-adapter-env-guarded-against-a-container]] — bring a cloud/self-hosted adapter to
+port-parity with the local one by making it pass the **same conformance suite**, guarded behind an env flag
+(skipped by default so the offline gate stays green), and verify it for real against a **Docker Compose**
+service. (Also: Docker Hub's CDN DNS can be flaky on first pull — retry the pull.)
+
+**Environment note:** an ECC **GateGuard** hook (loaded this session) fact-forces every edit/bash; complied
+throughout. **Postgres container left running** (`docker compose down` to stop; volume `tessera-postgres-data`
+persists).
+
+**Next step:** R1 by id — **F-024** (backup/restore + migration system, `@tessera/storage`) is the last
+open R1 feature. Follow-ups: the self-hosted config profile (Postgres graph/memory + a `createSelfHostedRuntime`
+branch) and migrating `apps/web` off `lib/api` onto `@tessera/sdk` (ADR-0022).
+
+---
+
 ## 2026-07-02 — F-022 DONE: Generated TypeScript SDK from OpenAPI (@tessera/sdk)
 **What changed** (FR-39; ADR-0025). Plan:
 [`F-022`](../plans/F-022-generated-typescript-sdk.md). New **`@tessera/sdk`** — the first-class TS client

@@ -8,7 +8,7 @@
       "id": "E-001",
       "from": { "kind": "contract", "ref": "@tessera/storage:ports (RelationalStore|VectorStore|BlobStore|Queue)" },
       "to": [
-        { "kind": "module", "ref": "@tessera/storage:adapters/* (sqlite, sqlite-vec, filesystem, in-proc; later postgres, pgvector, s3, bullmq)" },
+        { "kind": "module", "ref": "@tessera/storage:adapters/* (sqlite, sqlite-vec, filesystem, in-proc; postgres + pgvector REALIZED F-023/ADR-0026; later s3, bullmq)" },
         { "kind": "test", "ref": "@tessera/storage:conformance-suite" },
         { "kind": "decision", "ref": "docs/adr/0003-local-first-cloud-ready-ports-and-adapters.md" }
       ],
@@ -91,8 +91,8 @@
       "id": "E-007",
       "from": { "kind": "contract", "ref": "@tessera/storage ports (RelationalStore | BlobStore | Queue | VectorStore)" },
       "to": [
-        { "kind": "module", "ref": "@tessera/storage adapters (sqlite-relational, filesystem-blob, in-process-queue, sqlite-vec; later postgres, pgvector, s3, bullmq)" },
-        { "kind": "test", "ref": "@tessera/storage tests/conformance suites (relational, blob, queue, vector)" }
+        { "kind": "module", "ref": "@tessera/storage adapters (sqlite-relational, filesystem-blob, in-process-queue, sqlite-vec; postgres-relational + pgvector REALIZED F-023, pg + drizzle node-postgres; later s3, bullmq)" },
+        { "kind": "test", "ref": "@tessera/storage tests/conformance suites (relational, blob, queue, vector) — the Postgres/pgvector adapters pass the SAME suites (env-guarded TESSERA_TEST_POSTGRES; verified against the docker-compose pgvector service)" }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "Each storage port is implemented by every adapter and validated by a shared conformance suite; changing a port interface breaks all adapters and their suites (concrete instance of E-001 for @tessera/storage).",

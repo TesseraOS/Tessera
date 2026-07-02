@@ -1,10 +1,12 @@
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { ZodFastify } from '../../app-types.js';
+import type { ApiEventBus } from '../../events.js';
 import type { ApiServices } from '../../services.js';
 import { registerSearchRoutes } from './search.js';
 import { registerCompileRoutes } from './compile.js';
 import { registerEffectsRoutes } from './effects.js';
 import { registerMemoryRoutes } from './memory.js';
+import { registerEventsRoutes } from './events.js';
 
 /**
  * Mount every data route under the `/v1` prefix (NFR-11: versioned, additive). Also serves the
@@ -12,14 +14,19 @@ import { registerMemoryRoutes } from './memory.js';
  * `@fastify/swagger` and inherited by this child instance). Enqueued synchronously — the plugin
  * queue runs in order at boot, so never `await app.register` here.
  */
-export function registerV1Routes(app: ZodFastify, services: ApiServices): void {
+export function registerV1Routes(
+  app: ZodFastify,
+  services: ApiServices,
+  events: ApiEventBus,
+): void {
   app.register(
     (instance, _opts, done) => {
       const v1 = instance.withTypeProvider<ZodTypeProvider>();
       registerSearchRoutes(v1, services);
       registerCompileRoutes(v1, services);
       registerEffectsRoutes(v1, services);
-      registerMemoryRoutes(v1, services);
+      registerMemoryRoutes(v1, services, events);
+      registerEventsRoutes(v1, events);
 
       v1.get(
         '/openapi.json',

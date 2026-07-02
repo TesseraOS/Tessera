@@ -40,6 +40,7 @@
         { "kind": "module", "ref": "@tessera/mcp tools (apps/mcp/src/server.ts: search/compile_context/get_effects/capture_memory/explain) — wrap the SAME domain services as REST via a type-only ApiServices import (F-012, one engine/two surfaces)" },
         { "kind": "package", "ref": "@tessera/sdk (generated TS client, F-022) — supersedes apps/web/lib/api (ADR-0022)" },
         { "kind": "module", "ref": "@tessera/web dashboard (F-014, realized): search + Context Package Inspector consume POST /v1/search & /v1/compile via the interim typed client apps/web/lib/api (ADR-0022)" },
+        { "kind": "module", "ref": "@tessera/api GET /v1/events SSE stream (F-021, FR-38) over an injected ApiEventBus (buildServer option, default in-process) — ADDITIVE, REST-only (MCP unaffected); the memory-capture route emits memory.captured; document.ingested/removed types are provided, the ingestion-worker producer is wired via the composition root later. OpenAPI regenerates to include /v1/events" },
         { "kind": "decision", "ref": "docs/adr/0016-rest-api-fastify-zod-bridge.md" },
         { "kind": "decision", "ref": "docs/adr/0017-mcp-server-surface.md" }
       ],

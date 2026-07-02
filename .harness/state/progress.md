@@ -3,6 +3,47 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-02 — F-021 DONE: Realtime updates via Server-Sent Events (@tessera/api)
+**What changed** (FR-38; extends ADR-0016 REST surface — no new ADR). Plan:
+[`F-021`](../plans/F-021-realtime-sse.md). Added a **Server-Sent Events** stream for live updates —
+**additive** to the REST surface (no change to existing routes/schemas; MCP untouched).
+- **`events.ts`:** a typed **`ApiEventBus`** over the core `EventBus` (`ApiEventMap` =
+  `document.ingested` / `document.removed` / `memory.captured` — JSON-safe, non-sensitive summaries) +
+  `sseFrame`/`sseComment`.
+- **`routes/v1/events.ts`:** `GET /v1/events` `reply.hijack()`s and owns `reply.raw`, writing
+  `text/event-stream` with a reconnect hint + `: connected` handshake. It **subscribes before** the
+  handshake (no event lost between connect and subscribe), heartbeats on an **`unref`'d** timer, and
+  tears down subscriptions + timer on the request `close`.
+- **`buildServer`** gains an `events?` option (default `createApiEventBus()`); the **memory-capture
+  route is a real producer** (emits `memory.captured`). SSE headers (`x-accel-buffering: no`,
+  `cache-control: no-transform`) stop proxies buffering the stream.
+
+**Decision:** **SSE, not WebSocket** — server→client push is exactly FR-38's need (ingest progress, new
+memories) and is HTTP-native/testable; WS (bidirectional) is a later option. Wiring the **ingestion
+worker** producer into the API runtime is the same downstream runtime seam (event types + transport are
+ready; a test emits on the bus directly).
+
+**Evidence/verification (all green, workspace-wide):** state (33 features, 17 effect-links) · typecheck
+(27) · lint (15) · format · **test (27 tasks; api 15 = prior 11 + 4)** · **e2e (15 tasks; api 18 = prior
+14 + 4)** · build (15). The SSE e2e runs against a **real listening socket** (`listen:0` + a `fetch`
+stream reader, `AbortController` cleanup): handshake, an emitted bus event delivered, `POST /v1/memory` →
+`memory.captured` streamed, and `/v1/events` present in the OpenAPI doc.
+
+**Effects:** E-003 (a new additive `GET /v1/events` route; existing routes/schemas + MCP unchanged;
+OpenAPI regenerated).
+
+**Lesson:** [[sse-test-real-socket-and-subscribe-before-handshake]] — an SSE endpoint can't be tested with
+`app.inject` (it waits for a response that never ends); drive it over a **real socket** with a streaming
+reader + `AbortController` cleanup. And in the handler, **subscribe to the event source before writing the
+opening frame**, so no event emitted during connection setup is missed; `hijack` the reply, `unref` the
+heartbeat, and clean up on `request 'close'`.
+
+**Next step:** R1 by id — **F-022** (generated TypeScript SDK from the OpenAPI doc — offline codegen,
+supersedes `apps/web/lib/api`), then **F-024** (backup/restore + migrations). **F-023** (Postgres +
+pgvector, the R1 `must`) remains blocked here until Docker/Postgres or CI is available.
+
+---
+
 ## 2026-07-02 — F-020 DONE: Compiler reproducibility + caching + pluggable strategies (@tessera/context-compiler)
 **What changed** (FR-33/34; ADR-0004 — no new ADR). Plan:
 [`F-020`](../plans/F-020-compiler-reproducibility-caching-pluggable.md). Added reproducibility, caching,

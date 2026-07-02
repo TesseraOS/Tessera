@@ -11,6 +11,15 @@
 export { buildServer, startServer } from './server.js';
 export type { BuildServerOptions, ListenOptions } from './server.js';
 export type { ApiServices, ReadinessCheck, ReadinessReport } from './services.js';
+export {
+  API_EVENT_TYPES,
+  createApiEventBus,
+  sseComment,
+  sseFrame,
+  type ApiEventBus,
+  type ApiEventMap,
+  type ApiEventType,
+} from './events.js';
 export { API_VERSION } from './plugins/openapi.js';
 
 export type { ErrorEnvelope } from './errors/envelope.js';

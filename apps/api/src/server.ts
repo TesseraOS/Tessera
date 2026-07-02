@@ -10,6 +10,7 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 import type { ZodFastify } from './app-types.js';
+import { createApiEventBus, type ApiEventBus } from './events.js';
 import { registerErrorHandling } from './errors/error-handler.js';
 import { registerOpenapi } from './plugins/openapi.js';
 import { registerHealthRoutes } from './routes/health.js';
@@ -29,6 +30,11 @@ export interface BuildServerOptions {
   readonly loggerInstance?: FastifyBaseLogger;
   /** Max request body size in bytes (default {@link DEFAULT_BODY_LIMIT}). */
   readonly bodyLimit?: number;
+  /**
+   * The event bus backing the `/v1/events` SSE stream (FR-38). Defaults to a fresh in-process bus;
+   * the composition root passes a shared one so producers (memory route, ingestion worker) can emit.
+   */
+  readonly events?: ApiEventBus;
 }
 
 export interface ListenOptions extends BuildServerOptions {
@@ -94,7 +100,7 @@ export function buildServer(services: ApiServices, options: BuildServerOptions =
     done();
   });
 
-  registerV1Routes(app, services);
+  registerV1Routes(app, services, options.events ?? createApiEventBus());
 
   return app;
 }

@@ -1,6 +1,7 @@
 import { NotFoundError } from '@tessera/core';
 import type { MemoryLineageId } from '@tessera/memory';
 import type { ZodFastify } from '../../app-types.js';
+import type { ApiEventBus } from '../../events.js';
 import type { ApiServices } from '../../services.js';
 import {
   captureBodySchema,
@@ -21,7 +22,11 @@ import {
  * append a superseding version (the prior is never mutated); reads/edits of an unknown lineage
  * surface `NOT_FOUND` (404).
  */
-export function registerMemoryRoutes(app: ZodFastify, services: ApiServices): void {
+export function registerMemoryRoutes(
+  app: ZodFastify,
+  services: ApiServices,
+  events: ApiEventBus,
+): void {
   app.post<{ Body: CaptureBody }>(
     '/memory',
     {
@@ -34,6 +39,12 @@ export function registerMemoryRoutes(app: ZodFastify, services: ApiServices): vo
     },
     async (request, reply) => {
       const memory = await services.memory.capture(request.body);
+      // Live update (FR-38): notify SSE subscribers of the new memory (non-sensitive summary only).
+      await events.emit('memory.captured', {
+        lineageId: memory.lineageId,
+        kind: memory.kind,
+        title: memory.title,
+      });
       return reply.status(201).send(memory);
     },
   );

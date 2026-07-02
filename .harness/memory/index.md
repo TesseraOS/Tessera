@@ -6,6 +6,7 @@ One line per memory entry. Keep newest-relevant at top of each section.
 - [stack-and-architecture](decisions/stack-and-architecture.md) — the locked stack & architecture, linking ADRs 0001–0008.
 
 ## Lessons
+- [sse-test-real-socket-and-subscribe-before-handshake](lessons/sse-test-real-socket-and-subscribe-before-handshake.md) — test SSE/streaming endpoints over a real socket (not `app.inject`), and subscribe to the event source before writing the opening frame so no event is lost during setup.
 - [cache-key-must-fingerprint-every-output-affecting-input](lessons/cache-key-must-fingerprint-every-output-affecting-input.md) — a reproducibility/cache key must hash every output-affecting input AND each pluggable strategy's `id` (normalized: effective defaults, sorted lists); a too-narrow key silently serves stale results.
 - [surface-new-behavior-via-existing-explainability-field](lessons/surface-new-behavior-via-existing-explainability-field.md) — make new stage behavior (e.g. compiler compression) visible through an existing `whyIncluded`/trace channel instead of a new cross-package schema field, so the change stays in one package.
 - [enum-driven-contract-additive-variant](lessons/enum-driven-contract-additive-variant.md) — derive downstream validation/typing (`z.enum(CONST)`, opaque tags, fallback lookups) from one source-of-truth enum so adding a variant (e.g. the temporal signal) ripples nowhere.

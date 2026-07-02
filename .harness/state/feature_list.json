@@ -673,7 +673,25 @@
       "package": "@tessera/api",
       "release": "R1",
       "priority": "should",
-      "status": "todo"
+      "status": "done",
+      "blockedBy": [
+        "F-011"
+      ],
+      "acceptance": [
+        "GET /v1/events streams live domain updates (ingest progress + new memories, FR-38) as text/event-stream, with a reconnect hint, heartbeats, and clean per-connection teardown on client disconnect",
+        "Events flow through an injected ApiEventBus (composition seam); the memory-capture route is a real producer (emits memory.captured); the OpenAPI document lists the endpoint",
+        "Verified end-to-end (a live server delivers an emitted event and a POSTed memory to a connected SSE client) + unit tests for the SSE framing; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003"
+      ],
+      "notes": "Done 2026-07-02: realtime updates via Server-Sent Events (FR-38) — ADDITIVE to the REST surface, no change to existing routes/schemas or MCP. events.ts: typed ApiEventBus over the core EventBus (ApiEventMap = document.ingested/document.removed/memory.captured; JSON-safe, non-sensitive summaries) + sseFrame/sseComment. routes/v1/events.ts: GET /v1/events reply.hijack()s and owns reply.raw — writes text/event-stream with a retry hint + ': connected' handshake, SUBSCRIBES BEFORE the handshake (no lost event between connect and subscribe), heartbeats on an unref'd timer, and tears down subscriptions+timer on request 'close'. buildServer gains an events? option (default createApiEventBus()); the memory-capture route is a REAL producer (emits memory.captured with lineageId/kind/title). SSE-transport (x-accel-buffering:no, cache-control:no-transform) so proxies don't buffer. +4 unit (framing + bus emit/unsub) + 4 e2e over a REAL socket (listen:0 + fetch stream reader): handshake, an emitted bus event delivered, POST /v1/memory → memory.captured streamed, and /v1/events documented in OpenAPI. Effect E-003 (additive route). Deferred: WebSocket (SSE covers server→client push), wiring the ingestion worker producer into the API runtime (same runtime seam; event types + transport ready), auth/last-event-id resume/backpressure. Gates green: typecheck 27 · lint 15 · format · test 27 (api 15) · e2e 15 (api 18) · build 15."
     },
     {
       "id": "F-022",

@@ -3,6 +3,55 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-02 — R1 KICKOFF + F-017 DONE: GitHub connector + auto memory extraction (@tessera/ingestion)
+**R1 opened.** R0 is fully done, so the current release advanced to **R1**: promoted the R1 cohort
+(F-017–F-024) `backlog → todo` (release kickoff), then claimed **F-017** by the ordering policy
+(`by release, then id`). Plan: [`F-017`](../plans/F-017-github-connector-auto-memory.md).
+
+**What changed** (`@tessera/ingestion` extended — FR-4 + FR-14; ADR-0024)
+- **GitHub connector (FR-4):** `createGitHubConnector` implements the **existing** `Connector` port —
+  issues **and** PRs (with comments) become documents at synthetic paths (`issue/{n}`, `pr/{n}`).
+  The content hash is over the item's **mutable fields**, so the F-006 pipeline processes them
+  **incrementally + idempotently** and the **terminal redaction gate** scrubs secrets for free.
+  GitHub is reached via native **`fetch`** behind an injectable **`GitHubClient`** (paginated; typed
+  401/403-rate-limit/404 → `@tessera/core` errors) — **no Octokit**, so the package stays
+  dependency-free (ADR-0015 precedent). **Network only when a source is explicitly configured**
+  (NFR-3); tests use an in-memory **fake**, with an **env-guarded live smoke** (`TESSERA_TEST_GITHUB=1`).
+- **Auto-memory extraction (FR-14):** deterministic, rule-based `MemoryExtractor`s — **ADR** →
+  `decision` (from the Decision section), **merged PR** → `decision`, **closed issue** → `lesson` —
+  plus **`createMemoryExtractionSink`**, a `DocumentSink` **decorator** that captures **idempotently**
+  by `metadata.source` (`adr:NNNN` / `github:owner/repo#n`): supersede-on-change, skip-if-identical,
+  **never duplicate**. **`teeSink`** fans out to persistence + extraction. The memory dependency is a
+  **structural `MemoryCaptureService` seam** → ingestion gains **no new runtime dep and no cycle**.
+
+**Decision (ADR-0024):** GitHub via REST `fetch` (not Octokit) + heuristic extraction via a structural
+memory seam. Deferred: commit-message extraction (needs per-commit ingestion), LLM extraction, GitHub
+source wiring into the Local profile (F-015), webhooks/realtime (F-021).
+
+**Evidence/verification (all green, workspace-wide):** state (33 features, **17 effect-links**,
+wip_limit 1) · typecheck (27) · lint (15) · format · **test (27 tasks; ingestion 48 = prior 25 + 23
+new)** · build (15). New tests: github-client (fake-fetch pagination/headers/error-map), github
+connector conformance + provenance + incremental + include-filter (fake client), adr/github extractors,
+extraction-sink capture/skip/supersede + tee, and a full **fs → pipeline → memory** integration proving
+the ADR yields one decision, a plain file yields none, re-scan is idempotent, and editing the ADR
+supersedes the memory to v2.
+
+**Effects:** E-009 (github connector realized under the existing Connector port) + E-010 (new memory
+consumer via the structural seam) + **new E-017** (the auto-extraction seam).
+
+**Lesson:** [[auto-extraction-structural-memory-seam]] — a cross-package "producer→consumer" step
+(ingestion doc → memory capture) can stay dependency-free and acyclic by declaring a **minimal
+structural interface** for the consumer instead of importing it, and by making it an **additive
+`DocumentSink` decorator** (composed via `teeSink`) rather than mutating the worker. Key it on a stable
+`source` id so re-ingest supersedes/skips (idempotent), never duplicating.
+
+**Next step:** continue R1 by id — **F-018** (temporal retriever; simplest, fully offline, fits the
+existing `Retriever` interface E-012), then F-019/F-020 (compiler compression/caching), **F-022**
+(generated SDK, supersedes `lib/api`), **F-023** (Postgres + pgvector, the only R1 `must`). Wiring a
+GitHub source into the Local profile (F-015) is a small follow-up seam when a source config lands.
+
+---
+
 ## 2026-07-01 — Align All Route Pages with Dashboard 3 Design System
 Aligned all routes and views (Search, Inspector, Graph, Memory, Settings, Sources) with the flat, borderless, matching-card-background theme.
 - **Global Card Styles:** Removed default borders from the global `Card` component in `ui/card.tsx` to automatically render all cards across the application flat and borderless. Removed `border-b` horizontal dividers from card headers in `dashboard.tsx`, `inspector-view.tsx`, `search-view.tsx`, `recent-conversations.tsx`, `support-activity.tsx`, and `team-on-duty.tsx` to match efferd's flat aesthetic.

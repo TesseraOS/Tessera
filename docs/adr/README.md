@@ -39,6 +39,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0021](0021-frontend-harness-and-design-skill-adaptation.md) | Frontend execution harness, design-skill adaptation & Astryx evaluation (keep shadcn) | Accepted |
 | [0022](0022-interim-dashboard-data-client.md) | Interim dashboard data client until the generated SDK (F-022) | Accepted |
 | [0023](0023-adopt-efferd-dashboard-3-design-reference.md) | Adopt efferd Dashboard 3 as the binding dashboard design reference (dark-first, shadcn) | Accepted |
+| [0024](0024-github-connector-and-auto-memory-extraction.md) | GitHub connector via REST `fetch` (no Octokit) + heuristic auto-memory extraction (structural memory seam) | Accepted |
 
 ## Conventions
 

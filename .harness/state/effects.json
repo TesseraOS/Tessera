@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-06-30",
+  "updated": "2026-07-02",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -134,6 +134,7 @@
         { "kind": "test", "ref": "@tessera/memory tests/conformance (memory-store) + service unit tests" },
         { "kind": "module", "ref": "@tessera/memory service (capture/edit/supersede) — validates with Zod (validation.ts)" },
         { "kind": "package", "ref": "consumers exposing/using memory: @tessera/api (F-011), @tessera/mcp (F-012), @tessera/knowledge-graph (F-008), @tessera/retrieval (F-009)" },
+        { "kind": "module", "ref": "@tessera/ingestion memory-extraction-sink (F-017) — a NEW consumer of capture/edit/list via a structural MemoryCaptureService seam (no hard dep; see E-017)" },
         { "kind": "schema", "ref": "sqlite `memories` table DDL in the sqlite adapter (kept in lockstep with the Drizzle schema; migration tooling F-024)" }
       ],
       "kind": "EFFECT_LINK",
@@ -225,6 +226,22 @@
       "kind": "EFFECT_LINK",
       "rationale": "The Plugin SDK is a uniform ENVELOPE over the existing ports — it does not re-define them. Changing the Plugin/Manifest/Instance contract or the host (load/lifecycle/isolation semantics) breaks every first-party + third-party plugin and the conformance tests; the PluginKinds must stay aligned with the underlying ports (E-007/8/9/12). First-party wrappers live in plugin-host so it depends on ingestion/ai one-way (no cycle); domain packages are untouched. Failure isolation (config-invalid + setup/lifecycle errors → failed, never crash the host) is the FR-58 invariant.",
       "confidence": 1.0,
+      "origin": "manual"
+    },
+    {
+      "id": "E-017",
+      "from": { "kind": "contract", "ref": "@tessera/ingestion auto-memory extraction seam: MemoryExtractor + CandidateMemory (extraction/*) + createMemoryExtractionSink's structural MemoryCaptureService" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/ingestion extractors (adr-extractor → decision, github-extractor → decision/lesson) + runExtractors + defaultMemoryExtractors" },
+        { "kind": "module", "ref": "@tessera/ingestion adapters (memory-extraction-sink = a DocumentSink decorator capturing idempotently by metadata.source; tee-sink fans out to persistence + extraction)" },
+        { "kind": "package", "ref": "@tessera/memory MemoryService (capture/edit/list) — the structural target the extraction sink writes to (E-010 consumer); the real service is assignable to MemoryCaptureService, wired at composition (config/server, F-015). No hard dep / no cycle." },
+        { "kind": "module", "ref": "@tessera/ingestion github connector provenance (metadata.github) — the github-extractor reads it; changing the connector's provenance shape breaks the extractor" },
+        { "kind": "test", "ref": "@tessera/ingestion extractor unit tests (adr/github) + memory-extraction-sink test + the auto-memory-extraction integration test" },
+        { "kind": "decision", "ref": "docs/adr/0024-github-connector-and-auto-memory-extraction.md" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "FR-14 auto-extraction turns ingested ADRs and settled GitHub items into captured memories via deterministic, rule-based extractors and a DocumentSink decorator. The seam is STRUCTURAL: `@tessera/ingestion` declares a minimal MemoryCaptureService interface instead of importing `@tessera/memory`, so no package dependency or cycle forms (the type-only/structural-seam pattern). Idempotency is keyed on `metadata.source` (adr:NNNN / github:owner/repo#n): re-ingest supersedes-on-change or skips-if-identical, never duplicating. Changing the extractor contract, the CandidateMemory shape, the idempotency key, or the github provenance shape ripples across the extractors, the sink, and the composition wiring; the memory service's versioning invariant (FR-12) is what makes supersede safe. Extraction runs on the redacted ProcessedDocument, so memories never carry secrets.",
+      "confidence": 0.9,
       "origin": "manual"
     }
   ]

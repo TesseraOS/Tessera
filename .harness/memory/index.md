@@ -6,6 +6,7 @@ One line per memory entry. Keep newest-relevant at top of each section.
 - [stack-and-architecture](decisions/stack-and-architecture.md) — the locked stack & architecture, linking ADRs 0001–0008.
 
 ## Lessons
+- [auto-extraction-structural-memory-seam](lessons/auto-extraction-structural-memory-seam.md) — feed one package's output into another (ingestion→memory) via a structural interface + an additive `DocumentSink` decorator (no dep/cycle); key auto-records on a stable `source` id for idempotency.
 - [fair-deterministic-eval-design](lessons/fair-deterministic-eval-design.md) — design "beats baseline" evals so the system wins for attributable reasons, with deterministic backends; assert component wins not just the aggregate.
 - [hybrid-fusion-shared-ref-space](lessons/hybrid-fusion-shared-ref-space.md) — RRF fuses by rank (no score normalization); signals only combine when retrievers share a `ref` id space (an ingestion-wiring requirement).
 - [adapter-parity-shared-pure-core](lessons/adapter-parity-shared-pure-core.md) — when multiple adapters must return identical results, share one pure ranking/selection function; the conformance suite then proves parity.

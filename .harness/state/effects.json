@@ -175,7 +175,7 @@
       "id": "E-013",
       "from": { "kind": "contract", "ref": "@tessera/context-compiler pipeline + ContextPackage/CompilationTrace + CompileRequest + FragmentSource port" },
       "to": [
-        { "kind": "module", "ref": "@tessera/context-compiler stages (plan/expand/rank/resolve/dedup/compress/assemble) + quality (CQS, naive baseline)" },
+        { "kind": "module", "ref": "@tessera/context-compiler stages (plan/expand/rank/resolve/dedup/compress/assemble) + quality (CQS, naive baseline). compress now does citation-preserving extractive compression on overflow (FR-31, F-019): an over-budget fragment yields a query-relevant excerpt keeping its ref/provenance instead of being dropped — surfaced via the existing ContextFragment.whyIncluded + the compress trace note, so NO ContextPackage/API shape change" },
         { "kind": "test", "ref": "@tessera/context-compiler stage unit tests + compiler/beats-naive integration tests" },
         { "kind": "package", "ref": "consumers: @tessera/api + @tessera/mcp compile_context (F-011/F-012), @tessera/web Package Inspector (F-014) renders the trace/provenance" },
         { "kind": "package", "ref": "depends on: @tessera/retrieval (E-012), @tessera/knowledge-graph get_effects (E-011); corpus via the FragmentSource seam (ingestion)" }

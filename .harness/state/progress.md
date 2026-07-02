@@ -3,6 +3,53 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-02 — F-019 DONE: Compiler compression stage, citation-preserving (@tessera/context-compiler)
+**Note on sequencing:** the R1 `must` **F-023** (Postgres + pgvector + Docker Compose) was **deferred** —
+this environment has **no Docker/Postgres and no active CI**, so its conformance suite can't be verified
+against a real backend (harness: verification is the proof). The user chose to do F-019 instead; F-023
+stays `todo` until a Postgres/CI path exists.
+
+**What changed** (FR-31; ADR-0004 context-compilation — no new ADR). Plan:
+[`F-019`](../plans/F-019-compiler-compression-citation-preserving.md). The compress stage now
+**compresses** over-budget fragments instead of only dropping them — a deterministic, **offline**,
+query-relevant **extractive** summarization that **preserves each fragment's citation** (same
+`ref`/provenance) and **never exceeds the budget**. Entirely inside `@tessera/context-compiler` — **no
+domain/API schema change**.
+- **`stages/compress-text.ts` (new):** `compressToFit(text, query, targetTokens)` — segments text into
+  lines→sentences (a conservative `.!?`+space split that leaves code lines intact), scores each by
+  query-term overlap, greedily keeps the most-relevant segments that fit, restores original order, and
+  never exceeds the target; returns `undefined` if not even one segment fits.
+- **`stages/compress.ts`:** `fitToBudget` → `compressToBudget(items, budget, { query })` — whole
+  fragments pass through; an overflowing one is compressed to the remaining budget (when it's ≥ a
+  16-token floor), else dropped-and-continue (graceful degradation preserved).
+- **Surfaced without new fields:** `assemble` uses the excerpt + appends `"compressed to fit budget
+  (N→M tokens)"` to the existing `whyIncluded`; the compiler adds a compress **trace note** (count +
+  tokens saved). So REST/MCP/web (E-003) render compression with **zero contract change**.
+
+**Decision:** offline extractive compression (no LLM); **abstractive/pluggable** compression is F-020
+(pluggable stage strategies) — kept a documented seam.
+
+**Evidence/verification (all green, workspace-wide):** state (33 features, 17 effect-links) · typecheck
+(27) · lint (15) · format · **test (27 tasks; context-compiler 25 = prior 17 + 8 new)** · build (15).
+New tests: compress-text (relevance/original-order/never-exceed/undefined/deterministic), compress
+(whole-passthrough / compress-salvage / graceful-skip / never-exceed), and a compiler integration test
+where an over-budget top fragment is salvaged as a **cited excerpt**, the package fits the budget, and the
+trace records the compression. The existing beats-naive + budget-bounded compiler tests stay green.
+
+**Effects:** E-013 (compress stage behavior; **no ContextPackage/API shape change** → E-003 untouched).
+
+**Lesson:** [[surface-new-behavior-via-existing-explainability-field]] — to add visible behavior (here:
+compression) without rippling a cross-package schema, carry the new info through an **existing
+explainability channel** (the per-fragment `whyIncluded` + the stage trace note) instead of adding a new
+`ContextPackage`/API field; the change stays contained to one package and the inspector shows it for free.
+
+**Next step:** R1 by id — **F-020** (compiler reproducibility + caching + pluggable stage strategies;
+would also make this compressor swappable for an LLM one), then **F-021** (SSE/realtime), **F-022**
+(generated SDK). **F-023** (Postgres + pgvector, the R1 `must`) remains blocked here until Docker/Postgres
+or CI is available.
+
+---
+
 ## 2026-07-02 — F-018 DONE: Temporal retriever (recency / time-window) (@tessera/retrieval)
 **What changed** (the 5th retrieval signal, FR-24; ADR-0003/F-009 fusion — no new ADR)
 Plan: [`F-018`](../plans/F-018-temporal-retriever.md). Added `'temporal'` to `RETRIEVER_KINDS` (the

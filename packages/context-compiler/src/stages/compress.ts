@@ -1,42 +1,84 @@
 import type { TraceDrop } from '../domain.js';
 import { estimateTokens } from '../tokens.js';
+import { compressToFit } from './compress-text.js';
 import type { ResolvedCandidate } from './resolve.js';
 
-/** A fragment selected to fit the budget, with its token cost. */
+/** Minimum remaining budget worth compressing into — avoids sub-meaningful excerpts. */
+const MIN_COMPRESSED_TOKENS = 16;
+
+/** A fragment selected to fit the budget, with its token cost (of the possibly-compressed text). */
 export interface BudgetedItem {
   readonly item: ResolvedCandidate;
   readonly tokens: number;
+  /** Present when the fragment was compressed to fit: the excerpt + the original (uncompressed) tokens. */
+  readonly compressed?: { readonly text: string; readonly originalTokens: number };
 }
 
 export interface CompressResult {
   readonly selected: BudgetedItem[];
   readonly dropped: TraceDrop[];
   readonly totalTokens: number;
+  /** How many selected fragments were compressed (for the trace note). */
+  readonly compressedCount: number;
+  /** Total tokens saved by compression, original − compressed (for the trace note). */
+  readonly tokensSaved: number;
+}
+
+export interface CompressOptions {
+  /** Query used to rank a fragment's segments when compressing (the compile task text). */
+  readonly query?: string;
 }
 
 /**
- * Compress stage (FR-29): include fragments in rank order while the running token total stays within
- * `budget`; anything that would overflow is dropped (and traced). Degrades gracefully — an oversized
- * top fragment is skipped so smaller, still-relevant ones can fit. The package **never exceeds the
- * budget**. (Citation-preserving summarization is FR-31 / R1.)
+ * Compress stage (FR-29 + FR-31): include fragments in rank order within `budget`. A fragment that fits
+ * whole is kept whole; one that overflows the **remaining** budget is **compressed** — a query-relevant
+ * extractive excerpt that preserves its citation (same `ref`/provenance) — rather than dropped, unless
+ * the remaining budget is below a small floor or it cannot be compressed to fit (then it is dropped and
+ * traced, so a later smaller fragment can still fit — graceful degradation). The package **never exceeds
+ * the budget**. Abstractive/pluggable compression is F-020.
  */
-export function fitToBudget(items: readonly ResolvedCandidate[], budget: number): CompressResult {
+export function compressToBudget(
+  items: readonly ResolvedCandidate[],
+  budget: number,
+  options: CompressOptions = {},
+): CompressResult {
+  const query = options.query ?? '';
   const selected: BudgetedItem[] = [];
   const dropped: TraceDrop[] = [];
   let totalTokens = 0;
+  let compressedCount = 0;
+  let tokensSaved = 0;
 
   for (const item of items) {
-    const tokens = estimateTokens(item.fragment.text);
-    if (totalTokens + tokens <= budget) {
-      selected.push({ item, tokens });
-      totalTokens += tokens;
+    const remaining = budget - totalTokens;
+    const fullTokens = estimateTokens(item.fragment.text);
+
+    if (fullTokens <= remaining) {
+      selected.push({ item, tokens: fullTokens });
+      totalTokens += fullTokens;
+      continue;
+    }
+
+    const compressed =
+      remaining >= MIN_COMPRESSED_TOKENS
+        ? compressToFit(item.fragment.text, query, remaining)
+        : undefined;
+    if (compressed !== undefined) {
+      selected.push({
+        item,
+        tokens: compressed.tokens,
+        compressed: { text: compressed.text, originalTokens: fullTokens },
+      });
+      totalTokens += compressed.tokens;
+      compressedCount += 1;
+      tokensSaved += fullTokens - compressed.tokens;
     } else {
       dropped.push({
         ref: item.candidate.ref,
-        reason: `exceeds budget (needs ${tokens} tokens, ${budget - totalTokens} remaining)`,
+        reason: `exceeds budget (needs ${fullTokens} tokens, ${remaining} remaining)`,
       });
     }
   }
 
-  return { selected, dropped, totalTokens };
+  return { selected, dropped, totalTokens, compressedCount, tokensSaved };
 }

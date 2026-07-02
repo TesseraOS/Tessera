@@ -33,14 +33,21 @@ function buildWhyIncluded(candidate: WorkingCandidate): string {
 
 function toFragment(budgeted: BudgetedItem): ContextFragment {
   const { candidate, fragment } = budgeted.item;
+  // A compressed fragment carries its excerpt (still attributable to the same ref/provenance — the
+  // citation is preserved) and notes the compression in its "why included" (FR-31).
+  const text = budgeted.compressed?.text ?? fragment.text;
+  const whyIncluded =
+    budgeted.compressed !== undefined
+      ? `${buildWhyIncluded(candidate)}; compressed to fit budget (${budgeted.compressed.originalTokens}→${budgeted.tokens} tokens)`
+      : buildWhyIncluded(candidate);
   return {
     ref: fragment.ref,
-    text: fragment.text,
+    text,
     kind: fragment.kind,
     tokens: budgeted.tokens,
     score: candidate.score,
     provenance: buildProvenance(candidate, fragment.metadata),
-    whyIncluded: buildWhyIncluded(candidate),
+    whyIncluded,
   };
 }
 

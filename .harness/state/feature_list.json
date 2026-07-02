@@ -614,7 +614,24 @@
       "package": "@tessera/context-compiler",
       "release": "R1",
       "priority": "should",
-      "status": "todo"
+      "status": "in_progress",
+      "blockedBy": [
+        "F-010"
+      ],
+      "acceptance": [
+        "The compress stage compresses over-budget fragments (deterministic, offline, query-relevant extractive summarization) instead of dropping them, preserving each fragment's citation (ref + provenance) and never exceeding the budget",
+        "Compression is surfaced: the fragment's whyIncluded notes original→compressed tokens and the compress trace stage summarizes it; LLM-based/pluggable compression stays a documented seam (F-020)",
+        "Unit + integration tests (compression salvages an otherwise-dropped fragment, keeps query-relevant content, preserves ref/provenance, never exceeds budget); workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test"
+      ],
+      "effects": [
+        "E-013"
+      ],
+      "notes": "Done 2026-07-02: the compress stage now COMPRESSES over-budget fragments instead of only dropping them (FR-31), fully inside @tessera/context-compiler (no domain/API schema change). New compressToFit (stages/compress-text.ts): deterministic, offline, EXTRACTIVE summarization — segments text into lines→sentences (conservative .!? split leaves code intact), scores each by query-term overlap, greedily keeps the most-relevant segments that fit the token target, restores original order, never exceeds target, returns undefined if not even one segment fits. compress.ts: fitToBudget→compressToBudget(items, budget, {query}) — whole fragments pass through; an overflowing one is compressed to the remaining budget (if ≥ MIN 16 tokens) preserving its citation (same ref/provenance), else dropped-and-continue (graceful degradation preserved); never exceeds budget. Surfacing (no new fields): assemble uses the excerpt + appends 'compressed to fit budget (N→M tokens)' to whyIncluded; compiler adds a compress trace note (count + tokens saved). LLM/abstractive + pluggable compressor = F-020 (documented seam). +8 tests (compress-text: relevance/order/never-exceed/undefined/deterministic; compress: whole-passthrough/compress-salvage/graceful-skip/never-exceed; compiler integration: over-budget top fragment salvaged as a cited excerpt, package fits budget, trace note). Effect E-013 (compress behavior; no ContextPackage/API shape change → E-003 untouched). Gates green: typecheck 27 · lint 15 · format · test 27 (context-compiler 25) · build 15."
     },
     {
       "id": "F-020",

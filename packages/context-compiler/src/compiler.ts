@@ -10,7 +10,7 @@ import { expandCandidates } from './stages/expand.js';
 import { rankCandidates } from './stages/rank.js';
 import { resolveFragments } from './stages/resolve.js';
 import { dedupeFragments } from './stages/dedup.js';
-import { fitToBudget } from './stages/compress.js';
+import { compressToBudget } from './stages/compress.js';
 import { assemble } from './stages/assemble.js';
 
 /** Candidates retrieved per need before compilation, when the request does not specify a limit. */
@@ -159,12 +159,17 @@ export function createContextCompiler(options: ContextCompilerOptions): ContextC
         dropped: deduped.dropped,
       });
 
-      const compressed = fitToBudget(deduped.kept, request.budget);
+      const compressed = compressToBudget(deduped.kept, request.budget, { query: request.task });
       pushStage({
         stage: 'compress',
         inputCount: deduped.kept.length,
         outputCount: compressed.selected.length,
         dropped: compressed.dropped,
+        ...(compressed.compressedCount > 0
+          ? {
+              notes: `compressed ${compressed.compressedCount} fragment(s), saved ${compressed.tokensSaved} tokens`,
+            }
+          : {}),
       });
 
       pushStage({

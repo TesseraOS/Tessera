@@ -6,6 +6,7 @@ One line per memory entry. Keep newest-relevant at top of each section.
 - [stack-and-architecture](decisions/stack-and-architecture.md) — the locked stack & architecture, linking ADRs 0001–0008.
 
 ## Lessons
+- [surface-new-behavior-via-existing-explainability-field](lessons/surface-new-behavior-via-existing-explainability-field.md) — make new stage behavior (e.g. compiler compression) visible through an existing `whyIncluded`/trace channel instead of a new cross-package schema field, so the change stays in one package.
 - [enum-driven-contract-additive-variant](lessons/enum-driven-contract-additive-variant.md) — derive downstream validation/typing (`z.enum(CONST)`, opaque tags, fallback lookups) from one source-of-truth enum so adding a variant (e.g. the temporal signal) ripples nowhere.
 - [auto-extraction-structural-memory-seam](lessons/auto-extraction-structural-memory-seam.md) — feed one package's output into another (ingestion→memory) via a structural interface + an additive `DocumentSink` decorator (no dep/cycle); key auto-records on a stable `source` id for idempotency.
 - [fair-deterministic-eval-design](lessons/fair-deterministic-eval-design.md) — design "beats baseline" evals so the system wins for attributable reasons, with deterministic backends; assert component wins not just the aggregate.

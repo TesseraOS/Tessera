@@ -3,6 +3,44 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-02 — F-018 DONE: Temporal retriever (recency / time-window) (@tessera/retrieval)
+**What changed** (the 5th retrieval signal, FR-24; ADR-0003/F-009 fusion — no new ADR)
+Plan: [`F-018`](../plans/F-018-temporal-retriever.md). Added `'temporal'` to `RETRIEVER_KINDS` (the
+single source of truth) and a `createTemporalRetriever` adapter behind the **existing** `Retriever`
+interface. It **mirrors the keyword retriever**: takes a SQLite `db`, owns a `retrieval_temporal(ref, ts)`
+table with `index`/`remove`, and `retrieve()` returns the **most-recent** refs (`ORDER BY ts DESC,
+ref ASC`, optional `ts >= now-window`) scored by **exponential recency decay** `2^(-age/halfLife)`
+(in `(0,1]`, best-first/monotonic → satisfies the conformance ordering invariant). Clock is **injected**
+for deterministic tests; timestamps normalize from `number(ms)|ISO|Date` (invalid → `ValidationError`).
+Wired into `createLocalRuntime`'s hybrid set + exposed as **`Runtime.temporal`** (like `keyword`) so
+ingestion can populate it.
+
+**Fully additive — no consumer changed:** because `apps/api`'s `retrieverKindSchema = z.enum(RETRIEVER_KINDS)`
+is **derived** (auto-picks up `temporal`), the compiler treats `RetrieverKind` as an **opaque tag** (no
+switch), and the web `SignalBadge` **already mapped** `temporal → --chart-5`. Widening the enum rippled
+nowhere.
+
+**Evidence/verification (all green, workspace-wide):** state (33 features, 17 effect-links) · typecheck
+(27) · lint (15) · format · **test (27 tasks; retrieval 31 = prior 23 + 8 new)** · build (15). New tests:
+conformance (temporal) + newest-first ordering + decay (0.5 at exactly one half-life) + window exclusion +
+limit/idempotent-reindex/remove + invalid-timestamp + a **fusion** test where a recent item outranks an
+older one and carries both `temporal` + `keyword` attribution.
+
+**Effects:** E-012 (widened — new adapter + conformance; documented the derived-enum/opaque-tag dependents)
++ E-014 (Local profile now constructs the temporal retriever + exposes `Runtime.temporal`).
+
+**Lesson:** [[enum-driven-contract-additive-variant]] — when downstream validation/typing is **derived
+from one source-of-truth constant** (a Zod `z.enum(CONST)`, an opaque type tag, a lookup with a fallback),
+adding a new variant is purely additive and ripples nowhere; design shared enums this way so the fifth
+option costs almost nothing.
+
+**Next step:** continue R1 by id — **F-019** (compiler compression stage, citation-preserving), then
+F-020 (compiler reproducibility/caching), **F-022** (generated SDK), **F-023** (Postgres + pgvector, the
+only R1 `must`). Populating the temporal index from ingested timestamps is a small follow-up (same corpus
+seam keyword/semantic have).
+
+---
+
 ## 2026-07-02 — R1 KICKOFF + F-017 DONE: GitHub connector + auto memory extraction (@tessera/ingestion)
 **R1 opened.** R0 is fully done, so the current release advanced to **R1**: promoted the R1 cohort
 (F-017–F-024) `backlog → todo` (release kickoff), then claimed **F-017** by the ordering policy

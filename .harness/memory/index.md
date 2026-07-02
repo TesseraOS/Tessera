@@ -6,6 +6,7 @@ One line per memory entry. Keep newest-relevant at top of each section.
 - [stack-and-architecture](decisions/stack-and-architecture.md) — the locked stack & architecture, linking ADRs 0001–0008.
 
 ## Lessons
+- [enum-driven-contract-additive-variant](lessons/enum-driven-contract-additive-variant.md) — derive downstream validation/typing (`z.enum(CONST)`, opaque tags, fallback lookups) from one source-of-truth enum so adding a variant (e.g. the temporal signal) ripples nowhere.
 - [auto-extraction-structural-memory-seam](lessons/auto-extraction-structural-memory-seam.md) — feed one package's output into another (ingestion→memory) via a structural interface + an additive `DocumentSink` decorator (no dep/cycle); key auto-records on a stable `source` id for idempotency.
 - [fair-deterministic-eval-design](lessons/fair-deterministic-eval-design.md) — design "beats baseline" evals so the system wins for attributable reasons, with deterministic backends; assert component wins not just the aggregate.
 - [hybrid-fusion-shared-ref-space](lessons/hybrid-fusion-shared-ref-space.md) — RRF fuses by rank (no score normalization); signals only combine when retrievers share a `ref` id space (an ingestion-wiring requirement).

@@ -1,6 +1,6 @@
 import type { Embeddings } from '@tessera/ai';
 import type { ApiServices } from '@tessera/api';
-import type { KeywordRetriever } from '@tessera/retrieval';
+import type { KeywordRetriever, TemporalRetriever } from '@tessera/retrieval';
 import type { BlobStore, Queue, SqliteStore, VectorStore } from '@tessera/storage';
 import type { TesseraConfig } from './schema.js';
 import type { SecretsProvider } from './secrets/index.js';
@@ -27,6 +27,8 @@ export interface Runtime {
   readonly embeddings: Embeddings;
   /** The keyword retriever, exposed so ingestion/tests can index content into its FTS table. */
   readonly keyword: KeywordRetriever;
+  /** The temporal retriever, exposed so ingestion/tests can index item timestamps (FR-24). */
+  readonly temporal: TemporalRetriever;
   /** Release underlying handles (drain the queue, close the SQLite databases). */
   close(): Promise<void>;
 }

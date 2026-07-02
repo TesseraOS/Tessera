@@ -160,8 +160,9 @@
       "id": "E-012",
       "from": { "kind": "contract", "ref": "@tessera/retrieval Retriever interface + Candidate model + fusion ranker (fuse)" },
       "to": [
-        { "kind": "module", "ref": "@tessera/retrieval retrievers (semantic→VectorStore, keyword→FTS5, graph→GraphStore, symbolic→GraphStore) + hybrid service" },
-        { "kind": "test", "ref": "@tessera/retrieval tests/conformance (retriever) + fusion unit tests" },
+        { "kind": "module", "ref": "@tessera/retrieval retrievers (semantic→VectorStore, keyword→FTS5, graph→GraphStore, symbolic→GraphStore, temporal→SQLite recency index F-018) + hybrid service" },
+        { "kind": "module", "ref": "consumers of RETRIEVER_KINDS (the single source of truth): apps/api retrieverKindSchema = z.enum(RETRIEVER_KINDS) (DERIVED → auto), @tessera/context-compiler RetrieverKind signal tag (opaque, no switch), @tessera/web SignalBadge — so adding a signal (temporal, F-018) is purely additive" },
+        { "kind": "test", "ref": "@tessera/retrieval tests/conformance (retriever, incl. temporal) + fusion unit tests" },
         { "kind": "package", "ref": "consumers: @tessera/context-compiler retrieve stage (F-010), @tessera/api/mcp search (F-011/F-012)" },
         { "kind": "package", "ref": "depends on: @tessera/storage VectorStore (E-007), @tessera/ai Embeddings (E-008), @tessera/knowledge-graph GraphStore (E-011)" }
       ],
@@ -188,7 +189,7 @@
       "id": "E-014",
       "from": { "kind": "contract", "ref": "@tessera/config config schema (TesseraConfig) + Local profile composition (createLocalRuntime) + SecretsProvider port" },
       "to": [
-        { "kind": "module", "ref": "@tessera/config Local profile wiring (profiles/local.ts) — constructs every storage/ai/domain adapter and composes ApiServices" },
+        { "kind": "module", "ref": "@tessera/config Local profile wiring (profiles/local.ts) — constructs every storage/ai/domain adapter and composes ApiServices; includes the temporal retriever in the hybrid set + exposes Runtime.temporal for ingestion to populate (F-018)" },
         { "kind": "module", "ref": "@tessera/config blob-backed FragmentSource (fragment-source.ts) — the compiler's corpus seam over the filesystem BlobStore; ingestion's persistent DocumentSink must write the same {kind,text,metadata} convention" },
         { "kind": "module", "ref": "@tessera/config secrets adapters (env, file) implementing the SecretsProvider port (KMS/vault for cloud)" },
         { "kind": "package", "ref": "consumers: the runnable REST/MCP process bins that boot from a Runtime; type-only on @tessera/api ApiServices (E-003)" },

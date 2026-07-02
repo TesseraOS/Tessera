@@ -15,6 +15,7 @@ import {
   createKeywordRetriever,
   createSemanticRetriever,
   createSymbolicRetriever,
+  createTemporalRetriever,
 } from '@tessera/retrieval';
 import {
   createFilesystemBlobStore,
@@ -89,11 +90,13 @@ export async function createLocalRuntime(
   const memoryStore = createSqliteMemoryStore(relational.db);
 
   const keyword = createKeywordRetriever({ db: relational.db });
+  const temporal = createTemporalRetriever({ db: relational.db });
   const search = createHybridRetriever([
     createSemanticRetriever({ embeddings, vectorStore: vector }),
     keyword,
     createGraphRetriever({ graphStore }),
     createSymbolicRetriever({ graphStore }),
+    temporal,
   ]);
 
   const compiler = createContextCompiler({
@@ -121,6 +124,7 @@ export async function createLocalRuntime(
     stores: { relational, vector, blob, queue },
     embeddings,
     keyword,
+    temporal,
     async close() {
       await queue.shutdown();
       await vector.close();

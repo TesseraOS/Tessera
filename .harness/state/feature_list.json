@@ -583,7 +583,26 @@
       "package": "@tessera/retrieval",
       "release": "R1",
       "priority": "should",
-      "status": "todo"
+      "status": "done",
+      "blockedBy": [
+        "F-009",
+        "F-015"
+      ],
+      "acceptance": [
+        "Temporal retriever behind the EXISTING Retriever interface (kind 'temporal' added to RETRIEVER_KINDS); ranks by recency (exponential decay) with an optional time-window; owns a persistent SQLite index (index/remove) mirroring the keyword retriever",
+        "Passes the shared retriever conformance suite; fuses with the other signals (weighted RRF, per-candidate attribution); wired into the Local profile hybrid search and exposed on the Runtime for ingestion to populate",
+        "Deterministic + offline tests (injected clock); workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test"
+      ],
+      "effects": [
+        "E-012",
+        "E-014"
+      ],
+      "notes": "Done 2026-07-02: the 5th retrieval signal (FR-24), fully additive. `'temporal'` added to RETRIEVER_KINDS (single source of truth) → apps/api retrieverKindSchema (z.enum, DERIVED) picks it up automatically; the compiler treats RetrieverKind as an opaque tag (no switch) and the web SignalBadge already mapped `temporal` (--chart-5) — so no consumer changed. createTemporalRetriever mirrors the keyword retriever's owned-index pattern: it takes a SQLite `db`, owns retrieval_temporal(ref PK, ts), index/remove, and retrieve() returns most-recent refs (ORDER BY ts DESC, ref ASC, optional ts>=now-window) scored by exponential recency decay 2^(-age/halfLife) in (0,1] (best-first, monotonic → satisfies conformance ordering); clock injected for determinism; timestamps normalized from number(ms)|ISO|Date, invalid → ValidationError. Wired into createLocalRuntime's hybrid set + exposed as Runtime.temporal (like keyword) for ingestion to populate. +8 tests (conformance + newest-first + decay(0.5 at one half-life) + window filter + limit/idempotent-reindex/remove + invalid-ts + a fusion test where a recent item outranks an older one and carries both temporal+keyword attribution). Effects E-012 (widened; adapter+conformance) + E-014 (profile wiring + Runtime). Gates green: typecheck 27 · lint 15 · format · test 27 (retrieval 31) · build 15. Deferred: per-QUERY time windows (would change the shared RetrievalQuery contract → API ripple; construction-time window only here), config-exposed fusion weights (F-020), ingestion populating the index (same corpus seam as keyword/semantic)."
     },
     {
       "id": "F-019",

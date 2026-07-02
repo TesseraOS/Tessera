@@ -1,5 +1,5 @@
-/** The retrieval signals fused into one ranked set. Temporal (FR-24) is added in R1 (F-018). */
-export const RETRIEVER_KINDS = ['semantic', 'keyword', 'graph', 'symbolic'] as const;
+/** The retrieval signals fused into one ranked set (semantic/keyword/graph/symbolic + temporal, FR-24). */
+export const RETRIEVER_KINDS = ['semantic', 'keyword', 'graph', 'symbolic', 'temporal'] as const;
 export type RetrieverKind = (typeof RETRIEVER_KINDS)[number];
 
 /** Default number of results a retriever/fusion returns when no limit is given. */

@@ -614,7 +614,7 @@
       "package": "@tessera/context-compiler",
       "release": "R1",
       "priority": "should",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-010"
       ],
@@ -644,7 +644,24 @@
       "package": "@tessera/context-compiler",
       "release": "R1",
       "priority": "should",
-      "status": "todo"
+      "status": "done",
+      "blockedBy": [
+        "F-010"
+      ],
+      "acceptance": [
+        "Pluggable stage strategies (FR-34): the compressor and ranker are injectable strategies (default = current behavior), swapped WITHOUT any REST/MCP API or ContextPackage schema change",
+        "Reproducible & cacheable (FR-33): a deterministic compilation key over the normalized request + config fingerprint; an injectable CompilationCache (in-memory LRU adapter) short-circuits identical compiles to the same package (same inputs → same key/package)",
+        "Contained to @tessera/context-compiler; unit + integration tests (key determinism, cache hit/miss, strategy swap changes output + key, reproducibility); workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test"
+      ],
+      "effects": [
+        "E-013"
+      ],
+      "notes": "Done 2026-07-02: reproducibility + caching + pluggable stage strategies (FR-33/34), fully inside @tessera/context-compiler as NEW OPTIONAL compiler options — no ContextPackage/REST/MCP shape change (FR-34 'without API change'). strategies.ts: CompressionStrategy (default extractiveCompression wrapping F-019's compressToFit) + RankStrategy (default defaultRankStrategy wrapping rankCandidates); each carries an id folded into the key. cache.ts: CompilationCache port + createInMemoryCompilationCache (LRU, get/set bump recency, evict past maxEntries). key.ts: computeCompilationKey(normalizedRequest, fingerprint) = sha256 of canonical JSON of {task, budget, EFFECTIVE retrievalLimit, sorted filter kinds} + fingerprint {rankStrategy id, compression id, dedupThreshold?, expandDepth?} — deterministic, order-independent for kinds; the fingerprint MUST include every output-affecting knob or the cache goes stale. compiler.ts: options gain compression?/rankStrategy?/cache?; pipeline extracted to runPipeline(); when a cache is present, compile() keys the normalized request, returns a hit VERBATIM (identical package → true reproducibility) else compiles once and stores; rank via rankStrategy.rank, compress via compression.compress. compressToBudget gained an optional compress fn (default compressToFit). +9 tests (key determinism/sensitivity/order-independence; LRU get/set/evict; integration: cache hit skips retrieval + identical package + miss on different request, no-cache reproducibility, compressor swap changes the excerpt, ranker swap changes order — all with unchanged package shape). Effect E-013 (compiler options + key; no API shape change → E-003 untouched). Deferred: exposing the key on ContextPackage/API, fine-grained per-stage incremental recompute, persistent/shared cache backend, LLM compressor (the strategy seam enables it). Gates green: typecheck 27 · lint 15 · format · test 27 (context-compiler 34) · build 15. (Also flipped F-019 status backlog-slip fixed here.)"
     },
     {
       "id": "F-021",

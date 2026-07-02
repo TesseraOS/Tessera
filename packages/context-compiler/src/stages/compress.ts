@@ -1,7 +1,14 @@
 import type { TraceDrop } from '../domain.js';
 import { estimateTokens } from '../tokens.js';
-import { compressToFit } from './compress-text.js';
+import { compressToFit, type CompressionResult } from './compress-text.js';
 import type { ResolvedCandidate } from './resolve.js';
+
+/** How a fragment's text is compressed to fit a token target (the injected compression strategy, FR-34). */
+export type CompressFn = (
+  text: string,
+  query: string,
+  targetTokens: number,
+) => CompressionResult | undefined;
 
 /** Minimum remaining budget worth compressing into — avoids sub-meaningful excerpts. */
 const MIN_COMPRESSED_TOKENS = 16;
@@ -27,6 +34,8 @@ export interface CompressResult {
 export interface CompressOptions {
   /** Query used to rank a fragment's segments when compressing (the compile task text). */
   readonly query?: string;
+  /** The compression strategy (default: the extractive {@link compressToFit}). */
+  readonly compress?: CompressFn;
 }
 
 /**
@@ -43,6 +52,7 @@ export function compressToBudget(
   options: CompressOptions = {},
 ): CompressResult {
   const query = options.query ?? '';
+  const compress = options.compress ?? compressToFit;
   const selected: BudgetedItem[] = [];
   const dropped: TraceDrop[] = [];
   let totalTokens = 0;
@@ -61,7 +71,7 @@ export function compressToBudget(
 
     const compressed =
       remaining >= MIN_COMPRESSED_TOKENS
-        ? compressToFit(item.fragment.text, query, remaining)
+        ? compress(item.fragment.text, query, remaining)
         : undefined;
     if (compressed !== undefined) {
       selected.push({

@@ -3,6 +3,50 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-02 — F-020 DONE: Compiler reproducibility + caching + pluggable strategies (@tessera/context-compiler)
+**What changed** (FR-33/34; ADR-0004 — no new ADR). Plan:
+[`F-020`](../plans/F-020-compiler-reproducibility-caching-pluggable.md). Added reproducibility, caching,
+and pluggable stage strategies to the compiler as **new optional options** — **no `ContextPackage`/REST/
+MCP shape change** (FR-34 explicitly: "swap ranker/compressor without API change").
+- **Pluggable strategies (`strategies.ts`):** `CompressionStrategy` (default `extractiveCompression`
+  wrapping F-019's `compressToFit`) + `RankStrategy` (default `defaultRankStrategy` wrapping
+  `rankCandidates`), injected via `compile` options; each carries an `id`.
+- **Cache (`cache.ts`):** `CompilationCache` port + `createInMemoryCompilationCache` (LRU). When a cache
+  is injected, an identical compile is served **verbatim** (identical package → true reproducibility).
+- **Key (`key.ts`):** `computeCompilationKey(normalizedRequest, fingerprint)` = sha256 of canonical JSON
+  of {task, budget, **effective** retrievalLimit, sorted filter kinds} + a **config fingerprint**
+  (strategy ids + dedup/expand knobs). Deterministic, order-independent for kinds.
+- **`compiler.ts`:** pipeline extracted to `runPipeline()`; `compile()` validates → (with cache) key →
+  hit returns verbatim / miss compiles once and stores; ranks via the strategy, compresses via the
+  strategy.
+
+**Decisions:** cache hit returns the stored object (reproducibility over cache-hit visibility); key stays
+internal (exposing it on the package/API is a follow-up seam); LLM compressor + persistent/shared cache +
+fine-grained per-stage incremental recompute are deferred (the strategy/port seams enable them).
+
+**Evidence/verification (all green, workspace-wide):** state (33 features, 17 effect-links) · typecheck
+(27) · lint (15) · format · **test (27 tasks; context-compiler 34 = prior 25 + 9 new)** · build (15).
+New tests: key determinism/sensitivity/order-independence, LRU get/set/evict, and an integration test —
+cache hit skips retrieval and returns an identical package (miss on a different request), no-cache
+reproducibility, and **compressor/ranker swaps** that change output with an **unchanged package shape**.
+
+**Effects:** E-013 (new optional compiler options + reproducibility key; **no ContextPackage/API shape
+change** → E-003 untouched).
+
+**Also fixed:** an F-019 status slip — its `notes` were added but `status` was left `in_progress` (caught
+by `verify-state` when claiming F-020: "2 features in_progress"). Flipped F-019 → `done`.
+
+**Lesson:** [[cache-key-must-fingerprint-every-output-affecting-input]] — a reproducibility/cache key must
+fold in a fingerprint of **every** knob and pluggable-strategy `id` that affects the output; miss one and
+the cache silently serves a stale result for a changed configuration. Keep the fingerprint next to the
+key function with a "add new output-affecting options here" note.
+
+**Next step:** R1 by id — **F-021** (realtime updates, SSE/WebSocket — @tessera/api; verifiable via
+app.inject/e2e), then **F-022** (generated TypeScript SDK from OpenAPI — offline codegen). **F-023**
+(Postgres + pgvector, the R1 `must`) stays blocked here until Docker/Postgres or CI is available.
+
+---
+
 ## 2026-07-02 — F-019 DONE: Compiler compression stage, citation-preserving (@tessera/context-compiler)
 **Note on sequencing:** the R1 `must` **F-023** (Postgres + pgvector + Docker Compose) was **deferred** —
 this environment has **no Docker/Postgres and no active CI**, so its conformance suite can't be verified

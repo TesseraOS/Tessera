@@ -3,6 +3,45 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-02 — F-022 DONE: Generated TypeScript SDK from OpenAPI (@tessera/sdk)
+**What changed** (FR-39; ADR-0025). Plan:
+[`F-022`](../plans/F-022-generated-typescript-sdk.md). New **`@tessera/sdk`** — the first-class TS client
+whose **types are generated** from the `/v1` OpenAPI document, so it can never drift from the contract.
+- **Generation:** `scripts/generate.mjs` boots `buildServer({})` (the doc is built from the static route
+  schemas — handlers never run, so empty services suffice), captures `app.swagger()`, writes
+  `openapi.json`, and runs **openapi-typescript** → `src/generated/schema.ts` (committed; eslint +
+  prettier-ignored via `**/generated/**`; still typechecked because the client imports it).
+- **Client:** `createTesseraClient({ baseUrl, fetch?, headers? })` over **openapi-fetch** (~6 KB, zero
+  transitive deps) with ergonomic named methods (`search`/`compile`/`getEffects` + memory CRUD) and
+  request/response **type aliases derived from the generated `paths`**; `unwrap()` maps a non-2xx `{ error }`
+  envelope to a typed **`TesseraApiError`** (code/status/details).
+
+**Decision (ADR-0025):** generate the **types** (openapi-typescript, dev-only) + a **thin** typed client
+(openapi-fetch, runtime). Keeps the hand-written surface tiny and drift-proof. openapi-fetch is a small,
+focused, zero-transitive-dep library — the idiomatic consumer of openapi-typescript output — unlike the
+large Octokit rejected in ADR-0024 for the GitHub connector.
+
+**Evidence/verification (all green, workspace-wide):** state (33 features, 17 effect-links) · typecheck
+(28) · lint (16) · format · **test (28 tasks; sdk 5 new)** · build (16). The 5 tests are a **round-trip
+against the real in-memory API over a socket**: search (ranked + attribution), compile (budget-bounded),
+memory capture→get→edit(v2)→history→list, `NOT_FOUND`→`TesseraApiError`, and 400 validation. New deps
+(`openapi-fetch` runtime; `openapi-typescript` + `@tessera/api` dev) — `pnpm-lock` updated.
+
+**Effects:** E-003 realized (the `@tessera/sdk` consumer of the OpenAPI contract) — a route/schema change
+now means "regenerate the SDK types" (tsc then catches any wrapper drift).
+
+**Lesson:** [[generate-sdk-types-from-live-swagger-thin-client]] — generate an SDK's **types** from the
+API's own runtime OpenAPI (`buildServer({}).swagger()` — no live services needed since the doc is built
+from static route schemas) and wrap them in a **thin** typed client, rather than a heavy full-client
+generator or a hand-written client; commit + ignore the generated file (lint/format) but keep it
+typechecked so drift surfaces at build.
+
+**Next step:** R1 by id — **F-024** (backup/restore + migration system — `@tessera/storage`). **F-023**
+(Postgres + pgvector, the R1 `must`) remains blocked here until Docker/Postgres or CI is available. A
+follow-up: migrate `apps/web` off `lib/api` onto `@tessera/sdk` (ADR-0022).
+
+---
+
 ## 2026-07-02 — F-021 DONE: Realtime updates via Server-Sent Events (@tessera/api)
 **What changed** (FR-38; extends ADR-0016 REST surface — no new ADR). Plan:
 [`F-021`](../plans/F-021-realtime-sse.md). Added a **Server-Sent Events** stream for live updates —

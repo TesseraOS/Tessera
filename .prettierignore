@@ -4,6 +4,8 @@ node_modules/
 **/.next/
 **/.turbo/
 .turbo/
+**/generated/
+packages/sdk/openapi.json
 **/playwright-report/
 **/test-results/
 **/next-env.d.ts

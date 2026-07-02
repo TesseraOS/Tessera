@@ -7,7 +7,14 @@ import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/.turbo/**', 'logs/**', '**/*.d.ts'],
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/.turbo/**',
+      'logs/**',
+      '**/*.d.ts',
+      '**/generated/**',
+    ],
   },
   {
     // Disambiguate the TSConfig root in this monorepo (typescript-eslint#10841).

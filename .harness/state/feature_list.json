@@ -703,7 +703,24 @@
       "package": "@tessera/sdk",
       "release": "R1",
       "priority": "should",
-      "status": "todo"
+      "status": "done",
+      "blockedBy": [
+        "F-011"
+      ],
+      "acceptance": [
+        "A @tessera/sdk package whose types are GENERATED from the /v1 OpenAPI document (openapi-typescript); a committed generate script reproduces them from the live spec",
+        "A first-class, ergonomic typed TS client (createTesseraClient) over the generated types covering search/compile/effects/memory, mapping the {error} envelope to a typed TesseraApiError",
+        "Verified by a round-trip test against the real in-memory API server; ADR records the toolchain; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test"
+      ],
+      "effects": [
+        "E-003"
+      ],
+      "notes": "Done 2026-07-02: new @tessera/sdk — the first-class TS client whose TYPES are GENERATED from the /v1 OpenAPI doc (ADR-0025). scripts/generate.mjs boots buildServer({}) (doc = static route schemas; handlers never run), captures app.swagger(), writes openapi.json, and runs openapi-typescript → src/generated/schema.ts (committed; eslint+prettier-ignored via **/generated/**; still typechecked). client.ts: createTesseraClient({baseUrl,fetch?,headers?}) over openapi-fetch (~6KB, zero-transitive-dep) with ergonomic named methods search/compile/getEffects/captureMemory/listMemories/getMemory/editMemory/memoryHistory + request/response type aliases derived from the generated paths; unwrap() maps non-2xx {error} envelopes to a typed TesseraApiError(code,status,details). Deps: openapi-fetch (runtime), openapi-typescript + @tessera/api (dev). 5 round-trip tests against the REAL in-memory API over a socket (search ranked+attribution, compile budget-bounded, memory capture→get→edit(v2)→history→list, NOT_FOUND→TesseraApiError, 400 validation). Effect E-003 realized (SDK consumer). Deferred: migrating apps/web off lib/api onto the SDK (ADR-0022; separate UI change), non-TS SDKs, a CI regen-no-diff check. Gates green: typecheck 28 · lint 16 · format · test 28 (sdk 5) · build 16. New deps recorded in ADR-0025; pnpm-lock updated."
     },
     {
       "id": "F-023",

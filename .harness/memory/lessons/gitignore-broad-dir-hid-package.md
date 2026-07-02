@@ -28,5 +28,12 @@ committed the package.
 - Consider a CI guard: fail if any `packages/*/package.json` or `apps/*/package.json` is
   git-ignored.
 
+**Recurred 2026-07-03:** the same class of bug bit `packages/config/src/secrets/` — a bare
+`secrets/` rule (for secret material) also hid the F-015 `SecretsProvider` source (5 files,
+untracked). A fresh clone couldn't build `@tessera/config`. Fixed by anchoring `secrets/` →
+`/secrets/`. **Takeaway: audit EVERY bare directory ignore (`secrets/`, `build/`, `out/`, `tmp/`,
+`logs/`…) for source collisions, not just the one that bit you — anchor or dot-prefix them all.**
+The CI guard (fail if any `packages/*/src` file is git-ignored) would have caught both.
+
 Pairs with [[turbo-cache-stale-uncommitted]] — both were the toolchain giving false confidence;
 verify against ground truth. See [[harness-model]].

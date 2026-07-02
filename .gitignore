@@ -36,7 +36,9 @@ test-results/
 *.key
 *.p12
 *.pfx
-secrets/
+# Anchored to root (leading slash) so it never matches SOURCE dirs — a bare `secrets/`
+# hid packages/config/src/secrets/ (same class of bug the `storage/` note below warns about).
+/secrets/
 .secrets/
 
 # Local-mode data stores (SQLite + vector + object cache). These are runtime state,

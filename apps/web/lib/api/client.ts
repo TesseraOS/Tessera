@@ -1,8 +1,10 @@
 import type {
+  CaptureMemoryBody,
   CompileBody,
   ContextPackage,
   ErrorCode,
   ErrorEnvelope,
+  Memory,
   SearchBody,
   SearchResponse,
 } from './types';
@@ -63,4 +65,6 @@ export const api = {
     apiFetch<SearchResponse>('/search', { method: 'POST', body: JSON.stringify(body) }),
   compile: (body: CompileBody): Promise<ContextPackage> =>
     apiFetch<ContextPackage>('/compile', { method: 'POST', body: JSON.stringify(body) }),
+  captureMemory: (body: CaptureMemoryBody): Promise<Memory> =>
+    apiFetch<Memory>('/memory', { method: 'POST', body: JSON.stringify(body) }),
 };

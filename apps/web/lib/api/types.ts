@@ -95,3 +95,26 @@ export interface ContextPackage {
   trace: CompilationTrace;
   scores: PackageScores;
 }
+
+// --- memory (POST /v1/memory) — mirrors @tessera/memory MEMORY_KINDS + the capture schema ---
+export type MemoryKind =
+  'decision' | 'lesson' | 'incident' | 'failure' | 'architecture' | 'glossary' | 'task';
+
+export interface CaptureMemoryBody {
+  kind: MemoryKind;
+  title: string;
+  body: string;
+  scope?: string;
+}
+
+export interface Memory {
+  id: string;
+  lineageId: string;
+  kind: MemoryKind;
+  title: string;
+  body: string;
+  scope: string;
+  confidence: number;
+  version: number;
+  createdAt: string;
+}

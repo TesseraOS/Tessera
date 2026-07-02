@@ -13,13 +13,13 @@
 :root {
   --radius: 0.65rem;
 
-  /* Light theme */
-  --background: #fafafa;
-  --foreground: #060606;
-  --card: #fafafa;
-  --card-foreground: #060606;
-  --popover: #fafafa;
-  --popover-foreground: #060606;
+  /* Light theme — canvas is a soft gray so white cards read with clear contrast (parity with dark). */
+  --background: #f1f1f4;
+  --foreground: #09090b;
+  --card: #ffffff;
+  --card-foreground: #09090b;
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
   --primary: #171717;
   --primary-foreground: #dbd6d6;
   --secondary: #eeeeee;
@@ -29,9 +29,9 @@
   --accent: #eeeeee;
   --accent-foreground: #171717;
   --destructive: #e40014;
-  --border: #dedede;
-  --input: #e4e4e4;
-  --ring: #bebebe;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #a1a1aa;
 
   --chart-1: #f05100;
   --chart-2: #009588;
@@ -39,14 +39,14 @@
   --chart-4: #fcbb00;
   --chart-5: #f99c00;
 
-  --sidebar: #fafafa;
-  --sidebar-foreground: #060606;
-  --sidebar-primary: #171717;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #18181b;
+  --sidebar-primary: #18181b;
   --sidebar-primary-foreground: #fafafa;
-  --sidebar-accent: #eeeeee;
-  --sidebar-accent-foreground: #171717;
-  --sidebar-border: #e5e5e5;
-  --sidebar-ring: #bebebe;
+  --sidebar-accent: #f1f1f4;
+  --sidebar-accent-foreground: #18181b;
+  --sidebar-border: #e4e4e7;
+  --sidebar-ring: #a1a1aa;
 }
 
 .dark {

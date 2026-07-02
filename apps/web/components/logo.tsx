@@ -1,21 +1,28 @@
 import type React from 'react';
 import { cn } from '@/lib/utils';
 
+/**
+ * Tessera mark — "fragments of memory coming together": scattered tesserae (pixels) at
+ * decreasing opacity converge into a solid core. Pixel/mosaic, monochrome (uses currentColor).
+ */
 export const LogoIcon = ({ className, ...props }: React.ComponentProps<'svg'>) => (
   <svg
-    viewBox="0 0 24 24"
-    fill="none"
+    viewBox="0 0 32 32"
+    fill="currentColor"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
+    aria-hidden="true"
     {...props}
   >
-    {/* Isometric Mosaic Cube (Tessera Brand) */}
-    {/* Top Face */}
-    <path d="M12 3L19 7L12 11L5 7Z" fill="currentColor" fillOpacity="0.9" />
-    {/* Left Face */}
-    <path d="M4.5 8.5L11 12.2V19.5L4.5 15.8Z" fill="currentColor" fillOpacity="0.65" />
-    {/* Right Face */}
-    <path d="M13 12.2L19.5 8.5V15.8L13 19.5Z" fill="currentColor" fillOpacity="0.4" />
+    {/* assembled core */}
+    <rect x="13" y="13" width="6.5" height="6.5" rx="1.4" />
+    <rect x="20.5" y="13" width="6.5" height="6.5" rx="1.4" fillOpacity="0.82" />
+    <rect x="13" y="20.5" width="6.5" height="6.5" rx="1.4" fillOpacity="0.82" />
+    {/* converging fragments */}
+    <rect x="6" y="13.5" width="5" height="5" rx="1.1" fillOpacity="0.5" />
+    <rect x="13.5" y="6" width="5" height="5" rx="1.1" fillOpacity="0.5" />
+    <rect x="21.5" y="21.5" width="4" height="4" rx="1" fillOpacity="0.3" />
+    <rect x="6.5" y="6.5" width="4" height="4" rx="1" fillOpacity="0.3" />
   </svg>
 );
 
@@ -26,10 +33,10 @@ interface LogoProps extends React.ComponentProps<'div'> {
 
 export const Logo = ({ className, iconClassName, textClassName, ...props }: LogoProps) => (
   <div className={cn('flex items-center gap-2.5', className)} {...props}>
-    <LogoIcon className={cn('size-6 text-foreground', iconClassName)} />
+    <LogoIcon className={cn('text-foreground size-6', iconClassName)} />
     <span
       className={cn(
-        'font-semibold text-lg tracking-tight text-foreground select-none',
+        'text-foreground text-lg font-semibold tracking-tight select-none',
         textClassName,
       )}
     >

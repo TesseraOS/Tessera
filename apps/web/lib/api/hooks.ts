@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from './client';
-import type { CompileBody } from './types';
+import type { CaptureMemoryBody, CompileBody } from './types';
 
 /** Debounced global search (FR-41). The caller debounces `query`; the hook runs when non-empty. */
 export function useSearch(query: string, limit?: number) {
@@ -19,5 +19,12 @@ export function useSearch(query: string, limit?: number) {
 export function useCompile() {
   return useMutation({
     mutationFn: (body: CompileBody) => api.compile(body),
+  });
+}
+
+/** Capture a memory (FR-13) — POST /v1/memory. */
+export function useCaptureMemory() {
+  return useMutation({
+    mutationFn: (body: CaptureMemoryBody) => api.captureMemory(body),
   });
 }

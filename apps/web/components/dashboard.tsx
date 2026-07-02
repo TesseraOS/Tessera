@@ -1,7 +1,6 @@
-import { Activity, ArrowRight, BookText, Boxes, Network, Search } from 'lucide-react';
+import { Activity, ArrowRight, BookText, Boxes, GitBranch, Network, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { EmptyState } from '@/components/empty-state';
 import { DashboardStats } from '@/components/stats';
 
 const steps = [
@@ -36,37 +35,54 @@ export function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="border-none bg-sidebar shadow-none lg:col-span-2 dark:ring-0">
-          <CardHeader>
-            <CardTitle className="text-base">Recent activity</CardTitle>
-            <CardDescription>
-              Changes and compilations across your connected sources.
-            </CardDescription>
+        <Card className="bg-sidebar gap-0 border-none p-4 shadow-none lg:col-span-2 dark:ring-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-0 pb-4">
+            <div className="space-y-0.5">
+              <CardTitle className="text-sm font-semibold">Recent activity</CardTitle>
+              <CardDescription className="text-xs">
+                Changes and compilations across your connected sources.
+              </CardDescription>
+            </div>
+            <GitBranch className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
           </CardHeader>
-          <CardContent>
-            <EmptyState
-              icon={Activity}
-              title="No activity yet"
-              description="Once a source is connected and ingested, recent changes and compilations appear here."
-              className="bg-transparent"
-              action={
-                <Button asChild size="sm" variant="outline">
+          <CardContent className="p-0">
+            <div className="border-border/70 bg-background/40 flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed px-6 py-14 text-center">
+              <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-xl [&_svg]:size-5">
+                <Activity aria-hidden="true" />
+              </span>
+              <div className="space-y-1.5">
+                <p className="text-sm font-semibold">No activity yet</p>
+                <p className="text-muted-foreground mx-auto max-w-sm text-xs leading-relaxed">
+                  Connect a filesystem or Git source and Tessera will ingest, index, and record
+                  changes, compilations, and effect-link updates here in real time.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                <Button asChild size="sm">
                   <a href="/sources">
+                    <Boxes className="size-4" />
                     Connect a source
+                  </a>
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <a href="/inspector">
+                    Compile context
                     <ArrowRight className="size-4" />
                   </a>
                 </Button>
-              }
-            />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="border-none bg-sidebar shadow-none dark:ring-0">
-          <CardHeader>
-            <CardTitle className="text-base">Get started</CardTitle>
-            <CardDescription>Steps to a working context engine.</CardDescription>
+        <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
+          <CardHeader className="p-0 pb-4">
+            <CardTitle className="text-sm font-semibold">Get started</CardTitle>
+            <CardDescription className="text-xs">
+              Steps to a working context engine.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <ol className="space-y-4">
               {steps.map((step, index) => (
                 <li key={step.title} className="flex gap-3">

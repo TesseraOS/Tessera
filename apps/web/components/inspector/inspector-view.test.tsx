@@ -57,7 +57,7 @@ describe('InspectorView', () => {
     const user = userEvent.setup();
     renderWithClient(<InspectorView />);
 
-    await user.type(screen.getByLabelText('Task'), 'explain fusion');
+    await user.type(screen.getByLabelText('Task description'), 'explain fusion');
     await user.click(screen.getByRole('button', { name: 'Compile' }));
 
     expect(await screen.findByText(/High semantic match/)).toBeInTheDocument();

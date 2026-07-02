@@ -82,7 +82,7 @@
   --sidebar-primary-foreground: #fcfcfc;
   --sidebar-accent: #262626;
   --sidebar-accent-foreground: #fcfcfc;
-  --sidebar-border: rgba(255, 255, 255, 0.10);
+  --sidebar-border: rgba(255, 255, 255, 0.1);
   --sidebar-ring: #737373;
 }
 
@@ -144,14 +144,14 @@
   }
 
   button,
-  [role="button"] {
+  [role='button'] {
     cursor: pointer;
   }
 
   button:disabled,
-  [role="button"]:disabled,
+  [role='button']:disabled,
   button[disabled],
-  [role="button"][disabled] {
+  [role='button'][disabled] {
     cursor: not-allowed;
   }
 

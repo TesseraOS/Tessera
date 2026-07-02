@@ -1,99 +1,91 @@
-import { DashboardStats } from "@/components/stats";
-import { RecentConversations } from "@/components/recent-conversations";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { IconPlaceholder } from "@/components/icon-placeholder";
+import { Activity, ArrowRight, BookText, Boxes, Network, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/empty-state';
+import { DashboardStats } from '@/components/stats';
 
+const steps = [
+  {
+    icon: Boxes,
+    title: 'Connect a source',
+    body: 'Point Tessera at a filesystem path or Git repository to begin ingestion.',
+  },
+  {
+    icon: Network,
+    title: 'Ingest & index',
+    body: 'Documents are chunked, embedded, and linked into the knowledge graph.',
+  },
+  {
+    icon: Search,
+    title: 'Compile context',
+    body: 'Run compile tasks to produce token-efficient, provenance-tagged packages.',
+  },
+  {
+    icon: BookText,
+    title: 'Capture memories',
+    body: 'Record decisions, lessons, and incidents as first-class memory.',
+  },
+];
+
+/** Overview — Tessera stat cards + honest empty activity + onboarding (no fabricated data). */
 export function Dashboard() {
-	return (
-		<div className="space-y-4">
-			{/* Top KPI Stats */}
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-				<DashboardStats />
-			</div>
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <DashboardStats />
+      </div>
 
-			{/* Main Grid content */}
-			<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-				{/* Recent Activity (takes 2 cols on lg) */}
-				<div className="lg:col-span-2 flex flex-col">
-					<RecentConversations 
-						title="Recent Compilations" 
-						description="Latest context compilation traces" 
-						conversations={[]} 
-						className="flex-1"
-					/>
-				</div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="border-none bg-sidebar shadow-none lg:col-span-2 dark:ring-0">
+          <CardHeader>
+            <CardTitle className="text-base">Recent activity</CardTitle>
+            <CardDescription>
+              Changes and compilations across your connected sources.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EmptyState
+              icon={Activity}
+              title="No activity yet"
+              description="Once a source is connected and ingested, recent changes and compilations appear here."
+              className="bg-transparent"
+              action={
+                <Button asChild size="sm" variant="outline">
+                  <a href="/sources">
+                    Connect a source
+                    <ArrowRight className="size-4" />
+                  </a>
+                </Button>
+              }
+            />
+          </CardContent>
+        </Card>
 
-				{/* Get Started Guide (takes 1 col) */}
-				<Card className="border-none bg-sidebar p-4 gap-4 shadow-none dark:ring-0">
-					<CardHeader className="p-0 pb-3">
-						<CardTitle>Getting Started</CardTitle>
-						<CardDescription>Follow these steps to configure Tessera</CardDescription>
-					</CardHeader>
-					<CardContent className="p-0 pt-4 space-y-4">
-						<ul className="space-y-4">
-							<li className="flex gap-3">
-								<div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs font-semibold">
-									1
-								</div>
-								<div className="space-y-0.5">
-									<h4 className="text-xs font-medium text-foreground">Connect a Source</h4>
-									<p className="text-[11px] text-muted-foreground leading-normal">
-										Connect filesystems or Git repositories to begin signal ingestion.
-									</p>
-								</div>
-							</li>
-							<li className="flex gap-3">
-								<div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs font-semibold">
-									2
-								</div>
-								<div className="space-y-0.5">
-									<h4 className="text-xs font-medium text-foreground">Compile Context</h4>
-									<p className="text-[11px] text-muted-foreground leading-normal">
-										Run compile tasks to generate token-efficient packages for agents.
-									</p>
-								</div>
-							</li>
-							<li className="flex gap-3">
-								<div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs font-semibold">
-									3
-								</div>
-								<div className="space-y-0.5">
-									<h4 className="text-xs font-medium text-foreground">Capture Memories</h4>
-									<p className="text-[11px] text-muted-foreground leading-normal">
-										Record lessons, architectural decisions, and incidents.
-									</p>
-								</div>
-							</li>
-							<li className="flex gap-3">
-								<div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs font-semibold">
-									4
-								</div>
-								<div className="space-y-0.5">
-									<h4 className="text-xs font-medium text-foreground">Trace Effect Links</h4>
-									<p className="text-[11px] text-muted-foreground leading-normal">
-										Analyze ranked impact pathways across your knowledge graph.
-									</p>
-								</div>
-							</li>
-						</ul>
-						<div className="pt-2">
-							<Button asChild className="w-full text-xs" size="sm">
-								<a href="/sources">
-									<IconPlaceholder
-										hugeicons="Plug01Icon"
-										lucide="PlugZapIcon"
-										phosphor="PlugZapIcon"
-										remixicon="RiPlugZapLine"
-										tabler="IconPlug"
-									/>
-									Connect your first source
-								</a>
-							</Button>
-						</div>
-					</CardContent>
-				</Card>
-			</div>
-		</div>
-	);
+        <Card className="border-none bg-sidebar shadow-none dark:ring-0">
+          <CardHeader>
+            <CardTitle className="text-base">Get started</CardTitle>
+            <CardDescription>Steps to a working context engine.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ol className="space-y-4">
+              {steps.map((step, index) => (
+                <li key={step.title} className="flex gap-3">
+                  <span className="bg-muted text-muted-foreground mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md font-mono text-xs tabular-nums">
+                    {index + 1}
+                  </span>
+                  <div className="space-y-0.5">
+                    <p className="flex items-center gap-1.5 text-sm font-medium">
+                      <step.icon className="text-muted-foreground size-3.5" aria-hidden="true" />
+                      {step.title}
+                    </p>
+                    <p className="text-muted-foreground text-xs leading-relaxed">{step.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 }

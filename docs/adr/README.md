@@ -47,6 +47,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0029](0029-mcp-gateway-auth-quotas.md) | MCP gateway — reuse the auth model (type-only), per-principal quotas, shared RATE_LIMITED code | Accepted |
 | [0030](0030-auth-composition-root-wiring.md) | Auth composition-root wiring — Fastify-free `@tessera/api/auth` subpath + persistent SQLite token store | Accepted |
 | [0031](0031-billing-port-and-open-core.md) | Billing port + adapters (open-core) — `@tessera/billing`, local/free + Dodo | Accepted |
+| [0032](0032-oidc-auth-provider.md) | OIDC AuthProvider — IdP-agnostic JWT/JWKS verification via `jose` | Accepted |
 
 ## Conventions
 

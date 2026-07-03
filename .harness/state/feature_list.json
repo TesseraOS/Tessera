@@ -1113,12 +1113,26 @@
       "package": "@tessera/api",
       "release": "R2",
       "priority": "should",
-      "status": "backlog",
+      "status": "done",
       "blockedBy": [
         "F-025",
         "F-034"
       ],
-      "notes": "R2 seam carried out of the F-025/F-034 work: an OIDC AuthProvider adapter (JWT/JWKS verification — offline-testable with a generated keypair) + config auth.mode=oidc. GATED on the IdP/library decision (Better Auth / Auth.js / Keycloak) = an open ADR (OQ-adjacent), and a live IdP to verify end-to-end. The AuthProvider port already supports it (ADR-0028); this is a localized adapter + wiring."
+      "acceptance": [
+        "An IdP-agnostic OIDC AuthProvider adapter (createOidcAuthProvider) in @tessera/api/auth: verifies a Bearer JWT against the IdP's JWKS (jose; remote JWKS by default, an injectable key set for tests), validates issuer/audience/expiry, and maps claims → Principal (sub→id, a roles claim → RBAC roles filtered to the catalog, a tenant claim → AuthContext.tenantId); missing/invalid/expired → UnauthorizedError (401). Fastify-free (jose only) so config/MCP stay clean",
+        "Config auth.mode gains `oidc` with an `oidc` section (issuer, audience, jwksUri, rolesClaim, tenantClaim) + TESSERA_AUTH_OIDC_* env (documented in .env.example, enforced by the env-docs guard); createRuntimeAuth builds the provider via the @tessera/api/auth subpath",
+        "Additive & back-compatible (default none unchanged); offline tests (generate an RSA keypair, sign JWTs, verify: valid→context with mapped roles/tenant, expired→401, wrong aud/iss→401, missing→401, role-claim mapping); ADR records the jose choice + IdP-agnostic standard-OIDC design; workspace gates green. A live IdP end-to-end check is a documented seam"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test"
+      ],
+      "effects": [
+        "E-018",
+        "E-014"
+      ],
+      "notes": "Done 2026-07-03 (R2): IdP-agnostic OIDC AuthProvider (NFR-2; ADR-0032) — the 'which IdP/library' open question dissolved under the port model (Tessera VERIFIES tokens, it doesn't run an IdP/login). apps/api/src/auth/oidc.ts: createOidcAuthProvider verifies a Bearer JWT against the IdP's JWKS with `jose` (jwtVerify + createRemoteJWKSet; injectable keySet for offline tests), checks iss/aud/expiry, maps claims → Principal (sub→id; a roles claim (array | space/comma string) filtered to the RBAC catalog, unknown/empty → defaultRole viewer; a tenant claim → AuthContext.tenantId; name/email → displayName); any failure → UnauthorizedError (401, generic message). Exported from the Fastify-free @tessera/api/auth core so config/MCP stay clean (jose ≠ Fastify — verified: auth-core dist has no fastify). Config: auth.mode gains `oidc` + an auth.oidc section (issuer/audience required via superRefine, jwksUri/rolesClaim/tenantClaim optional) + TESSERA_AUTH_OIDC_* env (documented in .env.example — the new env-docs guard would have caught it); createRuntimeAuth builds it via the subpath. New dep: jose@^6 on @tessera/api. +10 tests: api oidc 7 (offline — generate an RSA keypair, sign JWTs: valid→mapped context, space-delimited roles + default tenant, unknown-role→viewer, missing/expired/wrong-aud/wrong-iss→401) + config 3 (auth/billing defaults, oidc accepted with issuer+audience, oidc rejected without them). Effects E-018 (OIDC adapter realized) + E-014 (config oidc wiring). Gates green: format · typecheck 30 · lint 17 · test 30 (api 43, config 19) · build 17 · e2e 16 (regression-clean). DEFERRED as documented seams: a LIVE IdP round-trip (no IdP available here), opaque-token introspection, and an OIDC discovery-document auto-config / login helper."
     },
     {
       "id": "F-037",

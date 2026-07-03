@@ -70,10 +70,18 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
     limit: num(env.TESSERA_AUTH_QUOTA_LIMIT),
     windowMs: num(env.TESSERA_AUTH_QUOTA_WINDOW_MS),
   });
+  const authOidc = section({
+    issuer: env.TESSERA_AUTH_OIDC_ISSUER,
+    audience: env.TESSERA_AUTH_OIDC_AUDIENCE,
+    jwksUri: env.TESSERA_AUTH_OIDC_JWKS_URI,
+    rolesClaim: env.TESSERA_AUTH_OIDC_ROLES_CLAIM,
+    tenantClaim: env.TESSERA_AUTH_OIDC_TENANT_CLAIM,
+  });
   const auth = section({
     mode: env.TESSERA_AUTH_MODE,
     tenant: env.TESSERA_AUTH_TENANT,
     ...(authQuota !== undefined ? { quota: authQuota } : {}),
+    ...(authOidc !== undefined ? { oidc: authOidc } : {}),
   });
   const billing = section({
     provider: env.TESSERA_BILLING_PROVIDER,

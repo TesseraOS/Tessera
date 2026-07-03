@@ -3,6 +3,37 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-03 — F-036 DONE: OIDC AuthProvider (IdP-agnostic JWT/JWKS, jose) (@tessera/api)
+Picked the **smaller** of the two carried R2 items (per the user's "OIDC first iff it's smaller"): OIDC is
+a single localized adapter + config wiring, vs F-037's every-store refactor. Plan/design: **ADR-0032**.
+**Key insight:** the "which IdP/library" open question **dissolves** under the port model — Tessera
+*verifies* tokens from whatever OIDC IdP the operator runs; it doesn't run a login. So there's no IdP
+product to pick, only a verifier: **`jose`**.
+- **`apps/api/src/auth/oidc.ts`:** `createOidcAuthProvider` verifies a Bearer JWT against the IdP's JWKS
+  (`jose` `jwtVerify` + `createRemoteJWKSet`; injectable `keySet` for offline tests), checks iss/aud/expiry,
+  and maps claims → `Principal` (`sub`→id; a roles claim → RBAC roles, unknown→`viewer`; a tenant claim →
+  `AuthContext.tenantId`; name/email→display). Any failure → 401 (generic). In the **Fastify-free**
+  `@tessera/api/auth` core (jose ≠ Fastify → config/MCP stay clean; verified).
+- **Config:** `auth.mode` gains `oidc` + an `auth.oidc` section (issuer/audience required via `superRefine`)
+  + `TESSERA_AUTH_OIDC_*` env (documented — the new env-docs guard would have caught a miss);
+  `createRuntimeAuth` builds it via the subpath. New dep `jose@^6` on `@tessera/api`.
+
+**Evidence:** state (37 features, 19 effect-links) · format · typecheck (30) · lint (17) · **test (30; api
+43, config 19)** · build (17) · e2e (16, regression-clean). +10 tests — api oidc 7 (offline RSA keypair;
+valid→mapped context, space-delimited roles + default tenant, unknown-role→viewer, missing/expired/wrong-
+aud/wrong-iss→401) + config 3 (defaults; oidc accepted w/ issuer+audience; rejected without). Effects E-018
+(OIDC adapter realized) + E-014 (config wiring). ADR-0032.
+
+**Decisions:** IdP-agnostic standard-OIDC verification with `jose` (not a full auth framework, not
+hand-rolled crypto). Seams: a **live IdP** round-trip (none available here), opaque-token introspection, an
+OIDC discovery/login helper.
+
+**R2 status:** the only remaining R2 item is **F-037** (data-plane per-tenant row isolation, FR-52 — the
+`must`), a large cross-package refactor tracked as backlog. Everything else in R2 is done. **R3 (F-027) is a
+separate session** per the user. Committed per the standing per-feature cadence.
+
+---
+
 ## 2026-07-03 — F-035 DONE + R2 COMPLETE (buildable): entitlement enforcement (@tessera/billing)
 Makes plan entitlements actually bite (NFR-12), completing R2's substantive work. Additive; default
 local/free.

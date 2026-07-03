@@ -7,7 +7,11 @@ import {
 import type { ApiServices } from '@tessera/api';
 // Runtime import via the Fastify-free `@tessera/api/auth` subpath (ADR-0030) — so the composition root
 // (and the MCP process that boots through it) never pulls Fastify.
-import { createLocalAuthProvider, createTokenAuthProvider } from '@tessera/api/auth';
+import {
+  createLocalAuthProvider,
+  createOidcAuthProvider,
+  createTokenAuthProvider,
+} from '@tessera/api/auth';
 import {
   createDodoBilling,
   createInMemorySubscriptionStore,
@@ -48,6 +52,23 @@ function createRuntimeAuth(config: TesseraConfig['auth'], db: BetterSQLite3Datab
   if (config.mode === 'token') {
     const tokenStore = createSqliteTokenStore(db);
     return { provider: createTokenAuthProvider({ tokenStore }), tokenStore };
+  }
+  if (config.mode === 'oidc') {
+    const { issuer, audience, jwksUri, rolesClaim, tenantClaim } = config.oidc;
+    if (issuer === undefined || audience === undefined) {
+      throw new ValidationError(
+        'auth.oidc.issuer and auth.oidc.audience are required for mode "oidc"',
+      );
+    }
+    return {
+      provider: createOidcAuthProvider({
+        issuer,
+        audience,
+        ...(jwksUri !== undefined ? { jwksUri } : {}),
+        ...(rolesClaim !== undefined ? { rolesClaim } : {}),
+        ...(tenantClaim !== undefined ? { tenantClaim } : {}),
+      }),
+    };
   }
   return { provider: createLocalAuthProvider({ tenantId: config.tenant }) };
 }

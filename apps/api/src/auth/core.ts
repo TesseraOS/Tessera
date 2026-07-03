@@ -40,3 +40,4 @@ export {
   type AuthInput,
   type AuthProvider,
 } from './provider.js';
+export { createOidcAuthProvider, type OidcAuthOptions } from './oidc.js';

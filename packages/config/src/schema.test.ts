@@ -49,4 +49,28 @@ describe('config schema + loader', () => {
   it('configSchema resolves a minimal object to defaults', () => {
     expect(configSchema.parse({}).budgets.retrievalLimit).toBe(20);
   });
+
+  it('defaults auth to none/free billing', () => {
+    const config = loadConfig({});
+    expect(config.auth.mode).toBe('none');
+    expect(config.auth.tenant).toBe('default');
+    expect(config.billing.provider).toBe('none');
+  });
+
+  it('accepts auth.mode=oidc with issuer + audience, and maps TESSERA_AUTH_OIDC_*', () => {
+    const config = loadConfig({
+      TESSERA_AUTH_MODE: 'oidc',
+      TESSERA_AUTH_OIDC_ISSUER: 'https://idp.example.com',
+      TESSERA_AUTH_OIDC_AUDIENCE: 'tessera-api',
+    });
+    expect(config.auth.mode).toBe('oidc');
+    expect(config.auth.oidc).toMatchObject({
+      issuer: 'https://idp.example.com',
+      audience: 'tessera-api',
+    });
+  });
+
+  it('rejects auth.mode=oidc without issuer/audience', () => {
+    expect(() => loadConfig({ TESSERA_AUTH_MODE: 'oidc' })).toThrow(/invalid configuration/);
+  });
 });

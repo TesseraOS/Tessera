@@ -12,8 +12,11 @@ export type SecretsProviderKind = (typeof SECRETS_PROVIDERS)[number];
 /** Root directory for the local stack's data (sqlite dbs + blobs) when paths are not overridden. */
 export const DEFAULT_DATA_DIR = '.tessera';
 
-/** Authentication modes: `none` = zero-auth local (full access); `token` = Bearer required (F-025). */
-export const AUTH_MODES = ['none', 'token'] as const;
+/**
+ * Authentication modes: `none` = zero-auth local (full access); `token` = Bearer API token (F-025);
+ * `oidc` = verify JWTs from an external OIDC IdP (F-036).
+ */
+export const AUTH_MODES = ['none', 'token', 'oidc'] as const;
 export type AuthMode = (typeof AUTH_MODES)[number];
 
 /** Billing providers: `none` = local/free (OSS default); `dodo` = Dodo Payments (cloud, F-030). */
@@ -73,9 +76,24 @@ const authQuotaSchema = z
   })
   .default({});
 
+/** OIDC settings (F-036); `issuer` + `audience` are required when `auth.mode = oidc`. */
+const authOidcSchema = z
+  .object({
+    issuer: z.string().url().optional(),
+    audience: z.string().min(1).optional(),
+    /** JWKS URL; defaults to `${issuer}/.well-known/jwks.json`. */
+    jwksUri: z.string().url().optional(),
+    /** Claim carrying roles (default `roles`). */
+    rolesClaim: z.string().min(1).optional(),
+    /** Claim carrying the tenant/org id (default `tenant_id`). */
+    tenantClaim: z.string().min(1).optional(),
+  })
+  .default({});
+
 /**
- * Auth wiring (F-025/F-026/F-034). `mode: none` keeps the zero-auth Local behavior (full access in the
- * `tenant`); `mode: token` requires a Bearer token resolved by the persistent token store.
+ * Auth wiring (F-025/F-026/F-034/F-036). `mode: none` keeps the zero-auth Local behavior (full access in
+ * the `tenant`); `mode: token` requires a Bearer token from the persistent token store; `mode: oidc`
+ * verifies JWTs from an external OIDC IdP (see `oidc`).
  */
 const authSchema = z
   .object({
@@ -83,8 +101,21 @@ const authSchema = z
     /** Tenant assigned to the local principal in `none` mode. */
     tenant: z.string().min(1).default('default'),
     quota: authQuotaSchema,
+    oidc: authOidcSchema,
   })
-  .default({});
+  .default({})
+  .superRefine((value, ctx) => {
+    if (
+      value.mode === 'oidc' &&
+      (value.oidc.issuer === undefined || value.oidc.audience === undefined)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'auth.oidc.issuer and auth.oidc.audience are required when auth.mode is "oidc"',
+        path: ['oidc'],
+      });
+    }
+  });
 
 /**
  * Billing wiring (F-030). `provider: none` = the local/free adapter (OSS default, no external service);

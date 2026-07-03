@@ -14,7 +14,8 @@ item below is true. If any fails, it stays `in_progress`.
 - [ ] **Effects traced.** [effect-link protocol](effect-link.md) run;
       [`effects.json`](../state/effects.json) updated; dependents handled or recorded.
 - [ ] **Docs current.** PRD/ARCHITECTURE/glossary updated if affected; new decisions have
-      [ADRs](../skills/write-adr/SKILL.md).
+      [ADRs](../skills/write-adr/SKILL.md). **Any new `TESSERA_*` env var is in
+      [`.env.example`](../../.env.example)** (enforced by the `state` gate).
 - [ ] **Rules satisfied.** [Constraints](../rules/) honored (types, security, boundaries).
 - [ ] **No debt left silently.** No dead code, no stray TODO without a tracked follow-up,
       no secrets, no commented-out blocks.

@@ -8,11 +8,12 @@
  *   - wip_limit honored (at most N features 'in_progress')
  *   - every blockedBy points to a real feature
  *   - every feature.effects id exists in effects.json
+ *   - every TESSERA_* env var read by config/server is documented in .env.example (env-docs guard)
  *
  * This runs with zero npm dependencies so it works pre-toolchain. The JSON Schemas remain
  * the formal contract for CI (ajv) later. Exit code 0 = valid, 1 = invalid.
  */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const root = new URL('../', import.meta.url);
@@ -127,6 +128,56 @@ if (features) {
 
   if (inProgress > wip)
     err('feature_list.json', `${inProgress} features in_progress exceeds wip_limit ${wip}`);
+}
+
+// ---- env-docs guard ----
+// Every TESSERA_* env var the config loader + the server read MUST be documented in .env.example,
+// so operators can discover it. We keep missing this by hand; the state gate now enforces it.
+// Scan source (the authoritative env→config mapping + the server), collect TESSERA_* tokens, and
+// require each to appear in .env.example (commented example lines count as documented).
+const ENV_SCAN = ['packages/config/src/load.ts', 'apps/server/src'];
+const ENV_TOKEN = /\bTESSERA_[A-Z0-9_]+\b/g;
+
+function tsFiles(relPath, acc = []) {
+  const abs = fileURLToPath(new URL(relPath, root));
+  let s;
+  try {
+    s = statSync(abs);
+  } catch {
+    return acc; // a scan path that doesn't exist yet is not an error
+  }
+  if (s.isDirectory()) {
+    for (const entry of readdirSync(abs)) tsFiles(`${relPath}/${entry}`, acc);
+  } else if (abs.endsWith('.ts') && !abs.endsWith('.test.ts')) {
+    acc.push(abs);
+  }
+  return acc;
+}
+
+const usedEnv = new Map(); // token -> first file that uses it
+for (const scan of ENV_SCAN) {
+  for (const file of tsFiles(scan)) {
+    const text = readFileSync(file, 'utf8');
+    for (const m of text.matchAll(ENV_TOKEN)) {
+      if (!usedEnv.has(m[0])) usedEnv.set(m[0], file);
+    }
+  }
+}
+
+let documentedEnv = null;
+try {
+  const exampleText = readFileSync(fileURLToPath(new URL('.env.example', root)), 'utf8');
+  documentedEnv = new Set([...exampleText.matchAll(ENV_TOKEN)].map((m) => m[0]));
+} catch {
+  err('env-docs', '.env.example is missing or unreadable');
+}
+if (documentedEnv) {
+  for (const [token, file] of [...usedEnv].sort()) {
+    if (!documentedEnv.has(token)) {
+      const rel = file.slice(fileURLToPath(root).length).replace(/\\/g, '/');
+      err('env-docs', `${token} (used in ${rel}) is not documented in .env.example`);
+    }
+  }
 }
 
 // ---- report ----

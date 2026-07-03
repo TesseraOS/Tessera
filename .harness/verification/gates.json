@@ -9,7 +9,7 @@
       "status": "active",
       "command": "node scripts/verify-state.mjs",
       "requiredFor": ["always"],
-      "description": "Validate harness state files (feature_list.json, effects.json)."
+      "description": "Validate harness state files (feature_list.json, effects.json) + the env-docs guard (every TESSERA_* var read by config/server is documented in .env.example)."
     },
     {
       "id": "typecheck",

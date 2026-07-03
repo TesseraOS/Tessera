@@ -1730,6 +1730,208 @@
         }
       }
     },
+    "/v1/audit": {
+      "get": {
+        "summary": "Query this tenant's audit trail (admin only).",
+        "tags": [
+          "audit"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "search",
+                "compile",
+                "effects.read",
+                "memory.read",
+                "memory.write",
+                "billing.read",
+                "billing.manage",
+                "audit.read"
+              ]
+            },
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "description": "Filter by action."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "query",
+            "name": "actor",
+            "required": false,
+            "description": "Filter by actor principal id."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "success",
+                "denied"
+              ]
+            },
+            "in": "query",
+            "name": "outcome",
+            "required": false,
+            "description": "Filter by outcome."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "description": "Inclusive lower time bound (ISO-8601)."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "description": "Inclusive upper time bound (ISO-8601)."
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 200
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "description": "Opaque forward cursor from a prior page."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "tenantId": {
+                            "type": "string"
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "principalId": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "local",
+                                  "user",
+                                  "token"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "principalId",
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "search",
+                              "compile",
+                              "effects.read",
+                              "memory.read",
+                              "memory.write",
+                              "billing.read",
+                              "billing.manage",
+                              "audit.read"
+                            ]
+                          },
+                          "target": {
+                            "type": "string"
+                          },
+                          "outcome": {
+                            "type": "string",
+                            "enum": [
+                              "success",
+                              "denied"
+                            ]
+                          },
+                          "at": {
+                            "type": "string"
+                          },
+                          "metadata": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "tenantId",
+                          "actor",
+                          "action",
+                          "outcome",
+                          "at"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "events"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/openapi.json": {
       "get": {
         "tags": [

@@ -30,6 +30,7 @@ export function registerCompileRoutes(app: ZodFastify, services: ApiServices): v
         body: compileBodySchema,
         response: { 200: contextPackageSchema },
       },
+      config: { audit: 'compile' },
     },
     async (request) => {
       const tenantId = tenantOf(request);

@@ -56,6 +56,28 @@ export {
   type ApiEventMap,
   type ApiEventType,
 } from './events.js';
+
+// Audit trail (F-027; FR-55/NFR-13) — the model/port/in-memory adapter are Fastify-free (the
+// composition root builds a persistent adapter); recordAudit is the Fastify recording hook. See ADR-0034.
+export {
+  AUDIT_ACTIONS,
+  DEFAULT_AUDIT_PAGE_SIZE,
+  MAX_AUDIT_PAGE_SIZE,
+  createInMemoryAuditLog,
+  isAuditAction,
+  recordAudit,
+  toAuditEvent,
+  type AuditAction,
+  type AuditActor,
+  type AuditEvent,
+  type AuditEventInput,
+  type AuditLog,
+  type AuditMetadata,
+  type AuditOutcome,
+  type AuditPage,
+  type AuditQuery,
+  type RetentionPolicy,
+} from './audit/index.js';
 export { API_VERSION } from './plugins/openapi.js';
 
 export type { ErrorEnvelope } from './errors/envelope.js';
@@ -68,3 +90,4 @@ export * from './schemas/compile.js';
 export * from './schemas/effects.js';
 export * from './schemas/memory.js';
 export * from './schemas/billing.js';
+export * from './schemas/audit.js';

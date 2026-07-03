@@ -291,6 +291,23 @@
       "rationale": "F-030 billing (FR-61, NFR-12) behind a BillingProvider port (ADR-0003 ports & adapters): open-core — the domain + local/free adapter are OSS (zero external deps), Dodo serves the paid Managed Cloud tier (merchant of record, ADR-0011). Changing the Plan catalog/entitlements, the Subscription model, the port, or the webhook mapping ripples to the adapters, the REST billing routes + schemas (and the regenerated OpenAPI/SDK, E-003), and the config wiring (E-014). Default is local/free so existing surfaces are unaffected. Live Dodo API verification, a persistent SubscriptionStore, entitlement enforcement in the compiler/quotas, and the dashboard billing UI are documented seams. OQ4 resolved 2026-07-03 (open-core).",
       "confidence": 0.9,
       "origin": "manual"
+    },
+    {
+      "id": "E-020",
+      "from": { "kind": "contract", "ref": "@tessera/api audit trail: AuditLog port + AuditEvent model + recording hook (apps/api/src/audit; F-027, ADR-0034)" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/api audit adapters: createInMemoryAuditLog (reference, drives the shared conformance) + createSqliteAuditLog (persistent, wired in @tessera/config — increment 1b) — both pass the shared AuditLog conformance incl. cross-tenant isolation (forTenant, E-018/ADR-0033)" },
+        { "kind": "module", "ref": "@tessera/api recordAudit onResponse hook (routes/v1/index.ts) — records an AuditEvent for routes flagged config.audit (search/compile/effects.read/memory.read|write/audit.read); actor+tenant from AuthContext, outcome from status (>=400 → denied); failure-isolated (never breaks a request); NON-SENSITIVE only (NFR-7 — no bodies/secrets/query content)" },
+        { "kind": "test", "ref": "@tessera/api audit-log conformance (in-memory) + audit e2e (default-build record+query; token-build success/denied outcomes, admin:manage-only query, cross-tenant isolation)" },
+        { "kind": "module", "ref": "@tessera/api GET /v1/audit route (admin:manage, tenant-scoped via forTenant, filter/paginate by action/actor/outcome/time + cursor) + schemas → OpenAPI + regenerated @tessera/sdk (getAudit). Advances E-003" },
+        { "kind": "module", "ref": "@tessera/config audit wiring (F-027 increment 1b): config.audit (enabled, retention) + Runtime.audit + createSqliteAuditLog; apps/server passes runtime.audit to buildServer (E-014)" },
+        { "kind": "module", "ref": "@tessera/web governance & audit UI (F-027 increment 2, FR-48) consumes GET /v1/audit" },
+        { "kind": "decision", "ref": "docs/adr/0034-audit-trail-and-governance.md" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "F-027 audit trail (FR-55/NFR-13): sensitive actions are recorded at the /v1 boundary into an append-only, tenant-scoped AuditLog and queried by admins (admin:manage). Changing the AuditEvent model, the AuditLog port, the recording hook's action catalog (config.audit), or the /v1/audit route/schema ripples to the adapters + shared conformance, the OpenAPI/regenerated SDK (E-003), the config wiring (E-014), and the governance UI (FR-48). Events are NON-SENSITIVE (NFR-7 — ids/actions/outcomes only); recording is failure-isolated; tenancy reuses forTenant (ADR-0033) with the actor/tenant from the AuthContext (E-018). Default is an in-memory sink so existing surfaces are unaffected. Increment 1a = in-memory end-to-end; 1b = persistent SQLite + config wiring; increment 2 = the web UI.",
+      "confidence": 0.9,
+      "origin": "manual"
     }
   ]
 }

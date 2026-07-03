@@ -11,6 +11,7 @@ import {
 } from 'fastify-type-provider-zod';
 import type { ZodFastify } from './app-types.js';
 import { createLocalAuthProvider, type AuthProvider } from './auth/index.js';
+import { createInMemoryAuditLog, type AuditLog } from './audit/index.js';
 import { createApiEventBus, type ApiEventBus } from './events.js';
 import { registerErrorHandling } from './errors/error-handler.js';
 import { registerOpenapi } from './plugins/openapi.js';
@@ -42,6 +43,12 @@ export interface BuildServerOptions {
    * host profiles inject a token/OIDC provider. See {@link AuthProvider} and ADR-0028.
    */
   readonly auth?: AuthProvider;
+  /**
+   * The audit trail sink (F-027; FR-55/NFR-13). Defaults to a fresh in-memory log; the composition
+   * root passes a persistent, tenant-scoped one. Sensitive routes (flagged `audit` in their config)
+   * record an event per response; `GET /v1/audit` (admin) queries it. See {@link AuditLog} + ADR-0034.
+   */
+  readonly audit?: AuditLog;
 }
 
 export interface ListenOptions extends BuildServerOptions {
@@ -113,6 +120,7 @@ export function buildServer(services: ApiServices, options: BuildServerOptions =
     services,
     options.events ?? createApiEventBus(),
     options.auth ?? createLocalAuthProvider(),
+    options.audit ?? createInMemoryAuditLog(),
   );
 
   return app;

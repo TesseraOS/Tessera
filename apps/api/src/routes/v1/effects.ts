@@ -23,6 +23,7 @@ export function registerEffectsRoutes(app: ZodFastify, services: ApiServices): v
         querystring: effectsQuerySchema,
         response: { 200: effectsResponseSchema },
       },
+      config: { audit: 'effects.read' },
     },
     async (request) => {
       const { kind, key, maxDepth } = request.query;

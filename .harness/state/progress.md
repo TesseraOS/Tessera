@@ -3,6 +3,45 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-04 — F-027 increment 1a: audit trail backend (in-memory, end-to-end) (@tessera/api)
+First code increment of F-027 (FR-55/NFR-13; ADR-0034). The **audit trail works end-to-end** with the
+default in-memory sink — sensitive actions are recorded at the `/v1` boundary and queried by admins,
+tenant-isolated. Persistence (SQLite/config) is increment **1b**; the governance UI is increment **2**.
+
+**What landed (`apps/api/src/audit/`):**
+- **Model + port (Fastify-free):** `AuditEvent { id, tenantId, actor {principalId, kind}, action, target?,
+  outcome success|denied, at, metadata? }` — **non-sensitive** (ids/actions/outcomes only, never bodies/
+  secrets, NFR-7); an `AUDIT_ACTIONS` catalog; `AuditLog { record, query, prune, forTenant }` — **append-
+  only**, tenant-scoped via `forTenant` (ADR-0033).
+- **`createInMemoryAuditLog`** (reference adapter): per-tenant events with a monotonic `seq`; queries are
+  **newest-first**, filtered (action/actor/outcome/time window) and **cursor-paginated** by `seq < cursor`
+  (stable against concurrent appends); `prune` by max age / max entries (retention, NFR-13).
+- **Recording:** `recordAudit` — an `onResponse` hook that records an event for routes flagged
+  `config.audit` (`search`/`compile`/`effects.read`/`memory.read|write`/`audit.read`); actor+tenant from the
+  `AuthContext`, outcome from the status (`>=400` → `denied`, so a 403 RBAC denial is captured);
+  **failure-isolated** (a sink error is logged, never breaks the request); unauthenticated (no AuthContext)
+  is skipped.
+- **`GET /v1/audit`** (`admin:manage`, tenant-scoped via `forTenant`, Zod filter/paginate) → `{ events,
+  nextCursor? }`; `buildServer` gains `audit?` (default in-memory); OpenAPI + **regenerated SDK** (`getAudit`).
+
+**Evidence (all green, workspace-wide):** state (37 features, **20 effect-links** — new **E-020**) · format ·
+typecheck 30 · lint 17 · **test 30** (api 49 incl. audit-log conformance 6) · build 17 · **e2e 16** (api 34
+incl. **audit e2e 2**: default-build record+query; token-build **success/denied** outcomes + **admin-only**
+query 403 + **cross-tenant isolation** — globex admin sees none of acme's events).
+
+**Decisions (ADR-0034):** record at the boundary via a hook (not the SSE event bus — audit needs durable,
+queryable, retained records); the model+port+in-memory core is Fastify-free (so the composition root builds
+a persistent adapter without pulling Fastify — the F-034 token-store precedent); tenancy reuses `forTenant`;
+`admin:manage` reused (no RBAC-catalog ripple); events non-sensitive. **Effects:** new **E-020** (audit
+contract) + **E-003** (new route/schema → OpenAPI/SDK) + **E-018** (consumes the auth model — actor/tenant).
+
+**Next step:** increment **1b** — `createSqliteAuditLog` (persistent `audit_events` table, tenant column,
+retention prune) + `config.audit` + `TESSERA_AUDIT_*` env + `Runtime.audit` + server wiring; then increment
+**2** — the governance & audit web UI (FR-48; WCAG AA, screenshot-verified). Committed per the standing
+per-feature cadence.
+
+---
+
 ## 2026-07-03 — R3 KICKOFF + F-027 claimed (planned): governance & audit UI + full audit trail
 R2 is complete, so the release advanced to **R3**. R3's only in-scope feature is **F-027** (Governance &
 audit UI + full audit trail — FR-48/FR-55/NFR-13). Promoted it `backlog → in_progress` (WIP 1; F-037 done),

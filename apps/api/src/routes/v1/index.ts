@@ -1,6 +1,7 @@
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { ZodFastify } from '../../app-types.js';
 import { registerAuth, type AuthProvider } from '../../auth/index.js';
+import { recordAudit, type AuditLog } from '../../audit/index.js';
 import type { ApiEventBus } from '../../events.js';
 import type { ApiServices } from '../../services.js';
 import { registerSearchRoutes } from './search.js';
@@ -9,6 +10,7 @@ import { registerEffectsRoutes } from './effects.js';
 import { registerMemoryRoutes } from './memory.js';
 import { registerEventsRoutes } from './events.js';
 import { registerBillingRoutes } from './billing.js';
+import { registerAuditRoutes } from './audit.js';
 
 /**
  * Mount every data route under the `/v1` prefix (NFR-11: versioned, additive). Also serves the
@@ -21,18 +23,22 @@ export function registerV1Routes(
   services: ApiServices,
   events: ApiEventBus,
   auth: AuthProvider,
+  audit: AuditLog,
 ): void {
   app.register(
     (instance, _opts, done) => {
       const v1 = instance.withTypeProvider<ZodTypeProvider>();
       // Authenticate every /v1 request first (per-route authorization is in each route module).
       registerAuth(v1, auth);
+      // Record an audit event per response for routes flagged with an `audit` action (FR-55).
+      recordAudit(v1, audit);
       registerSearchRoutes(v1, services);
       registerCompileRoutes(v1, services);
       registerEffectsRoutes(v1, services);
       registerMemoryRoutes(v1, services, events);
       registerEventsRoutes(v1, events);
       registerBillingRoutes(v1, services);
+      registerAuditRoutes(v1, audit);
 
       v1.get(
         '/openapi.json',

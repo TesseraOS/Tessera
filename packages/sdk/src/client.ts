@@ -20,6 +20,8 @@ export type MemoryList = paths['/v1/memory']['get']['responses'][200]['content']
 export type Memory = paths['/v1/memory/{lineageId}']['get']['responses'][200]['content'][Json];
 export type MemoryHistory =
   paths['/v1/memory/{lineageId}/history']['get']['responses'][200]['content'][Json];
+export type AuditQuery = NonNullable<paths['/v1/audit']['get']['parameters']['query']>;
+export type AuditPage = paths['/v1/audit']['get']['responses'][200]['content'][Json];
 
 export interface TesseraClientOptions {
   /** Base URL of the API, including the `/v1`-hosting origin (e.g. `http://localhost:3000`). */
@@ -48,6 +50,8 @@ export interface TesseraClient {
   editMemory(lineageId: string, patch: EditMemoryRequest): Promise<Memory>;
   /** Every version of a memory lineage, oldest first. */
   memoryHistory(lineageId: string): Promise<MemoryHistory>;
+  /** Query this tenant's audit trail (admin only), newest-first + paginated. */
+  getAudit(query?: AuditQuery): Promise<AuditPage>;
 }
 
 /** Unwrap an openapi-fetch result: return the body on success, else throw a typed error. */
@@ -101,6 +105,9 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
       return unwrap(
         await client.GET('/v1/memory/{lineageId}/history', { params: { path: { lineageId } } }),
       );
+    },
+    async getAudit(query = {}) {
+      return unwrap(await client.GET('/v1/audit', { params: { query } }));
     },
   };
 }

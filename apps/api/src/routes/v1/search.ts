@@ -16,6 +16,7 @@ export function registerSearchRoutes(app: ZodFastify, services: ApiServices): vo
         body: searchBodySchema,
         response: { 200: searchResponseSchema },
       },
+      config: { audit: 'search' },
     },
     async (request) => {
       const { query, limit } = request.body;

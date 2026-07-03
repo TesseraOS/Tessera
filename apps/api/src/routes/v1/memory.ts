@@ -38,6 +38,7 @@ export function registerMemoryRoutes(
         body: captureBodySchema,
         response: { 201: memorySchema },
       },
+      config: { audit: 'memory.write' },
     },
     async (request, reply) => {
       const memory = await services.memory.forTenant(tenantOf(request)).capture(request.body);
@@ -61,6 +62,7 @@ export function registerMemoryRoutes(
         querystring: memoryListQuerySchema,
         response: { 200: memoryListResponseSchema },
       },
+      config: { audit: 'memory.read' },
     },
     async (request) => {
       const { kind, scope } = request.query;
@@ -83,6 +85,7 @@ export function registerMemoryRoutes(
         params: lineageParamSchema,
         response: { 200: memorySchema },
       },
+      config: { audit: 'memory.read' },
     },
     async (request) => {
       const lineageId = request.params.lineageId as MemoryLineageId;
@@ -105,6 +108,7 @@ export function registerMemoryRoutes(
         body: editBodySchema,
         response: { 200: memorySchema },
       },
+      config: { audit: 'memory.write' },
     },
     (request) => {
       const lineageId = request.params.lineageId as MemoryLineageId;
@@ -122,6 +126,7 @@ export function registerMemoryRoutes(
         params: lineageParamSchema,
         response: { 200: memoryHistoryResponseSchema },
       },
+      config: { audit: 'memory.read' },
     },
     async (request) => {
       const lineageId = request.params.lineageId as MemoryLineageId;

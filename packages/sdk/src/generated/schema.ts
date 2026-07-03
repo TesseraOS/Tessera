@@ -779,6 +779,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Query this tenant's audit trail (admin only). */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Filter by action. */
+                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "billing.read" | "billing.manage" | "audit.read";
+                    /** @description Filter by actor principal id. */
+                    actor?: string;
+                    /** @description Filter by outcome. */
+                    outcome?: "success" | "denied";
+                    /** @description Inclusive lower time bound (ISO-8601). */
+                    since?: string;
+                    /** @description Inclusive upper time bound (ISO-8601). */
+                    until?: string;
+                    limit?: number;
+                    /** @description Opaque forward cursor from a prior page. */
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            events: {
+                                id: string;
+                                tenantId: string;
+                                actor: {
+                                    principalId: string;
+                                    /** @enum {string} */
+                                    kind: "local" | "user" | "token";
+                                };
+                                /** @enum {string} */
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "billing.read" | "billing.manage" | "audit.read";
+                                target?: string;
+                                /** @enum {string} */
+                                outcome: "success" | "denied";
+                                at: string;
+                                metadata?: {
+                                    [key: string]: string | number | boolean;
+                                };
+                            }[];
+                            nextCursor?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/openapi.json": {
         parameters: {
             query?: never;

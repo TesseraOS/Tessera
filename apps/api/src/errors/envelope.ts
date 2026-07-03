@@ -27,6 +27,8 @@ export function statusForCode(code: ErrorCode): number {
       return 404;
     case 'CONFLICT':
       return 409;
+    case 'RATE_LIMITED':
+      return 429;
     case 'INTERNAL':
       return 500;
   }
@@ -45,6 +47,8 @@ export function codeForStatus(status: number): ErrorCode {
       return 'NOT_FOUND';
     case 409:
       return 'CONFLICT';
+    case 429:
+      return 'RATE_LIMITED';
     default:
       return status >= 400 && status < 500 ? 'VALIDATION' : 'INTERNAL';
   }

@@ -8,6 +8,7 @@ export const errorCodeSchema = z.enum([
   'CONFLICT',
   'UNAUTHORIZED',
   'FORBIDDEN',
+  'RATE_LIMITED',
   'INTERNAL',
 ]);
 

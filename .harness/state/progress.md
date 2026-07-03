@@ -3,6 +3,61 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-03 — F-026 DONE: MCP gateway — multi-client auth + quotas (@tessera/mcp)
+Second R2 feature (FR-36), additive to `@tessera/mcp` (ADR-0029). Plan:
+[`F-026`](../plans/F-026-mcp-gateway-auth-quotas.md).
+
+**What changed** — an injected **gateway** on the MCP surface that reuses the F-025 auth model and adds
+per-principal quotas:
+- **Reuse the auth model TYPE-ONLY** (`AuthProvider`/`AuthContext`/`AuthInput`/`Permission` imported as
+  *types* from `@tessera/api`) so the **MCP runtime stays Fastify-free** (the F-012 invariant holds —
+  the gateway needs only `ctx.permissions.has()`; providers are built at the composition root).
+- **`gateway.ts`:** `createMcpGateway({ auth, quota?, resolveCredential? })` → `guard(tool, extra)` =
+  authenticate (→ `AuthContext`, `UnauthorizedError` on bad/missing) → authorize the tool's required
+  permission (`TOOL_PERMISSIONS`; `ForbiddenError`) → meter the principal (`RateLimitedError`). Errors
+  flow through the **existing** masked envelope (`toEnvelope`).
+- **`quota.ts`:** `QuotaLimiter` port + `createInMemoryQuotaLimiter` (fixed-window, injected clock,
+  independent per-principal buckets).
+- **`buildMcpServer(services, { gateway? })`** wraps each tool with the guard; **default off** ⇒ the
+  five tools behave exactly as before. `resolveCredential(extra)` reads the SDK `authInfo`/`Authorization`
+  header (default) — transport-agnostic.
+- **New shared `@tessera/core` `RATE_LIMITED`** code + `RateLimitedError` → **429** at the REST envelope
+  (`statusForCode`/`codeForStatus`/`errorCodeSchema` + web mirror; additive, **compiler-guided** by the
+  exhaustive switch). One 429-equivalent for both MCP quotas and future REST rate-limiting.
+
+**Decision (ADR-0029):** reuse the auth model type-only (no Fastify in MCP; no shared-package refactor);
+an MCP-owned quota port; a dedicated `RATE_LIMITED` code (not overloading 403). **Deferred as documented
+seams:** the multi-client **HTTP/streamable transport** + auth middleware (populates `authInfo`), a
+persistent/distributed quota store, token-bucket/sliding-window + per-tool weights + quota headers, and
+composition-root wiring (config/server → construct the gateway; capability proven by the e2e injecting the
+real F-025 token provider).
+
+**Evidence/verification (all green, workspace-wide):** state (33 features, 18 effect-links, wip 1) ·
+format · typecheck (28) · lint (16) · **test (28 tasks; mcp 14 = quota 4 + gateway 8 + explain 2; api 36
+incl. RATE_LIMITED→429)** · build (16) · **e2e (15 tasks; mcp 11 = prior 7 + 4 gateway)**. The gateway e2e
+drives a **real MCP client over InMemoryTransport**: a viewer is denied `capture_memory` (FORBIDDEN) but
+allowed reads, a member is allowed the write, quota exhaustion returns RATE_LIMITED, and the default
+(no-gateway) build leaves all tools open (back-compat). SDK regen = **no diff** (the error envelope isn't
+in the OpenAPI, so `RATE_LIMITED` doesn't ripple to `@tessera/sdk`).
+
+**Effects:** **E-018** (the MCP gateway is a new type-only consumer of the auth model + owns the quota
+port) + **E-006** (core `RATE_LIMITED` added additively; dependents reviewed) + **E-003** (tools now
+optionally guarded; the REST envelope maps 429 — all additive).
+
+**Lesson:** [[reuse-cross-surface-contract-type-only-to-avoid-runtime-coupling]] — to share a contract
+(auth model) across two surfaces without dragging one surface's heavy runtime (Fastify) into the other,
+import it **type-only** and inject the runtime pieces at the composition root; the consumer needs only the
+data (`AuthContext.permissions`), not the constructors. Add a shared error code additively and let the
+exhaustive switch guide the ripple.
+
+**Next step:** R2 remaining — **F-030** (billing) is gated on **OQ4** (license/business model), so it
+stays `backlog` until that resolves; **F-027** (governance & audit UI) is **R3**. So R2's actionable
+features (F-025, F-026) are **done**. Sensible follow-ups before R3: the deferred composition-root wiring
+(select the AuthProvider + MCP gateway from config/server env), a persistent TokenStore/quota store, the
+OIDC adapter, and data-plane per-tenant row-scoping. Committed per the standing per-feature cadence.
+
+---
+
 ## 2026-07-03 — R2 KICKOFF + F-025 DONE: API auth — tenancy + org RBAC + scoped tokens (@tessera/api)
 **R2 opened.** R1 is fully done, so the release advanced to **R2**: promoted the eligible R2 cohort
 (F-025 `must`, F-026 `should`) `backlog → todo`; **F-030** (billing) stays `backlog` (gated on **OQ4**,

@@ -8,10 +8,29 @@
  * injected (the deployment-profile wiring is F-015); `startMcpStdio` serves over stdio for agents.
  */
 export { buildMcpServer, SERVER_INFO } from './server.js';
+export type { BuildMcpServerOptions } from './server.js';
 export { startMcpStdio } from './stdio.js';
 export { buildExplanation } from './explain.js';
 export type { Explanation, FragmentExplanation, StageExplanation } from './explain.js';
 export { toolOk, toolErr, runTool } from './result.js';
+
+// MCP gateway — multi-client auth + quotas (F-026; FR-36). Reuses the F-025 auth model (type-only).
+export {
+  TOOL_PERMISSIONS,
+  createMcpGateway,
+  defaultCredentialResolver,
+  type CredentialResolver,
+  type McpCallContext,
+  type McpGateway,
+  type McpGatewayOptions,
+  type McpToolName,
+} from './gateway.js';
+export {
+  createInMemoryQuotaLimiter,
+  type InMemoryQuotaOptions,
+  type QuotaDecision,
+  type QuotaLimiter,
+} from './quota.js';
 export {
   searchShape,
   compileShape,

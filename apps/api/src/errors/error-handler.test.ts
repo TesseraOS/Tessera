@@ -3,6 +3,7 @@ import {
   ForbiddenError,
   InternalError,
   NotFoundError,
+  RateLimitedError,
   UnauthorizedError,
   ValidationError,
 } from '@tessera/core';
@@ -16,6 +17,7 @@ describe('mapError', () => {
     expect(mapError(new ForbiddenError('no')).statusCode).toBe(403);
     expect(mapError(new NotFoundError('gone')).statusCode).toBe(404);
     expect(mapError(new ConflictError('dup')).statusCode).toBe(409);
+    expect(mapError(new RateLimitedError('slow down')).statusCode).toBe(429);
   });
 
   it('preserves a client error message + details and is not a server fault', () => {

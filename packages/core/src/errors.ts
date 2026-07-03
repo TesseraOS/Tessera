@@ -1,6 +1,12 @@
 /** Stable, machine-readable error codes used across the domain. */
 export type ErrorCode =
-  'VALIDATION' | 'NOT_FOUND' | 'CONFLICT' | 'UNAUTHORIZED' | 'FORBIDDEN' | 'INTERNAL';
+  | 'VALIDATION'
+  | 'NOT_FOUND'
+  | 'CONFLICT'
+  | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
+  | 'RATE_LIMITED'
+  | 'INTERNAL';
 
 export interface TesseraErrorOptions {
   /** Stable error code (defaults to `INTERNAL`). */
@@ -60,6 +66,13 @@ export class UnauthorizedError extends TesseraError {
 export class ForbiddenError extends TesseraError {
   constructor(message: string, options: FixedCodeOptions = {}) {
     super(message, { ...options, code: 'FORBIDDEN' });
+  }
+}
+
+/** The caller exceeded a rate limit or quota (→ HTTP 429). */
+export class RateLimitedError extends TesseraError {
+  constructor(message: string, options: FixedCodeOptions = {}) {
+    super(message, { ...options, code: 'RATE_LIMITED' });
   }
 }
 

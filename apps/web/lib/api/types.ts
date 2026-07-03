@@ -2,7 +2,13 @@
 // hand-maintained mirror until the generated @tessera/sdk (F-022) replaces this module.
 
 export type ErrorCode =
-  'VALIDATION' | 'NOT_FOUND' | 'CONFLICT' | 'UNAUTHORIZED' | 'FORBIDDEN' | 'INTERNAL';
+  | 'VALIDATION'
+  | 'NOT_FOUND'
+  | 'CONFLICT'
+  | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
+  | 'RATE_LIMITED'
+  | 'INTERNAL';
 
 export interface ErrorEnvelope {
   error: { code: ErrorCode; message: string; details?: unknown };

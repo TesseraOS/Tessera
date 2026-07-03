@@ -43,6 +43,7 @@
         { "kind": "module", "ref": "@tessera/web dashboard (F-014, realized): search + Context Package Inspector consume POST /v1/search & /v1/compile via the interim typed client apps/web/lib/api (ADR-0022)" },
         { "kind": "module", "ref": "@tessera/api GET /v1/events SSE stream (F-021, FR-38) over an injected ApiEventBus (buildServer option, default in-process) — ADDITIVE, REST-only (MCP unaffected); the memory-capture route emits memory.captured; document.ingested/removed types are provided, the ingestion-worker producer is wired via the composition root later. OpenAPI regenerates to include /v1/events" },
         { "kind": "module", "ref": "@tessera/api /v1 auth guard (F-025): registerAuth (onRequest → request.authContext via the injected AuthProvider) + requirePermission per-route preHandlers add 401/403 paths to the existing routes — ADDITIVE (response schemas + OpenAPI unchanged; auth defaults to the zero-auth Local provider so existing routes/e2e are untouched). The full auth/tenancy/RBAC contract is E-018" },
+        { "kind": "module", "ref": "@tessera/api /v1/billing routes (F-030): plans (public) / subscription + checkout (admin:manage) / webhook (public, signature-verified via a raw-body scope) over the @tessera/billing BillingProvider — ADDITIVE; new billing schemas → the OpenAPI doc + generated @tessera/sdk were regenerated. See E-019" },
         { "kind": "decision", "ref": "docs/adr/0016-rest-api-fastify-zod-bridge.md" },
         { "kind": "decision", "ref": "docs/adr/0017-mcp-server-surface.md" }
       ],
@@ -200,6 +201,7 @@
         { "kind": "package", "ref": "consumers: the runnable REST/MCP process bins that boot from a Runtime; type-only on @tessera/api ApiServices (E-003)" },
         { "kind": "package", "ref": "@tessera/storage Postgres+pgvector adapters (F-023) add a self-hosted/cloud profile branch behind the same Runtime/config — no domain change" },
         { "kind": "module", "ref": "@tessera/config auth wiring (F-034): a config.auth section (mode none|token, tenant, quota) + createSqliteTokenStore (persistent TokenStore over the Drizzle handle, api_tokens table) + Runtime.auth {provider, tokenStore?} selected by config.auth.mode — built via the Fastify-free @tessera/api/auth subpath so the composition root (and the MCP process booting through it) never pulls Fastify. Adds a drizzle-orm dep to @tessera/config" },
+        { "kind": "module", "ref": "@tessera/config billing wiring (F-030): config.billing (provider none|dodo) → Runtime.billing + ApiServices.billing selected by config; the local/free default keeps zero external deps. See E-019" },
         { "kind": "decision", "ref": "docs/adr/0018-config-loader-and-local-profile.md" },
         { "kind": "decision", "ref": "docs/adr/0030-auth-composition-root-wiring.md" }
       ],
@@ -268,6 +270,22 @@
       ],
       "kind": "EFFECT_LINK",
       "rationale": "F-025 adds an authentication + authorization control plane at the /v1 boundary; F-026 extends the same model to the MCP surface as a gateway (auth + per-principal quotas). AuthProvider + TokenStore are ports (local adapters now; OIDC + persistent token store as cloud seams); RBAC is a pure roles→permissions mapping intersected with token scopes. Changing the permission catalog, the role mapping, the AuthContext shape, or the port interfaces ripples to the REST per-route guards, the MCP gateway's TOOL_PERMISSIONS, the composition root that injects a provider, and the future data-plane row-scoping + OIDC adapter. The MCP gateway consumes the auth model TYPE-ONLY so the MCP runtime stays Fastify-free (F-012 invariant); quota-exceeded surfaces the new @tessera/core RATE_LIMITED code (→429 REST). Both surfaces default to zero-auth/ungated so existing routes/tools/e2e are unchanged — enforcement engages only when a provider/gateway is injected. tenantId is carried but the domain stores are not yet tenant-scoped (documented seam, no false isolation claim). Advances E-003 additively (new 401/403/429 paths; response schemas + OpenAPI unchanged).",
+      "confidence": 0.9,
+      "origin": "manual"
+    },
+    {
+      "id": "E-019",
+      "from": { "kind": "contract", "ref": "@tessera/billing BillingProvider + SubscriptionStore ports + Plan/PLANS catalog + Subscription/Entitlements model" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/billing adapters: createLocalBilling (open-core free default, no external deps) + createDodoBilling (fetch-based, env-guarded; HMAC webhook verify + payload mapping offline-tested; live Dodo API = seam) + createInMemorySubscriptionStore (a persistent store = seam)" },
+        { "kind": "test", "ref": "@tessera/billing tests (domain/entitlements, local adapter, dodo signature+parse+webhook+checkout) + @tessera/api billing e2e (plans/subscription/checkout + signed webhook)" },
+        { "kind": "module", "ref": "@tessera/api /v1/billing routes (plans public, subscription+checkout admin:manage, webhook public + signature-verified via a raw-body child scope) + schemas — the PLANS catalog + Subscription shape drive validation/OpenAPI (advances E-003; the SDK was regenerated to include /v1/billing)" },
+        { "kind": "module", "ref": "@tessera/config billing wiring: config.billing (provider none|dodo) → createRuntimeBilling (dodo secrets via the SecretsProvider) → Runtime.billing + ApiServices.billing (E-014)" },
+        { "kind": "decision", "ref": "docs/adr/0011-billing-dodo-payments.md" },
+        { "kind": "decision", "ref": "docs/adr/0031-billing-port-and-open-core.md" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "F-030 billing (FR-61, NFR-12) behind a BillingProvider port (ADR-0003 ports & adapters): open-core — the domain + local/free adapter are OSS (zero external deps), Dodo serves the paid Managed Cloud tier (merchant of record, ADR-0011). Changing the Plan catalog/entitlements, the Subscription model, the port, or the webhook mapping ripples to the adapters, the REST billing routes + schemas (and the regenerated OpenAPI/SDK, E-003), and the config wiring (E-014). Default is local/free so existing surfaces are unaffected. Live Dodo API verification, a persistent SubscriptionStore, entitlement enforcement in the compiler/quotas, and the dashboard billing UI are documented seams. OQ4 resolved 2026-07-03 (open-core).",
       "confidence": 0.9,
       "origin": "manual"
     }

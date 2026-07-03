@@ -44,6 +44,9 @@ importers:
       '@fastify/swagger':
         specifier: ^9.5.1
         version: 9.7.0
+      '@tessera/billing':
+        specifier: workspace:*
+        version: link:../../packages/billing
       '@tessera/context-compiler':
         specifier: workspace:*
         version: link:../../packages/context-compiler
@@ -236,6 +239,12 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/billing:
+    dependencies:
+      '@tessera/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/config:
     dependencies:
       '@tessera/ai':
@@ -244,6 +253,9 @@ importers:
       '@tessera/api':
         specifier: workspace:*
         version: link:../../apps/api
+      '@tessera/billing':
+        specifier: workspace:*
+        version: link:../billing
       '@tessera/context-compiler':
         specifier: workspace:*
         version: link:../context-compiler

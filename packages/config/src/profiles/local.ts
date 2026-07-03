@@ -8,6 +8,12 @@ import type { ApiServices } from '@tessera/api';
 // Runtime import via the Fastify-free `@tessera/api/auth` subpath (ADR-0030) — so the composition root
 // (and the MCP process that boots through it) never pulls Fastify.
 import { createLocalAuthProvider, createTokenAuthProvider } from '@tessera/api/auth';
+import {
+  createDodoBilling,
+  createInMemorySubscriptionStore,
+  createLocalBilling,
+  type BillingProvider,
+} from '@tessera/billing';
 import { createContextCompiler } from '@tessera/context-compiler';
 import { InternalError, ValidationError } from '@tessera/core';
 import { createKnowledgeGraphService, createSqliteGraphStore } from '@tessera/knowledge-graph';
@@ -32,7 +38,7 @@ import { createBlobFragmentSource } from '../fragment-source.js';
 import type { Env } from '../load.js';
 import type { Runtime, RuntimeAuth } from '../runtime.js';
 import type { TesseraConfig } from '../schema.js';
-import { createSecretsProvider } from '../secrets/index.js';
+import { createSecretsProvider, type SecretsProvider } from '../secrets/index.js';
 
 /**
  * Build the runtime auth from config (F-034): `token` mode wires a persistent SQLite token store behind
@@ -44,6 +50,30 @@ function createRuntimeAuth(config: TesseraConfig['auth'], db: BetterSQLite3Datab
     return { provider: createTokenAuthProvider({ tokenStore }), tokenStore };
   }
   return { provider: createLocalAuthProvider({ tenantId: config.tenant }) };
+}
+
+/**
+ * Build the billing provider from config (F-030): `dodo` reads its secrets via the SecretsProvider
+ * and persists subscriptions in memory (a durable store is a seam); otherwise the local/free adapter
+ * (OSS default, no external service).
+ */
+async function createRuntimeBilling(
+  config: TesseraConfig['billing'],
+  secrets: SecretsProvider,
+): Promise<BillingProvider> {
+  if (config.provider === 'dodo') {
+    const [apiKey, webhookSecret] = await Promise.all([
+      secrets.require('BILLING_DODO_API_KEY'),
+      secrets.require('BILLING_DODO_WEBHOOK_SECRET'),
+    ]);
+    return createDodoBilling({
+      apiKey,
+      webhookSecret,
+      store: createInMemorySubscriptionStore(),
+      ...(config.dodoBaseUrl !== undefined ? { baseUrl: config.dodoBaseUrl } : {}),
+    });
+  }
+  return createLocalBilling();
 }
 
 /** Construct the configured embeddings provider. Transformers/Ollama load a model (async). */
@@ -122,11 +152,14 @@ export async function createLocalRuntime(
     graphStore,
   });
 
+  const billing = await createRuntimeBilling(config.billing, secrets);
+
   const services: ApiServices = {
     search,
     compiler,
     graph: createKnowledgeGraphService(graphStore),
     memory: createMemoryService(memoryStore),
+    billing,
     readiness: async () => {
       const ok = await relational.healthcheck().catch(() => false);
       const checks = [{ name: 'sqlite', ok }];
@@ -138,6 +171,7 @@ export async function createLocalRuntime(
     config,
     services,
     auth: createRuntimeAuth(config.auth, relational.db),
+    billing,
     secrets,
     stores: { relational, vector, blob, queue },
     embeddings,

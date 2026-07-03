@@ -8,6 +8,7 @@ import { registerCompileRoutes } from './compile.js';
 import { registerEffectsRoutes } from './effects.js';
 import { registerMemoryRoutes } from './memory.js';
 import { registerEventsRoutes } from './events.js';
+import { registerBillingRoutes } from './billing.js';
 
 /**
  * Mount every data route under the `/v1` prefix (NFR-11: versioned, additive). Also serves the
@@ -31,6 +32,7 @@ export function registerV1Routes(
       registerEffectsRoutes(v1, services);
       registerMemoryRoutes(v1, services, events);
       registerEventsRoutes(v1, events);
+      registerBillingRoutes(v1, services);
 
       v1.get(
         '/openapi.json',

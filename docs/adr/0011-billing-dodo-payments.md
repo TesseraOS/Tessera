@@ -1,10 +1,11 @@
 # ADR-0011: Billing & subscriptions via Dodo Payments (Managed Cloud, R2)
 
-- **Status:** Accepted (direction) — build deferred to R2
-- **Date:** 2026-06-27
+- **Status:** Accepted — **OQ4 resolved 2026-07-03 (open-core)**, build underway (F-030)
+- **Date:** 2026-06-27 (OQ4 gate resolved 2026-07-03)
 - **Deciders:** Project lead, Claude
 - **Tags:** billing, cloud, commercial
-- **Depends on:** OQ4 (license / business model) in `docs/PRD.md`
+- **Depends on:** OQ4 (license / business model) in `docs/PRD.md` — **resolved: open-core**, so this
+  direction is committed. The concrete Billing port + adapters are ADR-0031 (F-030).
 
 ## Context
 

@@ -323,7 +323,9 @@ Selected by a **deployment profile** ([ADR-0003](adr/0003-local-first-cloud-read
   a dedicated graph engine later? Decide by R1 based on query needs.
 - **OQ3** — Compression strategy: extractive vs LLM-abstractive (and which provider) under
   local-first constraints.
-- **OQ4** — License model (OSS core + commercial? source-available?) — pre-R1.
+- **OQ4** — License model — **RESOLVED 2026-07-03: open-core** (permissive-OSS core + a paid Managed
+  Cloud / enterprise tier). Confirms [ADR-0011](adr/0011-billing-dodo-payments.md) (billing is committed,
+  cloud-only, behind a `Billing` port) and unblocks **F-030**.
 - **OQ5** — Code-symbol extraction approach across languages (tree-sitter vs LSP) for FR-16.
 
 ## 13. References

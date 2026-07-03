@@ -1,6 +1,7 @@
 import type { Embeddings } from '@tessera/ai';
 import type { ApiServices } from '@tessera/api';
 import type { AuthProvider, TokenStore } from '@tessera/api/auth';
+import type { BillingProvider } from '@tessera/billing';
 import type { KeywordRetriever, TemporalRetriever } from '@tessera/retrieval';
 import type { BlobStore, Queue, SqliteStore, VectorStore } from '@tessera/storage';
 import type { TesseraConfig } from './schema.js';
@@ -36,6 +37,8 @@ export interface Runtime {
   readonly services: ApiServices;
   /** The auth provider (+ token store) the surfaces guard with, selected by `config.auth` (F-034). */
   readonly auth: RuntimeAuth;
+  /** The billing provider (local/free or Dodo), selected by `config.billing` (F-030). */
+  readonly billing: BillingProvider;
   readonly secrets: SecretsProvider;
   readonly stores: RuntimeStores;
   readonly embeddings: Embeddings;

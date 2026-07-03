@@ -23,6 +23,7 @@
   "dependencies": {
     "@tessera/ai": "workspace:*",
     "@tessera/api": "workspace:*",
+    "@tessera/billing": "workspace:*",
     "@tessera/context-compiler": "workspace:*",
     "@tessera/core": "workspace:*",
     "@tessera/knowledge-graph": "workspace:*",

@@ -1,3 +1,4 @@
+import type { BillingProvider } from '@tessera/billing';
 import type { ContextCompiler } from '@tessera/context-compiler';
 import type { KnowledgeGraphService } from '@tessera/knowledge-graph';
 import type { MemoryService } from '@tessera/memory';
@@ -35,6 +36,11 @@ export interface ApiServices {
   readonly graph: KnowledgeGraphService;
   /** Versioned memory (F-007) — `/v1/memory`. */
   readonly memory: MemoryService;
+  /**
+   * Billing provider (F-030) — `/v1/billing/*`. Optional; when omitted the routes fall back to the
+   * local/free adapter (open-core default), so plans/subscription always answer.
+   */
+  readonly billing?: BillingProvider;
   /**
    * Optional readiness probe for `/ready`. When omitted, the server reports ready as soon as it is
    * listening. F-015/F-016 wire real dependency checks here.

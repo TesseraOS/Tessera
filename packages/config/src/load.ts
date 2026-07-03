@@ -75,12 +75,17 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
     tenant: env.TESSERA_AUTH_TENANT,
     ...(authQuota !== undefined ? { quota: authQuota } : {}),
   });
+  const billing = section({
+    provider: env.TESSERA_BILLING_PROVIDER,
+    dodoBaseUrl: env.TESSERA_BILLING_DODO_BASE_URL,
+  });
 
   if (storage !== undefined) input.storage = storage;
   if (embeddings !== undefined) input.embeddings = embeddings;
   if (budgets !== undefined) input.budgets = budgets;
   if (secrets !== undefined) input.secrets = secrets;
   if (auth !== undefined) input.auth = auth;
+  if (billing !== undefined) input.billing = billing;
   return input as ConfigInput;
 }
 
@@ -96,6 +101,7 @@ function mergeConfig(base: ConfigInput, over: ConfigInput): ConfigInput {
     ...((base.budgets ?? over.budgets) ? { budgets: { ...base.budgets, ...over.budgets } } : {}),
     ...((base.secrets ?? over.secrets) ? { secrets: { ...base.secrets, ...over.secrets } } : {}),
     ...((base.auth ?? over.auth) ? { auth: { ...base.auth, ...over.auth } } : {}),
+    ...((base.billing ?? over.billing) ? { billing: { ...base.billing, ...over.billing } } : {}),
   };
 }
 

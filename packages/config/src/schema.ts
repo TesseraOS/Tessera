@@ -16,6 +16,10 @@ export const DEFAULT_DATA_DIR = '.tessera';
 export const AUTH_MODES = ['none', 'token'] as const;
 export type AuthMode = (typeof AUTH_MODES)[number];
 
+/** Billing providers: `none` = local/free (OSS default); `dodo` = Dodo Payments (cloud, F-030). */
+export const BILLING_PROVIDERS = ['none', 'dodo'] as const;
+export type BillingProviderKind = (typeof BILLING_PROVIDERS)[number];
+
 const storageSchema = z
   .object({
     /** RelationalStore path (`:memory:` for ephemeral). */
@@ -82,6 +86,18 @@ const authSchema = z
   })
   .default({});
 
+/**
+ * Billing wiring (F-030). `provider: none` = the local/free adapter (OSS default, no external service);
+ * `provider: dodo` = Dodo Payments (secrets — apiKey/webhookSecret — come via the SecretsProvider).
+ */
+const billingSchema = z
+  .object({
+    provider: z.enum(BILLING_PROVIDERS).default('none'),
+    /** Dodo API base URL override (sandbox); non-secret. */
+    dodoBaseUrl: z.string().url().optional(),
+  })
+  .default({});
+
 /** The validated Tessera configuration (FR-50). Deployment is configuration — one surface. */
 export const configSchema = z.object({
   profile: z.enum(DEPLOYMENT_PROFILES as unknown as [string, ...string[]]).default('local'),
@@ -92,6 +108,7 @@ export const configSchema = z.object({
   budgets: budgetsSchema,
   secrets: secretsSchema,
   auth: authSchema,
+  billing: billingSchema,
 });
 
 /** Caller-facing config input (pre-defaults). */

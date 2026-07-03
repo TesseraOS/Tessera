@@ -3,6 +3,54 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-03 — OQ4 RESOLVED + F-030 DONE: Billing behind a Billing port, open-core (@tessera/billing)
+**OQ4 resolved → open-core** (permissive-OSS core + a paid Managed Cloud tier), recorded in
+[`PRD §12`](../../docs/PRD.md) + [ADR-0011](../../docs/adr/0011-billing-dodo-payments.md). That unblocked
+**F-030** (FR-61, NFR-12). Plan/design: [ADR-0031](../../docs/adr/0031-billing-port-and-open-core.md).
+
+**What changed** — a `BillingProvider` port with a local/free adapter (OSS) + a Dodo adapter (paid cloud),
+default local/free so nothing existing is affected:
+- **NEW `@tessera/billing`** (deps: `@tessera/core` only — no Fastify): `domain.ts` (`PlanId`
+  free/pro/enterprise + `PLANS` catalog with `Entitlements`; `Subscription`; `effectiveEntitlements` →
+  free for un-entitled statuses); `ports.ts` (`BillingProvider` + `SubscriptionStore`); `createLocalBilling`
+  (every tenant active-free, checkout/webhook rejected, zero external deps); `createDodoBilling`
+  (fetch-based, no SDK; `verifyDodoSignature` = constant-time HMAC-SHA256 over the **raw body**;
+  `parseDodoEvent` maps a webhook → `BillingEvent`; env-guarded, live API = seam); in-memory
+  `SubscriptionStore`.
+- **Config:** a `billing` section (provider none|dodo, dodoBaseUrl) + `TESSERA_BILLING_*` env; Dodo
+  secrets via the `SecretsProvider`; `Runtime.billing` + `ApiServices.billing` selected by config.
+- **REST (`@tessera/api`):** `/v1/billing/plans` (public), `/v1/billing/subscription` + `/checkout`
+  (`admin:manage`, tenant from the `AuthContext`), `/webhook` (public, signature-verified via an
+  **encapsulated raw-body** string parser so other routes keep normal JSON). Reused `admin:manage` (no
+  RBAC-catalog ripple); falls back to `createLocalBilling` when unwired.
+
+**Decision (ADR-0031):** billing in its own package (not the API app); `fetch` over a payments SDK
+(ADR-0024); reuse `admin:manage`. **Deferred as documented seams:** live Dodo verification (reconcile
+`verifyDodoSignature` with Dodo's Standard Webhooks format when wiring a real account), a persistent
+`SubscriptionStore`, **entitlement enforcement** (wiring `PLANS` limits into the compiler budget / MCP
+quotas — NFR-12 metering), and the dashboard billing UI.
+
+**Evidence/verification (all green, workspace-wide):** state (34 features, 19 effect-links, wip 1) · format
+· typecheck (30) · lint (17) · **test (30 tasks; billing 13 = domain 4 + local 2 + dodo 7; api 36)** · build
+(17) · **e2e (16 tasks; api 30 = prior 25 + 5 billing)**. The billing e2e drives a **signed Dodo webhook over
+HTTP** that updates the subscription, plus bad-signature→401, public plans, and local checkout-rejection.
+The **SDK was regenerated** (openapi.json + generated schema.ts now include `/v1/billing`).
+
+**Effects:** **E-019** (new — the billing contract: ports + PLANS catalog + adapters) + **E-003** (new REST
+routes; OpenAPI + SDK regenerated) + **E-014** (config billing wiring).
+
+**Lesson:** [[open-core-domain-package-plus-provider-port]] — model a paid capability as a domain package
+with a provider port + a **local/free adapter as the OSS default**, so the open-source build has zero
+payment deps and the cloud adapter is opt-in; verify a provider you can't call live by unit-testing its
+**signature + payload mapping** over raw bytes and driving a **signed webhook** through the real HTTP route.
+
+**Next step:** **R2's buildable features are complete** — F-025 (auth/RBAC), F-026 (MCP gateway), F-034
+(auth wiring seam), F-030 (billing). Remaining R2 seam work (entitlement enforcement, live Dodo, persistent
+subscription store, OIDC mode, data-plane row-scoping) are follow-ups. **R3 next:** F-027 (governance &
+audit UI + full audit trail). Committed per the standing per-feature cadence.
+
+---
+
 ## 2026-07-03 — F-034 DONE: Auth composition-root wiring + persistent SQLite token store (@tessera/config)
 R2 follow-up **seam #1** (the user's agreed "harden the seams" step). Makes F-025/F-026 auth **usable
 end-to-end** — config-driven provider/gateway selection + durable token grants — additive (default `none`

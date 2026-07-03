@@ -65,3 +65,4 @@ export * from './schemas/search.js';
 export * from './schemas/compile.js';
 export * from './schemas/effects.js';
 export * from './schemas/memory.js';
+export * from './schemas/billing.js';

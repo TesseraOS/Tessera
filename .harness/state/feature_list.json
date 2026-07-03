@@ -928,11 +928,33 @@
         "NFR-12"
       ],
       "service": "api",
-      "package": "@tessera/api",
+      "package": "@tessera/billing",
       "release": "R2",
       "priority": "should",
-      "status": "backlog",
-      "notes": "Direction per ADR-0011; gated on OQ4 (license/business model)."
+      "status": "done",
+      "blockedBy": [
+        "F-011",
+        "F-015",
+        "F-025"
+      ],
+      "acceptance": [
+        "A @tessera/billing package (open-core): a BillingProvider port + domain (Plan + a PLANS catalog free/pro/enterprise carrying entitlements; Subscription with status + current-period) + a local/free adapter (the OSS default — zero external deps, every tenant on the free plan) + an in-memory SubscriptionStore; a Dodo Payments adapter (fetch-based, no SDK per ADR-0024) implementing the same port, env-guarded, with offline-unit-tested HMAC webhook-signature verification (live Dodo API calls remain a documented seam)",
+        "Config gains a `billing` section (provider none|dodo, default none) selecting the adapter; Runtime.billing is exposed; the local default keeps zero external deps / offline",
+        "A REST billing surface in @tessera/api: GET /v1/billing/plans (public), GET /v1/billing/subscription + POST /v1/billing/checkout (guarded by admin:manage, tenant from the AuthContext), POST /v1/billing/webhook (public, signature-verified) — Zod-validated, in the OpenAPI doc, consistent error envelope",
+        "Additive & back-compatible (default local/none billing → existing surfaces unaffected); tests (billing package: local adapter + entitlements + webhook signature + subscription store; api routes with the local provider); ADR-0031 records the Billing port/adapters + open-core (OQ4); workspace gates green. Dashboard billing UI + live Dodo verification are documented seams"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-014",
+        "E-019"
+      ],
+      "notes": "Done 2026-07-03 (R2): billing & subscriptions behind a Billing port, open-core (OQ4 resolved 2026-07-03; ADR-0011 confirmed + ADR-0031). NEW @tessera/billing package (deps: @tessera/core only — no Fastify, so config/MCP stay clean): domain.ts (PlanId free/pro/enterprise + PLANS catalog carrying Entitlements; Subscription + SubscriptionStatus; effectiveEntitlements falls back to free for un-entitled statuses); ports.ts (BillingProvider + SubscriptionStore + CheckoutRequest/Session + BillingEvent); adapters/local.ts (createLocalBilling — the OSS default: every tenant active-free, checkout/webhook rejected, zero external deps); adapters/dodo.ts (createDodoBilling — fetch-based, no SDK per ADR-0024; verifyDodoSignature = constant-time HMAC-SHA256 over the raw body; parseDodoEvent maps Dodo webhook → BillingEvent; env-guarded, live API = seam); subscription-store.ts (in-memory; persistent = seam). CONFIG (@tessera/config): a `billing` section (provider none|dodo, dodoBaseUrl) + TESSERA_BILLING_* env; createRuntimeBilling reads Dodo secrets via the SecretsProvider; Runtime.billing + ApiServices.billing selected by config (default local/free). REST (@tessera/api): /v1/billing/plans (public), /v1/billing/subscription + /v1/billing/checkout (admin:manage, tenant from AuthContext), /v1/billing/webhook (public, signature-verified via an ENCAPSULATED raw-body string parser so other routes keep normal JSON) — Zod schemas → OpenAPI; falls back to createLocalBilling when no provider is wired. Reused the existing admin:manage permission (no catalog ripple). +18 tests: billing 13 (domain 4 · local 2 · dodo 7) + api billing e2e 5 (plans public, free subscription, checkout-rejected-locally, a SIGNED Dodo webhook over HTTP updates the subscription, bad-signature→401). SDK regenerated (openapi.json + generated schema.ts now include /v1/billing). Effects E-003 (new routes) + E-014 (config wiring) + NEW E-019 (billing contract). Gates green workspace-wide: format · typecheck 30 · lint 17 · test 30 (billing 13, api 36) · build 17 · e2e 16 (api 30). DEFERRED as documented seams: live Dodo API verification (no account/keys here) — reconcile verifyDodoSignature with Dodo's Standard Webhooks format when wiring live; a persistent SubscriptionStore; entitlement ENFORCEMENT (wiring PLANS limits into the compiler budget / MCP quotas); and the dashboard billing UI (R3-adjacent). This completes R2's buildable features (F-025/F-026/F-030 + the F-034 wiring seam)."
     },
     {
       "id": "F-031",

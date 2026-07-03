@@ -1500,6 +1500,236 @@
         }
       }
     },
+    "/v1/billing/plans": {
+      "get": {
+        "summary": "List subscription plans and their entitlements.",
+        "tags": [
+          "billing"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plans": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "enum": [
+                              "free",
+                              "pro",
+                              "enterprise"
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "priceCents": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "interval": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "month",
+                                  "year"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "entitlements": {
+                            "type": "object",
+                            "properties": {
+                              "maxMonthlyCompiles": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "maxSeats": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "maxTokensPerCompile": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "maxMonthlyCompiles",
+                              "maxSeats",
+                              "maxTokensPerCompile"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "priceCents",
+                          "interval",
+                          "entitlements"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "plans"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/billing/subscription": {
+      "get": {
+        "summary": "The calling tenant's current subscription.",
+        "tags": [
+          "billing"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tenantId": {
+                      "type": "string"
+                    },
+                    "planId": {
+                      "type": "string",
+                      "enum": [
+                        "free",
+                        "pro",
+                        "enterprise"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "trialing",
+                        "past_due",
+                        "canceled"
+                      ]
+                    },
+                    "currentPeriodEnd": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "externalId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "tenantId",
+                    "planId",
+                    "status",
+                    "currentPeriodEnd"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/billing/checkout": {
+      "post": {
+        "summary": "Start a hosted checkout for a paid plan.",
+        "tags": [
+          "billing"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "planId": {
+                    "type": "string",
+                    "enum": [
+                      "free",
+                      "pro",
+                      "enterprise"
+                    ]
+                  },
+                  "successUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "cancelUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  }
+                },
+                "required": [
+                  "planId",
+                  "successUrl",
+                  "cancelUrl"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    },
+                    "externalId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/openapi.json": {
       "get": {
         "tags": [
@@ -1509,6 +1739,39 @@
         "responses": {
           "200": {
             "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/billing/webhook": {
+      "post": {
+        "summary": "Provider billing webhook (signature-verified).",
+        "tags": [
+          "billing"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "received": {
+                      "type": "boolean"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "received",
+                    "type"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
           }
         }
       }

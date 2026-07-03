@@ -763,7 +763,26 @@
       "package": "@tessera/storage",
       "release": "R1",
       "priority": "should",
-      "status": "todo"
+      "status": "done",
+      "blockedBy": [
+        "F-003",
+        "F-023"
+      ],
+      "acceptance": [
+        "A versioned, idempotent migration runner over the RelationalStore (tracks applied ids in a _tessera_migrations table), working on both SQLite and Postgres (env-guarded PG)",
+        "Backup/restore for the local stores: SQLite online backup + restore, and recursive filesystem (blob) backup/restore — round-trip verified (seed → backup → mutate → restore → data matches)",
+        "Offline-verifiable tests (PG parity env-guarded); workspace gates green; ADR records the approach; Postgres physical backup (pg_dump/managed snapshots) documented as an ops concern"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test"
+      ],
+      "effects": [
+        "E-001",
+        "E-007"
+      ],
+      "notes": "Done 2026-07-03 (last R1 feature): backup/restore + a versioned migration runner (FR-56), additive to @tessera/storage — no port change (ADR-0027). migrations/runner.ts: runMigrations(db, migrations) applies ordered {id, up} migrations IDEMPOTENTLY, tracking applied ids in _tessera_migrations(id, applied_at) and skipping already-applied; ids constrained to a safe pattern (interpolated); a minimal MigrationDb seam with sqliteMigrationDb / postgresMigrationDb runs it on BOTH backends. backup/backup.ts: backupSqlite (SQLite online backup — consistent single-file snapshot, safe while in use) + restoreSqlite (file copy, clears stale WAL/SHM); backupDirectory/restoreDirectory (recursive fs copy for the blob store). No new deps (better-sqlite3 + node:fs). Tests: SQLite migration apply/idempotent/incremental/unsafe-id-reject + backup round-trips (sqlite seed→backup→mutate→restore→'original'; directory tree) — 5 new + a guarded Postgres migration-parity test. Gates green (default; PG skips): format · typecheck 28 · lint 16 · test 28 · build 16. NOTE: Docker Desktop was NOT running in the resume session, so the guarded Postgres parity test skipped (the Postgres RelationalStore itself was verified live against the F-023 container; postgresMigrationDb is a thin drizzle.execute wrapper). Deferred: Postgres physical backup (pg_dump/managed snapshots — ops concern); adopting the runner to replace adapters' ad-hoc CREATE TABLE IF NOT EXISTS; down-migrations/incremental backup. Effects E-001/E-007. R1 COMPLETE (F-017..F-024 all done)."
     },
     {
       "id": "F-025",

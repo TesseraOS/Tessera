@@ -92,7 +92,8 @@
       "from": { "kind": "contract", "ref": "@tessera/storage ports (RelationalStore | BlobStore | Queue | VectorStore)" },
       "to": [
         { "kind": "module", "ref": "@tessera/storage adapters (sqlite-relational, filesystem-blob, in-process-queue, sqlite-vec; postgres-relational + pgvector REALIZED F-023, pg + drizzle node-postgres; later s3, bullmq)" },
-        { "kind": "test", "ref": "@tessera/storage tests/conformance suites (relational, blob, queue, vector) — the Postgres/pgvector adapters pass the SAME suites (env-guarded TESSERA_TEST_POSTGRES; verified against the docker-compose pgvector service)" }
+        { "kind": "test", "ref": "@tessera/storage tests/conformance suites (relational, blob, queue, vector) — the Postgres/pgvector adapters pass the SAME suites (env-guarded TESSERA_TEST_POSTGRES; verified against the docker-compose pgvector service)" },
+        { "kind": "module", "ref": "@tessera/storage migrations/runner (runMigrations + MigrationDb sqlite/postgres) + backup/backup (backupSqlite/restoreSqlite, backupDirectory/restoreDirectory) — ADDITIVE utilities over the stores (F-024/ADR-0027; no port change). Postgres physical backup = ops concern (deferred)" }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "Each storage port is implemented by every adapter and validated by a shared conformance suite; changing a port interface breaks all adapters and their suites (concrete instance of E-001 for @tessera/storage).",

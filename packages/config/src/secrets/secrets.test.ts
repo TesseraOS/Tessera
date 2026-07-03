@@ -2,7 +2,11 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createEnvSecretsProvider, createFileSecretsProvider, createSecretsProvider } from './index.js';
+import {
+  createEnvSecretsProvider,
+  createFileSecretsProvider,
+  createSecretsProvider,
+} from './index.js';
 
 describe('env secrets provider', () => {
   const provider = createEnvSecretsProvider({
@@ -47,7 +51,9 @@ describe('file secrets provider', () => {
 
 describe('createSecretsProvider', () => {
   it('selects the file provider and requires a path', () => {
-    expect(() => createSecretsProvider({ provider: 'file', envPrefix: '' })).toThrow(/secrets\.file/);
+    expect(() => createSecretsProvider({ provider: 'file', envPrefix: '' })).toThrow(
+      /secrets\.file/,
+    );
   });
 
   it('defaults to the env provider', async () => {

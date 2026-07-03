@@ -3,6 +3,40 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-03 — F-024 DONE: Backup/restore + migration runner — **R1 COMPLETE** (@tessera/storage)
+The last R1 feature (FR-56), additive to `@tessera/storage` — no port change (ADR-0027). Plan:
+[`F-024`](../plans/F-024-backup-restore-migrations.md).
+- **Migration runner** (`migrations/runner.ts`): `runMigrations(db, migrations)` applies ordered
+  `{ id, up }` migrations **idempotently**, tracking applied ids in `_tessera_migrations(id, applied_at)`
+  and skipping already-applied; ids constrained to a safe pattern; a minimal **`MigrationDb`** seam with
+  `sqliteMigrationDb` / `postgresMigrationDb` runs it on **both** backends.
+- **Backup/restore** (`backup/backup.ts`): `backupSqlite` (SQLite **online backup** — consistent
+  single-file snapshot) + `restoreSqlite` (file copy, clears stale WAL/SHM); `backupDirectory`/
+  `restoreDirectory` (recursive fs copy for the blob store). No new deps (better-sqlite3 + `node:fs`).
+
+**Evidence/verification (default; PG skips):** state (33 features, 17 effect-links) · format · typecheck
+(28) · lint (16) · **test (28; storage 24 + 11 guarded-skipped)** · build (16). New: SQLite migration
+apply/idempotent/incremental/unsafe-id-reject (3) + backup round-trips (2) — seed→backup→mutate→restore
+recovers `'original'`; a directory tree round-trips. **Docker was NOT running in the resume session**, so
+the guarded Postgres migration-parity test skipped (the Postgres RelationalStore itself was verified live
+against the F-023 container; `postgresMigrationDb` is a thin `drizzle.execute` wrapper).
+
+**Decision (ADR-0027):** a lightweight forward/idempotent runner (not a full framework); SQLite online
+backup + dir copy (no CLI dep). Deferred: Postgres physical backup (`pg_dump`/managed snapshots — ops);
+adopting the runner to replace adapters' ad-hoc `CREATE TABLE IF NOT EXISTS`; down-migrations. Effects
+E-001/E-007.
+
+**🎉 R1 COMPLETE** — F-017 (GitHub connector+auto-memory), F-018 (temporal retriever), F-019 (compiler
+compression), F-020 (reproducibility/caching/pluggable), F-021 (SSE), F-022 (generated SDK), F-023
+(Postgres+pgvector — the `must`), F-024 (backup/migrations) all **done**.
+
+**Next step (R2 / follow-ups):** the self-hosted config profile (Postgres-backed graph/memory +
+`createSelfHostedRuntime`), migrate `apps/web` off `lib/api` onto `@tessera/sdk` (ADR-0022), then the R2
+backlog (F-025 multi-tenancy+RBAC, F-026 MCP gateway, F-030 billing). NOTE: the ECC GateGuard hook was
+disabled mid-session at the user's request.
+
+---
+
 ## 2026-07-03 — FIX: untracked `secrets/` source + `.env.example` disclosure (repo hygiene)
 Two issues the user flagged after the F-023 commit:
 - **Bug — `packages/config/src/secrets/` was git-ignored** (untracked): a bare `.gitignore` rule

@@ -11,3 +11,5 @@ export * from './adapters/sqlite-relational/index.js';
 export * from './adapters/sqlite-vec/index.js';
 export * from './adapters/postgres-relational/index.js';
 export * from './adapters/pgvector/index.js';
+export * from './migrations/runner.js';
+export * from './backup/backup.js';

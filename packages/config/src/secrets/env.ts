@@ -12,7 +12,6 @@ export interface EnvSecretsOptions {
 export function createEnvSecretsProvider(options: EnvSecretsOptions = {}): SecretsProvider {
   const env = options.env ?? process.env;
   const prefix = options.prefix ?? '';
-  const get = (key: string): Promise<string | undefined> =>
-    Promise.resolve(env[`${prefix}${key}`]);
+  const get = (key: string): Promise<string | undefined> => Promise.resolve(env[`${prefix}${key}`]);
   return { get, require: (key) => requireSecret(get, key) };
 }

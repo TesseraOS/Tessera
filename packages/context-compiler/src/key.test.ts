@@ -47,6 +47,20 @@ describe('computeCompilationKey', () => {
     ).not.toBe(base);
   });
 
+  it('changes when the tenant changes (data-plane isolation)', () => {
+    const base = computeCompilationKey({ task: 't', budget: 100, retrievalLimit: 20 }, FP);
+    const a = computeCompilationKey(
+      { task: 't', budget: 100, retrievalLimit: 20 },
+      { ...FP, tenantId: 'tenant-a' },
+    );
+    const b = computeCompilationKey(
+      { task: 't', budget: 100, retrievalLimit: 20 },
+      { ...FP, tenantId: 'tenant-b' },
+    );
+    expect(a).not.toBe(base);
+    expect(a).not.toBe(b);
+  });
+
   it('is order-independent for filter kinds', () => {
     const a = computeCompilationKey(
       { task: 't', budget: 100, retrievalLimit: 20, kinds: ['code', 'memory'] },

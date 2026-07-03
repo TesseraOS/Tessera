@@ -56,6 +56,23 @@ describe('context compiler pipeline', () => {
     expect(pkg.trace.stages.every((s) => typeof s.durationMs === 'number')).toBe(true);
   });
 
+  it('scopes retrieval + graph expansion to the tenant (forTenant) — no cross-tenant fragments', async () => {
+    const c = (corpus = await buildCorpus()); // the corpus is indexed under the DEFAULT tenant
+    const compiler = createContextCompiler({
+      retriever: c.retriever,
+      fragmentSource: c.fragmentSource,
+      graphStore: c.graphStore,
+    });
+
+    // The default tenant sees the corpus…
+    const base = await compiler.compile({ task: QUERY, budget: 1000 });
+    expect(base.sections.flatMap((s) => s.fragments).length).toBeGreaterThan(0);
+
+    // …a different tenant's compiler sees an empty corpus (retrieval + graph are scoped away).
+    const other = await compiler.forTenant('tenant-b').compile({ task: QUERY, budget: 1000 });
+    expect(other.sections.flatMap((s) => s.fragments)).toHaveLength(0);
+  });
+
   it('never exceeds a tight budget (graceful degradation)', async () => {
     const c = (corpus = await buildCorpus());
     const compiler = createContextCompiler({

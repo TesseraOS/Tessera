@@ -26,5 +26,12 @@ export function createSemanticRetriever(options: SemanticRetrieverOptions): Retr
         score: 1 / (1 + match.distance),
       }));
     },
+    forTenant(tenantId) {
+      // Scope the vector store; embeddings are stateless (FR-52, ADR-0033).
+      return createSemanticRetriever({
+        embeddings: options.embeddings,
+        vectorStore: options.vectorStore.forTenant(tenantId),
+      });
+    },
   };
 }

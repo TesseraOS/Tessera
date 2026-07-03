@@ -40,5 +40,8 @@ export function createSymbolicRetriever(options: SymbolicRetrieverOptions): Retr
 
       return candidates.sort((a, b) => b.score - a.score).slice(0, limit);
     },
+    forTenant(tenantId) {
+      return createSymbolicRetriever({ graphStore: options.graphStore.forTenant(tenantId) });
+    },
   };
 }

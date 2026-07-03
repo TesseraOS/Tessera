@@ -1,4 +1,4 @@
-import { NotFoundError, ValidationError, newId } from '@tessera/core';
+import { NotFoundError, ValidationError, newId, type TenantId } from '@tessera/core';
 import type { z } from 'zod';
 import type { Memory, MemoryLineageId, MemoryMetadata } from '../domain.js';
 import type { MemoryListFilter, MemoryStore } from '../ports/memory-store.js';
@@ -49,6 +49,11 @@ export interface MemoryService {
   history(lineageId: MemoryLineageId): Promise<readonly Memory[]>;
   /** Current memories, optionally filtered. */
   list(filter?: MemoryListFilter): Promise<readonly Memory[]>;
+  /**
+   * A view of this service confined to `tenantId` (FR-52, ADR-0033) — every operation runs against
+   * that tenant's rows. The base service operates in {@link DEFAULT_TENANT_ID}.
+   */
+  forTenant(tenantId: TenantId): MemoryService;
 }
 
 /** Create a {@link MemoryService} backed by a {@link MemoryStore}. */
@@ -109,6 +114,10 @@ export function createMemoryService(store: MemoryStore): MemoryService {
 
     list(filter) {
       return store.listCurrent(filter);
+    },
+
+    forTenant(tenantId) {
+      return createMemoryService(store.forTenant(tenantId));
     },
   };
 }

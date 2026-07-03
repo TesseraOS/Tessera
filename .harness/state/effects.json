@@ -13,7 +13,7 @@
         { "kind": "decision", "ref": "docs/adr/0003-local-first-cloud-ready-ports-and-adapters.md" }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "A storage port is implemented by every adapter and validated by one shared conformance suite; changing the interface breaks all adapters and the suite, and a semantic change needs an ADR.",
+      "rationale": "A storage port is implemented by every adapter and validated by one shared conformance suite; changing the interface breaks all adapters and the suite, and a semantic change needs an ADR. F-037 (ADR-0033) added VectorStore.forTenant (per-tenant row isolation): sqlite-vec uses a per-tenant vec0 table, pgvector a tenant column + composite PK; both satisfy the shared vector conformance's isolation case (pgvector verified live).",
       "confidence": 1.0,
       "origin": "manual"
     },
@@ -86,7 +86,7 @@
         { "kind": "package", "ref": "every @tessera/* package and app (all depend on @tessera/core)" }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "@tessera/core is the dependency-free base every package imports; changing/removing an exported member (Id, errors, Result, config types, EventBus) can break any consumer. Change additively and review dependents. Example: F-026 added the RATE_LIMITED ErrorCode + RateLimitedError additively — dependents reviewed and updated: the REST envelope (statusForCode→429, codeForStatus, errorCodeSchema) and the web ErrorCode mirror; MCP's toEnvelope passes it through.",
+      "rationale": "@tessera/core is the dependency-free base every package imports; changing/removing an exported member (Id, errors, Result, config types, EventBus, TenantId) can break any consumer. Change additively and review dependents. Example: F-026 added the RATE_LIMITED ErrorCode + RateLimitedError additively — dependents reviewed and updated: the REST envelope (statusForCode→429, codeForStatus, errorCodeSchema) and the web ErrorCode mirror; MCP's toEnvelope passes it through. Example: F-037 added TenantId + DEFAULT_TENANT_ID (ADR-0033) so the domain stores scope rows by tenant without depending on @tessera/api; @tessera/api/auth/model re-exports them (its public TenantId API unchanged).",
       "confidence": 1.0,
       "origin": "manual"
     },
@@ -99,7 +99,7 @@
         { "kind": "module", "ref": "@tessera/storage migrations/runner (runMigrations + MigrationDb sqlite/postgres) + backup/backup (backupSqlite/restoreSqlite, backupDirectory/restoreDirectory) — ADDITIVE utilities over the stores (F-024/ADR-0027; no port change). Postgres physical backup = ops concern (deferred)" }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "Each storage port is implemented by every adapter and validated by a shared conformance suite; changing a port interface breaks all adapters and their suites (concrete instance of E-001 for @tessera/storage).",
+      "rationale": "Each storage port is implemented by every adapter and validated by a shared conformance suite; changing a port interface breaks all adapters and their suites (concrete instance of E-001 for @tessera/storage). VectorStore gained forTenant (F-037/ADR-0033) — the isolation case is part of the shared vector conformance both sqlite-vec and pgvector pass.",
       "confidence": 1.0,
       "origin": "manual"
     },
@@ -143,7 +143,7 @@
         { "kind": "schema", "ref": "sqlite `memories` table DDL in the sqlite adapter (kept in lockstep with the Drizzle schema; migration tooling F-024)" }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "MemoryStore is implemented by every adapter and validated by one conformance suite (E-001 instance); the Memory version model (immutable versions + supersede pointers, FR-12) is the contract the service and all consumers rely on. Changing the port/model breaks adapters + suite + service; changing the sqlite DDL must track the Drizzle schema. The never-silently-mutated invariant must hold across adapters.",
+      "rationale": "MemoryStore is implemented by every adapter and validated by one conformance suite (E-001 instance); the Memory version model (immutable versions + supersede pointers, FR-12) is the contract the service and all consumers rely on. Changing the port/model breaks adapters + suite + service; changing the sqlite DDL must track the Drizzle schema. The never-silently-mutated invariant must hold across adapters. F-037 (ADR-0033) added MemoryStore.forTenant + MemoryService.forTenant (a tenant_id column, additive migration, per-tenant filtering); the shared memory-store conformance gained a cross-tenant isolation case. Memory keeps no tenant field on the wire — tenancy is a storage concern.",
       "confidence": 1.0,
       "origin": "manual"
     },
@@ -157,7 +157,7 @@
         { "kind": "package", "ref": "consumers: @tessera/retrieval graph-retriever (F-009), @tessera/api/mcp get_effects (F-011/F-012), @tessera/web graph/effects views (F-014)" }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "Concrete instance of E-002: GraphStore is implemented by every adapter and validated by one conformance suite; the shared ranking/static-derivation make the two adapters' get_effects identical (change one → re-verify both). The effect-link model mirrors the harness effects.schema (E-002). Node-population from code (symbol extraction) is a downstream ingestion concern, not part of this contract.",
+      "rationale": "Concrete instance of E-002: GraphStore is implemented by every adapter and validated by one conformance suite; the shared ranking/static-derivation make the two adapters' get_effects identical (change one → re-verify both). The effect-link model mirrors the harness effects.schema (E-002). Node-population from code (symbol extraction) is a downstream ingestion concern, not part of this contract. F-037 (ADR-0033) added GraphStore.forTenant + KnowledgeGraphService.forTenant: node ids are deterministic from (kind,key) so the PK is composite (tenant_id,id); the tenant predicate is applied in every query AND both arms of the getEffects recursive CTE; the shared graph-store conformance gained a cross-tenant isolation case (nodes/edges/effects never leak).",
       "confidence": 1.0,
       "origin": "manual"
     },
@@ -172,7 +172,7 @@
         { "kind": "package", "ref": "depends on: @tessera/storage VectorStore (E-007), @tessera/ai Embeddings (E-008), @tessera/knowledge-graph GraphStore (E-011)" }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "The Retriever interface + Candidate shape + fusion contract are what the compiler's retrieve stage and the API/MCP search build on; changing them breaks every retriever, the conformance suite, and consumers. Adding the temporal retriever (FR-24, F-018) must fit this same interface. Meaningful fusion needs a consistent `ref` space across backends — established by ingestion/config, not retrieval.",
+      "rationale": "The Retriever interface + Candidate shape + fusion contract are what the compiler's retrieve stage and the API/MCP search build on; changing them breaks every retriever, the conformance suite, and consumers. Adding the temporal retriever (FR-24, F-018) must fit this same interface. Meaningful fusion needs a consistent `ref` space across backends — established by ingestion/config, not retrieval. F-037 (ADR-0033) added Retriever.forTenant to the port + all five retrievers + HybridRetriever.forTenant: keyword (FTS5 tenant column) + temporal (composite PK) filter their owned indices; semantic/graph/symbolic delegate to the already-scoped vector/graph stores; the shared retriever conformance holds and keyword/temporal have adapter-level isolation tests.",
       "confidence": 1.0,
       "origin": "manual"
     },
@@ -187,7 +187,7 @@
         { "kind": "package", "ref": "depends on: @tessera/retrieval (E-012), @tessera/knowledge-graph get_effects (E-011); corpus via the FragmentSource seam (ingestion)" }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "The ContextPackage shape (sections/provenance/whyIncluded), the CompilationTrace, and the CompileRequest are the contract REST/MCP `compile_context` returns and the web Package Inspector renders (concretely advances E-003); changing them ripples to API/MCP/web. The compiler consumes the retrieval + graph contracts. CQS (PRD §9) is the regression guard that compilation beats naive top-k. FragmentSource is the corpus seam ingestion fills.",
+      "rationale": "The ContextPackage shape (sections/provenance/whyIncluded), the CompilationTrace, and the CompileRequest are the contract REST/MCP `compile_context` returns and the web Package Inspector renders (concretely advances E-003); changing them ripples to API/MCP/web. The compiler consumes the retrieval + graph contracts. CQS (PRD §9) is the regression guard that compilation beats naive top-k. FragmentSource is the corpus seam ingestion fills. F-037 (ADR-0033) added ContextCompiler.forTenant (scopes the retriever + graph store) and folded a non-default tenantId into the CompilationKey fingerprint so a shared cache stays tenant-isolated — no ContextPackage/CompileRequest/API shape change (tenancy stays off the wire).",
       "confidence": 1.0,
       "origin": "manual"
     },
@@ -220,7 +220,7 @@
         { "kind": "package", "ref": "seams (instrument provided, not yet fed): per-adapter spans; registerQueueDepthGauge needs a Queue depth source; OTLP exporters via config" }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "Observability is cross-cutting but kept additive: libraries use the OTel API only (no-op until startTelemetry registers the SDK at the process), instrumentServices wraps ApiServices without touching domain packages, and redaction keeps secrets/content out of logs (NFR-7). Changing the instruments, the span/log contract, or the redaction policy affects the server wiring and any future surface that boots a runtime. The compiler's durationMs and buildServer's loggerInstance are additive — the surfaces' response schemas ignore the new optional trace field. Deepening to per-adapter spans / a fed queue-depth gauge must preserve these seams.",
+      "rationale": "Observability is cross-cutting but kept additive: libraries use the OTel API only (no-op until startTelemetry registers the SDK at the process), instrumentServices wraps ApiServices without touching domain packages, and redaction keeps secrets/content out of logs (NFR-7). Changing the instruments, the span/log contract, or the redaction policy affects the server wiring and any future surface that boots a runtime. The compiler's durationMs and buildServer's loggerInstance are additive — the surfaces' response schemas ignore the new optional trace field. Deepening to per-adapter spans / a fed queue-depth gauge must preserve these seams. F-037 (ADR-0033) note: instrumentServices' tracing Proxy special-cases `forTenant` — it returns the scoped service re-wrapped (still traced) rather than treating it as an async call, so a service gaining a synchronous scoping method must be handled here (else it would return a Promise and break the caller).",
       "confidence": 0.9,
       "origin": "manual"
     },
@@ -264,13 +264,14 @@
         { "kind": "test", "ref": "@tessera/api auth unit tests (model / token-store / provider) + auth e2e (401 / 403 / 200 / revoked / public-openapi + zero-auth back-compat over app.inject)" },
         { "kind": "package", "ref": "the composition root REALIZED (F-034): @tessera/config selects the AuthProvider + a persistent SQLite TokenStore by config.auth (exposed as Runtime.auth), imported via the NEW Fastify-free `@tessera/api/auth` subpath export (auth model + providers + token store, excludes the Fastify plugin); apps/server wires it end-to-end — startApiServer passes runtime.auth.provider to buildServer, startMcpServer builds the MCP gateway (+ optional in-memory quota) for startMcpStdio, and a `tessera-token` bin issues tokens. OIDC provider selection is now REALIZED too (F-036: `auth.mode=oidc` → createOidcAuthProvider via the same subpath; jose is Fastify-free so the MCP process stays clean)" },
         { "kind": "package", "ref": "@tessera/mcp gateway (F-026, REALIZED): reuses this auth model TYPE-ONLY (AuthProvider/AuthContext/Permission — no Fastify in the MCP runtime) to authorize each tool by its required permission (TOOL_PERMISSIONS), plus an MCP-owned QuotaLimiter port + in-memory fixed-window adapter for per-principal quotas; buildMcpServer gains an optional gateway (default off = unchanged). Changing the AuthContext/permission catalog ripples here too" },
-        { "kind": "module", "ref": "SEAM — data-plane per-tenant row isolation: AuthContext.tenantId is resolved + carried at the boundary, but the domain stores (memory/graph/retrieval) are not yet tenant-scoped (deferred behind the E-014 profile seam); no cross-tenant guarantee is claimed beyond the boundary" },
+        { "kind": "module", "ref": "data-plane per-tenant row isolation REALIZED (F-037, ADR-0033): AuthContext.tenantId now scopes every domain store via a `forTenant(tenantId)` view (default = DEFAULT_TENANT_ID). The tenant primitive moved to @tessera/core (E-006); MemoryStore/GraphStore/VectorStore/Retriever/HybridRetriever/ContextCompiler + the three domain services gained forTenant; adapters enforce it with a tenant column / composite PK / vec0 per-tenant table, and each shared conformance suite gained a cross-tenant isolation case (pgvector verified live). REST routes call services.X.forTenant(tenantOf(request)) and MCP tools use guard()'s AuthContext.tenantId — response schemas + OpenAPI unchanged (E-003). Changing the tenant column/scoping contract ripples across every store + its conformance suite (E-001/E-007/E-010/E-011/E-012/E-013) and the surfaces' threading" },
         { "kind": "decision", "ref": "docs/adr/0028-api-auth-tenancy-rbac.md" },
         { "kind": "decision", "ref": "docs/adr/0029-mcp-gateway-auth-quotas.md" },
-        { "kind": "decision", "ref": "docs/adr/0032-oidc-auth-provider.md" }
+        { "kind": "decision", "ref": "docs/adr/0032-oidc-auth-provider.md" },
+        { "kind": "decision", "ref": "docs/adr/0033-data-plane-tenant-isolation.md" }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "F-025 adds an authentication + authorization control plane at the /v1 boundary; F-026 extends the same model to the MCP surface as a gateway (auth + per-principal quotas); F-036 adds an IdP-agnostic OIDC AuthProvider (jose JWT/JWKS verification) as a third mode. AuthProvider + TokenStore are ports (local adapters now; OIDC + persistent token store as cloud seams); RBAC is a pure roles→permissions mapping intersected with token scopes. Changing the permission catalog, the role mapping, the AuthContext shape, or the port interfaces ripples to the REST per-route guards, the MCP gateway's TOOL_PERMISSIONS, the composition root that injects a provider, and the future data-plane row-scoping + OIDC adapter. The MCP gateway consumes the auth model TYPE-ONLY so the MCP runtime stays Fastify-free (F-012 invariant); quota-exceeded surfaces the new @tessera/core RATE_LIMITED code (→429 REST). Both surfaces default to zero-auth/ungated so existing routes/tools/e2e are unchanged — enforcement engages only when a provider/gateway is injected. tenantId is carried but the domain stores are not yet tenant-scoped (documented seam, no false isolation claim). Advances E-003 additively (new 401/403/429 paths; response schemas + OpenAPI unchanged).",
+      "rationale": "F-025 adds an authentication + authorization control plane at the /v1 boundary; F-026 extends the same model to the MCP surface as a gateway (auth + per-principal quotas); F-036 adds an IdP-agnostic OIDC AuthProvider (jose JWT/JWKS verification) as a third mode; F-037 realizes the data plane — AuthContext.tenantId now scopes every domain store via `forTenant` (ADR-0033), so org/workspace row isolation (FR-52) is enforced end-to-end, not just carried. AuthProvider + TokenStore are ports (local adapters now; persistent token store as a cloud seam); RBAC is a pure roles→permissions mapping intersected with token scopes. Changing the permission catalog, the role mapping, the AuthContext shape, or the port interfaces ripples to the REST per-route guards, the MCP gateway's TOOL_PERMISSIONS, the composition root that injects a provider, and the tenant-scoping of the domain stores. The MCP gateway consumes the auth model TYPE-ONLY so the MCP runtime stays Fastify-free (F-012 invariant); quota-exceeded surfaces the new @tessera/core RATE_LIMITED code (→429 REST). Both surfaces default to zero-auth/ungated and every store's base view is the default tenant, so existing routes/tools/e2e are unchanged — tenancy engages only when a non-default tenantId is threaded. Advances E-003 additively (new 401/403/429 paths + tenant threading; response schemas + OpenAPI unchanged).",
       "confidence": 0.9,
       "origin": "manual"
     },

@@ -7,4 +7,4 @@
  * Non-HTTP consumers should import the Fastify-free `@tessera/api/auth` subpath ({@link ./core}) instead.
  */
 export * from './core.js';
-export { registerAuth, requirePermission } from './plugin.js';
+export { registerAuth, requirePermission, tenantOf } from './plugin.js';

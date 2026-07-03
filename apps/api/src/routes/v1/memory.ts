@@ -1,7 +1,7 @@
 import { NotFoundError } from '@tessera/core';
 import type { MemoryLineageId } from '@tessera/memory';
 import type { ZodFastify } from '../../app-types.js';
-import { requirePermission } from '../../auth/index.js';
+import { requirePermission, tenantOf } from '../../auth/index.js';
 import type { ApiEventBus } from '../../events.js';
 import type { ApiServices } from '../../services.js';
 import {
@@ -40,7 +40,7 @@ export function registerMemoryRoutes(
       },
     },
     async (request, reply) => {
-      const memory = await services.memory.capture(request.body);
+      const memory = await services.memory.forTenant(tenantOf(request)).capture(request.body);
       // Live update (FR-38): notify SSE subscribers of the new memory (non-sensitive summary only).
       await events.emit('memory.captured', {
         lineageId: memory.lineageId,
@@ -68,7 +68,7 @@ export function registerMemoryRoutes(
         ...(kind !== undefined ? { kind } : {}),
         ...(scope !== undefined ? { scope } : {}),
       };
-      const memories = await services.memory.list(filter);
+      const memories = await services.memory.forTenant(tenantOf(request)).list(filter);
       return { memories };
     },
   );
@@ -86,7 +86,7 @@ export function registerMemoryRoutes(
     },
     async (request) => {
       const lineageId = request.params.lineageId as MemoryLineageId;
-      const memory = await services.memory.getCurrent(lineageId);
+      const memory = await services.memory.forTenant(tenantOf(request)).getCurrent(lineageId);
       if (memory === undefined) {
         throw new NotFoundError('memory lineage not found', { details: { lineageId } });
       }
@@ -108,7 +108,7 @@ export function registerMemoryRoutes(
     },
     (request) => {
       const lineageId = request.params.lineageId as MemoryLineageId;
-      return services.memory.edit(lineageId, request.body);
+      return services.memory.forTenant(tenantOf(request)).edit(lineageId, request.body);
     },
   );
 
@@ -125,7 +125,7 @@ export function registerMemoryRoutes(
     },
     async (request) => {
       const lineageId = request.params.lineageId as MemoryLineageId;
-      const versions = await services.memory.history(lineageId);
+      const versions = await services.memory.forTenant(tenantOf(request)).history(lineageId);
       return { versions };
     },
   );

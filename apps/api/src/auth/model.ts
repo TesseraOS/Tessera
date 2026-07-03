@@ -9,11 +9,12 @@
  * the domain stores by `tenantId`) is a documented seam — see ADR-0028.
  */
 
-/** A tenant (org/workspace) boundary. Opaque string; the cloud profile scopes data by it. */
-export type TenantId = string;
+// The tenant primitive now lives in @tessera/core (ADR-0033) so the domain stores can scope by tenant
+// (`forTenant`) without depending on @tessera/api; imported for use below and re-exported to keep the
+// auth model's public API stable (a request's tenant resolution stays co-located with the auth model).
+import { DEFAULT_TENANT_ID, type TenantId } from '@tessera/core';
 
-/** The single tenant the zero-auth Local profile serves. */
-export const DEFAULT_TENANT_ID: TenantId = 'default';
+export { DEFAULT_TENANT_ID, type TenantId };
 
 /** Roles, most- to least-privileged. The source of truth for {@link ROLE_PERMISSIONS}. */
 export const ROLES = ['owner', 'admin', 'member', 'viewer'] as const;

@@ -1,4 +1,4 @@
-import { ValidationError } from '@tessera/core';
+import { DEFAULT_TENANT_ID, ValidationError, type TenantId } from '@tessera/core';
 import type { GraphStore } from '@tessera/knowledge-graph';
 import type { HybridRetriever, RetrieverKind, SignalContribution } from '@tessera/retrieval';
 import { z } from 'zod';
@@ -49,11 +49,22 @@ export interface ContextCompilerOptions {
   readonly rankStrategy?: RankStrategy;
   /** Optional cache for compiled packages (FR-33): identical compiles are served verbatim. */
   readonly cache?: CompilationCache;
+  /**
+   * The tenant this compiler is scoped to (FR-52, ADR-0033). Internal (never on the wire); set via
+   * {@link ContextCompiler.forTenant}. Defaults to {@link DEFAULT_TENANT_ID}. Folded into the cache key
+   * so a shared cache never serves one tenant's package to another.
+   */
+  readonly tenantId?: TenantId;
 }
 
 /** The context compiler — the domain REST/MCP `compile_context` wraps (FR-27). */
 export interface ContextCompiler {
   compile(request: CompileRequest): Promise<ContextPackage>;
+  /**
+   * A view of the compiler confined to `tenantId` (FR-52, ADR-0033): its retriever + graph store are
+   * scoped to the tenant and the cache key is tenant-specific. Base = {@link DEFAULT_TENANT_ID}.
+   */
+  forTenant(tenantId: TenantId): ContextCompiler;
 }
 
 function distinctSignals(signals: readonly SignalContribution[]): RetrieverKind[] {
@@ -75,6 +86,7 @@ function distinctSignals(signals: readonly SignalContribution[]): RetrieverKind[
  */
 export function createContextCompiler(options: ContextCompilerOptions): ContextCompiler {
   const { retriever, fragmentSource, graphStore, cache } = options;
+  const tenantId = options.tenantId ?? DEFAULT_TENANT_ID;
   const compression = options.compression ?? extractiveCompression;
   const rankStrategy: RankStrategy =
     options.rankStrategy ??
@@ -87,6 +99,9 @@ export function createContextCompiler(options: ContextCompilerOptions): ContextC
     compressionStrategy: compression.id,
     ...(options.dedupThreshold !== undefined ? { dedupThreshold: options.dedupThreshold } : {}),
     ...(options.expandDepth !== undefined ? { expandDepth: options.expandDepth } : {}),
+    // Fold a non-default tenant into the key so a shared cache stays tenant-isolated (default keeps
+    // the pre-existing key so nothing changes for the single-tenant Local profile).
+    ...(tenantId !== DEFAULT_TENANT_ID ? { tenantId } : {}),
   };
 
   async function runPipeline(request: CompileRequest): Promise<ContextPackage> {
@@ -225,6 +240,19 @@ export function createContextCompiler(options: ContextCompilerOptions): ContextC
       const pkg = await runPipeline(request);
       await cache.set(key, pkg);
       return pkg;
+    },
+
+    forTenant(nextTenant) {
+      const scoped: ContextCompilerOptions = {
+        ...options,
+        tenantId: nextTenant,
+        retriever: retriever.forTenant(nextTenant),
+      };
+      return createContextCompiler(
+        graphStore === undefined
+          ? scoped
+          : { ...scoped, graphStore: graphStore.forTenant(nextTenant) },
+      );
     },
   };
 }

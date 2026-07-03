@@ -151,5 +151,42 @@ export function runGraphStoreConformance(name: string, makeStore: GraphStoreFact
         await cleanup?.();
       }
     });
+
+    it('isolates nodes/edges and effects by tenant (forTenant)', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const a = store.forTenant('tenant-a');
+        const b = store.forTenant('tenant-b');
+        const x = node('symbol', 'x');
+        const y = node('symbol', 'y');
+        // Tenant A: x -> y effect-link.
+        await a.addNode(x);
+        await a.addNode(y);
+        await a.addEdge(effectLink(x, y, 0.9));
+        // Tenant B: only x (the SAME deterministic id), with a different label; no edges.
+        await b.addNode({ ...x, label: 'b-label' });
+
+        // The same node id is independent per tenant.
+        expect((await a.getNode(x.id))?.label).toBe('x');
+        expect((await b.getNode(x.id))?.label).toBe('b-label');
+        expect(await b.getNode(y.id)).toBeUndefined();
+        expect(await b.getNodeByKey('symbol', 'y')).toBeUndefined();
+
+        // Listings are tenant-scoped.
+        expect((await a.listNodes()).map((n) => n.id).sort()).toEqual([x.id, y.id].sort());
+        expect((await b.listNodes()).map((n) => n.id)).toEqual([x.id]);
+        expect(await b.listEdges()).toEqual([]);
+
+        // Effect traversal never crosses tenants.
+        expect((await a.getEffects(x.id)).map((hit) => hit.nodeId)).toEqual([y.id]);
+        expect(await b.getEffects(x.id)).toEqual([]);
+
+        // The default view (a distinct tenant) sees neither.
+        expect(await store.getNode(x.id)).toBeUndefined();
+        expect(await store.listNodes()).toEqual([]);
+      } finally {
+        await cleanup?.();
+      }
+    });
   });
 }

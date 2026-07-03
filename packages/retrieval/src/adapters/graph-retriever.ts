@@ -52,5 +52,11 @@ export function createGraphRetriever(options: GraphRetrieverOptions): Retriever 
 
       return [...best.values()].sort((a, b) => b.score - a.score).slice(0, limit);
     },
+    forTenant(tenantId) {
+      return createGraphRetriever({
+        ...options,
+        graphStore: options.graphStore.forTenant(tenantId),
+      });
+    },
   };
 }

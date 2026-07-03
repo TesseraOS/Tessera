@@ -1,3 +1,5 @@
+import type { TenantId } from '@tessera/core';
+
 /** Distance metric used by a vector index. */
 export type VectorMetric = 'l2' | 'cosine';
 
@@ -29,6 +31,10 @@ export interface VectorMatch {
  * Vector store port for semantic retrieval (ADR-0004/0006). Local default is sqlite-vec; a
  * pgvector adapter implements the same contract for cloud (ADR-0003). Each vector records its
  * embedding `model`; the `dimension` is fixed per store.
+ *
+ * **Tenancy (FR-52, ADR-0033):** the store the factory returns operates within
+ * {@link DEFAULT_TENANT_ID}. {@link VectorStore.forTenant} returns a view whose reads/writes are
+ * confined to one tenant, so vectors written under one tenant are never returned to another.
  */
 export interface VectorStore {
   readonly capabilities: VectorStoreCapabilities;
@@ -40,4 +46,9 @@ export interface VectorStore {
   delete(ids: readonly string[]): Promise<void>;
   /** Release resources. */
   close(): Promise<void>;
+  /**
+   * A view of this store confined to `tenantId` (FR-52). The default view is
+   * {@link DEFAULT_TENANT_ID}; the returned view shares the underlying connection/resources.
+   */
+  forTenant(tenantId: TenantId): VectorStore;
 }

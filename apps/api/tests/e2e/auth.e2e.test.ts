@@ -122,5 +122,56 @@ describe('@tessera/api auth + RBAC', () => {
       expect(res.statusCode).toBe(200);
       expect(res.json().openapi).toMatch(/^3\./);
     });
+
+    it('isolates memory across tenants — one tenant never reads another (FR-52, ADR-0033)', async () => {
+      const acme = (
+        await tokenStore.issue({ tenantId: 'acme', principalId: 'w1', roles: ['member'] })
+      ).token;
+      const globex = (
+        await tokenStore.issue({ tenantId: 'globex', principalId: 'w2', roles: ['member'] })
+      ).token;
+
+      // acme captures a memory.
+      const created = await app.inject({
+        method: 'POST',
+        url: '/v1/memory',
+        payload: MEMORY_BODY,
+        headers: { authorization: `Bearer ${acme}` },
+      });
+      expect(created.statusCode).toBe(201);
+      const lineageId = created.json().lineageId as string;
+
+      // acme reads it back; globex gets 404 for the very same lineage and an empty list.
+      const acmeGet = await app.inject({
+        method: 'GET',
+        url: `/v1/memory/${lineageId}`,
+        headers: { authorization: `Bearer ${acme}` },
+      });
+      expect(acmeGet.statusCode).toBe(200);
+
+      const globexGet = await app.inject({
+        method: 'GET',
+        url: `/v1/memory/${lineageId}`,
+        headers: { authorization: `Bearer ${globex}` },
+      });
+      expect(globexGet.statusCode).toBe(404);
+
+      const globexList = await app.inject({
+        method: 'GET',
+        url: '/v1/memory',
+        headers: { authorization: `Bearer ${globex}` },
+      });
+      expect(globexList.json().memories).toEqual([]);
+
+      // acme sees exactly its own memory.
+      const acmeList = await app.inject({
+        method: 'GET',
+        url: '/v1/memory',
+        headers: { authorization: `Bearer ${acme}` },
+      });
+      expect(acmeList.json().memories.map((m: { lineageId: string }) => m.lineageId)).toEqual([
+        lineageId,
+      ]);
+    });
   });
 });

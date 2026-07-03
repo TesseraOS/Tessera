@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { ValidationError } from '@tessera/core';
+import { DEFAULT_TENANT_ID, ValidationError, type TenantId } from '@tessera/core';
 import type {
   VectorMatch,
   VectorMetric,
@@ -39,6 +39,11 @@ interface MatchRow {
  * recorded per row; nearest-neighbor search uses the metric's distance operator. The extension + table
  * are created lazily on first use. Vectors are parameterized as `$n::vector` literals — no extra
  * `pgvector` npm dependency (only `pg` is added).
+ *
+ * **Tenancy (FR-52, ADR-0033):** a `tenant` column (part of the composite primary key `(tenant, id)`)
+ * scopes every row. The base store operates in {@link DEFAULT_TENANT_ID}; {@link VectorStore.forTenant}
+ * returns a view bound to another tenant over the same pool/table, filtering every read + write by it —
+ * so the same id can exist independently per tenant and a query never crosses tenants.
  */
 export function createPgVectorStore(options: PgVectorStoreOptions): VectorStore {
   const { connectionString, dimension, metric = 'l2', table = 'vectors' } = options;
@@ -58,7 +63,8 @@ export function createPgVectorStore(options: PgVectorStoreOptions): VectorStore 
       await pool.query('CREATE EXTENSION IF NOT EXISTS vector');
       await pool.query(
         `CREATE TABLE IF NOT EXISTS ${table} ` +
-          `(id text PRIMARY KEY, embedding vector(${dimension}), model text NOT NULL)`,
+          `(tenant text NOT NULL DEFAULT '${DEFAULT_TENANT_ID}', id text NOT NULL, ` +
+          `embedding vector(${dimension}), model text NOT NULL, PRIMARY KEY (tenant, id))`,
       );
     })();
     return ready;
@@ -72,57 +78,69 @@ export function createPgVectorStore(options: PgVectorStoreOptions): VectorStore 
     }
   }
 
-  return {
-    capabilities,
+  function storeFor(tenantId: TenantId): VectorStore {
+    return {
+      capabilities,
 
-    async upsert(items) {
-      await ensureReady();
-      for (const item of items) assertDimension(item.vector);
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        for (const item of items) {
-          await client.query(
-            `INSERT INTO ${table} (id, embedding, model) VALUES ($1, $2::vector, $3) ` +
-              `ON CONFLICT (id) DO UPDATE SET embedding = EXCLUDED.embedding, model = EXCLUDED.model`,
-            [item.id, toVectorLiteral(item.vector), item.model],
-          );
+      async upsert(items) {
+        await ensureReady();
+        for (const item of items) assertDimension(item.vector);
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          for (const item of items) {
+            await client.query(
+              `INSERT INTO ${table} (tenant, id, embedding, model) VALUES ($1, $2, $3::vector, $4) ` +
+                `ON CONFLICT (tenant, id) DO UPDATE SET embedding = EXCLUDED.embedding, model = EXCLUDED.model`,
+              [tenantId, item.id, toVectorLiteral(item.vector), item.model],
+            );
+          }
+          await client.query('COMMIT');
+        } catch (error) {
+          await client.query('ROLLBACK');
+          throw error;
+        } finally {
+          client.release();
         }
-        await client.query('COMMIT');
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
-      }
-    },
+      },
 
-    async query(vector, k) {
-      await ensureReady();
-      assertDimension(vector);
-      const result = await pool.query(
-        `SELECT id, embedding ${operator} $1::vector AS distance, model ` +
-          `FROM ${table} ORDER BY distance LIMIT $2`,
-        [toVectorLiteral(vector), k],
-      );
-      return (result.rows as MatchRow[]).map((row): VectorMatch => ({
-        id: row.id,
-        distance: Number(row.distance),
-        model: row.model,
-      }));
-    },
+      async query(vector, k) {
+        await ensureReady();
+        assertDimension(vector);
+        const result = await pool.query(
+          `SELECT id, embedding ${operator} $1::vector AS distance, model ` +
+            `FROM ${table} WHERE tenant = $2 ORDER BY distance LIMIT $3`,
+          [toVectorLiteral(vector), tenantId, k],
+        );
+        return (result.rows as MatchRow[]).map((row): VectorMatch => ({
+          id: row.id,
+          distance: Number(row.distance),
+          model: row.model,
+        }));
+      },
 
-    async delete(ids) {
-      if (ids.length === 0) return;
-      await ensureReady();
-      await pool.query(`DELETE FROM ${table} WHERE id = ANY($1)`, [ids]);
-    },
+      async delete(ids) {
+        if (ids.length === 0) return;
+        await ensureReady();
+        await pool.query(`DELETE FROM ${table} WHERE tenant = $1 AND id = ANY($2)`, [
+          tenantId,
+          ids,
+        ]);
+      },
 
-    async close() {
-      if (open) {
-        open = false;
-        await pool.end();
-      }
-    },
-  };
+      async close() {
+        // The pool is shared across tenant views; close it once (guarded).
+        if (open) {
+          open = false;
+          await pool.end();
+        }
+      },
+
+      forTenant(next) {
+        return storeFor(next);
+      },
+    };
+  }
+
+  return storeFor(DEFAULT_TENANT_ID);
 }

@@ -1,4 +1,4 @@
-import { NotFoundError, ValidationError } from '@tessera/core';
+import { NotFoundError, ValidationError, type TenantId } from '@tessera/core';
 import type { z } from 'zod';
 import {
   EFFECT_LINK_KIND,
@@ -47,6 +47,11 @@ export interface KnowledgeGraphService {
   deriveStaticEffectLinks(): Promise<number>;
   /** What is affected if the referenced node changes — ranked dependents with paths (FR-19). */
   getEffects(node: NodeRef, options?: GetEffectsOptions): Promise<readonly EffectHit[]>;
+  /**
+   * A view of this service confined to `tenantId` (FR-52, ADR-0033). The base service operates in
+   * {@link DEFAULT_TENANT_ID}.
+   */
+  forTenant(tenantId: TenantId): KnowledgeGraphService;
 }
 
 /** Create a {@link KnowledgeGraphService} backed by a {@link GraphStore}. */
@@ -119,6 +124,10 @@ export function createKnowledgeGraphService(store: GraphStore): KnowledgeGraphSe
         throw new NotFoundError('node not found', { details: { kind: ref.kind, key: ref.key } });
       }
       return store.getEffects(id, options);
+    },
+
+    forTenant(tenantId) {
+      return createKnowledgeGraphService(store.forTenant(tenantId));
     },
   };
 }

@@ -6,7 +6,7 @@ import {
 } from '@tessera/billing';
 import type { CompileRequest } from '@tessera/context-compiler';
 import type { ZodFastify } from '../../app-types.js';
-import { DEFAULT_TENANT_ID, requirePermission } from '../../auth/index.js';
+import { requirePermission, tenantOf } from '../../auth/index.js';
 import type { ApiServices } from '../../services.js';
 import {
   compileBodySchema,
@@ -32,7 +32,7 @@ export function registerCompileRoutes(app: ZodFastify, services: ApiServices): v
       },
     },
     async (request) => {
-      const tenantId = request.authContext?.tenantId ?? DEFAULT_TENANT_ID;
+      const tenantId = tenantOf(request);
       const entitlements = effectiveEntitlements(await billing.getSubscription(tenantId));
       const { task, budget, retrievalLimit, filters } = request.body;
       const compileRequest: CompileRequest = {
@@ -43,7 +43,8 @@ export function registerCompileRoutes(app: ZodFastify, services: ApiServices): v
           ? { filters: filters.kinds !== undefined ? { kinds: filters.kinds } : {} }
           : {}),
       };
-      return services.compiler.compile(compileRequest);
+      // Data-plane isolation (FR-52): compile against only the caller-tenant's corpus/graph.
+      return services.compiler.forTenant(tenantId).compile(compileRequest);
     },
   );
 }

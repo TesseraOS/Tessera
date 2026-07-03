@@ -1,6 +1,6 @@
 import type { GetEffectsOptions } from '@tessera/knowledge-graph';
 import type { ZodFastify } from '../../app-types.js';
-import { requirePermission } from '../../auth/index.js';
+import { requirePermission, tenantOf } from '../../auth/index.js';
 import type { ApiServices } from '../../services.js';
 import {
   effectsQuerySchema,
@@ -28,7 +28,10 @@ export function registerEffectsRoutes(app: ZodFastify, services: ApiServices): v
       const { kind, key, maxDepth } = request.query;
       const options: GetEffectsOptions | undefined =
         maxDepth === undefined ? undefined : { maxDepth };
-      const effects = await services.graph.getEffects({ kind, key }, options);
+      // Data-plane isolation (FR-52): traverse only the caller-tenant's graph.
+      const effects = await services.graph
+        .forTenant(tenantOf(request))
+        .getEffects({ kind, key }, options);
       return { effects };
     },
   );

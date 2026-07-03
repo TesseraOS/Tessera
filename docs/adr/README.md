@@ -48,6 +48,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0030](0030-auth-composition-root-wiring.md) | Auth composition-root wiring — Fastify-free `@tessera/api/auth` subpath + persistent SQLite token store | Accepted |
 | [0031](0031-billing-port-and-open-core.md) | Billing port + adapters (open-core) — `@tessera/billing`, local/free + Dodo | Accepted |
 | [0032](0032-oidc-auth-provider.md) | OIDC AuthProvider — IdP-agnostic JWT/JWKS verification via `jose` | Accepted |
+| [0033](0033-data-plane-tenant-isolation.md) | Data-plane per-tenant row isolation via `forTenant` scoping (default-tenant back-compat) | Accepted |
 
 ## Conventions
 

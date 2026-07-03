@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ValidationError } from '@tessera/core';
+import { ValidationError, type TenantId } from '@tessera/core';
 import type { FusedCandidate, RetrievalQuery } from '../domain.js';
 import type { Retriever } from '../ports/retriever.js';
 import { fuse, type FusionOptions, type RetrieverResult } from '../fusion/fuse.js';
@@ -13,6 +13,11 @@ const querySchema = z.object({
 export interface HybridRetriever {
   /** Run every configured retriever and fuse the results into one ranked set (FR-26). */
   search(query: RetrievalQuery): Promise<readonly FusedCandidate[]>;
+  /**
+   * A view of the hybrid retriever confined to `tenantId` (FR-52, ADR-0033) — every child retriever
+   * is scoped to the tenant, so fused results never cross tenants. Base = {@link DEFAULT_TENANT_ID}.
+   */
+  forTenant(tenantId: TenantId): HybridRetriever;
 }
 
 /**
@@ -44,6 +49,13 @@ export function createHybridRetriever(
         })),
       );
       return fuse(results, options);
+    },
+
+    forTenant(tenantId) {
+      return createHybridRetriever(
+        retrievers.map((retriever) => retriever.forTenant(tenantId)),
+        options,
+      );
     },
   };
 }

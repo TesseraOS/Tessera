@@ -1,3 +1,4 @@
+import type { TenantId } from '@tessera/core';
 import type { Memory, MemoryId, MemoryKind, MemoryLineageId } from '../domain.js';
 
 /** Filter for listing the current memories. */
@@ -28,4 +29,9 @@ export interface MemoryStore {
   listVersions(lineageId: MemoryLineageId): Promise<readonly Memory[]>;
   /** The current version of every lineage, optionally filtered by kind/scope. */
   listCurrent(filter?: MemoryListFilter): Promise<readonly Memory[]>;
+  /**
+   * A view of this store confined to `tenantId` (FR-52, ADR-0033). The base store operates in
+   * {@link DEFAULT_TENANT_ID}; memories written under one tenant are never visible to another.
+   */
+  forTenant(tenantId: TenantId): MemoryStore;
 }

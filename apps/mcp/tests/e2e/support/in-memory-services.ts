@@ -47,6 +47,11 @@ const keywordRetriever: Retriever = {
       .slice(0, limit);
     return Promise.resolve(scored);
   },
+  // The fixed test corpus is tenant-agnostic; scoping is a no-op here (FR-52 isolation is covered by
+  // the tenant-aware stores + the api cross-tenant e2e).
+  forTenant() {
+    return keywordRetriever;
+  },
 };
 
 const fragmentSource: FragmentSource = {

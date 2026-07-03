@@ -93,5 +93,39 @@ export function runVectorConformance(name: string, makeStore: VectorFactory): vo
         await cleanup();
       }
     });
+
+    it('isolates vectors by tenant (forTenant) — no cross-tenant reads, same id per tenant', async () => {
+      const { store, cleanup } = await makeStore({ dimension: 3 });
+      try {
+        const a = store.forTenant('tenant-a');
+        const b = store.forTenant('tenant-b');
+        // The same id `shared` exists independently in each tenant, plus a tenant-only id apiece.
+        await a.upsert([
+          { id: 'shared', vector: [1, 0, 0], model: 'mA' },
+          { id: 'only-a', vector: [0, 1, 0], model: 'mA' },
+        ]);
+        await b.upsert([
+          { id: 'shared', vector: [0, 0, 1], model: 'mB' },
+          { id: 'only-b', vector: [0, 1, 0], model: 'mB' },
+        ]);
+
+        // A sees only its own rows; `shared` resolves to A's vector/model, never B's.
+        const aMatches = await a.query([1, 0, 0], 5);
+        expect(aMatches.map((m) => m.id).sort()).toEqual(['only-a', 'shared']);
+        expect(aMatches.find((m) => m.id === 'shared')?.model).toBe('mA');
+
+        // B sees only its own rows; the same id `shared` resolves to B's vector/model.
+        const bMatches = await b.query([0, 0, 1], 5);
+        expect(bMatches.map((m) => m.id).sort()).toEqual(['only-b', 'shared']);
+        expect(bMatches.find((m) => m.id === 'shared')?.model).toBe('mB');
+
+        // Deleting in A does not touch B.
+        await a.delete(['shared', 'only-a']);
+        expect(await a.query([1, 0, 0], 5)).toHaveLength(0);
+        expect((await b.query([0, 0, 1], 5)).map((m) => m.id).sort()).toEqual(['only-b', 'shared']);
+      } finally {
+        await cleanup();
+      }
+    });
   });
 }

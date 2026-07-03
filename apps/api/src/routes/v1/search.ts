@@ -1,6 +1,6 @@
 import type { RetrievalQuery } from '@tessera/retrieval';
 import type { ZodFastify } from '../../app-types.js';
-import { requirePermission } from '../../auth/index.js';
+import { requirePermission, tenantOf } from '../../auth/index.js';
 import type { ApiServices } from '../../services.js';
 import { searchBodySchema, searchResponseSchema, type SearchBody } from '../../schemas/search.js';
 
@@ -21,7 +21,8 @@ export function registerSearchRoutes(app: ZodFastify, services: ApiServices): vo
       const { query, limit } = request.body;
       const retrievalQuery: RetrievalQuery =
         limit === undefined ? { text: query } : { text: query, limit };
-      const results = await services.search.search(retrievalQuery);
+      // Data-plane isolation (FR-52): search only the caller-tenant's indices.
+      const results = await services.search.forTenant(tenantOf(request)).search(retrievalQuery);
       return { results };
     },
   );

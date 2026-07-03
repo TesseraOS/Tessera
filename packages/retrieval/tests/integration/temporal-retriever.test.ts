@@ -93,6 +93,31 @@ describe('temporal retriever (recency)', () => {
     }
   });
 
+  it('isolates the recency index by tenant (forTenant)', async () => {
+    const { sqlite, retriever } = setup();
+    try {
+      const a = retriever.forTenant('tenant-a');
+      const b = retriever.forTenant('tenant-b');
+      a.index('doc:shared', NOW - 5 * DAY_MS);
+      b.index('doc:shared', NOW - 5 * DAY_MS); // same ref, different tenant
+
+      expect((await a.retrieve({ text: 'q' })).map((c) => c.ref)).toEqual(['doc:shared']);
+      expect((await b.retrieve({ text: 'q' })).map((c) => c.ref)).toEqual(['doc:shared']);
+
+      // Removing in A leaves B (and the base tenant) untouched.
+      a.remove('doc:shared');
+      expect(await a.retrieve({ text: 'q' })).toEqual([]);
+      expect((await b.retrieve({ text: 'q' })).map((c) => c.ref)).toEqual(['doc:shared']);
+      expect((await retriever.retrieve({ text: 'q' })).map((c) => c.ref)).toEqual([
+        'doc:new',
+        'doc:mid',
+        'doc:old',
+      ]);
+    } finally {
+      await sqlite.close();
+    }
+  });
+
   it('rejects an invalid timestamp', () => {
     const sqlite = createSqliteStore({ path: ':memory:' });
     try {

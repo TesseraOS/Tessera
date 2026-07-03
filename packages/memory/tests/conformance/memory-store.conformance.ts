@@ -123,5 +123,35 @@ export function runMemoryStoreConformance(name: string, makeStore: MemoryStoreFa
         await cleanup?.();
       }
     });
+
+    it('isolates memories by tenant (forTenant) — no cross-tenant reads', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const a = store.forTenant('tenant-a');
+        const b = store.forTenant('tenant-b');
+        const ma = memory({ scope: 'shared' });
+        const mb = memory({ scope: 'shared' });
+        await a.add(ma);
+        await b.add(mb);
+
+        // Reads by id / lineage / listing see only the caller-tenant's rows.
+        expect(await a.getById(ma.id)).toEqual(ma);
+        expect(await a.getById(mb.id)).toBeUndefined();
+        expect(await b.getById(mb.id)).toEqual(mb);
+        expect(await b.getById(ma.id)).toBeUndefined();
+
+        expect(await a.getCurrent(mb.lineageId)).toBeUndefined();
+        expect(await a.listVersions(mb.lineageId)).toEqual([]);
+        expect((await a.listCurrent()).map((m) => m.id)).toEqual([ma.id]);
+        expect((await a.listCurrent({ scope: 'shared' })).map((m) => m.id)).toEqual([ma.id]);
+        expect((await b.listCurrent()).map((m) => m.id)).toEqual([mb.id]);
+
+        // The default view is a distinct tenant and sees neither.
+        expect(await store.getById(ma.id)).toBeUndefined();
+        expect(await store.listCurrent()).toEqual([]);
+      } finally {
+        await cleanup?.();
+      }
+    });
   });
 }

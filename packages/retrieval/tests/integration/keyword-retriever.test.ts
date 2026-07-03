@@ -38,4 +38,28 @@ describe('keyword retriever (FTS5)', () => {
       await sqlite.close();
     }
   });
+
+  it('isolates the FTS index by tenant (forTenant)', async () => {
+    const { sqlite, retriever } = setup();
+    try {
+      const a = retriever.forTenant('tenant-a');
+      const b = retriever.forTenant('tenant-b');
+      a.index('doc:shared', 'quarterly revenue projections alpha');
+      b.index('doc:shared', 'unrelated beta content'); // same ref, different tenant
+
+      expect((await a.retrieve({ text: 'revenue projections' })).map((c) => c.ref)).toEqual([
+        'doc:shared',
+      ]);
+      // Tenant B never sees A's content, even for the same ref.
+      expect(await b.retrieve({ text: 'revenue projections' })).toEqual([]);
+      expect((await b.retrieve({ text: 'beta content' })).map((c) => c.ref)).toEqual([
+        'doc:shared',
+      ]);
+      // The default (base) retriever is a distinct tenant and sees neither.
+      expect(await retriever.retrieve({ text: 'revenue projections' })).toEqual([]);
+      expect(await retriever.retrieve({ text: 'beta content' })).toEqual([]);
+    } finally {
+      await sqlite.close();
+    }
+  });
 });

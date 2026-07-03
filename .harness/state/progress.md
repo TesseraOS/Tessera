@@ -3,6 +3,65 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-03 — F-037 DONE + **R2 COMPLETE**: data-plane per-tenant row isolation (FR-52; ADR-0033)
+The last R2 `must`. Closed the F-025 seam: `AuthContext.tenantId` was *carried* but the domain stores were
+**not** tenant-scoped — now every store enforces real per-tenant row isolation. User picked the **full**
+scope (all SQLite stores + services + REST + MCP + **live Postgres verification**).
+
+**Design (ADR-0033) — `forTenant` scoped views, default = `DEFAULT_TENANT_ID`:**
+- Promoted the tenant primitive **`TenantId` + `DEFAULT_TENANT_ID`** to **`@tessera/core`** (dependency-free
+  base) so domain packages scope by tenant without depending on `@tessera/api`; `@tessera/api/auth/model`
+  **re-exports** them (public API unchanged). Additive on **E-006**.
+- Added **`forTenant(tenantId): Self`** to `MemoryStore`/`GraphStore`/`VectorStore`/`Retriever`/
+  `HybridRetriever`/`ContextCompiler` + the 3 domain services. The **base view is the default tenant**, so
+  every existing test + the zero-auth Local profile are **byte-for-byte unchanged**; tenancy engages only
+  when a non-default `tenantId` is threaded. Enforcement lives **in the adapter** (not a bypassable wrapper).
+- **Per store:** VectorStore — sqlite-vec **per-tenant `vec0` table**, pgvector **`tenant` column + composite
+  PK `(tenant,id)`**. Memory — `memories.tenant_id` + additive `ALTER` migration. Graph — `tenant_id` +
+  **composite PK** (`nodeIdFor(kind,key)` is deterministic → same node id per tenant) + tenant predicate in
+  **both arms of the `getEffects` recursive CTE**. Keyword (FTS5 tenant col) + temporal (composite PK) filter
+  their owned indices; semantic/graph/symbolic delegate to the scoped stores. Compiler folds a non-default
+  `tenantId` into the **CompilationKey** so a shared cache stays tenant-safe.
+- **No wire change:** `Memory`/`ContextPackage`/`CompileRequest`/REST/MCP schemas keep **no** tenant field —
+  isolation is a server-side storage guarantee → **OpenAPI + generated SDK unaffected**.
+- **Threading:** REST routes call `services.X.forTenant(tenantOf(request))` (new auth helper); MCP tools use
+  `guard()`'s returned `AuthContext.tenantId` (ungated → default).
+- **Effect-link ripple caught:** `@tessera/observability` `instrumentServices`' tracing Proxy now special-cases
+  `forTenant` (re-wrap the scoped service, don't Promise-ify it) — **E-015**.
+
+**Evidence (all green, workspace-wide):** state (37 features, 19 effect-links) · format · **typecheck 30** ·
+**lint 17** · **test 30** (storage **37 with live PG** incl. pgvector isolation, memory 27, knowledge-graph
+25, retrieval 33, context-compiler 36) · **build 17** · **e2e 16** (api 33 incl. a **cross-tenant memory
+e2e** — acme writes, globex 404s + empty list; mcp 11; web 5 WCAG). Each shared **conformance suite** gained
+a cross-tenant isolation case (so every current + future adapter must satisfy it). **pgvector isolation
+verified LIVE** against `docker compose … postgres`.
+
+**Effects:** **E-018** — data-plane isolation **REALIZED** (no longer a seam) + **E-001/E-007** (VectorStore
+forTenant), **E-010** (memory), **E-011** (graph), **E-012** (retrieval), **E-013** (compiler + tenant key),
+**E-006** (core TenantId), **E-003** (routes/tools thread tenantId; schemas unchanged), **E-015** (obs Proxy).
+
+**Decisions (ADR-0033):** `forTenant` scoped views over threading tenant on every signature (additive,
+green-at-every-step); tenant primitive in `@tessera/core`; a **row/partition column** over a DB-per-tenant
+(local-first single SQLite file); tenancy **off the wire** (storage guarantee, not a payload field).
+**Deferred as documented seams:** Postgres-backed memory/graph stores (still SQLite-only — will inherit the
+same `tenant_id` contract), cross-tenant admin ops, per-tenant quotas/usage + tenant lifecycle, and ingestion
+populating per-tenant retrieval/vector indices (same `forTenant` seam).
+
+**Lesson:** [[forTenant-scoped-view-default-tenant-for-additive-row-isolation]] — retrofit per-tenant row
+isolation across many verified stores by adding a `forTenant(tenantId)` **scoped view whose base is a default
+tenant** (existing callers/tests untouched) and enforcing the tenant column **inside each adapter** + a shared
+**conformance isolation case**, rather than threading tenant through every method signature; keep tenancy off
+the wire so the API/SDK contract is unchanged, and watch cross-cutting decorators (observability Proxy) that
+assume every method is an async call.
+
+**🎉 R2 COMPLETE** — F-025 (auth/RBAC), F-026 (MCP gateway), F-030 (billing), F-034 (auth wiring), F-035
+(entitlement enforcement), F-036 (OIDC), **F-037 (data-plane isolation — the last `must`)** all done.
+
+**Next step:** **R3** — F-027 (governance & audit UI + full audit trail, `@tessera/web`, FR-48/55/NFR-13), the
+only R3 feature currently in scope. Committed per the standing per-feature cadence.
+
+---
+
 ## 2026-07-03 — F-036 DONE: OIDC AuthProvider (IdP-agnostic JWT/JWKS, jose) (@tessera/api)
 Picked the **smaller** of the two carried R2 items (per the user's "OIDC first iff it's smaller"): OIDC is
 a single localized adapter + config wiring, vs F-037's every-store refactor. Plan/design: **ADR-0032**.

@@ -39,6 +39,10 @@ function memoryStub() {
     history: (lineageId: string) =>
       Promise.resolve(byLineage.has(lineageId) ? [byLineage.get(lineageId)] : []),
     list: () => Promise.resolve([...byLineage.values()]),
+    // Tenant scoping (FR-52) is a no-op for the canned stub — return the same store.
+    forTenant() {
+      return this;
+    },
   };
 }
 
@@ -55,6 +59,9 @@ function stubServices(): ApiServices {
             label: 'authentication',
           },
         ]),
+      forTenant() {
+        return this;
+      },
     },
     compiler: {
       compile: (request: { task: string; budget: number }) =>
@@ -66,8 +73,16 @@ function stubServices(): ApiServices {
           trace: { stages: [] },
           scores: { fragmentCount: 0, budgetAdherence: 1, provenanceCoverage: 1, redundancy: 0 },
         }),
+      forTenant() {
+        return this;
+      },
     },
-    graph: { getEffects: () => Promise.resolve({ effects: [] }) },
+    graph: {
+      getEffects: () => Promise.resolve({ effects: [] }),
+      forTenant() {
+        return this;
+      },
+    },
     memory: memoryStub(),
   } as unknown as ApiServices;
 }

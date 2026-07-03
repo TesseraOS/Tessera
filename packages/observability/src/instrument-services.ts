@@ -10,6 +10,13 @@ function traceObject<T extends object>(target: T, prefix: string, obs: Observabi
     get(self, property, receiver): unknown {
       const value: unknown = Reflect.get(self, property, receiver);
       if (typeof value !== 'function') return value;
+      // `forTenant` (FR-52) returns a scoped view synchronously — re-wrap it (keep tracing on the
+      // scoped service) rather than treating it as an async service call that returns a Promise.
+      if (property === 'forTenant') {
+        const scope = value as (tenantId: string) => T;
+        return (tenantId: string): T =>
+          traceObject(Reflect.apply(scope, self, [tenantId]) as T, prefix, obs);
+      }
       const name = `${prefix}.${String(property)}`;
       const method = value as (...args: unknown[]) => unknown;
       return (...args: unknown[]): Promise<unknown> =>
@@ -38,6 +45,8 @@ function traceCompiler(compiler: ContextCompiler, obs: Observability): ContextCo
         recordCompileStageDurations(obs.instruments, pkg.trace);
         return pkg;
       }),
+    // Data-plane isolation (FR-52): a scoped compiler stays instrumented.
+    forTenant: (tenantId) => traceCompiler(compiler.forTenant(tenantId), obs),
   };
 }
 

@@ -1,7 +1,13 @@
 import { ForbiddenError, UnauthorizedError } from '@tessera/core';
 import type { FastifyRequest, preHandlerAsyncHookHandler } from 'fastify';
 import type { ZodFastify } from '../app-types.js';
-import { hasPermission, type AuthContext, type Permission } from './model.js';
+import {
+  DEFAULT_TENANT_ID,
+  hasPermission,
+  type AuthContext,
+  type Permission,
+  type TenantId,
+} from './model.js';
 import type { AuthProvider } from './provider.js';
 
 declare module 'fastify' {
@@ -50,4 +56,13 @@ export function requirePermission(permission: Permission): preHandlerAsyncHookHa
     }
     return Promise.resolve();
   };
+}
+
+/**
+ * The tenant a request is scoped to (FR-52, ADR-0033): its resolved {@link AuthContext}'s tenant, or
+ * {@link DEFAULT_TENANT_ID} on public/zero-auth requests. Routes thread this into the domain services
+ * via `service.forTenant(tenantOf(request))` so data-plane reads/writes are isolated per tenant.
+ */
+export function tenantOf(request: FastifyRequest): TenantId {
+  return request.authContext?.tenantId ?? DEFAULT_TENANT_ID;
 }

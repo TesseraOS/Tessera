@@ -1145,11 +1145,30 @@
       "package": "@tessera/storage",
       "release": "R2",
       "priority": "must",
-      "status": "backlog",
+      "status": "done",
       "blockedBy": [
         "F-025"
       ],
-      "notes": "R2 seam carried out of F-025: the auth control plane resolves + carries AuthContext.tenantId, but the domain stores (memory/graph/retrieval/storage) are NOT yet tenant-scoped, so no cross-tenant data guarantee exists beyond the boundary. Completing FR-52 needs a tenant column + enforced filter across every domain store + its conformance suite + the services threading tenantId — a large, cross-package change deferred as its own feature (like the Postgres-backed graph/memory profile). Design it before touching every verified store."
+      "verification": [
+        "state",
+        "typecheck",
+        "lint",
+        "test",
+        "build",
+        "e2e"
+      ],
+      "effects": [
+        "E-018",
+        "E-001",
+        "E-007",
+        "E-010",
+        "E-011",
+        "E-012",
+        "E-013",
+        "E-006",
+        "E-003"
+      ],
+      "notes": "Done 2026-07-03 (R2 COMPLETE — the last R2 must): real per-tenant row isolation (FR-52) across every domain store, closing the F-025 seam. ADR-0033. Design: promote the tenant primitive TenantId + DEFAULT_TENANT_ID to @tessera/core (dependency-free base; @tessera/api/auth/model re-exports — public API unchanged, E-006), then add a `forTenant(tenantId): Self` scoped view to every store/retriever/service whose base is bound to DEFAULT_TENANT_ID (so every existing test + the zero-auth Local profile are byte-for-byte unchanged; tenancy engages only when a non-default tenantId is threaded). Enforcement lives IN the adapter (a tenant column / composite PK / vec0 per-tenant table injected on write + filtered on every read), not a bypassable wrapper. Per store: VectorStore.forTenant (sqlite-vec = per-tenant vec0 table; pgvector = tenant column + composite PK (tenant,id); shared vector conformance gained an isolation case — pgvector VERIFIED LIVE against the Docker container). MemoryStore/MemoryService.forTenant (memories.tenant_id + additive ALTER migration; isolation conformance). GraphStore/KnowledgeGraphService.forTenant (nodes/edges tenant_id + composite PK since nodeIdFor(kind,key) is deterministic; tenant predicate in every query AND both arms of the getEffects recursive CTE; isolation conformance). Retriever.forTenant on the port + all 5 retrievers + HybridRetriever.forTenant (keyword FTS5 tenant column, temporal composite PK — both filter their owned indices; semantic/graph/symbolic delegate to the scoped stores; keyword/temporal have adapter isolation tests). ContextCompiler.forTenant (scopes retriever + graph; folds a non-default tenantId into the CompilationKey so a shared cache stays tenant-safe). NO wire change: Memory/ContextPackage/CompileRequest/REST/MCP schemas keep NO tenant field — isolation is a server-side storage guarantee driven by AuthContext.tenantId → OpenAPI + generated SDK unaffected. Threading: REST routes call services.X.forTenant(tenantOf(request)) (new auth helper; default → 'default'); MCP tool handlers use guard()'s returned AuthContext.tenantId (ungated → default). Effect-link ripple handled: @tessera/observability instrumentServices' tracing Proxy special-cases forTenant (re-wrap the scoped service, don't Promise-ify it) — E-015. +tests: storage vector isolation (sqlite-vec + pgvector-live) · memory + graph store isolation conformance (in-memory + sqlite) · keyword + temporal adapter isolation · compiler forTenant isolation + key.tenant · api auth e2e cross-tenant memory (acme writes, globex 404s + empty list). Gates green workspace-wide: state (37 features, 19 effect-links) · format · typecheck 30 · lint 17 · test 30 (storage 37 w/ PG, memory 27, knowledge-graph 25, retrieval 33, context-compiler 36) · build 17 · e2e 16 (api 33 incl. cross-tenant, mcp 11, web 5 WCAG). Effects E-018 (data-plane isolation REALIZED — no longer a seam) + E-001/E-007/E-010/E-011/E-012/E-013 (each port gained forTenant + isolation conformance) + E-006 (core TenantId) + E-003 (routes/tools thread tenantId; schemas unchanged) + E-015 (observability Proxy). DEFERRED as documented seams: Postgres-backed memory/graph stores (still SQLite-only; they'll inherit the same tenant_id contract), cross-tenant admin ops, per-tenant quotas/usage + tenant lifecycle (create/delete/migrate), and ingestion populating per-tenant retrieval/vector indices (same forTenant seam)."
     }
   ]
 }

@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { ApiServices } from '@tessera/api';
+import type { ApiServices, AuthContext } from '@tessera/api';
+import { DEFAULT_TENANT_ID } from '@tessera/core';
 import type { CompileRequest } from '@tessera/context-compiler';
 import type { GetEffectsOptions } from '@tessera/knowledge-graph';
 import type { RetrievalQuery } from '@tessera/retrieval';
@@ -62,9 +63,16 @@ export function buildMcpServer(
   const server = new McpServer(SERVER_INFO);
   const { gateway } = options;
 
-  /** Authenticate/authorize/meter a call when a gateway is configured; a no-op otherwise (back-compat). */
-  const guard = (tool: McpToolName, extra: McpCallContext): Promise<unknown> =>
-    gateway === undefined ? Promise.resolve() : gateway.guard(tool, extra);
+  /**
+   * Authenticate/authorize/meter a call when a gateway is configured; a no-op otherwise (back-compat).
+   * Returns the resolved {@link AuthContext} (whose `tenantId` scopes the data plane, FR-52) — or
+   * `undefined` when ungated, in which case the default tenant is used.
+   */
+  const guard = (tool: McpToolName, extra: McpCallContext): Promise<AuthContext | undefined> =>
+    gateway === undefined ? Promise.resolve(undefined) : gateway.guard(tool, extra);
+
+  /** The tenant a call runs in — the gateway's resolved tenant, or the default when ungated. */
+  const tenantOf = (ctx: AuthContext | undefined): string => ctx?.tenantId ?? DEFAULT_TENANT_ID;
 
   server.registerTool(
     'search',
@@ -74,10 +82,10 @@ export function buildMcpServer(
     },
     (args, extra) =>
       runTool(async () => {
-        await guard('search', extra);
+        const ctx = await guard('search', extra);
         const query: RetrievalQuery =
           args.limit === undefined ? { text: args.query } : { text: args.query, limit: args.limit };
-        return { results: await services.search.search(query) };
+        return { results: await services.search.forTenant(tenantOf(ctx)).search(query) };
       }),
   );
 
@@ -89,8 +97,8 @@ export function buildMcpServer(
     },
     (args, extra) =>
       runTool(async () => {
-        await guard('compile_context', extra);
-        return services.compiler.compile(toCompileRequest(args));
+        const ctx = await guard('compile_context', extra);
+        return services.compiler.forTenant(tenantOf(ctx)).compile(toCompileRequest(args));
       }),
   );
 
@@ -102,11 +110,13 @@ export function buildMcpServer(
     },
     (args, extra) =>
       runTool(async () => {
-        await guard('get_effects', extra);
+        const ctx = await guard('get_effects', extra);
         const opts: GetEffectsOptions | undefined =
           args.maxDepth === undefined ? undefined : { maxDepth: args.maxDepth };
         return {
-          effects: await services.graph.getEffects({ kind: args.kind, key: args.key }, opts),
+          effects: await services.graph
+            .forTenant(tenantOf(ctx))
+            .getEffects({ kind: args.kind, key: args.key }, opts),
         };
       }),
   );
@@ -119,8 +129,8 @@ export function buildMcpServer(
     },
     (args, extra) =>
       runTool(async () => {
-        await guard('capture_memory', extra);
-        return services.memory.capture(args);
+        const ctx = await guard('capture_memory', extra);
+        return services.memory.forTenant(tenantOf(ctx)).capture(args);
       }),
   );
 
@@ -132,12 +142,12 @@ export function buildMcpServer(
     },
     (args, extra) =>
       runTool(async () => {
-        await guard('explain', extra);
+        const ctx = await guard('explain', extra);
         const request = toCompileRequest({
           ...args,
           budget: args.budget ?? DEFAULT_EXPLAIN_BUDGET,
         });
-        return buildExplanation(await services.compiler.compile(request));
+        return buildExplanation(await services.compiler.forTenant(tenantOf(ctx)).compile(request));
       }),
   );
 

@@ -12,6 +12,11 @@ export interface CompilerFingerprint {
   readonly compressionStrategy: string;
   readonly dedupThreshold?: number;
   readonly expandDepth?: number;
+  /**
+   * The tenant the compiler is scoped to (FR-52, ADR-0033). Folded into the key so a shared cache is
+   * tenant-safe: identical tasks under different tenants never collide.
+   */
+  readonly tenantId?: string;
 }
 
 /** The request fields (already normalized to their effective values) that identify a compilation. */
@@ -43,6 +48,7 @@ export function computeCompilationKey(
       compression: fingerprint.compressionStrategy,
       dedupThreshold: fingerprint.dedupThreshold ?? null,
       expandDepth: fingerprint.expandDepth ?? null,
+      tenant: fingerprint.tenantId ?? null,
     },
   });
   return createHash('sha256').update(canonical).digest('hex');

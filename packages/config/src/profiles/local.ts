@@ -38,6 +38,7 @@ import {
 } from '@tessera/storage';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { createSqliteTokenStore } from '../auth/sqlite-token-store.js';
+import { createSqliteAuditLog } from '../audit/sqlite-audit-log.js';
 import { createBlobFragmentSource } from '../fragment-source.js';
 import type { Env } from '../load.js';
 import type { Runtime, RuntimeAuth } from '../runtime.js';
@@ -193,6 +194,8 @@ export async function createLocalRuntime(
     services,
     auth: createRuntimeAuth(config.auth, relational.db),
     billing,
+    // Persistent audit trail (F-027) when enabled; the surface falls back to its in-memory sink otherwise.
+    ...(config.audit.enabled ? { audit: createSqliteAuditLog(relational.db) } : {}),
     secrets,
     stores: { relational, vector, blob, queue },
     embeddings,

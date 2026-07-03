@@ -202,6 +202,7 @@
         { "kind": "package", "ref": "@tessera/storage Postgres+pgvector adapters (F-023) add a self-hosted/cloud profile branch behind the same Runtime/config — no domain change" },
         { "kind": "module", "ref": "@tessera/config auth wiring (F-034/F-036): a config.auth section (mode none|token|oidc, tenant, quota, oidc {issuer,audience,jwksUri,rolesClaim,tenantClaim}) + createSqliteTokenStore (persistent TokenStore over the Drizzle handle, api_tokens table) + Runtime.auth {provider, tokenStore?} selected by config.auth.mode — built via the Fastify-free @tessera/api/auth subpath so the composition root (and the MCP process booting through it) never pulls Fastify. Adds a drizzle-orm dep to @tessera/config" },
         { "kind": "module", "ref": "@tessera/config billing wiring (F-030): config.billing (provider none|dodo) → Runtime.billing + ApiServices.billing selected by config; the local/free default keeps zero external deps. See E-019" },
+        { "kind": "module", "ref": "@tessera/config audit wiring (F-027): config.audit (enabled, retention) + TESSERA_AUDIT_* → createSqliteAuditLog over the Drizzle handle → Runtime.audit (optional) → apps/server passes it to buildServer. Fastify-free via a type-only @tessera/api import (like the token store). See E-020" },
         { "kind": "decision", "ref": "docs/adr/0018-config-loader-and-local-profile.md" },
         { "kind": "decision", "ref": "docs/adr/0030-auth-composition-root-wiring.md" }
       ],
@@ -300,7 +301,7 @@
         { "kind": "module", "ref": "@tessera/api recordAudit onResponse hook (routes/v1/index.ts) — records an AuditEvent for routes flagged config.audit (search/compile/effects.read/memory.read|write/audit.read); actor+tenant from AuthContext, outcome from status (>=400 → denied); failure-isolated (never breaks a request); NON-SENSITIVE only (NFR-7 — no bodies/secrets/query content)" },
         { "kind": "test", "ref": "@tessera/api audit-log conformance (in-memory) + audit e2e (default-build record+query; token-build success/denied outcomes, admin:manage-only query, cross-tenant isolation)" },
         { "kind": "module", "ref": "@tessera/api GET /v1/audit route (admin:manage, tenant-scoped via forTenant, filter/paginate by action/actor/outcome/time + cursor) + schemas → OpenAPI + regenerated @tessera/sdk (getAudit). Advances E-003" },
-        { "kind": "module", "ref": "@tessera/config audit wiring (F-027 increment 1b): config.audit (enabled, retention) + Runtime.audit + createSqliteAuditLog; apps/server passes runtime.audit to buildServer (E-014)" },
+        { "kind": "module", "ref": "@tessera/config audit wiring (F-027, REALIZED): config.audit (enabled, retention {maxAgeDays,maxEntries}) + TESSERA_AUDIT_* env + createSqliteAuditLog (persistent audit_events table, tenant column, seq-cursor, prune) + Runtime.audit; apps/server passes runtime.audit to buildServer. Type-only @tessera/api import keeps config Fastify-free (ADR-0030). See E-014" },
         { "kind": "module", "ref": "@tessera/web governance & audit UI (F-027 increment 2, FR-48) consumes GET /v1/audit" },
         { "kind": "decision", "ref": "docs/adr/0034-audit-trail-and-governance.md" }
       ],

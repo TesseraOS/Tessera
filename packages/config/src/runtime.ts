@@ -1,5 +1,5 @@
 import type { Embeddings } from '@tessera/ai';
-import type { ApiServices } from '@tessera/api';
+import type { ApiServices, AuditLog } from '@tessera/api';
 import type { AuthProvider, TokenStore } from '@tessera/api/auth';
 import type { BillingProvider } from '@tessera/billing';
 import type { KeywordRetriever, TemporalRetriever } from '@tessera/retrieval';
@@ -39,6 +39,11 @@ export interface Runtime {
   readonly auth: RuntimeAuth;
   /** The billing provider (local/free or Dodo), selected by `config.billing` (F-030). */
   readonly billing: BillingProvider;
+  /**
+   * The persistent, tenant-scoped audit trail (F-027; FR-55/NFR-13) the REST surface records into,
+   * present when `config.audit.enabled`. `undefined` → the surface falls back to its in-memory sink.
+   */
+  readonly audit?: AuditLog;
   readonly secrets: SecretsProvider;
   readonly stores: RuntimeStores;
   readonly embeddings: Embeddings;

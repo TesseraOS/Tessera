@@ -3,6 +3,32 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-04 — F-027 increment 1b: persistent SQLite audit log + config wiring (@tessera/config)
+Made the audit trail **durable** — the composition root now wires a persistent, tenant-scoped SQLite sink
+so records survive restarts (increment 1a's default sink is in-memory). Mirrors the F-034 token-store
+pattern exactly (ADR-0030): the audit contract is imported **type-only** from `@tessera/api`, so
+`@tessera/config` (and the MCP process booting through it) stays **Fastify-free** (verified — config dist
+has no fastify).
+- **`createSqliteAuditLog(db)`** (`packages/config/src/audit/`): implements the `AuditLog` port over the
+  storage Drizzle handle — an `audit_events` table with a monotonic `seq` (rowid) for newest-first ordering
+  + a **stable `seq < cursor` cursor**, a `tenant_id` column + `forTenant` scoping, filter by
+  action/actor/outcome/time, and `prune` by max age / newest-`maxEntries` (retention, NFR-13).
+- **Config:** an `audit` section (`enabled` default true, `retention {maxAgeDays?, maxEntries?}`) +
+  `TESSERA_AUDIT_*` env (documented in `.env.example` — the env-docs guard enforced it); `Runtime.audit?`
+  built in `createLocalRuntime` when enabled; `apps/server` `startApiServer` passes `runtime.audit` to
+  `buildServer` (falls back to the in-memory sink when disabled).
+
+**Evidence (all green, workspace-wide):** state (env-docs incl. the 3 new vars) · format · typecheck 30 ·
+lint 17 · **test 30** (config 22: sqlite-audit-log 3 = record/filter/isolation, pagination+retention prune,
+**persist-across-restart**) · build 17 · **e2e 16**. Fastify-free-config invariant re-verified.
+
+**Effects:** **E-020** (createSqliteAuditLog realized) + **E-014** (config `audit` section + `Runtime.audit`
+wiring). **Next step:** increment **2** — the governance & audit **web UI** (FR-48): an Audit Log view
+(filter by action/actor/outcome/date) + a Governance view (roles/permissions + retention), WCAG AA,
+screenshot-verified. Committed per the standing per-feature cadence.
+
+---
+
 ## 2026-07-04 — F-027 increment 1a: audit trail backend (in-memory, end-to-end) (@tessera/api)
 First code increment of F-027 (FR-55/NFR-13; ADR-0034). The **audit trail works end-to-end** with the
 default in-memory sink — sensitive actions are recorded at the `/v1` boundary and queried by admins,

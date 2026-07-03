@@ -39,6 +39,8 @@ export async function startApiServer(options: ApiServerOptions = {}): Promise<Ap
   const app = buildServer(services, {
     // Guard /v1 with the runtime's configured provider (F-034; default = zero-auth Local).
     auth: runtime.auth.provider,
+    // Record the audit trail into the runtime's persistent sink when enabled (F-027; else in-memory).
+    ...(runtime.audit !== undefined ? { audit: runtime.audit } : {}),
     ...(obs !== undefined ? { loggerInstance: obs.logger } : { logger: options.logger ?? false }),
   });
 

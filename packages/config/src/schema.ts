@@ -117,6 +117,26 @@ const authSchema = z
     }
   });
 
+/** Audit-trail retention (NFR-13): prune events older than `maxAgeDays` and/or beyond `maxEntries` per tenant. */
+const auditRetentionSchema = z
+  .object({
+    maxAgeDays: z.number().int().positive().optional(),
+    maxEntries: z.number().int().positive().optional(),
+  })
+  .default({});
+
+/**
+ * Audit-trail wiring (F-027; FR-55/NFR-13). `enabled` (default true) records sensitive actions into a
+ * persistent, tenant-scoped SQLite trail queryable at `GET /v1/audit`; `retention` prunes it. Disabling
+ * falls back to the non-durable in-memory sink in `@tessera/api`.
+ */
+const auditSchema = z
+  .object({
+    enabled: z.boolean().default(true),
+    retention: auditRetentionSchema,
+  })
+  .default({});
+
 /**
  * Billing wiring (F-030). `provider: none` = the local/free adapter (OSS default, no external service);
  * `provider: dodo` = Dodo Payments (secrets — apiKey/webhookSecret — come via the SecretsProvider).
@@ -140,6 +160,7 @@ export const configSchema = z.object({
   secrets: secretsSchema,
   auth: authSchema,
   billing: billingSchema,
+  audit: auditSchema,
 });
 
 /** Caller-facing config input (pre-defaults). */

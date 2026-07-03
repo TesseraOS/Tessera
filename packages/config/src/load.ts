@@ -87,6 +87,14 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
     provider: env.TESSERA_BILLING_PROVIDER,
     dodoBaseUrl: env.TESSERA_BILLING_DODO_BASE_URL,
   });
+  const auditRetention = section({
+    maxAgeDays: num(env.TESSERA_AUDIT_RETENTION_MAX_AGE_DAYS),
+    maxEntries: num(env.TESSERA_AUDIT_RETENTION_MAX_ENTRIES),
+  });
+  const audit = section({
+    enabled: bool(env.TESSERA_AUDIT_ENABLED),
+    ...(auditRetention !== undefined ? { retention: auditRetention } : {}),
+  });
 
   if (storage !== undefined) input.storage = storage;
   if (embeddings !== undefined) input.embeddings = embeddings;
@@ -94,6 +102,7 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
   if (secrets !== undefined) input.secrets = secrets;
   if (auth !== undefined) input.auth = auth;
   if (billing !== undefined) input.billing = billing;
+  if (audit !== undefined) input.audit = audit;
   return input as ConfigInput;
 }
 
@@ -110,6 +119,7 @@ function mergeConfig(base: ConfigInput, over: ConfigInput): ConfigInput {
     ...((base.secrets ?? over.secrets) ? { secrets: { ...base.secrets, ...over.secrets } } : {}),
     ...((base.auth ?? over.auth) ? { auth: { ...base.auth, ...over.auth } } : {}),
     ...((base.billing ?? over.billing) ? { billing: { ...base.billing, ...over.billing } } : {}),
+    ...((base.audit ?? over.audit) ? { audit: { ...base.audit, ...over.audit } } : {}),
   };
 }
 

@@ -2,7 +2,7 @@
   "$schemaRef": "./schemas/feature_list.schema.json",
   "version": 1,
   "project": "tessera",
-  "updated": "2026-07-02",
+  "updated": "2026-07-03",
   "policy": {
     "wip_limit": 1,
     "ordering": "by release, then id; respect blockedBy"
@@ -796,7 +796,28 @@
       "package": "@tessera/api",
       "release": "R2",
       "priority": "must",
-      "status": "backlog"
+      "status": "done",
+      "blockedBy": [
+        "F-011",
+        "F-015"
+      ],
+      "acceptance": [
+        "AuthProvider port in @tessera/api with a local/none adapter (a single default tenant + a full-access principal → today's zero-auth local behavior is unchanged) and an OIDC + RBAC cloud adapter as a documented, env-guarded seam; a principal is a user or a scoped, revocable API token (NFR-2)",
+        "Tenancy + RBAC domain model: an org/workspace tenant scope + roles (owner/admin/member/viewer) mapped to a permission catalog (memory:read/write, search/compile/effects:read, admin:manage); the /v1 boundary authenticates every request into an AuthContext {principal, tenantId, roles} and authorizes each route against its required permission, returning the standard {error} envelope (401 UNAUTHORIZED / 403 FORBIDDEN)",
+        "Scoped, revocable API tokens via a TokenStore port + local adapter (hashed at rest, scopes, revoke); org/workspace isolation is carried on AuthContext.tenantId and threaded to the request, with cross-tenant data-plane row-scoping (domain stores) + live OIDC verification kept as documented, env-guarded seams (mirroring the F-023/F-015 local-first + cloud-seam pattern)",
+        "Additive & back-compatible: existing routes + e2e stay green under the default local (no-auth) profile; an ADR records the auth/tenancy approach and the still-open OIDC-library question; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-018"
+      ],
+      "notes": "Done 2026-07-03 (first R2 feature): the API auth control plane (FR-52/FR-54/NFR-2) — tenancy + RBAC + scoped tokens, fully in @tessera/api under new ports (ADR-0028), ADDITIVE and back-compatible. auth/model.ts: TenantId + DEFAULT_TENANT_ID, ROLES (owner/admin/member/viewer), a PERMISSIONS catalog + ROLE_PERMISSIONS, Principal/AuthContext, and effectivePermissions = roles' permissions ∩ a token's scopes (least privilege). AuthProvider port (auth/provider.ts): createLocalAuthProvider = NONE (full-access default principal in the default tenant → today's zero-auth local behavior, unchanged) + createTokenAuthProvider (requires a valid Bearer; missing/invalid → 401). TokenStore port (auth/token-store.ts) + createInMemoryTokenStore: crypto-random 'tsk_' secrets HASHED AT REST (SHA-256; plaintext returned once), verify/revoke/list. Enforcement (auth/plugin.ts): registerAuth adds an onRequest hook resolving request.authContext via the injected provider (skips public routes) + requirePermission(p) per-route guards; buildServer gains auth? (default local none); /v1/openapi.json marked public. Per-route guards: search→search:read, compile→compile:read, effects→effects:read, memory GET→memory:read, memory POST/PATCH→memory:write. Errors reuse the envelope (UnauthorizedError→401, ForbiddenError→403; @tessera/core already had both codes). Because the default is the none provider, every existing route + e2e stays green (unauthenticated → full access). +21 unit (model 8 · token-store 6 · provider 7) + 7 auth e2e (401/403/200/revoked/public-openapi + zero-auth back-compat). Effects E-003 (additive 401/403 paths; response schemas + OpenAPI unchanged) + new E-018 (auth/tenancy/RBAC contract). Gates green workspace-wide: format · typecheck 28 · lint 16 · test 28 (api 36) · build 16 · e2e 15 (api 25). DELIBERATELY DEFERRED as documented, env-guarded seams (precedent F-023/F-021): live OIDC verification (OIDC is just another AuthProvider; the concrete IdP/library stays an open ADR), data-plane per-tenant row isolation (AuthContext.tenantId is resolved+carried, but the domain stores are not yet tenant-scoped — no cross-tenant guarantee beyond the boundary is claimed), composition-root wiring (config/server env → choose provider; a one-line seam, capability proven by the token-provider e2e), a persistent SQLite TokenStore, advertising the Bearer scheme in OpenAPI, and MCP gateway auth+quotas (F-026)."
     },
     {
       "id": "F-026",
@@ -808,7 +829,11 @@
       "package": "@tessera/mcp",
       "release": "R2",
       "priority": "should",
-      "status": "backlog"
+      "status": "todo",
+      "blockedBy": [
+        "F-012",
+        "F-025"
+      ]
     },
     {
       "id": "F-027",

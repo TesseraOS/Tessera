@@ -1,5 +1,6 @@
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { ZodFastify } from '../../app-types.js';
+import { registerAuth, type AuthProvider } from '../../auth/index.js';
 import type { ApiEventBus } from '../../events.js';
 import type { ApiServices } from '../../services.js';
 import { registerSearchRoutes } from './search.js';
@@ -18,10 +19,13 @@ export function registerV1Routes(
   app: ZodFastify,
   services: ApiServices,
   events: ApiEventBus,
+  auth: AuthProvider,
 ): void {
   app.register(
     (instance, _opts, done) => {
       const v1 = instance.withTypeProvider<ZodTypeProvider>();
+      // Authenticate every /v1 request first (per-route authorization is in each route module).
+      registerAuth(v1, auth);
       registerSearchRoutes(v1, services);
       registerCompileRoutes(v1, services);
       registerEffectsRoutes(v1, services);
@@ -30,7 +34,11 @@ export function registerV1Routes(
 
       v1.get(
         '/openapi.json',
-        { schema: { tags: ['ops'], description: 'Generated OpenAPI document.' } },
+        {
+          schema: { tags: ['ops'], description: 'Generated OpenAPI document.' },
+          // The API contract is public — the auth hook skips it (see registerAuth).
+          config: { public: true },
+        },
         () => app.swagger(),
       );
 

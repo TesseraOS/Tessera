@@ -1,6 +1,7 @@
 import { NotFoundError } from '@tessera/core';
 import type { MemoryLineageId } from '@tessera/memory';
 import type { ZodFastify } from '../../app-types.js';
+import { requirePermission } from '../../auth/index.js';
 import type { ApiEventBus } from '../../events.js';
 import type { ApiServices } from '../../services.js';
 import {
@@ -30,6 +31,7 @@ export function registerMemoryRoutes(
   app.post<{ Body: CaptureBody }>(
     '/memory',
     {
+      preHandler: requirePermission('memory:write'),
       schema: {
         tags: ['memory'],
         summary: 'Capture a new memory.',
@@ -52,6 +54,7 @@ export function registerMemoryRoutes(
   app.get<{ Querystring: MemoryListQuery }>(
     '/memory',
     {
+      preHandler: requirePermission('memory:read'),
       schema: {
         tags: ['memory'],
         summary: 'List the current memories.',
@@ -73,6 +76,7 @@ export function registerMemoryRoutes(
   app.get<{ Params: LineageParam }>(
     '/memory/:lineageId',
     {
+      preHandler: requirePermission('memory:read'),
       schema: {
         tags: ['memory'],
         summary: 'Get the current version of a memory lineage.',
@@ -93,6 +97,7 @@ export function registerMemoryRoutes(
   app.patch<{ Params: LineageParam; Body: EditBody }>(
     '/memory/:lineageId',
     {
+      preHandler: requirePermission('memory:write'),
       schema: {
         tags: ['memory'],
         summary: 'Edit a memory (appends a superseding version).',
@@ -110,6 +115,7 @@ export function registerMemoryRoutes(
   app.get<{ Params: LineageParam }>(
     '/memory/:lineageId/history',
     {
+      preHandler: requirePermission('memory:read'),
       schema: {
         tags: ['memory'],
         summary: 'Every version of a memory lineage, oldest first.',

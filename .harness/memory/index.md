@@ -20,6 +20,7 @@ One line per memory entry. Keep newest-relevant at top of each section.
 - [ingestion-redaction-terminal-gate](lessons/ingestion-redaction-terminal-gate.md) — enforce security invariants (secret redaction) as a fixed terminal pipeline stage, not optional config; keep emitted source ASCII-clean.
 - [turbo-cache-stale-uncommitted](lessons/turbo-cache-stale-uncommitted.md) — turbo gave false-green on uncommitted changes; gate tasks now `cache: false`.
 - [gitignore-broad-dir-hid-package](lessons/gitignore-broad-dir-hid-package.md) — bare `storage/` ignore rule excluded the whole `packages/storage` package; anchor ignore patterns + verify `git ls-files`.
+- [auth-control-plane-default-none-additive](lessons/auth-control-plane-default-none-additive.md) — add auth as an injected port whose default adapter is zero-auth full-access, so enforcement is opt-in and existing routes/tests stay green; RBAC = pure roles→permissions ∩ token scopes; carry `tenantId` but keep row-isolation + OIDC honest seams.
 
 ## Architecture
 _(none yet — see [`../../docs/architecture/ARCHITECTURE.md`](../../docs/architecture/ARCHITECTURE.md) for the full picture)_

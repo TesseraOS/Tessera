@@ -1,5 +1,6 @@
 import type { GetEffectsOptions } from '@tessera/knowledge-graph';
 import type { ZodFastify } from '../../app-types.js';
+import { requirePermission } from '../../auth/index.js';
 import type { ApiServices } from '../../services.js';
 import {
   effectsQuerySchema,
@@ -15,6 +16,7 @@ export function registerEffectsRoutes(app: ZodFastify, services: ApiServices): v
   app.get<{ Querystring: EffectsQuery }>(
     '/effects',
     {
+      preHandler: requirePermission('effects:read'),
       schema: {
         tags: ['effects'],
         summary: 'What is affected if a node changes (ranked, path-bearing).',

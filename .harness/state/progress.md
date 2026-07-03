@@ -3,6 +3,61 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-03 — R2 KICKOFF + F-025 DONE: API auth — tenancy + org RBAC + scoped tokens (@tessera/api)
+**R2 opened.** R1 is fully done, so the release advanced to **R2**: promoted the eligible R2 cohort
+(F-025 `must`, F-026 `should`) `backlog → todo`; **F-030** (billing) stays `backlog` (gated on **OQ4**,
+license/business model). Claimed **F-025** by the ordering policy (`by release, then id`). Plan:
+[`F-025`](../plans/F-025-multi-tenancy-org-rbac.md); **ADR-0028**.
+
+**What changed** (`@tessera/api` extended — FR-52/FR-54/NFR-2; **additive**, no domain/schema/consumer
+change). The **authn/authz control plane** at the `/v1` boundary, all in `apps/api/src/auth/`:
+- **RBAC model** (`model.ts`, pure): `ROLES` (owner/admin/member/viewer) → a `PERMISSIONS` catalog +
+  `ROLE_PERMISSIONS` (single source of truth); `effectivePermissions` = roles' permissions **∩** a token's
+  `scopes` (**least privilege**). `AuthContext = { principal, tenantId, permissions }`.
+- **`AuthProvider` port** (`provider.ts`): `createLocalAuthProvider` = **none** (full-access default
+  principal in the `default` tenant — today's zero-auth behavior, and the `buildServer` default) +
+  `createTokenAuthProvider` (valid `Bearer` required; missing/invalid → 401).
+- **`TokenStore` port** (`token-store.ts`) + `createInMemoryTokenStore`: scoped, **revocable** `tsk_`
+  tokens **hashed at rest** (SHA-256; plaintext returned once).
+- **Enforcement** (`plugin.ts`): `registerAuth` (an `onRequest` hook → `request.authContext`, skips
+  `public` routes) + `requirePermission(p)` per-route guards; `buildServer` gains `auth?` (default local
+  none); `/v1/openapi.json` stays public. Guards: search→`search:read`, compile→`compile:read`,
+  effects→`effects:read`, memory GET→`memory:read`, memory POST/PATCH→`memory:write`. 401/403 via the
+  existing `{error}` envelope (`@tessera/core` already had `UnauthorizedError`/`ForbiddenError`).
+
+**Because the default is the none provider**, every existing route + e2e stays green (unauthenticated →
+full access); enforcement engages only when a credential-requiring provider is injected.
+
+**Decision (ADR-0028):** ship the control plane in `@tessera/api` behind ports (local adapters now),
+back-compatible, default zero-auth. **Deliberately deferred as documented, env-guarded seams** (precedent
+F-023/F-021, no false claims): **live OIDC** (just another `AuthProvider`; the IdP/library is an **open ADR**,
+OQ4-adjacent), **data-plane per-tenant row isolation** (`tenantId` is resolved + carried, but the domain
+stores aren't tenant-scoped yet — no cross-tenant guarantee beyond the boundary), **composition-root wiring**
+(config/server env → choose provider; capability proven by the token-provider e2e), a **persistent
+TokenStore**, advertising the Bearer scheme in OpenAPI, and **MCP** gateway auth+quotas (**F-026**).
+
+**Evidence/verification (all green, workspace-wide):** state (33 features, **18 effect-links**, wip 1) ·
+format · typecheck (28) · lint (16) · **test (28 tasks; api 36 = prior 15 + 21 auth: model 8 / token-store
+6 / provider 7)** · build (16) · **e2e (15 tasks; api 25 = prior 18 + 7 auth)**. The auth e2e (`app.inject`)
+proves: default build serves `/v1/search` + `/v1/memory` **unauthenticated** (back-compat); token build →
+no-token 401, viewer→`memory:write` 403, member→201, revoked→401, `/v1/openapi.json` public.
+
+**Effects:** **E-003** advanced additively (new 401/403 paths; response schemas + OpenAPI unchanged → SDK
++ MCP unaffected) + **new E-018** (the auth/tenancy/RBAC contract: ports, catalog, tenantId seam).
+
+**Lesson:** [[auth-control-plane-default-none-additive]] — add an authn/authz layer as an **injected port**
+whose **default adapter is zero-auth full-access**, so enforcement is opt-in and every existing route/test
+stays green; make RBAC a pure roles→permissions map intersected with token scopes (least privilege); carry
+`tenantId` at the boundary but keep data-plane row-scoping + live OIDC honest, documented seams rather than
+overclaiming isolation.
+
+**Next step:** R2 by id — **F-026** (MCP gateway: multi-client auth + quotas — reuses this tenancy/RBAC
+model over `@tessera/mcp`; now unblocked). Then the follow-up seams (composition-root provider selection in
+`@tessera/config`/`@tessera/server`, a persistent TokenStore, OIDC adapter, data-plane tenant scoping) and
+**F-030** billing once **OQ4** resolves. Committed per the standing per-feature cadence (as F-021…F-024).
+
+---
+
 ## 2026-07-03 — F-024 DONE: Backup/restore + migration runner — **R1 COMPLETE** (@tessera/storage)
 The last R1 feature (FR-56), additive to `@tessera/storage` — no port change (ADR-0027). Plan:
 [`F-024`](../plans/F-024-backup-restore-migrations.md).

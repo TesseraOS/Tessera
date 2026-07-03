@@ -11,6 +11,40 @@
 export { buildServer, startServer } from './server.js';
 export type { BuildServerOptions, ListenOptions } from './server.js';
 export type { ApiServices, ReadinessCheck, ReadinessReport } from './services.js';
+
+// Auth / tenancy / RBAC (F-025; FR-52/FR-54/NFR-2) — the composition root injects an AuthProvider
+// into buildServer (default: zero-auth Local). See ADR-0028.
+export {
+  DEFAULT_TENANT_ID,
+  LOCAL_PRINCIPAL,
+  PERMISSIONS,
+  ROLES,
+  ROLE_PERMISSIONS,
+  buildAuthContext,
+  createInMemoryTokenStore,
+  createLocalAuthContext,
+  createLocalAuthProvider,
+  createTokenAuthProvider,
+  effectivePermissions,
+  hasPermission,
+  parseBearer,
+  permissionsForRoles,
+  registerAuth,
+  requirePermission,
+  type ApiTokenRecord,
+  type AuthContext,
+  type AuthInput,
+  type AuthProvider,
+  type InMemoryTokenStoreOptions,
+  type IssuedToken,
+  type IssueTokenInput,
+  type Permission,
+  type Principal,
+  type PrincipalKind,
+  type Role,
+  type TenantId,
+  type TokenStore,
+} from './auth/index.js';
 export {
   API_EVENT_TYPES,
   createApiEventBus,

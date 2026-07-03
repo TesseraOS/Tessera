@@ -1,5 +1,6 @@
 import type { CompileRequest } from '@tessera/context-compiler';
 import type { ZodFastify } from '../../app-types.js';
+import { requirePermission } from '../../auth/index.js';
 import type { ApiServices } from '../../services.js';
 import {
   compileBodySchema,
@@ -12,6 +13,7 @@ export function registerCompileRoutes(app: ZodFastify, services: ApiServices): v
   app.post<{ Body: CompileBody }>(
     '/compile',
     {
+      preHandler: requirePermission('compile:read'),
       schema: {
         tags: ['compile'],
         summary: 'Compile context for a task within a token budget.',

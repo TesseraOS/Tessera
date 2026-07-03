@@ -10,6 +10,7 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 import type { ZodFastify } from './app-types.js';
+import { createLocalAuthProvider, type AuthProvider } from './auth/index.js';
 import { createApiEventBus, type ApiEventBus } from './events.js';
 import { registerErrorHandling } from './errors/error-handler.js';
 import { registerOpenapi } from './plugins/openapi.js';
@@ -35,6 +36,12 @@ export interface BuildServerOptions {
    * the composition root passes a shared one so producers (memory route, ingestion worker) can emit.
    */
   readonly events?: ApiEventBus;
+  /**
+   * The authentication provider guarding `/v1` (F-025; FR-52/FR-54/NFR-2). Defaults to the zero-auth
+   * Local provider (full access, single default tenant) so local behavior is unchanged; hosted/self-
+   * host profiles inject a token/OIDC provider. See {@link AuthProvider} and ADR-0028.
+   */
+  readonly auth?: AuthProvider;
 }
 
 export interface ListenOptions extends BuildServerOptions {
@@ -47,8 +54,9 @@ export interface ListenOptions extends BuildServerOptions {
  * (validate → call service → map result); cross-cutting concerns are plugins. Registration order
  * matters: the Zod compilers and error envelope are installed first, then `@fastify/swagger`
  * (so its `onRoute` hook captures every route), then the routes. The instance is **not** awaited
- * here — `inject`/`listen` boot the plugin queue in order. Auth/CORS/rate-limit (per profile) and
- * adapter wiring are F-015/F-025; this function is pure given its services.
+ * here — `inject`/`listen` boot the plugin queue in order. `/v1` is guarded by the injected
+ * {@link AuthProvider} (F-025; default = zero-auth Local); CORS is per profile; adapter wiring is
+ * F-015. This function is pure given its services + options.
  */
 export function buildServer(services: ApiServices, options: BuildServerOptions = {}): ZodFastify {
   // Fastify forbids `logger` + `loggerInstance` together; prefer the injected instance when present.
@@ -100,7 +108,12 @@ export function buildServer(services: ApiServices, options: BuildServerOptions =
     done();
   });
 
-  registerV1Routes(app, services, options.events ?? createApiEventBus());
+  registerV1Routes(
+    app,
+    services,
+    options.events ?? createApiEventBus(),
+    options.auth ?? createLocalAuthProvider(),
+  );
 
   return app;
 }

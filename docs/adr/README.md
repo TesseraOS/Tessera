@@ -43,6 +43,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0025](0025-generated-typescript-sdk-toolchain.md) | Generated TypeScript SDK — openapi-typescript types + openapi-fetch client | Accepted |
 | [0026](0026-postgres-pgvector-adapters.md) | Postgres + pgvector storage adapters (self-hosted/cloud) + Docker Compose | Accepted |
 | [0027](0027-backup-restore-and-migration-runner.md) | Backup/restore + a versioned migration runner | Accepted |
+| [0028](0028-api-auth-tenancy-rbac.md) | API auth — AuthProvider port, tenancy + RBAC model, scoped tokens (OIDC + row-isolation as seams) | Accepted |
 
 ## Conventions
 

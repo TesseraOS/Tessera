@@ -26,6 +26,13 @@ See [`../../docs/architecture/ARCHITECTURE.md`](../../docs/architecture/ARCHITEC
   ([effect E-001](../../.harness/state/effects.json)).
 - Provide `/health` + `/ready`; emit OTel spans + Pino logs per the
   [observability protocol](../../.harness/protocols/observability.md).
+- **Auth is a port, injected at composition** (F-025, [ADR-0028](../../docs/adr/0028-api-auth-tenancy-rbac.md)):
+  `/v1` is guarded by the `AuthProvider` `buildServer` takes (default = the zero-auth **Local**
+  provider — full access, single `default` tenant, so local behavior is unchanged). Authorize each
+  route with `requirePermission(<perm>)` against the RBAC catalog in `src/auth/model.ts` (the single
+  source of truth for roles → permissions); auth failures use the standard `{error}` envelope
+  (401/403). Keep it **additive** — never require credentials in the default profile. Data-plane
+  per-tenant row isolation + live OIDC are documented seams ([effect E-018](../../.harness/state/effects.json)).
 
 ## Relevant features
 F-003…F-013, F-015, F-016 (and R1+ backend work) in

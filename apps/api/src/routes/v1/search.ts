@@ -1,5 +1,6 @@
 import type { RetrievalQuery } from '@tessera/retrieval';
 import type { ZodFastify } from '../../app-types.js';
+import { requirePermission } from '../../auth/index.js';
 import type { ApiServices } from '../../services.js';
 import { searchBodySchema, searchResponseSchema, type SearchBody } from '../../schemas/search.js';
 
@@ -8,6 +9,7 @@ export function registerSearchRoutes(app: ZodFastify, services: ApiServices): vo
   app.post<{ Body: SearchBody }>(
     '/search',
     {
+      preHandler: requirePermission('search:read'),
       schema: {
         tags: ['search'],
         summary: 'Hybrid search across code, memory, and the knowledge graph.',

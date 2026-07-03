@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-07-02",
+  "updated": "2026-07-03",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -41,6 +41,7 @@
         { "kind": "package", "ref": "@tessera/sdk (generated TS client, F-022 REALIZED, ADR-0025): types GENERATED from GET /v1/openapi.json via openapi-typescript (committed src/generated/schema.ts + a reproducible generate script) + a thin openapi-fetch client (createTesseraClient) mapping the {error} envelope to TesseraApiError. A route/schema change ⇒ regenerate the SDK types (tsc catches drift). Supersedes apps/web/lib/api once the web app adopts it (ADR-0022, deferred)" },
         { "kind": "module", "ref": "@tessera/web dashboard (F-014, realized): search + Context Package Inspector consume POST /v1/search & /v1/compile via the interim typed client apps/web/lib/api (ADR-0022)" },
         { "kind": "module", "ref": "@tessera/api GET /v1/events SSE stream (F-021, FR-38) over an injected ApiEventBus (buildServer option, default in-process) — ADDITIVE, REST-only (MCP unaffected); the memory-capture route emits memory.captured; document.ingested/removed types are provided, the ingestion-worker producer is wired via the composition root later. OpenAPI regenerates to include /v1/events" },
+        { "kind": "module", "ref": "@tessera/api /v1 auth guard (F-025): registerAuth (onRequest → request.authContext via the injected AuthProvider) + requirePermission per-route preHandlers add 401/403 paths to the existing routes — ADDITIVE (response schemas + OpenAPI unchanged; auth defaults to the zero-auth Local provider so existing routes/e2e are untouched). The full auth/tenancy/RBAC contract is E-018" },
         { "kind": "decision", "ref": "docs/adr/0016-rest-api-fastify-zod-bridge.md" },
         { "kind": "decision", "ref": "docs/adr/0017-mcp-server-surface.md" }
       ],
@@ -245,6 +246,23 @@
       ],
       "kind": "EFFECT_LINK",
       "rationale": "FR-14 auto-extraction turns ingested ADRs and settled GitHub items into captured memories via deterministic, rule-based extractors and a DocumentSink decorator. The seam is STRUCTURAL: `@tessera/ingestion` declares a minimal MemoryCaptureService interface instead of importing `@tessera/memory`, so no package dependency or cycle forms (the type-only/structural-seam pattern). Idempotency is keyed on `metadata.source` (adr:NNNN / github:owner/repo#n): re-ingest supersedes-on-change or skips-if-identical, never duplicating. Changing the extractor contract, the CandidateMemory shape, the idempotency key, or the github provenance shape ripples across the extractors, the sink, and the composition wiring; the memory service's versioning invariant (FR-12) is what makes supersede safe. Extraction runs on the redacted ProcessedDocument, so memories never carry secrets.",
+      "confidence": 0.9,
+      "origin": "manual"
+    },
+    {
+      "id": "E-018",
+      "from": { "kind": "contract", "ref": "@tessera/api auth control plane: AuthProvider + TokenStore ports + tenancy/RBAC model (roles→permissions, AuthContext{principal, tenantId, permissions})" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/api auth adapters — createLocalAuthProvider (none/full-access, default tenant), createTokenAuthProvider (Bearer over a TokenStore), createInMemoryTokenStore (hashed-at-rest, revocable). OIDC provider + a persistent TokenStore adapter are documented seams (ADR-0028)" },
+        { "kind": "module", "ref": "@tessera/api enforcement — registerAuth (onRequest authenticate → request.authContext) + requirePermission per-route guards (search:read / compile:read / effects:read / memory:read / memory:write); buildServer gains auth? (default local none); /v1/openapi.json stays public via route config" },
+        { "kind": "module", "ref": "@tessera/api RBAC catalog (ROLES owner/admin/member/viewer, PERMISSIONS, ROLE_PERMISSIONS) — the single source of truth; effectivePermissions intersects roles with a token's scopes (least privilege). Adding a route/permission or a role changes the catalog + its guards" },
+        { "kind": "test", "ref": "@tessera/api auth unit tests (model / token-store / provider) + auth e2e (401 / 403 / 200 / revoked / public-openapi + zero-auth back-compat over app.inject)" },
+        { "kind": "package", "ref": "the composition root (@tessera/config + @tessera/server, F-015) selects the AuthProvider (env → token/OIDC) — a documented wiring seam; the MCP gateway (F-026) reuses the same tenancy/RBAC model" },
+        { "kind": "module", "ref": "SEAM — data-plane per-tenant row isolation: AuthContext.tenantId is resolved + carried at the boundary, but the domain stores (memory/graph/retrieval) are not yet tenant-scoped (deferred behind the E-014 profile seam); no cross-tenant guarantee is claimed beyond the boundary" },
+        { "kind": "decision", "ref": "docs/adr/0028-api-auth-tenancy-rbac.md" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "F-025 adds an authentication + authorization control plane at the /v1 boundary. AuthProvider + TokenStore are ports (local adapters now; OIDC + persistent token store as cloud seams); RBAC is a pure roles→permissions mapping intersected with token scopes. Changing the permission catalog, the role mapping, the AuthContext shape, or the port interfaces ripples to the per-route guards, the composition root that injects a provider, the F-026 MCP gateway, and the future data-plane row-scoping + OIDC adapter. The default is the zero-auth Local provider (full access, single default tenant) so existing routes/e2e are unchanged — enforcement engages only when a credential-requiring provider is injected. tenantId is carried but the domain stores are not yet tenant-scoped (documented seam, no false isolation claim). Advances E-003 additively (new 401/403 paths; response schemas + OpenAPI unchanged).",
       "confidence": 0.9,
       "origin": "manual"
     }

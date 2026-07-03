@@ -3,6 +3,30 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-03 — R3 KICKOFF + F-027 claimed (planned): governance & audit UI + full audit trail
+R2 is complete, so the release advanced to **R3**. R3's only in-scope feature is **F-027** (Governance &
+audit UI + full audit trail — FR-48/FR-55/NFR-13). Promoted it `backlog → in_progress` (WIP 1; F-037 done),
+added its **acceptance criteria**, and completed the **planner phase**: [`F-027`](../plans/F-027-governance-audit-ui-audit-trail.md)
++ **ADR-0034**.
+
+**Design (ADR-0034):** an `AuditLog` port whose events are recorded at the `/v1` boundary by a `buildServer`
+hook, queried via `GET /v1/audit` (`admin:manage`, tenant-scoped via `forTenant`/ADR-0033), persisted by a
+SQLite adapter wired in `@tessera/config` — **mirroring the F-034 token-store pattern** (Fastify-free
+model+port+in-memory core in `@tessera/api`; SQLite adapter + wiring in the composition root). `AuditEvent`
+is non-sensitive (ids/actions/outcomes only — never bodies/secrets, NFR-7); append-only; retention prune
+(NFR-13). Default in-memory sink → additive. Then a governance/audit **web UI** (FR-48) consumes it.
+
+**Planned increments:** (1) **audit-trail backend** — audit core (model/port/in-memory) + shared conformance
+(incl. cross-tenant isolation) + recording hook + `GET /v1/audit` + `createSqliteAuditLog` + config `audit`
+section + server wiring + SDK regen; (2) **governance & audit web UI** — Audit Log + Governance views, WCAG
+AA, screenshot-verified.
+
+**State:** no code yet — this commit is the **R3 kickoff + planner phase** (plan-before-code per the harness),
+leaving F-027 cleanly `in_progress` with an actionable plan. Gates unaffected (state valid — 37 features, 19
+effect-links; format clean). **Next step:** implement increment 1 (audit-trail backend) then increment 2 (UI).
+
+---
+
 ## 2026-07-03 — F-037 DONE + **R2 COMPLETE**: data-plane per-tenant row isolation (FR-52; ADR-0033)
 The last R2 `must`. Closed the F-025 seam: `AuthContext.tenantId` was *carried* but the domain stores were
 **not** tenant-scoped — now every store enforces real per-tenant row isolation. User picked the **full**

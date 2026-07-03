@@ -49,6 +49,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0031](0031-billing-port-and-open-core.md) | Billing port + adapters (open-core) — `@tessera/billing`, local/free + Dodo | Accepted |
 | [0032](0032-oidc-auth-provider.md) | OIDC AuthProvider — IdP-agnostic JWT/JWKS verification via `jose` | Accepted |
 | [0033](0033-data-plane-tenant-isolation.md) | Data-plane per-tenant row isolation via `forTenant` scoping (default-tenant back-compat) | Accepted |
+| [0034](0034-audit-trail-and-governance.md) | Audit trail via an `AuditLog` port recorded at the API boundary + governance surface (R3) | Accepted |
 
 ## Conventions
 

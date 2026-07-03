@@ -863,7 +863,29 @@
       "package": "@tessera/web",
       "release": "R3",
       "priority": "should",
-      "status": "backlog"
+      "status": "in_progress",
+      "blockedBy": [
+        "F-025",
+        "F-034",
+        "F-037"
+      ],
+      "acceptance": [
+        "Audit trail backend: an AuditLog port + in-memory (reference) and SQLite adapters recording append-only AuditEvents (id, tenantId, actor {principalId, kind}, action, target, outcome success|denied, timestamp, non-sensitive metadata) for sensitive actions (FR-55: access/reads of governed surfaces, memory/config writes, admin, billing, exports); tenant-scoped via forTenant (ADR-0033); passes a shared conformance suite incl. cross-tenant isolation; never logs secrets/raw content (NFR-7)",
+        "The API records audit events for sensitive actions via an injected AuditRecorder (default local sink) and exposes GET /v1/audit (admin:manage, tenant-scoped, filterable by action/actor/outcome + time window, paginated) returning the trail; Zod-validated → OpenAPI + regenerated SDK; a configurable retention policy (max age/count) prunes the trail (NFR-13); wired through @tessera/config (Runtime.audit) + the server",
+        "Governance & audit UI (@tessera/web, FR-48): an Audit Log view (filter by action/actor/outcome/date, provenance-first) + a Governance view (users/roles from the RBAC catalog, retention settings) consuming /v1/audit via the typed client; enterprise-grade per DESIGN-SYSTEM.md, WCAG AA, screenshot-verified; nav entry added",
+        "Additive & back-compatible (audit defaults to a local sink; existing routes/tools/e2e stay green); an ADR records the audit-trail + governance design; workspace gates green incl. e2e (a cross-tenant audit e2e + web a11y)"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-014",
+        "E-018"
+      ]
     },
     {
       "id": "F-028",

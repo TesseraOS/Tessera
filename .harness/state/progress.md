@@ -50,11 +50,18 @@ import it **type-only** and inject the runtime pieces at the composition root; t
 data (`AuthContext.permissions`), not the constructors. Add a shared error code additively and let the
 exhaustive switch guide the ripple.
 
-**Next step:** R2 remaining — **F-030** (billing) is gated on **OQ4** (license/business model), so it
-stays `backlog` until that resolves; **F-027** (governance & audit UI) is **R3**. So R2's actionable
-features (F-025, F-026) are **done**. Sensible follow-ups before R3: the deferred composition-root wiring
-(select the AuthProvider + MCP gateway from config/server env), a persistent TokenStore/quota store, the
-OIDC adapter, and data-plane per-tenant row-scoping. Committed per the standing per-feature cadence.
+**Next step (AGREED PLAN, 2026-07-03):** R2's actionable features (F-025, F-026) are **done**; the session
+is **paused here** on a clean, committed tree. The user set the forward order:
+1. **Harden the deferred composition-root seams** (do first): select the `AuthProvider` (F-025) + the MCP
+   `gateway` (F-026) from config/server env in `@tessera/config`/`@tessera/server`, and add a persistent
+   `TokenStore`/quota store — turning "capability proven by tests" into "usable end-to-end". These are not
+   yet tracked features; add them to `feature_list.json` (as `backlog`, linked to FR-52/54/NFR-2 + FR-36)
+   before starting.
+2. **Then resolve OQ4** (license/business model — a user/business decision) to unblock **F-030** (billing
+   behind a Billing port, Dodo Payments; ADR-0011). It stays `backlog` until OQ4 resolves.
+3. **R3 later** — **F-027** (governance & audit UI + full audit trail, `@tessera/web`, FR-48/55/NFR-13).
+
+Both R2 features committed per the standing per-feature cadence (F-025 `8d61301`, F-026 `4526302`).
 
 ---
 

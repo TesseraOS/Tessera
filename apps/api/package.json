@@ -7,6 +7,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./auth": {
+      "types": "./dist/auth/core.d.ts",
+      "import": "./dist/auth/core.js"
     }
   },
   "main": "./dist/index.js",

@@ -12,6 +12,10 @@ export type SecretsProviderKind = (typeof SECRETS_PROVIDERS)[number];
 /** Root directory for the local stack's data (sqlite dbs + blobs) when paths are not overridden. */
 export const DEFAULT_DATA_DIR = '.tessera';
 
+/** Authentication modes: `none` = zero-auth local (full access); `token` = Bearer required (F-025). */
+export const AUTH_MODES = ['none', 'token'] as const;
+export type AuthMode = (typeof AUTH_MODES)[number];
+
 const storageSchema = z
   .object({
     /** RelationalStore path (`:memory:` for ephemeral). */
@@ -54,6 +58,30 @@ const secretsSchema = z
   })
   .default({});
 
+/** Per-principal MCP quota (F-026). Off by default; a distributed store is a deployment seam. */
+const authQuotaSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    /** Max calls per principal per window. */
+    limit: z.number().int().positive().default(120),
+    /** Window length in ms. */
+    windowMs: z.number().int().positive().default(60_000),
+  })
+  .default({});
+
+/**
+ * Auth wiring (F-025/F-026/F-034). `mode: none` keeps the zero-auth Local behavior (full access in the
+ * `tenant`); `mode: token` requires a Bearer token resolved by the persistent token store.
+ */
+const authSchema = z
+  .object({
+    mode: z.enum(AUTH_MODES).default('none'),
+    /** Tenant assigned to the local principal in `none` mode. */
+    tenant: z.string().min(1).default('default'),
+    quota: authQuotaSchema,
+  })
+  .default({});
+
 /** The validated Tessera configuration (FR-50). Deployment is configuration — one surface. */
 export const configSchema = z.object({
   profile: z.enum(DEPLOYMENT_PROFILES as unknown as [string, ...string[]]).default('local'),
@@ -63,6 +91,7 @@ export const configSchema = z.object({
   embeddings: embeddingsSchema,
   budgets: budgetsSchema,
   secrets: secretsSchema,
+  auth: authSchema,
 });
 
 /** Caller-facing config input (pre-defaults). */

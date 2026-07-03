@@ -36,10 +36,11 @@ export async function startApiServer(options: ApiServerOptions = {}): Promise<Ap
   const obs = options.observability;
   const services = obs === undefined ? runtime.services : instrumentServices(runtime.services, obs);
 
-  const app = buildServer(
-    services,
-    obs !== undefined ? { loggerInstance: obs.logger } : { logger: options.logger ?? false },
-  );
+  const app = buildServer(services, {
+    // Guard /v1 with the runtime's configured provider (F-034; default = zero-auth Local).
+    auth: runtime.auth.provider,
+    ...(obs !== undefined ? { loggerInstance: obs.logger } : { logger: options.logger ?? false }),
+  });
 
   if (obs !== undefined) {
     app.addHook('onResponse', (request, reply, done) => {

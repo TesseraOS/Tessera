@@ -5,6 +5,9 @@ import {
   type Embeddings,
 } from '@tessera/ai';
 import type { ApiServices } from '@tessera/api';
+// Runtime import via the Fastify-free `@tessera/api/auth` subpath (ADR-0030) — so the composition root
+// (and the MCP process that boots through it) never pulls Fastify.
+import { createLocalAuthProvider, createTokenAuthProvider } from '@tessera/api/auth';
 import { createContextCompiler } from '@tessera/context-compiler';
 import { InternalError, ValidationError } from '@tessera/core';
 import { createKnowledgeGraphService, createSqliteGraphStore } from '@tessera/knowledge-graph';
@@ -23,11 +26,25 @@ import {
   createSqliteStore,
   createSqliteVecStore,
 } from '@tessera/storage';
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { createSqliteTokenStore } from '../auth/sqlite-token-store.js';
 import { createBlobFragmentSource } from '../fragment-source.js';
 import type { Env } from '../load.js';
-import type { Runtime } from '../runtime.js';
+import type { Runtime, RuntimeAuth } from '../runtime.js';
 import type { TesseraConfig } from '../schema.js';
 import { createSecretsProvider } from '../secrets/index.js';
+
+/**
+ * Build the runtime auth from config (F-034): `token` mode wires a persistent SQLite token store behind
+ * the token provider; `none` mode is the zero-auth Local provider (full access in the configured tenant).
+ */
+function createRuntimeAuth(config: TesseraConfig['auth'], db: BetterSQLite3Database): RuntimeAuth {
+  if (config.mode === 'token') {
+    const tokenStore = createSqliteTokenStore(db);
+    return { provider: createTokenAuthProvider({ tokenStore }), tokenStore };
+  }
+  return { provider: createLocalAuthProvider({ tenantId: config.tenant }) };
+}
 
 /** Construct the configured embeddings provider. Transformers/Ollama load a model (async). */
 async function createEmbeddings(config: TesseraConfig['embeddings']): Promise<Embeddings> {
@@ -120,6 +137,7 @@ export async function createLocalRuntime(
   return {
     config,
     services,
+    auth: createRuntimeAuth(config.auth, relational.db),
     secrets,
     stores: { relational, vector, blob, queue },
     embeddings,

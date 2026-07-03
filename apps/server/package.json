@@ -5,7 +5,8 @@
   "type": "module",
   "bin": {
     "tessera-api": "./dist/bin/api.js",
-    "tessera-mcp": "./dist/bin/mcp.js"
+    "tessera-mcp": "./dist/bin/mcp.js",
+    "tessera-token": "./dist/bin/token.js"
   },
   "exports": {
     ".": {

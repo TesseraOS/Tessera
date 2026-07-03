@@ -41,6 +41,42 @@ describe('startApiServer', () => {
     expect(((await openapi.json()) as { openapi: string }).openapi).toMatch(/^3\./);
   });
 
+  it('enforces token auth when config.auth.mode=token (F-034 wiring)', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'tessera-server-auth-'));
+    handle = await startApiServer({
+      port: 0,
+      config: {
+        auth: { mode: 'token' },
+        storage: { sqlitePath: ':memory:', vectorPath: ':memory:', blobRoot: join(dir, 'blobs') },
+        embeddings: { provider: 'fake', dimension: 8 },
+      },
+    });
+
+    const search = (init?: RequestInit): Promise<Response> =>
+      fetch(`${handle!.url}/v1/search`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
+        body: JSON.stringify({ query: 'anything' }),
+      });
+
+    // No credential → 401 UNAUTHORIZED.
+    const anon = await search();
+    expect(anon.status).toBe(401);
+    expect((await anon.json()).error.code).toBe('UNAUTHORIZED');
+
+    // Issue a token via the runtime's persistent store, then authenticate.
+    const tokenStore = handle.runtime.auth.tokenStore;
+    expect(tokenStore).toBeDefined();
+    const { token } = await tokenStore!.issue({
+      tenantId: 'default',
+      principalId: 'tester',
+      roles: ['member'],
+    });
+    const authed = await search({ headers: { authorization: `Bearer ${token}` } });
+    expect(authed.status).toBe(200);
+    expect(await authed.json()).toHaveProperty('results');
+  });
+
   it('serves an observability-instrumented server (F-016 wiring)', async () => {
     dir = await mkdtemp(join(tmpdir(), 'tessera-server-obs-'));
     handle = await startApiServer({

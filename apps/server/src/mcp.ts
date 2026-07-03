@@ -1,5 +1,5 @@
 import type { Runtime } from '@tessera/config';
-import { startMcpStdio } from '@tessera/mcp';
+import { createInMemoryQuotaLimiter, createMcpGateway, startMcpStdio } from '@tessera/mcp';
 import { instrumentServices, type Observability } from '@tessera/observability';
 import { createServerRuntime, type ServerRuntimeOptions } from './bootstrap.js';
 
@@ -28,7 +28,17 @@ export async function startMcpServer(options: McpServerOptions = {}): Promise<Mc
     options.observability === undefined
       ? runtime.services
       : instrumentServices(runtime.services, options.observability);
-  const server = await startMcpStdio(services);
+
+  // Gate the tools with the runtime's provider (F-026/F-034); the local provider = full access, so
+  // `none` mode is unchanged. Quotas engage only when configured. All gateway pieces are Fastify-free.
+  const quota = runtime.config.auth.quota;
+  const gateway = createMcpGateway({
+    auth: runtime.auth.provider,
+    ...(quota.enabled
+      ? { quota: createInMemoryQuotaLimiter({ limit: quota.limit, windowMs: quota.windowMs }) }
+      : {}),
+  });
+  const server = await startMcpStdio(services, { gateway });
 
   return {
     runtime,

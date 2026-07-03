@@ -52,9 +52,18 @@ export interface TokenStore {
 /** Prefix marking a Tessera secret key — aids secret scanners and human recognition. */
 const TOKEN_PREFIX = 'tsk_';
 
-/** SHA-256 hex of a secret. Lookups key on this, so the plaintext is never stored or compared. */
-function hashSecret(secret: string): string {
+/**
+ * SHA-256 hex of a token secret. Lookups key on this, so the plaintext is never stored or compared.
+ * Exported so other {@link TokenStore} adapters (e.g. the SQLite adapter in `@tessera/config`) share
+ * the exact scheme.
+ */
+export function hashApiTokenSecret(secret: string): string {
   return createHash('sha256').update(secret).digest('hex');
+}
+
+/** Generate a fresh `tsk_`-prefixed token secret. Shared across {@link TokenStore} adapters. */
+export function newApiTokenSecret(): string {
+  return `${TOKEN_PREFIX}${randomBytes(24).toString('base64url')}`;
 }
 
 export interface InMemoryTokenStoreOptions {
@@ -95,14 +104,14 @@ export function createInMemoryTokenStore(options: InMemoryTokenStoreOptions = {}
         createdAt: now().toISOString(),
         revokedAt: null,
       };
-      const hash = hashSecret(secret);
+      const hash = hashApiTokenSecret(secret);
       byHash.set(hash, record);
       hashById.set(id, hash);
       return Promise.resolve({ token: secret, record });
     },
 
     verify(token) {
-      const record = byHash.get(hashSecret(token));
+      const record = byHash.get(hashApiTokenSecret(token));
       if (record === undefined || (record.revokedAt !== undefined && record.revokedAt !== null)) {
         return Promise.resolve(null);
       }

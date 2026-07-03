@@ -29,6 +29,10 @@
     "@tessera/memory": "workspace:*",
     "@tessera/retrieval": "workspace:*",
     "@tessera/storage": "workspace:*",
+    "drizzle-orm": "^0.45.2",
     "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13"
   }
 }

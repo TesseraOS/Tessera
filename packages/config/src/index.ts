@@ -13,3 +13,4 @@ export * from './secrets/index.js';
 export * from './fragment-source.js';
 export * from './runtime.js';
 export * from './profiles/local.js';
+export * from './auth/sqlite-token-store.js';

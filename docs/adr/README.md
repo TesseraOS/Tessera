@@ -45,6 +45,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0027](0027-backup-restore-and-migration-runner.md) | Backup/restore + a versioned migration runner | Accepted |
 | [0028](0028-api-auth-tenancy-rbac.md) | API auth — AuthProvider port, tenancy + RBAC model, scoped tokens (OIDC + row-isolation as seams) | Accepted |
 | [0029](0029-mcp-gateway-auth-quotas.md) | MCP gateway — reuse the auth model (type-only), per-principal quotas, shared RATE_LIMITED code | Accepted |
+| [0030](0030-auth-composition-root-wiring.md) | Auth composition-root wiring — Fastify-free `@tessera/api/auth` subpath + persistent SQLite token store | Accepted |
 
 ## Conventions
 

@@ -10,6 +10,15 @@ function num(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) ? parsed : value === '' ? undefined : Number.NaN;
 }
 
+/** Parse a boolean env var: `1`/`true` → true, `0`/`false` → false, else undefined. */
+function bool(value: string | undefined): boolean | undefined {
+  if (value === undefined) return undefined;
+  const v = value.trim().toLowerCase();
+  if (v === '1' || v === 'true') return true;
+  if (v === '0' || v === 'false') return false;
+  return undefined;
+}
+
 /** Drop `undefined` values so a section only carries the keys actually provided. */
 function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
   const out: Record<string, unknown> = {};
@@ -56,11 +65,22 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
     file: env.TESSERA_SECRETS_FILE,
     envPrefix: env.TESSERA_SECRET_PREFIX,
   });
+  const authQuota = section({
+    enabled: bool(env.TESSERA_AUTH_QUOTA_ENABLED),
+    limit: num(env.TESSERA_AUTH_QUOTA_LIMIT),
+    windowMs: num(env.TESSERA_AUTH_QUOTA_WINDOW_MS),
+  });
+  const auth = section({
+    mode: env.TESSERA_AUTH_MODE,
+    tenant: env.TESSERA_AUTH_TENANT,
+    ...(authQuota !== undefined ? { quota: authQuota } : {}),
+  });
 
   if (storage !== undefined) input.storage = storage;
   if (embeddings !== undefined) input.embeddings = embeddings;
   if (budgets !== undefined) input.budgets = budgets;
   if (secrets !== undefined) input.secrets = secrets;
+  if (auth !== undefined) input.auth = auth;
   return input as ConfigInput;
 }
 
@@ -75,6 +95,7 @@ function mergeConfig(base: ConfigInput, over: ConfigInput): ConfigInput {
       : {}),
     ...((base.budgets ?? over.budgets) ? { budgets: { ...base.budgets, ...over.budgets } } : {}),
     ...((base.secrets ?? over.secrets) ? { secrets: { ...base.secrets, ...over.secrets } } : {}),
+    ...((base.auth ?? over.auth) ? { auth: { ...base.auth, ...over.auth } } : {}),
   };
 }
 

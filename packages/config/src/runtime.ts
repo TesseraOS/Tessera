@@ -1,5 +1,6 @@
 import type { Embeddings } from '@tessera/ai';
 import type { ApiServices } from '@tessera/api';
+import type { AuthProvider, TokenStore } from '@tessera/api/auth';
 import type { KeywordRetriever, TemporalRetriever } from '@tessera/retrieval';
 import type { BlobStore, Queue, SqliteStore, VectorStore } from '@tessera/storage';
 import type { TesseraConfig } from './schema.js';
@@ -14,6 +15,17 @@ export interface RuntimeStores {
 }
 
 /**
+ * The auth wiring a runtime exposes (F-034): the {@link AuthProvider} the REST/MCP surfaces guard with
+ * (selected by `config.auth.mode`), plus the {@link TokenStore} when `mode: token` (so an admin/CLI can
+ * issue + revoke tokens). In `none` mode the provider is the zero-auth Local provider and there is no
+ * token store.
+ */
+export interface RuntimeAuth {
+  readonly provider: AuthProvider;
+  readonly tokenStore?: TokenStore;
+}
+
+/**
  * A fully-wired Tessera runtime for a deployment profile: the validated config, the composed
  * {@link ApiServices} the REST/MCP surfaces consume, the secrets provider, and the underlying
  * adapters. `close()` releases handles.
@@ -22,6 +34,8 @@ export interface Runtime {
   readonly config: TesseraConfig;
   /** The domain services the REST (F-011) and MCP (F-012) surfaces take by injection. */
   readonly services: ApiServices;
+  /** The auth provider (+ token store) the surfaces guard with, selected by `config.auth` (F-034). */
+  readonly auth: RuntimeAuth;
   readonly secrets: SecretsProvider;
   readonly stores: RuntimeStores;
   readonly embeddings: Embeddings;

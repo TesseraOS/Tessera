@@ -3,6 +3,57 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-03 — F-034 DONE: Auth composition-root wiring + persistent SQLite token store (@tessera/config)
+R2 follow-up **seam #1** (the user's agreed "harden the seams" step). Makes F-025/F-026 auth **usable
+end-to-end** — config-driven provider/gateway selection + durable token grants — additive (default `none`
+unchanged). Plan: [`F-034`](../plans/F-034-auth-composition-root-wiring.md); **ADR-0030**.
+
+**Key constraint solved:** `apps/server` boots the **MCP** process **through `@tessera/config`**, which
+imports `@tessera/api` **type-only** to keep the MCP runtime **Fastify-free** (F-012). Building auth
+providers needs `@tessera/api` runtime → would pull Fastify. **Fix:** a new **Fastify-free subpath
+`@tessera/api/auth`** (`auth/core.ts` = model + providers + token store; **excludes** the Fastify
+`plugin.ts`; `package.json exports['./auth']`). Config builds `Runtime.auth` from the subpath → the MCP
+runtime stays Fastify-free (**verified**: config's only runtime `@tessera/api*` import is `/auth`, whose
+graph has zero fastify).
+
+**What changed:**
+- **`@tessera/config`:** a validated `auth` section (`mode none|token`, `tenant`, `quota
+  {enabled,limit,windowMs}`) + `TESSERA_AUTH_*` env mapping; **`createSqliteTokenStore(db)`** — a
+  persistent `TokenStore` over the storage Drizzle handle (`api_tokens`; hashed at rest via the shared
+  `hashApiTokenSecret`/`newApiTokenSecret` helpers extracted from the in-memory adapter; revoke/list;
+  **survives restarts**); `Runtime.auth = { provider, tokenStore? }` selected by `config.auth.mode` in
+  `createLocalRuntime`. New dep `drizzle-orm` (+ `@types/better-sqlite3` dev).
+- **`@tessera/mcp`:** `startMcpStdio(services, { gateway? })` passthrough.
+- **`apps/server`:** `startApiServer` → `buildServer({ auth: runtime.auth.provider })`; `startMcpServer`
+  builds `createMcpGateway` (+ optional `createInMemoryQuotaLimiter`) → `startMcpStdio`; new
+  **`tessera-token`** bin issues a scoped token (secret printed once).
+
+**Decision (ADR-0030):** the subpath export over a package move (smaller, achieves Fastify-free reuse now);
+the SQLite token store lives in **config** (the composition root already wires storage + api — api gaining
+storage or storage depending on the api port would both be wrong-way deps). Quotas stay **in-memory**
+(single-instance-correct; a distributed store is a seam). OIDC mode + data-plane row-scoping remain seams.
+
+**Evidence/verification (all green, workspace-wide):** state (34 features, 18 effect-links, wip 1) ·
+format · typecheck (28) · lint (16) · **test (28; +6: config sqlite-token-store 3 incl. persist-across-
+reopen; server api auth-mode 1 = 401 without a token / 200 with an issued token; default none unchanged)** ·
+build (16) · **e2e (15, regression-clean)**. Fastify-free-MCP invariant re-verified by grep.
+
+**Effects:** **E-014** (config composition realized: `Runtime.auth` + `config.auth` + persistent token
+store) + **E-018** (composition-root consumer realized; the `@tessera/api/auth` subpath is the new
+Fastify-free import surface).
+
+**Lesson:** [[fastify-free-subpath-for-composition-root-reuse]] — when the composition root must build a
+capability whose code lives in a package with a heavy runtime (Fastify), expose a **Fastify-free subpath
+export** of just the transport-agnostic core (model + ports + adapters, excluding the framework plugin)
+rather than importing the package barrel; verify the invariant by grepping the actual import graph.
+
+**Next step (agreed R2 plan):** seam #1 done. Next is **resolve OQ4** (license/business model — user
+decision) → unblock **F-030** (billing behind a Billing port, Dodo Payments; ADR-0011). Then **R3** (F-027
+governance & audit UI). Remaining auth seams (OIDC mode, distributed quota store, data-plane row-scoping)
+are follow-ups. Committed per the standing per-feature cadence.
+
+---
+
 ## 2026-07-03 — F-026 DONE: MCP gateway — multi-client auth + quotas (@tessera/mcp)
 Second R2 feature (FR-36), additive to `@tessera/mcp` (ADR-0029). Plan:
 [`F-026`](../plans/F-026-mcp-gateway-auth-quotas.md).

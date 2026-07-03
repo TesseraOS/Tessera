@@ -281,6 +281,7 @@
         { "kind": "test", "ref": "@tessera/billing tests (domain/entitlements, local adapter, dodo signature+parse+webhook+checkout) + @tessera/api billing e2e (plans/subscription/checkout + signed webhook)" },
         { "kind": "module", "ref": "@tessera/api /v1/billing routes (plans public, subscription+checkout admin:manage, webhook public + signature-verified via a raw-body child scope) + schemas — the PLANS catalog + Subscription shape drive validation/OpenAPI (advances E-003; the SDK was regenerated to include /v1/billing)" },
         { "kind": "module", "ref": "@tessera/config billing wiring: config.billing (provider none|dodo) → createRuntimeBilling (dodo secrets via the SecretsProvider) → Runtime.billing + ApiServices.billing (E-014)" },
+        { "kind": "module", "ref": "@tessera/api /v1/compile entitlement enforcement (F-035): clampBudgetToPlan caps the requested token budget to the caller's plan (effectiveEntitlements via services.billing, tenant from the AuthContext, local/free fallback) — REALIZED. Monthly-usage metering (needs a persistent usage store), seat limits, and MCP-surface enforcement remain seams" },
         { "kind": "decision", "ref": "docs/adr/0011-billing-dodo-payments.md" },
         { "kind": "decision", "ref": "docs/adr/0031-billing-port-and-open-core.md" }
       ],

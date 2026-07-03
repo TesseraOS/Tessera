@@ -3,6 +3,38 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-03 — F-035 DONE + R2 COMPLETE (buildable): entitlement enforcement (@tessera/billing)
+Makes plan entitlements actually bite (NFR-12), completing R2's substantive work. Additive; default
+local/free.
+- **`@tessera/billing`:** `clampBudgetToPlan(entitlements, requested)` = `min(requested,
+  maxTokensPerCompile)`, honoring `-1` = unlimited.
+- **`@tessera/api` `/v1/compile`:** resolves the caller's subscription via `services.billing` (tenant from
+  the `AuthContext`; local/free fallback) → `effectiveEntitlements` → **clamps the requested token budget**
+  before compiling. Free caps at 8000; a subscribed pro tenant gets 32000.
+
+**Evidence:** state (37 features, 19 effect-links) · format · typecheck (30) · lint (17) · **test (30;
+billing 14, api 36)** · build (17) · **e2e (16; api 31)** — billing unit clamp + api e2e (free 50000→8000;
+pro, seeded via a signed webhook, →32000). SDK regenerated. Effects E-019 (enforcement realized) + E-003.
+
+**R2 status — COMPLETE for what is buildable in this environment.** Tracked features done: **F-025**
+(auth/RBAC), **F-026** (MCP gateway), **F-030** (billing), **F-034** (auth wiring), **F-035** (entitlement
+enforcement). Two R2 requirements are **carried as explicitly-tracked backlog** because they need external
+resources or a large refactor — recorded as features so nothing is lost:
+- **F-036** — OIDC AuthProvider adapter (NFR-2): needs the IdP/library decision (an open ADR) + a live IdP;
+  the `AuthProvider` port already supports it, so this is a localized adapter.
+- **F-037** — data-plane per-tenant row isolation (FR-52): `AuthContext.tenantId` is carried but the domain
+  stores aren't tenant-scoped yet; completing it is a large cross-package change (tenant column + enforced
+  filter + conformance across every store) to design before touching verified code.
+
+Other seams (live Dodo verification, persistent subscription/quota/usage stores, monthly-compile metering,
+MCP-surface entitlement enforcement) are documented in the relevant feature notes/effects.
+
+**Next step:** **R3 in a separate session** (per the user) — F-027 (governance & audit UI + full audit
+trail). When resuming R2's carried items: F-037 (isolation) is the `must`; F-036 (OIDC) needs the IdP ADR.
+Committed per the standing per-feature cadence.
+
+---
+
 ## 2026-07-03 — HARNESS: env-docs guard (stop shipping undocumented env vars)
 The user flagged that we **repeatedly forget** to add new env vars to `.env.example`. Systematized it in
 the harness so it can't be missed:

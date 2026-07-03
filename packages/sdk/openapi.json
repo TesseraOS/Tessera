@@ -260,7 +260,7 @@
     },
     "/v1/compile": {
       "post": {
-        "summary": "Compile context for a task within a token budget.",
+        "summary": "Compile context for a task within a token budget (capped to the plan).",
         "tags": [
           "compile"
         ],

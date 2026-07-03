@@ -1070,6 +1070,72 @@
         "E-018"
       ],
       "notes": "Done 2026-07-03 (R2 follow-up seam #1): made F-025/F-026 auth usable end-to-end — config-driven AuthProvider + MCP gateway selection + a PERSISTENT token store (ADR-0030), additive (default `none` = unchanged). KEY CONSTRAINT SOLVED: apps/server boots the MCP process THROUGH @tessera/config, which imports @tessera/api type-only to stay Fastify-free; constructing auth providers pulls @tessera/api runtime (→ Fastify). Fix: a NEW Fastify-free subpath export `@tessera/api/auth` (apps/api/src/auth/core.ts = model + providers + token store, EXCLUDES the Fastify plugin.ts; package.json exports['./auth']). config builds runtime.auth from that subpath → the MCP runtime stays Fastify-free (verified: config's only runtime @tessera/api import is /auth; the auth-core graph has zero fastify). WHAT: (1) config schema `auth` section (mode none|token, tenant, quota {enabled,limit,windowMs}) + TESSERA_AUTH_* env mapping + merge (bool helper). (2) createSqliteTokenStore(db) — persistent TokenStore over the storage Drizzle handle (api_tokens table; hashed at rest via the shared hashApiTokenSecret/newApiTokenSecret helpers extracted from the in-memory adapter; revoke/list; survives restarts). (3) Runtime.auth {provider, tokenStore?} selected by config.auth.mode in createLocalRuntime. (4) @tessera/mcp startMcpStdio(services, {gateway?}) passthrough. (5) apps/server: startApiServer passes runtime.auth.provider to buildServer; startMcpServer builds createMcpGateway(auth + optional createInMemoryQuotaLimiter) → startMcpStdio; new `tessera-token` bin issues a scoped token (secret printed once) so token mode is usable. New dep: drizzle-orm on @tessera/config (+@types/better-sqlite3 dev). +6 tests: config sqlite-token-store 3 (issue/verify hashed-at-rest, revoke+list-by-tenant, PERSISTS across reopening the same db file) + server api auth-mode (token mode → 401 without a token, 200 with an issued token; default none unchanged). Effects E-014 (config composition realized: Runtime.auth + config.auth + persistent token store) + E-018 (composition-root consumer realized; the @tessera/api/auth subpath is the new Fastify-free import surface). Gates green workspace-wide: format · typecheck 28 · lint 16 · test 28 · build 16 · e2e 15 (regression-clean). DEFERRED as documented seams: OIDC provider selection, a distributed/persistent QUOTA store (in-memory is correct for single-instance; multi-instance is a deployment concern), and data-plane per-tenant row-scoping. Advances the R2 follow-up plan; next up: resolve OQ4 → F-030 billing."
+    },
+    {
+      "id": "F-035",
+      "title": "Entitlement enforcement — clamp compile budget to the tenant's plan (NFR-12 metering)",
+      "requirements": [
+        "FR-61",
+        "NFR-12"
+      ],
+      "service": "api",
+      "package": "@tessera/billing",
+      "release": "R2",
+      "priority": "should",
+      "status": "done",
+      "blockedBy": [
+        "F-030"
+      ],
+      "acceptance": [
+        "Plan entitlements actually bite: @tessera/billing exposes clampBudgetToPlan(entitlements, requested) (min, honoring -1 = unlimited); the /v1/compile route resolves the caller's subscription → effectiveEntitlements (via ApiServices.billing, tenant from the AuthContext, local/free fallback) and clamps the requested token budget to maxTokensPerCompile before compiling",
+        "Additive & back-compatible (default local/free clamps to 8000; existing compile tests within budget are unaffected); tests: billing unit (clamp) + api e2e (a free-tier request above the cap is clamped; a pro-subscribed tenant gets the higher budget)",
+        "Honest scope: monthly-compile usage metering (needs a persistent usage store), seat limits (needs user management), and MCP-surface enforcement are documented seams; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-019"
+      ],
+      "notes": "Done 2026-07-03 (R2 completion): plan entitlements now bite (NFR-12). @tessera/billing gains clampBudgetToPlan(entitlements, requested) = min(requested, maxTokensPerCompile), honoring -1 = unlimited. The /v1/compile route resolves the caller's subscription via services.billing (tenant from the AuthContext; local/free fallback) → effectiveEntitlements → clamps the requested token budget BEFORE compiling (handler now async). Additive & back-compatible: default local/free caps at 8000, so existing compile tests within budget are unchanged; a subscribed pro tenant gets 32000. +3 tests: billing domain clamp unit (free/pro/enterprise/unlimited) + api e2e (free-tier request of 50000 → package.budget 8000; a pro tenant seeded via a signed webhook → 32000). SDK regenerated (compile summary). Effects E-019 (billing consumer — enforcement realized) + E-003 (compile route additive). Gates green: format · typecheck 30 · lint 17 · test 30 (billing 14, api 36) · build 17 · e2e 16 (api 31). DEFERRED as documented seams: monthly-compile usage metering (needs a persistent usage store), seat limits (needs user management), and MCP-surface enforcement. Completes R2's substantive buildable work; F-036 (OIDC) + F-037 (data-plane isolation) tracked as backlog (need an IdP / a large cross-package refactor)."
+    },
+    {
+      "id": "F-036",
+      "title": "OIDC AuthProvider adapter (hosted login) + auth.mode=oidc",
+      "requirements": [
+        "NFR-2"
+      ],
+      "service": "api",
+      "package": "@tessera/api",
+      "release": "R2",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [
+        "F-025",
+        "F-034"
+      ],
+      "notes": "R2 seam carried out of the F-025/F-034 work: an OIDC AuthProvider adapter (JWT/JWKS verification — offline-testable with a generated keypair) + config auth.mode=oidc. GATED on the IdP/library decision (Better Auth / Auth.js / Keycloak) = an open ADR (OQ-adjacent), and a live IdP to verify end-to-end. The AuthProvider port already supports it (ADR-0028); this is a localized adapter + wiring."
+    },
+    {
+      "id": "F-037",
+      "title": "Data-plane per-tenant row isolation (FR-52 org/workspace isolation)",
+      "requirements": [
+        "FR-52",
+        "NFR-2"
+      ],
+      "service": "api",
+      "package": "@tessera/storage",
+      "release": "R2",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-025"
+      ],
+      "notes": "R2 seam carried out of F-025: the auth control plane resolves + carries AuthContext.tenantId, but the domain stores (memory/graph/retrieval/storage) are NOT yet tenant-scoped, so no cross-tenant data guarantee exists beyond the boundary. Completing FR-52 needs a tenant column + enforced filter across every domain store + its conformance suite + the services threading tenantId — a large, cross-package change deferred as its own feature (like the Postgres-backed graph/memory profile). Design it before touching every verified store."
     }
   ]
 }

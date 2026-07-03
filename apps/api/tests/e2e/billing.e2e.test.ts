@@ -50,6 +50,17 @@ describe('@tessera/api billing (F-030)', () => {
       expect(res.statusCode).toBe(400);
       expect(res.json().error.code).toBe('VALIDATION');
     });
+
+    it('clamps an over-plan compile budget to the free tier (F-035)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/compile',
+        payload: { task: 'how does authentication work', budget: 50000 },
+      });
+      expect(res.statusCode).toBe(200);
+      // Free plan caps maxTokensPerCompile at 8000.
+      expect(res.json().budget).toBe(8000);
+    });
   });
 
   describe('Dodo provider webhook (signature + subscription update)', () => {
@@ -89,6 +100,15 @@ describe('@tessera/api billing (F-030)', () => {
 
       const sub = await app.inject({ method: 'GET', url: '/v1/billing/subscription' });
       expect(sub.json()).toMatchObject({ planId: 'pro', status: 'active', externalId: 'sub_9' });
+
+      // With a pro subscription, the compile budget is capped at the higher pro limit (32000), not free.
+      const compiled = await app.inject({
+        method: 'POST',
+        url: '/v1/compile',
+        payload: { task: 'how does authentication work', budget: 50000 },
+      });
+      expect(compiled.statusCode).toBe(200);
+      expect(compiled.json().budget).toBe(32000);
     });
 
     it('rejects a webhook with a bad signature (401)', async () => {

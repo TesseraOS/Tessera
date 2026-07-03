@@ -171,7 +171,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Compile context for a task within a token budget. */
+        /** Compile context for a task within a token budget (capped to the plan). */
         post: {
             parameters: {
                 query?: never;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  clampBudgetToPlan,
   effectiveEntitlements,
   entitlementsFor,
   freeSubscription,
@@ -43,5 +44,16 @@ describe('billing domain', () => {
 
     const canceledPro = { ...activePro, status: 'canceled' } as const;
     expect(effectiveEntitlements(canceledPro)).toEqual(entitlementsFor('free'));
+  });
+
+  it('clamps a compile budget to the plan (unlimited = no clamp)', () => {
+    expect(clampBudgetToPlan(entitlementsFor('free'), 50000)).toBe(8000);
+    expect(clampBudgetToPlan(entitlementsFor('free'), 4000)).toBe(4000);
+    expect(clampBudgetToPlan(entitlementsFor('pro'), 50000)).toBe(32000);
+    expect(clampBudgetToPlan(entitlementsFor('enterprise'), 500000)).toBe(128000);
+    // -1 means unlimited → the request passes through unclamped.
+    expect(
+      clampBudgetToPlan({ maxMonthlyCompiles: -1, maxSeats: -1, maxTokensPerCompile: -1 }, 500000),
+    ).toBe(500000);
   });
 });

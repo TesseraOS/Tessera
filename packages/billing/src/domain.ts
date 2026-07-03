@@ -89,3 +89,13 @@ export function freeSubscription(tenantId: string): Subscription {
 export function effectiveEntitlements(subscription: Subscription): Entitlements {
   return entitlementsFor(isEntitled(subscription.status) ? subscription.planId : 'free');
 }
+
+/**
+ * Clamp a requested context-compilation token budget to the plan's `maxTokensPerCompile` (NFR-12
+ * entitlement enforcement). `-1` means unlimited (no clamp); otherwise the effective budget is
+ * `min(requested, limit)`. Never raises a budget — only caps it.
+ */
+export function clampBudgetToPlan(entitlements: Entitlements, requestedBudget: number): number {
+  const max = entitlements.maxTokensPerCompile;
+  return max < 0 ? requestedBudget : Math.min(requestedBudget, max);
+}

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from './client';
-import type { CaptureMemoryBody, CompileBody } from './types';
+import type { AuditQuery, CaptureMemoryBody, CompileBody } from './types';
 
 /** Debounced global search (FR-41). The caller debounces `query`; the hook runs when non-empty. */
 export function useSearch(query: string, limit?: number) {
@@ -26,5 +26,14 @@ export function useCompile() {
 export function useCaptureMemory() {
   return useMutation({
     mutationFn: (body: CaptureMemoryBody) => api.captureMemory(body),
+  });
+}
+
+/** Query the audit trail (FR-48/55) — GET /v1/audit (admin-only). */
+export function useAudit(query: AuditQuery = {}) {
+  return useQuery({
+    queryKey: ['audit', query],
+    queryFn: () => api.getAudit(query),
+    staleTime: 15_000,
   });
 }

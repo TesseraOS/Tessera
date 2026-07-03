@@ -124,3 +124,47 @@ export interface Memory {
   version: number;
   createdAt: string;
 }
+
+// --- audit (GET /v1/audit) — mirrors the @tessera/api audit schemas (F-027) ---
+export type AuditAction =
+  | 'search'
+  | 'compile'
+  | 'effects.read'
+  | 'memory.read'
+  | 'memory.write'
+  | 'billing.read'
+  | 'billing.manage'
+  | 'audit.read';
+
+export type AuditOutcome = 'success' | 'denied';
+
+export interface AuditActor {
+  principalId: string;
+  kind: 'local' | 'user' | 'token';
+}
+
+export interface AuditEvent {
+  id: string;
+  tenantId: string;
+  actor: AuditActor;
+  action: AuditAction;
+  target?: string;
+  outcome: AuditOutcome;
+  at: string;
+  metadata?: Record<string, string | number | boolean>;
+}
+
+export interface AuditQuery {
+  action?: AuditAction;
+  actor?: string;
+  outcome?: AuditOutcome;
+  since?: string;
+  until?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface AuditPage {
+  events: AuditEvent[];
+  nextCursor?: string;
+}

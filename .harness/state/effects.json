@@ -302,7 +302,7 @@
         { "kind": "test", "ref": "@tessera/api audit-log conformance (in-memory) + audit e2e (default-build record+query; token-build success/denied outcomes, admin:manage-only query, cross-tenant isolation)" },
         { "kind": "module", "ref": "@tessera/api GET /v1/audit route (admin:manage, tenant-scoped via forTenant, filter/paginate by action/actor/outcome/time + cursor) + schemas → OpenAPI + regenerated @tessera/sdk (getAudit). Advances E-003" },
         { "kind": "module", "ref": "@tessera/config audit wiring (F-027, REALIZED): config.audit (enabled, retention {maxAgeDays,maxEntries}) + TESSERA_AUDIT_* env + createSqliteAuditLog (persistent audit_events table, tenant column, seq-cursor, prune) + Runtime.audit; apps/server passes runtime.audit to buildServer. Type-only @tessera/api import keeps config Fastify-free (ADR-0030). See E-014" },
-        { "kind": "module", "ref": "@tessera/web governance & audit UI (F-027 increment 2, FR-48) consumes GET /v1/audit" },
+        { "kind": "module", "ref": "@tessera/web governance & audit UI (F-027, FR-48, REALIZED): /audit (AuditView — filter by action/outcome, a provenance-first events table, empty/error/loading states) + /governance (GovernanceView — the RBAC roles→permissions matrix + retention posture) consume GET /v1/audit via lib/api (getAudit/useAudit); nav 'Govern' group; WCAG AA (axe e2e clean). The RBAC/action catalogs are a hand-maintained mirror in lib/governance.ts (ADR-0022)" },
         { "kind": "decision", "ref": "docs/adr/0034-audit-trail-and-governance.md" }
       ],
       "kind": "EFFECT_LINK",

@@ -1,4 +1,6 @@
 import type {
+  AuditPage,
+  AuditQuery,
   CaptureMemoryBody,
   CompileBody,
   ContextPackage,
@@ -67,4 +69,16 @@ export const api = {
     apiFetch<ContextPackage>('/compile', { method: 'POST', body: JSON.stringify(body) }),
   captureMemory: (body: CaptureMemoryBody): Promise<Memory> =>
     apiFetch<Memory>('/memory', { method: 'POST', body: JSON.stringify(body) }),
+  getAudit: (query: AuditQuery = {}): Promise<AuditPage> => {
+    const params = new URLSearchParams();
+    if (query.action) params.set('action', query.action);
+    if (query.outcome) params.set('outcome', query.outcome);
+    if (query.actor) params.set('actor', query.actor);
+    if (query.since) params.set('since', query.since);
+    if (query.until) params.set('until', query.until);
+    if (query.limit !== undefined) params.set('limit', String(query.limit));
+    if (query.cursor) params.set('cursor', query.cursor);
+    const qs = params.toString();
+    return apiFetch<AuditPage>(`/audit${qs ? `?${qs}` : ''}`);
+  },
 };

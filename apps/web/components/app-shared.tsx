@@ -5,8 +5,10 @@ import {
   LayoutGrid,
   Network,
   NotebookText,
+  ScrollText,
   Search,
   Settings,
+  ShieldCheck,
 } from 'lucide-react';
 
 export type SidebarNavItem = {
@@ -57,6 +59,18 @@ export function buildNavGroups(pathname: string): SidebarNavGroup[] {
       label: 'Connect',
       items: [
         { title: 'Sources', path: '/sources', icon: <Boxes />, isActive: isActive('/sources') },
+      ],
+    },
+    {
+      label: 'Govern',
+      items: [
+        { title: 'Audit log', path: '/audit', icon: <ScrollText />, isActive: isActive('/audit') },
+        {
+          title: 'Governance',
+          path: '/governance',
+          icon: <ShieldCheck />,
+          isActive: isActive('/governance'),
+        },
       ],
     },
   ];

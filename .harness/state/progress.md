@@ -3,6 +3,38 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-04 — F-027 DONE (increment 2): governance & audit web UI — **R3's first feature complete** (@tessera/web)
+The final increment of F-027 (FR-48) — the governance & audit **UI** over the audit trail backend (1a/1b),
+completing the feature and **R3's first delivery**.
+- **Data layer (`apps/web/lib/api`):** audit types + `api.getAudit(query)` (GET /v1/audit with a filter
+  querystring) + a `useAudit` TanStack Query hook, mirroring the `/v1/audit` schema (ADR-0022 interim client).
+  `lib/governance.ts` = a hand-maintained mirror of the RBAC catalog (ROLES/PERMISSIONS/ROLE_PERMISSIONS) +
+  audit-action labels, so the UI renders the model without bundling `@tessera/api`.
+- **`/audit` (`AuditView`, flagship):** a provenance-first **audit log** — filter by action + outcome
+  (accessible `Select`s), a table of events (time · actor+kind · action · target · outcome), with
+  loading/empty/error states and a "more events" hint. Outcome badges use an **outline + colored-text**
+  treatment (denied = destructive text) after axe flagged a solid-destructive badge for **contrast** (AA).
+- **`/governance` (`GovernanceView`):** the **RBAC roles→permissions matrix** (check/–) + an **audit
+  retention** posture card (NFR-13). Added a **"Govern" nav group** (Audit log + Governance) to BOTH nav
+  sources — `components/app-shared.tsx` (sidebar/breadcrumb) and `lib/nav.ts` (⌘K palette); the sidebar uses
+  `app-shared` (caught during screenshot verification — the group was missing until I updated it too).
+
+**Evidence (all green, workspace-wide):** state · format · typecheck 30 · lint 17 · **test 30** · build 17
+(+ `/audit` + `/governance` prerendered) · **e2e 16** (web 7 incl. **2 new axe tests** — audit renders
+stubbed events + filters, governance renders the matrix + retention, both **WCAG A/AA clean**).
+**Screenshot-verified** (frontend bar): `/governance` renders the matrix + retention cards; `/audit` renders
+the header + filters + states with the Govern group active in the sidebar.
+
+**Decisions:** consume the audit API via the interim `lib/api` client (ADR-0022; the generated SDK already
+has `getAudit`); mirror the RBAC/action catalogs in `lib/governance.ts` rather than import the API package
+into the browser bundle; outcome badges use accessible colored-text over solid fills. **Effects:** **E-020**
+(the governance/audit UI realized — the audit contract's web consumer) + **E-003** (consumes GET /v1/audit).
+
+**🎉 F-027 DONE** — audit trail backend (1a), persistent SQLite + config (1b), governance/audit UI (2).
+**R3's only in-scope feature is complete.** Committed per the standing per-feature cadence.
+
+---
+
 ## 2026-07-04 — F-027 increment 1b: persistent SQLite audit log + config wiring (@tessera/config)
 Made the audit trail **durable** — the composition root now wires a persistent, tenant-scoped SQLite sink
 so records survive restarts (increment 1a's default sink is in-memory). Mirrors the F-034 token-store

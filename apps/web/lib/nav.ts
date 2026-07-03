@@ -4,8 +4,10 @@ import {
   LayoutGrid,
   Network,
   NotebookText,
+  ScrollText,
   Search,
   Settings,
+  ShieldCheck,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -35,6 +37,13 @@ export const navGroups: NavGroup[] = [
   {
     label: 'Connect',
     items: [{ title: 'Sources', href: '/sources', icon: Boxes }],
+  },
+  {
+    label: 'Govern',
+    items: [
+      { title: 'Audit log', href: '/audit', icon: ScrollText },
+      { title: 'Governance', href: '/governance', icon: ShieldCheck },
+    ],
   },
 ];
 

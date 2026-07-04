@@ -11,6 +11,7 @@ confidently.
 | [`tool-access`](tool-access.md) | Which tools/commands agents may run; maps to `.claude/settings.json`. |
 | [`policy-model`](policy-model.md) | How policies are expressed/enforced: static + **stateful/contextual** (scopes, cost budgets, egress-proxy credentials). |
 | [`adr-policy`](adr-policy.md) | When a decision must become an ADR. |
+| [`third-party-model-review`](third-party-model-review.md) | Using a model outside our Claude workflow (e.g. Codex) to review code — egress-gated, opt-in, advisory-only. |
 
 These policies are **binding** and sit just below the golden rules in precedence
 ([`../rules/README.md`](../rules/README.md)). Violating governance is a stop-and-fix event,

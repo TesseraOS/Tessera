@@ -4,6 +4,7 @@ One line per memory entry. Keep newest-relevant at top of each section.
 
 ## Decisions
 - [stack-and-architecture](decisions/stack-and-architecture.md) — the locked stack & architecture, linking ADRs 0001–0008.
+- [external-agent-skill-adaptations](decisions/external-agent-skill-adaptations.md) — adapted design-review (impeccable) + skill-observer (one-skill) into the core; codex review opt-in; pm-skills declined (ADR-0038/0039).
 
 ## Lessons
 - [verify-cloud-adapter-env-guarded-against-a-container](lessons/verify-cloud-adapter-env-guarded-against-a-container.md) — a cloud adapter reaches port-parity by passing the SAME conformance suite; env-guard its integration tests (skip by default) and verify for real against a Docker Compose service.

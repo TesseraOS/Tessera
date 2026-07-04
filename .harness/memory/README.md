@@ -18,6 +18,11 @@ repo is the source of truth**.
 
 Index of entries: [`index.md`](index.md).
 
+> **Working buffer:** [`observations.md`](observations.md) is a low-friction capture log for the
+> [`skill-observer`](../skills/skill-observer/SKILL.md) skill — **not** durable canon. It is
+> reviewed periodically and drained into skill/rule edits, ADRs, or `lessons/`; it is append-only
+> and exempt from the one-fact-per-file/index rules above.
+
 ## Entry format
 One fact per file, kebab-case name, with frontmatter:
 

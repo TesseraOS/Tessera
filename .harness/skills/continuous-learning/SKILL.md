@@ -14,6 +14,10 @@ lessons" step in [clean-state](../../protocols/clean-state.md) and the
 > system of record** ([`../../memory/lessons/`](../../memory/lessons/)), not a personal
 > `~/.claude` store — the repository is memory.
 
+> **Companion:** [`skill-observer`](../skill-observer/SKILL.md) captures *harness* improvements
+> (skill/rule/ADR changes) as you work; this skill captures durable *lessons* (what happened).
+> Same discipline — signal over noise — pointed at two different targets.
+
 ## When to capture
 - After fixing a non-obvious bug (write the root cause + the fix).
 - After a **user correction** (record the preference/standard so it isn't repeated).

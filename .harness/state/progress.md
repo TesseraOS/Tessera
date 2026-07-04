@@ -3,6 +3,44 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-04 — Harness: adopt external agent-skills (design-review, skill-observer); codex review opt-in; pm-skills declined
+
+Evaluated four proposed external skill repos and integrated them via the **"adapt into the
+agnostic core"** pattern ([ADR-0013](../../docs/adr/0013-general-purpose-execution-skills-from-ecc.md)
+/ [ADR-0021](../../docs/adr/0021-frontend-harness-and-design-skill-adaptation.md) precedent), not
+raw plugin installs. Additive Markdown only — no source touched, build unaffected.
+
+- **`design-review`** (new skill, from **impeccable**, Apache-2.0): a deterministic
+  design-audit / critique / polish pass subordinate to `DESIGN-SYSTEM.md`; complements
+  `frontend-craft` / `build-ui`, feeds the `a11y` / `web-perf` gates, and runs live checks through
+  our own `preview_*` tooling. Principles adapted; impeccable's CLI/detector/extension stay
+  upstream.
+- **`skill-observer`** (new skill, from **one-skill / Task Observer**, CC BY 4.0): a low-friction
+  observation buffer ([`../memory/observations.md`](../memory/observations.md)) drained
+  periodically into concrete skill/rule/ADR improvements. Crisp boundary vs `continuous-learning`
+  (durable lessons) and `write-adr` (decisions).
+- **Codex adversarial review**: OpenAI Codex made an **opt-in, off-by-default** Claude Code
+  integration ([`../../.claude/integrations/`](../../.claude/integrations/)) under a new agnostic
+  governance policy [`third-party-model-review`](../governance/third-party-model-review.md); the
+  evaluator references it as advisory-only. Nothing egresses to OpenAI unless a human enables it.
+- **pm-skills**: **declined** — an off-mission PM marketplace (~68 skills); scope creep for a
+  coding harness (product definition already lives in PRD/roadmap/ADRs).
+
+Also fixed a pre-existing index gap (the frontend skills were absent from the skills README).
+Decisions in [ADR-0038](../../docs/adr/0038-external-agent-skill-adaptations-design-review-and-skill-observer.md)
+(adaptations + pm-skills decline) and
+[ADR-0039](../../docs/adr/0039-optional-independent-model-adversarial-review-codex.md) (codex
+opt-in + egress policy); attributions in [`NOTICE.md`](../../NOTICE.md) (Apache-2.0
+impeccable/codex; CC BY 4.0 Task Observer, attribution retained); `.claude/` shims for both new
+skills; skills/governance/memory indexes updated.
+
+**Evidence:** `node scripts/verify-state.mjs` → `state valid — 65 features, 20 effect-links,
+wip_limit 1; 11 gates CI-mirrored, 777 doc links, env-docs ok` (was 708 links; +69 all resolve).
+3 pre-existing historical warnings (F-031/033/035 plan-less done) unchanged.
+**Next step:** unchanged — executor claims **F-038**.
+
+---
+
 ## 2026-07-04 — Harness hardening: strict self-audit → 6 new mechanical guards + policy/practice reconciliation
 
 A strict audit of the harness itself (`.harness/` + `.claude/` + `scripts/` + `AGENTS.md`), then

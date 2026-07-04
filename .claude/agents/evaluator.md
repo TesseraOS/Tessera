@@ -26,3 +26,11 @@ report it; you do not "fix it to pass."
   evidence in `.harness/state/progress.md`.
 - **Fail** otherwise: list precisely what's missing/broken and send it back to the
   generator. Never weaken a gate, skip a test, or mark done on red.
+
+## Optional: independent-model second opinion
+On a risky or complex feature you *may* request an adversarial review from an independent model
+(OpenAI Codex) to catch what a same-model pass rationalizes past — **only if a human has enabled
+it** (off by default). It is advisory input to your judgment, never the verdict, and must not
+weaken a gate. See [`../integrations/codex-adversarial-review.md`](../integrations/codex-adversarial-review.md)
+and the governing policy
+[`third-party-model-review`](../../.harness/governance/third-party-model-review.md).

@@ -14,8 +14,18 @@ and tool-agnostic; each lives in its own folder as `SKILL.md` with a small front
 | [`coding-standards`](coding-standards/SKILL.md) | Applying the baseline quality conventions (write / review / refactor / onboard). |
 | [`strategic-compact`](strategic-compact/SKILL.md) | Compacting context deliberately at task boundaries. |
 | [`continuous-learning`](continuous-learning/SKILL.md) | Capturing reusable lessons into in-repo memory. |
+| [`skill-observer`](skill-observer/SKILL.md) | Improving the harness itself — capture observations, drain them into skill/rule/ADR changes. |
+| [`build-ui`](build-ui/SKILL.md) | Building a dashboard UI feature end-to-end (server-first, tokens, compose, UX baseline, a11y). |
+| [`shadcn`](shadcn/SKILL.md) | Finding / installing / composing / customizing shadcn/ui components. |
+| [`frontend-craft`](frontend-craft/SKILL.md) | Typography, spacing, restraint — avoiding generic UI. |
+| [`motion`](motion/SKILL.md) | Functional, `prefers-reduced-motion`-safe animation. |
+| [`design-review`](design-review/SKILL.md) | Auditing a built/changed screen against design anti-patterns before UI is done. |
 
-The last three are **general-purpose execution skills** (apply to any task), adapted from ECC
-(MIT — see [`../../NOTICE.md`](../../NOTICE.md)); the rest are Tessera workflow skills.
+`coding-standards`, `strategic-compact`, and `continuous-learning` are **general-purpose execution
+skills** (adapted from ECC, MIT); `skill-observer` extends that self-improvement loop (adapted
+CC BY 4.0). `build-ui`, `shadcn`, `frontend-craft`, `motion`, and `design-review` are the
+**frontend/design** skills — subordinate to
+[`DESIGN-SYSTEM.md`](../../docs/design/DESIGN-SYSTEM.md). The rest are Tessera workflow skills. All
+adaptations are attributed in [`../../NOTICE.md`](../../NOTICE.md).
 
 New skills: keep them short, action-oriented, and linked from this index.

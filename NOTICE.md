@@ -64,3 +64,42 @@ decision.
 
 These are adaptations of ideas grounded in our own DESIGN-SYSTEM.md, not redistributions of the
 original files. The upstream license texts (MIT / Apache-2.0) apply to their respective sources.
+
+## Design-review skill (`impeccable`)
+
+Tessera's [`design-review`](.harness/skills/design-review/SKILL.md) skill **adapts** the
+audit/critique workflow and deterministic anti-pattern detectors of **impeccable** (ideas and
+review discipline, not copied files), used **subordinate to**
+[`DESIGN-SYSTEM.md`](docs/design/DESIGN-SYSTEM.md). impeccable also informs the typography/motion
+lineage credited in `frontend-craft` above. See
+[ADR-0038](docs/adr/0038-external-agent-skill-adaptations-design-review-and-skill-observer.md).
+
+- **Source:** <https://github.com/pbakaus/impeccable>
+- **Author / ©:** pbakaus
+- **License:** Apache-2.0
+
+## Skill-observer skill (One Skill to Rule Them All / Task Observer)
+
+Tessera's [`skill-observer`](.harness/skills/skill-observer/SKILL.md) skill **adapts** the
+session-observer methodology of **"One Skill to Rule Them All" (Task Observer)** — capture
+Issue / Suggested-improvement / Principle observations, review periodically, improve the skill
+library — adapted to write into the in-repo system of record. See
+[ADR-0038](docs/adr/0038-external-agent-skill-adaptations-design-review-and-skill-observer.md).
+
+- **Source:** <https://github.com/rebelytics/one-skill-to-rule-them-all>
+- **Author / ©:** Eoghan Henn (rebelytics.com)
+- **License:** Creative Commons Attribution 4.0 International (**CC BY 4.0**) — attribution is
+  required by the license and is retained here.
+
+## Codex adversarial review (optional adapter integration)
+
+Tessera's optional, opt-in Claude Code integration
+[`.claude/integrations/codex-adversarial-review.md`](.claude/integrations/codex-adversarial-review.md)
+documents use of **openai/codex-plugin-cc** as an independent-model reviewer. We reference and
+invoke the upstream plugin (no files copied). It is disabled by default; see
+[ADR-0039](docs/adr/0039-optional-independent-model-adversarial-review-codex.md) and the
+[`third-party-model-review`](.harness/governance/third-party-model-review.md) policy.
+
+- **Source:** <https://github.com/openai/codex-plugin-cc>
+- **Author / ©:** OpenAI
+- **License:** Apache-2.0

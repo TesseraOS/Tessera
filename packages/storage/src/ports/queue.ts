@@ -17,4 +17,11 @@ export interface Queue {
   subscribe<T>(topic: string, handler: JobHandler<T>): QueueSubscription;
   /** Stop accepting new jobs and await all in-flight handlers. */
   shutdown(): Promise<void>;
+  /**
+   * Await all currently in-flight handlers **without** stopping acceptance (unlike {@link shutdown}).
+   * Optional: the in-process adapter implements it so a caller can turn fire-and-forget delivery into a
+   * synchronous "the work is done" barrier (F-038 scans); distributed adapters (BullMQ) may omit it, in
+   * which case work is observed asynchronously (status/SSE) instead.
+   */
+  drain?(): Promise<void>;
 }

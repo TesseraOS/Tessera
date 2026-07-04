@@ -29,3 +29,5 @@ export * from './adapters/in-memory-sink.js';
 export * from './adapters/in-memory-manifest.js';
 export * from './adapters/tee-sink.js';
 export * from './adapters/memory-extraction-sink.js';
+export * from './sources/registry.js';
+export * from './sources/service.js';

@@ -18,6 +18,12 @@ export interface IngestionWorkerOptions {
   readonly queue: Queue;
   /** Connectors used to resolve a change event's content, keyed internally by `connector.kind`. */
   readonly connectors: readonly Connector[];
+  /**
+   * Optional per-**source** connector resolver, taking precedence over the `connectors` kind-map. The
+   * runtime source service (F-038) supplies this so multiple sources of the same kind (e.g. two
+   * filesystem roots) each resolve their own connector. Returning `undefined` falls back to the map.
+   */
+  readonly connectorFor?: (source: ChangeEvent['source']) => Connector | undefined;
   /** Where processed documents are persisted. */
   readonly sink: DocumentSink;
   /** The content-hash index advanced after each successful persist. */
@@ -67,7 +73,7 @@ export function createIngestionWorker(options: IngestionWorkerOptions): Ingestio
       return;
     }
 
-    const connector = connectorByKind.get(source.kind);
+    const connector = options.connectorFor?.(source) ?? connectorByKind.get(source.kind);
     if (connector === undefined) {
       throw new ValidationError('no connector registered for source kind', {
         details: { kind: source.kind },

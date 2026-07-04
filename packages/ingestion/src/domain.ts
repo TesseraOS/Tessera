@@ -75,10 +75,33 @@ export interface ProcessedDocument {
   readonly redactions: readonly RedactionFinding[];
 }
 
-/** Typed domain events emitted by the ingestion worker (consumed by SSE/dashboards later). */
+/** Counts of what a scan found, by change kind plus the untouched remainder (FR-8). */
+export interface ScanSummary {
+  readonly added: number;
+  readonly modified: number;
+  readonly removed: number;
+  readonly unchanged: number;
+}
+
+/**
+ * Typed domain events emitted by the ingestion worker + source service (consumed by SSE/dashboards).
+ * The composition root bridges these to the API's SSE stream (`document.*` from the worker;
+ * `source.scan.*` lifecycle from the source service). Payloads stay JSON-safe and non-sensitive.
+ */
 export interface IngestionEvents extends Record<string, unknown> {
   readonly 'document.ingested': { readonly document: ProcessedDocument };
   readonly 'document.removed': { readonly sourceId: SourceId; readonly path: string };
+  readonly 'source.scan.started': {
+    readonly sourceId: SourceId;
+    readonly kind: string;
+    readonly label: string;
+  };
+  readonly 'source.scan.completed': {
+    readonly sourceId: SourceId;
+    readonly kind: string;
+    readonly label: string;
+    readonly summary: ScanSummary;
+  };
 }
 
 /** Separator between source id and path when deriving a document id (source ids never contain it). */

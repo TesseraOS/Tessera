@@ -1,6 +1,6 @@
 import { ValidationError } from '@tessera/core';
 import type { Queue } from '@tessera/storage';
-import type { ChangeEvent, SourceDescriptor } from '../domain.js';
+import type { ChangeEvent, ScanSummary, SourceDescriptor } from '../domain.js';
 import type { Connector } from '../ports/connector.js';
 import type { IngestionManifest } from '../ports/manifest.js';
 import { diffEntries } from '../connectors/scan-diff.js';
@@ -17,14 +17,6 @@ export interface IngestionCoordinatorOptions {
   readonly manifest: IngestionManifest;
   /** Queue topic to publish to (default {@link INGESTION_TOPIC}). */
   readonly topic?: string;
-}
-
-/** Counts of what a scan found, by change kind plus the untouched remainder. */
-export interface ScanSummary {
-  readonly added: number;
-  readonly modified: number;
-  readonly removed: number;
-  readonly unchanged: number;
 }
 
 export interface IngestionCoordinator {

@@ -66,6 +66,12 @@ export function createInProcessQueue(options: InProcessQueueOptions = {}): Queue
       return subscription;
     },
 
+    async drain() {
+      // Await the current in-flight set without halting acceptance. Jobs are added to `inFlight`
+      // synchronously within `enqueue`, so a caller that has finished enqueuing sees them all here.
+      await Promise.all([...inFlight]);
+    },
+
     async shutdown() {
       accepting = false;
       await Promise.all([...inFlight]);

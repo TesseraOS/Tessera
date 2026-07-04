@@ -84,6 +84,55 @@ export function runGraphStoreConformance(name: string, makeStore: GraphStoreFact
       }
     });
 
+    it('removes a node and every edge incident to it (idempotent)', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const file = node('file', 'src/a.ts');
+        const sym = node('symbol', 'src/a.ts#run');
+        const dep = node('file', 'src/dep.ts');
+        for (const n of [file, sym, dep]) await store.addNode(n);
+        await store.addEdge(structural(file, sym, 'defines'));
+        await store.addEdge(structural(file, dep, 'imports'));
+        await store.addEdge(effectLink(dep, file, 0.9)); // an edge pointing AT the file
+
+        await store.removeNode(file.id);
+
+        expect(await store.getNode(file.id)).toBeUndefined();
+        // Every edge touching the file (out AND in) is gone; the dep node itself survives.
+        expect(await store.listEdges({ from: file.id })).toEqual([]);
+        expect(await store.listEdges({ to: file.id })).toEqual([]);
+        expect(await store.getNode(dep.id)).toBeDefined();
+        // Idempotent: removing again is a no-op.
+        await expect(store.removeNode(file.id)).resolves.toBeUndefined();
+      } finally {
+        await cleanup?.();
+      }
+    });
+
+    it('removes edges by filter without clobbering other edges (subgraph replace)', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const f = node('file', 'src/f.ts');
+        const b = node('file', 'src/b.ts');
+        const a = node('file', 'src/a.ts');
+        for (const n of [f, b, a]) await store.addNode(n);
+        await store.addEdge(structural(f, b, 'imports')); // f's OUTGOING import
+        await store.addEdge(structural(a, f, 'imports')); // a imports f (incoming to f)
+        await store.addEdge(effectLink(b, f, 0.9)); // effect-link INTO f (from f's import)
+
+        // Replace f's outgoing imports + clear its incoming effect-links, preserving a -> f.
+        await store.removeEdges({ from: f.id, kind: 'imports' });
+        await store.removeEdges({ to: f.id, kind: EFFECT_LINK_KIND });
+
+        expect(await store.listEdges({ from: f.id })).toEqual([]); // f's outgoing import gone
+        expect(await store.listEdges({ to: f.id, kind: EFFECT_LINK_KIND })).toEqual([]); // effect-link gone
+        // a -> f (another file's edge) is preserved.
+        expect((await store.listEdges({ from: a.id })).map((e) => e.to)).toEqual([f.id]);
+      } finally {
+        await cleanup?.();
+      }
+    });
+
     it('get_effects returns transitive dependents ranked, with paths', async () => {
       const { store, cleanup } = await makeStore();
       try {

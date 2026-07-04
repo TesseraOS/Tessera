@@ -1,4 +1,4 @@
-import { and, eq, sql, type SQL } from 'drizzle-orm';
+import { and, eq, or, sql, type SQL } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { DEFAULT_TENANT_ID, type TenantId } from '@tessera/core';
@@ -153,6 +153,27 @@ export function createSqliteGraphStore(db: BetterSQLite3Database): GraphStore {
               metadata: edge.metadata,
             },
           })
+          .run();
+        return Promise.resolve();
+      },
+
+      removeNode(id: NodeId) {
+        db.delete(nodes)
+          .where(and(eq(nodes.id, id), nodeInTenant))
+          .run();
+        db.delete(edges)
+          .where(and(edgeInTenant, or(eq(edges.from, id), eq(edges.to, id))))
+          .run();
+        return Promise.resolve();
+      },
+
+      removeEdges(filter?: EdgeFilter) {
+        const conditions: SQL[] = [edgeInTenant];
+        if (filter?.kind !== undefined) conditions.push(eq(edges.kind, filter.kind));
+        if (filter?.from !== undefined) conditions.push(eq(edges.from, filter.from));
+        if (filter?.to !== undefined) conditions.push(eq(edges.to, filter.to));
+        db.delete(edges)
+          .where(and(...conditions))
           .run();
         return Promise.resolve();
       },

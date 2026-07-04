@@ -64,6 +64,27 @@ export function createInMemoryGraphStore(): GraphStore {
         return Promise.resolve();
       },
 
+      removeNode(id) {
+        nodes.delete(id);
+        for (const [edgeId, edge] of edges) {
+          if (edge.from === id || edge.to === id) edges.delete(edgeId);
+        }
+        return Promise.resolve();
+      },
+
+      removeEdges(filter?: EdgeFilter) {
+        for (const [edgeId, edge] of edges) {
+          if (
+            (filter?.kind === undefined || edge.kind === filter.kind) &&
+            (filter?.from === undefined || edge.from === filter.from) &&
+            (filter?.to === undefined || edge.to === filter.to)
+          ) {
+            edges.delete(edgeId);
+          }
+        }
+        return Promise.resolve();
+      },
+
       getNode(id) {
         return Promise.resolve(nodes.get(id));
       },

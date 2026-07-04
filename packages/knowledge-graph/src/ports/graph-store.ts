@@ -33,6 +33,16 @@ export interface GetEffectsOptions {
 export interface GraphStore {
   addNode(node: GraphNode): Promise<void>;
   addEdge(edge: GraphEdge): Promise<void>;
+  /**
+   * Remove a node and every edge incident to it (idempotent — no error if absent). Used to remove a
+   * deleted source file's subgraph (F-040).
+   */
+  removeNode(id: NodeId): Promise<void>;
+  /**
+   * Remove every edge matching `filter` (idempotent). Used to replace a changed file's OUTGOING edges
+   * on re-ingest (F-040) without clobbering edges from other files. An empty filter removes all edges.
+   */
+  removeEdges(filter?: EdgeFilter): Promise<void>;
   getNode(id: NodeId): Promise<GraphNode | undefined>;
   getNodeByKey(kind: NodeKind, key: string): Promise<GraphNode | undefined>;
   listNodes(filter?: NodeFilter): Promise<readonly GraphNode[]>;

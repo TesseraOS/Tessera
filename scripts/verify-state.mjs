@@ -244,7 +244,10 @@ if (features) {
     // Plan-before-code (golden rule 3): in-flight features must have a committed plan.
     const hasPlan = planFiles.some((name) => name.startsWith(`${f.id}-`));
     if (['in_progress', 'in_review'].includes(f.status) && !hasPlan)
-      err(at, `status "${f.status}" but no plan file .harness/plans/${f.id}-*.md (plan before code)`);
+      err(
+        at,
+        `status "${f.status}" but no plan file .harness/plans/${f.id}-*.md (plan before code)`,
+      );
     if (f.status === 'done' && !hasPlan)
       warn(at, `done without a plan file in .harness/plans/ (historical debt — do not repeat)`);
   });
@@ -260,17 +263,27 @@ if (features) {
     if (Array.isArray(releaseSchema.enum)) {
       for (const r of releases)
         if (!releaseSchema.enum.includes(r))
-          err('schema-sync', `release "${r}" is in feature_list.json releases[] but not in the schema enum`);
+          err(
+            'schema-sync',
+            `release "${r}" is in feature_list.json releases[] but not in the schema enum`,
+          );
     } else if (typeof releaseSchema.pattern === 'string') {
       const re = new RegExp(releaseSchema.pattern);
       for (const r of releases)
-        if (!re.test(r)) err('schema-sync', `release "${r}" does not match schema pattern ${releaseSchema.pattern}`);
+        if (!re.test(r))
+          err(
+            'schema-sync',
+            `release "${r}" does not match schema pattern ${releaseSchema.pattern}`,
+          );
     }
     const statusSchema = featProps.status ?? {};
     if (Array.isArray(statusSchema.enum)) {
       for (const s of statuses)
         if (!statusSchema.enum.includes(s))
-          err('schema-sync', `status "${s}" is in feature_list.json statuses[] but not in the schema enum`);
+          err(
+            'schema-sync',
+            `status "${s}" is in feature_list.json statuses[] but not in the schema enum`,
+          );
     }
   }
 }
@@ -337,7 +350,10 @@ if (envExample !== null) {
   const documented = new Set([...envExample.matchAll(ENV_TOKEN)].map((m) => m[0]));
   for (const [token, file] of [...usedEnv].sort()) {
     if (!documented.has(token)) {
-      err('env-docs', `${token} (used in ${file.replaceAll(sep, '/')}) is not documented in .env.example`);
+      err(
+        'env-docs',
+        `${token} (used in ${file.replaceAll(sep, '/')}) is not documented in .env.example`,
+      );
     }
   }
 }

@@ -26,10 +26,13 @@ function hasCode(code: string) {
 describe('TOOL_PERMISSIONS', () => {
   it('maps every tool to a required permission', () => {
     expect(Object.keys(TOOL_PERMISSIONS).sort()).toEqual([
+      'add_source',
       'capture_memory',
       'compile_context',
       'explain',
       'get_effects',
+      'list_sources',
+      'scan_source',
       'search',
     ]);
   });

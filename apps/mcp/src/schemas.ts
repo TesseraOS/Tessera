@@ -54,3 +54,16 @@ export const captureMemoryShape = {
     })
     .optional(),
 };
+
+export const addSourceShape = {
+  kind: z.string().min(1).describe('Connector kind: "filesystem" or "git".'),
+  root: z.string().min(1).describe('Working-tree path to ingest.'),
+  label: z.string().min(1).optional().describe('Human-readable label (defaults to the root).'),
+};
+
+/** `list_sources` takes no arguments. */
+export const listSourcesShape = {};
+
+export const scanSourceShape = {
+  id: z.string().min(1).describe('The source id returned by add_source.'),
+};

@@ -30,5 +30,9 @@
     "@tessera/memory": "workspace:*",
     "@tessera/retrieval": "workspace:*",
     "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@tessera/ingestion": "workspace:*",
+    "@tessera/storage": "workspace:*"
   }
 }

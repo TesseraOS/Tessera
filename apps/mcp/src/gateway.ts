@@ -15,7 +15,14 @@ import type { QuotaLimiter } from './quota.js';
 
 /** The tools the gateway guards, each mapped to the permission it requires (RBAC, reuse F-025 catalog). */
 export type McpToolName =
-  'search' | 'compile_context' | 'get_effects' | 'capture_memory' | 'explain';
+  | 'search'
+  | 'compile_context'
+  | 'get_effects'
+  | 'capture_memory'
+  | 'explain'
+  | 'add_source'
+  | 'list_sources'
+  | 'scan_source';
 
 export const TOOL_PERMISSIONS: Readonly<Record<McpToolName, Permission>> = {
   search: 'search:read',
@@ -23,6 +30,9 @@ export const TOOL_PERMISSIONS: Readonly<Record<McpToolName, Permission>> = {
   explain: 'compile:read',
   get_effects: 'effects:read',
   capture_memory: 'memory:write',
+  add_source: 'sources:manage',
+  list_sources: 'sources:read',
+  scan_source: 'sources:manage',
 };
 
 /**

@@ -32,13 +32,16 @@ describe('@tessera/mcp tools', () => {
     return (result.structuredContent ?? {}) as Record<string, unknown>;
   }
 
-  it('advertises the five tools', async () => {
+  it('advertises the full tool set', async () => {
     const { tools } = await client.listTools();
     expect(tools.map((tool) => tool.name).sort()).toEqual([
+      'add_source',
       'capture_memory',
       'compile_context',
       'explain',
       'get_effects',
+      'list_sources',
+      'scan_source',
       'search',
     ]);
   });

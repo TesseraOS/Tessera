@@ -1,8 +1,22 @@
 import type { ApiServices } from '@tessera/api';
 import { createContextCompiler, type FragmentSource } from '@tessera/context-compiler';
+import { ValidationError } from '@tessera/core';
+import {
+  createFilesystemConnector,
+  createGitConnector,
+  createInMemoryDocumentSink,
+  createInMemoryManifest,
+  createInMemorySourceRegistry,
+  createIngestionWorker,
+  createSourceService,
+  type Connector,
+  type SourceRecord,
+  type SourceService,
+} from '@tessera/ingestion';
 import { createInMemoryGraphStore, createKnowledgeGraphService } from '@tessera/knowledge-graph';
 import { createInMemoryMemoryStore, createMemoryService } from '@tessera/memory';
 import { createHybridRetriever, type Candidate, type Retriever } from '@tessera/retrieval';
+import { createInProcessQueue } from '@tessera/storage';
 
 /**
  * E2E composition root: real domain services (F-007…F-010) over in-memory adapters + a small fixed
@@ -61,6 +75,35 @@ const fragmentSource: FragmentSource = {
   },
 };
 
+/** A real {@link SourceService} over in-memory adapters + real filesystem/git connectors (F-038). */
+function createInMemorySourceService(): SourceService {
+  const queue = createInProcessQueue();
+  const manifest = createInMemoryManifest();
+  const sink = createInMemoryDocumentSink();
+  const sources = createSourceService({
+    registry: createInMemorySourceRegistry(),
+    queue,
+    manifest,
+    connectorFactory: (record: SourceRecord): Connector => {
+      const root = record.config['root'];
+      if (typeof root !== 'string' || root.length === 0) {
+        throw new ValidationError('source config.root is required');
+      }
+      if (record.kind === 'filesystem') return createFilesystemConnector({ root });
+      if (record.kind === 'git') return createGitConnector({ root });
+      throw new ValidationError(`unsupported source kind "${record.kind}"`);
+    },
+  });
+  createIngestionWorker({
+    queue,
+    connectors: [],
+    connectorFor: sources.connectorFor,
+    sink,
+    manifest,
+  });
+  return sources;
+}
+
 /** Build the in-memory {@link ApiServices}, seeding a graph effect-link for `get_effects`. */
 export async function createInMemoryServices(): Promise<ApiServices> {
   const memory = createMemoryService(createInMemoryMemoryStore());
@@ -78,5 +121,5 @@ export async function createInMemoryServices(): Promise<ApiServices> {
   const search = createHybridRetriever([keywordRetriever]);
   const compiler = createContextCompiler({ retriever: search, fragmentSource, graphStore });
 
-  return { search, compiler, graph, memory };
+  return { search, compiler, graph, memory, sources: createInMemorySourceService() };
 }

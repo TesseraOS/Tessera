@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ApiServices, AuthContext } from '@tessera/api';
-import { DEFAULT_TENANT_ID } from '@tessera/core';
+import { DEFAULT_TENANT_ID, InternalError } from '@tessera/core';
 import type { CompileRequest } from '@tessera/context-compiler';
 import type { GetEffectsOptions } from '@tessera/knowledge-graph';
 import type { RetrievalQuery } from '@tessera/retrieval';
@@ -8,12 +8,44 @@ import { buildExplanation } from './explain.js';
 import type { McpCallContext, McpGateway, McpToolName } from './gateway.js';
 import { runTool } from './result.js';
 import {
+  addSourceShape,
   captureMemoryShape,
   compileShape,
   effectsShape,
   explainShape,
+  listSourcesShape,
+  scanSourceShape,
   searchShape,
 } from './schemas.js';
+
+/** A registered source projected to the wire shape (tenancy stays off the wire — ADR-0033). */
+type SourceService = NonNullable<ApiServices['sources']>;
+type SourceRecord = Awaited<ReturnType<SourceService['register']>>;
+
+/** The source service, or a clean error when the runtime wired none. */
+function requireSources(services: ApiServices): SourceService {
+  if (services.sources === undefined) {
+    throw new InternalError('source management is not configured for this deployment');
+  }
+  return services.sources;
+}
+
+/** Drop `tenantId` from a stored source (kept off the wire, mirroring the REST surface). */
+function toWireSource(record: SourceRecord): {
+  id: string;
+  kind: string;
+  label: string;
+  config: Record<string, unknown>;
+  createdAt: string;
+} {
+  return {
+    id: record.id,
+    kind: record.kind,
+    label: record.label,
+    config: { ...record.config },
+    createdAt: record.createdAt,
+  };
+}
 
 /** Identifies this server in the MCP handshake. */
 export const SERVER_INFO = { name: 'tessera', version: '0.0.0' } as const;
@@ -131,6 +163,55 @@ export function buildMcpServer(
       runTool(async () => {
         const ctx = await guard('capture_memory', extra);
         return services.memory.forTenant(tenantOf(ctx)).capture(args);
+      }),
+  );
+
+  server.registerTool(
+    'add_source',
+    {
+      description: 'Register a filesystem or git source for ingestion; returns the stored source.',
+      inputSchema: addSourceShape,
+    },
+    (args, extra) =>
+      runTool(async () => {
+        const ctx = await guard('add_source', extra);
+        const record = await requireSources(services)
+          .forTenant(tenantOf(ctx))
+          .register({
+            kind: args.kind,
+            config: { root: args.root },
+            ...(args.label !== undefined ? { label: args.label } : {}),
+          });
+        return toWireSource(record);
+      }),
+  );
+
+  server.registerTool(
+    'list_sources',
+    {
+      description: 'List the registered ingestion sources.',
+      inputSchema: listSourcesShape,
+    },
+    (_args, extra) =>
+      runTool(async () => {
+        const ctx = await guard('list_sources', extra);
+        const sources = await requireSources(services).forTenant(tenantOf(ctx)).list();
+        return { sources: sources.map(toWireSource) };
+      }),
+  );
+
+  server.registerTool(
+    'scan_source',
+    {
+      description: 'Scan a source (incremental + idempotent); returns what changed.',
+      inputSchema: scanSourceShape,
+    },
+    (args, extra) =>
+      runTool(async () => {
+        const ctx = await guard('scan_source', extra);
+        const scoped = requireSources(services).forTenant(tenantOf(ctx));
+        const { source, summary } = await scoped.scan(args.id as Parameters<typeof scoped.scan>[0]);
+        return { source: toWireSource(source), summary };
       }),
   );
 

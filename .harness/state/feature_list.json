@@ -1255,6 +1255,7 @@
       "acceptance": [
         "A persistent indexing DocumentSink (composition root) writes ingested documents as blob fragments (existing FragmentSource contract) AND indexes them: keyword (FTS5), temporal (timestamps), semantic (embed → VectorStore, batched + content-hash-cached so unchanged chunks are never re-embedded, NFR-12); document removal removes index entries; re-scan is idempotent (no duplicate index rows)",
         "search/compile answer from the user's actual repository: an integration test ingests a fixture repo through the real pipeline and asserts POST /v1/search returns its files with multi-signal attribution and POST /v1/compile produces a budget-bounded package citing them",
+        "Captured memories are indexed for retrieval too: memory capture/edit (API + MCP) upserts into the keyword/semantic/temporal indices (supersede updates the index entry) — the 2026-07-04 live check proved a just-captured memory is unfindable via /v1/search today, so this path is part of closing the loop, not only ingestion",
         "Tenant scoping respected end-to-end (indices written through the forTenant/scoped views); chunking strategy documented (plan); embedding remains offline-testable (fake provider drives the deterministic tests, transformers env-guarded)",
         "Workspace gates green; compile-cache invalidation on index writes addressed (at minimum: document the staleness contract; ideally key on a corpus version)"
       ],
@@ -1492,7 +1493,7 @@
       "acceptance": [
         "A professional /profile page (DESIGN-SYSTEM-grade): identity (name/email/avatar initials), roles + effective permissions, tenant/org, plan (from billing), connected-agent hints; no fake data — every field backed by the API",
         "API-token self-service: /v1/tokens routes (list/create with scopes + expiry/revoke; secret shown exactly once) over the existing TokenStore port, RBAC-guarded + audited, OpenAPI + SDK regenerated + MCP parity tool (ADR-0036); UI in profile/settings with copy-once UX",
-        "Admin user management view (FR-48 completion): principals/roles listing + role assignment where the store supports it (local token principals today; OIDC-user listing = documented seam)",
+        "Admin user management view (FR-48 completion): principals/roles listing + role assignment where the store supports it (local token principals today; OIDC-user listing = documented seam); the hand-mirrored RBAC catalog in apps/web/lib/governance.ts is replaced by a shared/SDK-derived catalog (drift risk flagged in the 2026-07-04 dashboard review)",
         "axe AA + screenshot-verified; e2e (issue token in UI → authenticate with it against the API); workspace gates green"
       ],
       "verification": [
@@ -1943,6 +1944,171 @@
       ],
       "effects": [
         "E-005"
+      ]
+    },
+    {
+      "id": "F-060",
+      "title": "Dashboard: live Overview — real workspace stats + SSE activity feed + notifications",
+      "requirements": [
+        "FR-38",
+        "FR-62",
+        "FR-49"
+      ],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R3",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [
+        "F-038",
+        "F-039"
+      ],
+      "acceptance": [
+        "A new GET /v1/stats workspace summary (indexed documents, memories, graph nodes + effect-links, sources, last scan) — Zod → OpenAPI + regenerated SDK + a get_stats MCP tool (ADR-0036 parity), tenant-scoped; token-lean response",
+        "The Overview page consumes it: the stat cards show REAL values (the 2026-07-04 review found them hardcoded to '—'/'0' while the live API held data); deltas render only when real prior-period data exists (no fabricated trends)",
+        "The dashboard gains its FIRST /v1/events consumer (none exists today): a resilient SSE client (reconnect + backoff; auth-aware once F-045 lands) feeds a live Recent-activity feed (document.ingested/removed, memory.captured, scan lifecycle) replacing the permanent empty state, and the notifications bell (today an honest 'all caught up' shell) shows the same events with unread state",
+        "Loading/empty/error states; WCAG AA (axe) + screenshot-verified; e2e (an emitted event appears in the feed); workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-004"
+      ]
+    },
+    {
+      "id": "F-061",
+      "title": "Dashboard: search depth — excerpts, kind filters, result detail view, keyboard nav, virtualization",
+      "requirements": [
+        "FR-41",
+        "FR-49"
+      ],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R3",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [
+        "F-039"
+      ],
+      "acceptance": [
+        "Search results show content excerpts with query highlighting (extend the /v1/search response ADDITIVELY with an optional snippet; OpenAPI + SDK regenerated) — today a result is only ref + score + signals",
+        "Results stop being a dead end: selecting one opens a detail surface rendering the fragment/file/memory body with full provenance (per-signal rank/score/weight) and actions — 'open in Inspector as task seed' and 'show effects' — wiring search → compile → effects into one investigation flow",
+        "Kind filters (file/memory/symbol) + result counts; full keyboard navigation (arrows/enter, focus management); the results list is virtualized for large sets (first real FR-49 virtualization)",
+        "WCAG AA (axe) + screenshot-verified; RTL + e2e; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-012",
+        "E-004"
+      ]
+    },
+    {
+      "id": "F-062",
+      "title": "Dashboard: Inspector v2 — honest empty guidance, agent-ready export, compile filters & presets",
+      "requirements": [
+        "FR-44",
+        "FR-32",
+        "FR-29"
+      ],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R3",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "An empty package renders a GUIDANCE state instead of perfect scores (the 2026-07-04 live review compiled against an empty corpus and got 'Budget adherence 100% · Provenance coverage 100% · 0 fragments' — misleading): explain that retrieval matched nothing, link to Sources; package scores render only when fragmentCount > 0",
+        "Agent-ready export: one-click copy of the compiled package as citation-preserving Markdown (sections + refs + why-included) and JSON download; per-fragment copy — the human↔agent handoff path",
+        "Compile controls: CompileRequest kind filters surfaced in the form; budget presets; when the F-035 entitlement clamp reduces the requested budget the UI says so explicitly; a session-local recent-compiles list re-runs prior tasks",
+        "RTL + e2e; WCAG AA (axe) + screenshot-verified; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-013",
+        "E-004"
+      ]
+    },
+    {
+      "id": "F-063",
+      "title": "Dashboard: enterprise data-table standard + Audit v2 (real pagination, actor/date filters, export)",
+      "requirements": [
+        "FR-48",
+        "FR-55",
+        "FR-49"
+      ],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R3",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "A reusable data-table pattern (TanStack Table + virtualization; sortable columns, sticky header, cursor pagination, truncation with tooltips) established once and adopted by the audit view first; the memory/sources tables (F-041/F-042) build on it",
+        "Audit v2: REAL cursor pagination using the existing nextCursor (replaces the 'narrow the filters to see older entries' hint found in review), plus actor and date-range filters (GET /v1/audit already supports actor/since/until — the UI exposes only action/outcome today)",
+        "Export of the filtered audit view as CSV/JSON (compliance workflow); the export action is itself audited",
+        "Table semantics preserved under virtualization (WCAG AA, axe); RTL + e2e; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-020",
+        "E-003",
+        "E-004"
+      ]
+    },
+    {
+      "id": "F-064",
+      "title": "Dashboard: UX-baseline completion + i18n readiness (FR-49 debt, NFR-14)",
+      "requirements": [
+        "FR-49",
+        "NFR-14",
+        "NFR-9"
+      ],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [
+        "F-041",
+        "F-042",
+        "F-045"
+      ],
+      "acceptance": [
+        "The FR-49 baseline is audited claim-by-claim and closed (the 2026-07-04 review found several claimed items unimplemented): virtualized lists on every long list, optimistic updates where safe (memory capture), context menus on data rows (copy ref / open / show effects), a keyboard-shortcuts help overlay, and the ⌘K palette covering every route + primary action",
+        "i18n readiness (NFR-14): user-facing strings externalized into a locale catalog (English only; no translation yet); a lint guard prevents new hardcoded strings in components",
+        "Theme + responsive parity: a screenshot matrix (light/dark × desktop/mobile) across all routes; reduced-motion behavior verified",
+        "axe WCAG AA re-run across every route; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-004"
       ]
     }
   ]

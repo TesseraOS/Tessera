@@ -3,6 +3,54 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-04 — Dashboard hard review (live-verified): craft is enterprise-grade, coverage is not → +F-060…F-064
+
+Follow-up to the launch-readiness review: a file-level + **live** review of `apps/web` (booted the real
+API on :3000 with scratchpad storage/fake embeddings + `next dev` on :3100 and drove the UI in a real
+browser).
+
+**Verdict:** the **craft** is genuinely enterprise-grade — consistent DESIGN-SYSTEM usage, honest
+loading/empty/error states everywhere, no fabricated data anywhere (verified: the overview renders
+'—' rather than fake numbers), accessible labels/skeletons, clean typed data layer. What's built is
+**correctly integrated**: `/audit` rendered the real recorded events of live API calls; the
+capture-memory dialog wrote a real memory (confirmed via `GET /v1/memory`); web(:3100)→api(:3000)
+CORS worked. The problem is **coverage + product depth**, not quality.
+
+**Live-proven findings**
+1. **Core-loop proof:** captured a memory via API, then `/v1/search` for its exact words → `[]`;
+   `/v1/compile` → an empty package. Nothing feeds the retrieval indices (confirms F-038/F-039);
+   **captured memories also never reach the indices** → added an explicit acceptance bullet to
+   **F-039** (memory capture/edit must upsert into keyword/semantic/temporal).
+2. **Misleading empty-package UX:** compiling against an empty corpus renders 'Budget adherence
+   100% · Provenance coverage 100% · 0 fragments' — perfect scores on nothing → **F-062**.
+3. **Static Overview:** stat cards are hardcoded placeholders; 'Recent activity' is a permanent
+   empty state; the notifications bell is an 'all caught up' shell; **the app has zero `/v1/events`
+   (SSE) consumers** although the API ships the stream → **F-060**.
+4. **Search is a dead end:** results show only ref + score + signals — no excerpt, no click-through
+   detail, no kind filters, no keyboard nav → **F-061**.
+5. **Audit v2 needed:** UI exposes only action/outcome filters (API supports actor/since/until);
+   `nextCursor` unused — the UI says 'narrow the filters' instead of paginating; no export;
+   **no virtualization anywhere** despite the FR-49 claim → **F-063** (data-table standard) +
+   **F-064** (FR-49 debt audit + i18n readiness, NFR-14 — nothing is externalized).
+6. Smaller notes for implementers: `lib/api` `JSON.parse` can throw a raw SyntaxError on non-JSON
+   responses and ignores TanStack abort signals (both dissolve when F-045 adopts the SDK);
+   `lib/governance.ts` hand-mirrors the RBAC catalog (drift risk → folded into F-046 acceptance).
+
+**What changed:** feature_list +**F-060** (live Overview: `GET /v1/stats` + get_stats MCP parity +
+first SSE consumer + notifications feed), +**F-061** (search depth), +**F-062** (Inspector v2:
+honest empty guidance, agent-ready Markdown/JSON export, filters/presets/clamp feedback),
++**F-063** (data-table standard + Audit v2), +**F-064** (UX-baseline completion + i18n, R4);
+amended F-039 (memory indexing) + F-046 (governance catalog drift). With F-041/042/043/045/046/050/
+057, the dashboard backlog now covers every PRD dashboard requirement plus the review findings.
+
+**Evidence:** `node scripts/verify-state.mjs` valid (**64 features**, 20 effect-links); live-session
+proof as above (server booted from `apps/server/dist`, real browser session, real API round-trips).
+
+**Next step:** unchanged — executor claims **F-038**; the dashboard arc lands F-041/042/043 then
+F-060…F-063 behind it.
+
+---
+
 ## 2026-07-04 — Launch-readiness review (supervisor/architect session): gap analysis → R3 rescoped + R4 added (F-038…F-059)
 
 A full project review (harness, PRD, ADRs, all 37 features, code wiring, security) against the

@@ -39,5 +39,8 @@
     "fastify-type-provider-zod": "^5.1.0",
     "jose": "^6.2.3",
     "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@tessera/storage": "workspace:*"
   }
 }

@@ -22,6 +22,11 @@ export type MemoryHistory =
   paths['/v1/memory/{lineageId}/history']['get']['responses'][200]['content'][Json];
 export type AuditQuery = NonNullable<paths['/v1/audit']['get']['parameters']['query']>;
 export type AuditPage = paths['/v1/audit']['get']['responses'][200]['content'][Json];
+export type RegisterSourceRequest = paths['/v1/sources']['post']['requestBody']['content'][Json];
+export type Source = paths['/v1/sources']['post']['responses'][201]['content'][Json];
+export type SourceList = paths['/v1/sources']['get']['responses'][200]['content'][Json];
+export type ScanResult = paths['/v1/sources/{id}/scan']['post']['responses'][200]['content'][Json];
+export type ScanStatus = paths['/v1/sources/{id}/scan']['get']['responses'][200]['content'][Json];
 
 export interface TesseraClientOptions {
   /** Base URL of the API, including the `/v1`-hosting origin (e.g. `http://localhost:3000`). */
@@ -52,6 +57,18 @@ export interface TesseraClient {
   memoryHistory(lineageId: string): Promise<MemoryHistory>;
   /** Query this tenant's audit trail (admin only), newest-first + paginated. */
   getAudit(query?: AuditQuery): Promise<AuditPage>;
+  /** List the registered ingestion sources. */
+  listSources(): Promise<SourceList>;
+  /** Register a filesystem/git source for ingestion. */
+  registerSource(request: RegisterSourceRequest): Promise<Source>;
+  /** Get a registered source (throws `NOT_FOUND` if absent). */
+  getSource(id: string): Promise<Source>;
+  /** Remove a registered source. */
+  removeSource(id: string): Promise<{ id: string }>;
+  /** Scan a source (incremental + idempotent); returns what changed. */
+  scanSource(id: string): Promise<ScanResult>;
+  /** A source's most recent scan status. */
+  scanStatus(id: string): Promise<ScanStatus>;
 }
 
 /** Unwrap an openapi-fetch result: return the body on success, else throw a typed error. */
@@ -108,6 +125,24 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
     },
     async getAudit(query = {}) {
       return unwrap(await client.GET('/v1/audit', { params: { query } }));
+    },
+    async listSources() {
+      return unwrap(await client.GET('/v1/sources', {}));
+    },
+    async registerSource(request) {
+      return unwrap(await client.POST('/v1/sources', { body: request }));
+    },
+    async getSource(id) {
+      return unwrap(await client.GET('/v1/sources/{id}', { params: { path: { id } } }));
+    },
+    async removeSource(id) {
+      return unwrap(await client.DELETE('/v1/sources/{id}', { params: { path: { id } } }));
+    },
+    async scanSource(id) {
+      return unwrap(await client.POST('/v1/sources/{id}/scan', { params: { path: { id } } }));
+    },
+    async scanStatus(id) {
+      return unwrap(await client.GET('/v1/sources/{id}/scan', { params: { path: { id } } }));
     },
   };
 }

@@ -77,6 +77,10 @@ importers:
       zod:
         specifier: ^3.25.67
         version: 3.25.76
+    devDependencies:
+      '@tessera/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
 
   apps/mcp:
     dependencies:

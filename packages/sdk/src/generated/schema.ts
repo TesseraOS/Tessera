@@ -600,6 +600,249 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the registered sources. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            sources: {
+                                id: string;
+                                kind: string;
+                                label: string;
+                                config: {
+                                    [key: string]: unknown;
+                                };
+                                createdAt: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Register a source (filesystem or git) for ingestion. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        kind: string;
+                        label?: string;
+                        config: {
+                            root: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            kind: string;
+                            label: string;
+                            config: {
+                                [key: string]: unknown;
+                            };
+                            createdAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sources/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a registered source. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            kind: string;
+                            label: string;
+                            config: {
+                                [key: string]: unknown;
+                            };
+                            createdAt: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Remove a registered source. */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sources/{id}/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A source's most recent scan status. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            state: "idle" | "running" | "error";
+                            lastScan?: {
+                                summary: {
+                                    added: number;
+                                    modified: number;
+                                    removed: number;
+                                    unchanged: number;
+                                };
+                                at: string;
+                            };
+                            error?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Scan a source (incremental + idempotent); returns what changed. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            source: {
+                                id: string;
+                                kind: string;
+                                label: string;
+                                config: {
+                                    [key: string]: unknown;
+                                };
+                                createdAt: string;
+                            };
+                            summary: {
+                                added: number;
+                                modified: number;
+                                removed: number;
+                                unchanged: number;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/events": {
         parameters: {
             query?: never;
@@ -791,7 +1034,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Filter by action. */
-                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "billing.read" | "billing.manage" | "audit.read";
+                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read";
                     /** @description Filter by actor principal id. */
                     actor?: string;
                     /** @description Filter by outcome. */
@@ -826,7 +1069,7 @@ export interface paths {
                                     kind: "local" | "user" | "token";
                                 };
                                 /** @enum {string} */
-                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "billing.read" | "billing.manage" | "audit.read";
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read";
                                 target?: string;
                                 /** @enum {string} */
                                 outcome: "success" | "denied";

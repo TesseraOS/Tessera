@@ -30,6 +30,8 @@ export const PERMISSIONS = [
   'effects:read',
   'memory:read',
   'memory:write',
+  'sources:read',
+  'sources:manage',
   'admin:manage',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
@@ -40,6 +42,7 @@ const READ_PERMISSIONS: readonly Permission[] = [
   'compile:read',
   'effects:read',
   'memory:read',
+  'sources:read',
 ];
 
 /**
@@ -50,7 +53,7 @@ const READ_PERMISSIONS: readonly Permission[] = [
 export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
   owner: PERMISSIONS,
   admin: PERMISSIONS,
-  member: [...READ_PERMISSIONS, 'memory:write'],
+  member: [...READ_PERMISSIONS, 'memory:write', 'sources:manage'],
   viewer: READ_PERMISSIONS,
 };
 

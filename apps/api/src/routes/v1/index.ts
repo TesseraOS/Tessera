@@ -8,6 +8,7 @@ import { registerSearchRoutes } from './search.js';
 import { registerCompileRoutes } from './compile.js';
 import { registerEffectsRoutes } from './effects.js';
 import { registerMemoryRoutes } from './memory.js';
+import { registerSourceRoutes } from './sources.js';
 import { registerEventsRoutes } from './events.js';
 import { registerBillingRoutes } from './billing.js';
 import { registerAuditRoutes } from './audit.js';
@@ -36,6 +37,7 @@ export function registerV1Routes(
       registerCompileRoutes(v1, services);
       registerEffectsRoutes(v1, services);
       registerMemoryRoutes(v1, services, events);
+      registerSourceRoutes(v1, services);
       registerEventsRoutes(v1, events);
       registerBillingRoutes(v1, services);
       registerAuditRoutes(v1, audit);

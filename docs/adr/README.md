@@ -50,6 +50,9 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0032](0032-oidc-auth-provider.md) | OIDC AuthProvider — IdP-agnostic JWT/JWKS verification via `jose` | Accepted |
 | [0033](0033-data-plane-tenant-isolation.md) | Data-plane per-tenant row isolation via `forTenant` scoping (default-tenant back-compat) | Accepted |
 | [0034](0034-audit-trail-and-governance.md) | Audit trail via an `AuditLog` port recorded at the API boundary + governance surface (R3) | Accepted |
+| [0035](0035-public-web-platform-three-surfaces.md) | Public web platform — marketing (apex) + dashboard (`app.`) + docs (`docs.`, Fumadocs) | Accepted |
+| [0036](0036-agent-first-operations.md) | Agent-first operations — API/MCP parity rule, CLI onboarding, skills registry, remote MCP | Accepted |
+| [0037](0037-multi-project-workspaces.md) | Multi-project workspaces within a tenant (`(tenantId, projectId)` scope) | Accepted |
 
 ## Conventions
 

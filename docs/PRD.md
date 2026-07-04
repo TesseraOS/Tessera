@@ -5,8 +5,8 @@
 | **Product** | Tessera — Context & Memory Operating System for AI coding agents |
 | **Codename** | ContextOS (internal only) |
 | **Package scope** | `@tessera/*` |
-| **Status** | Draft v1.0 — Phase A (definition) |
-| **Last updated** | 2026-06-27 |
+| **Status** | v1.1 — living document (R0–R2 built; updated 2026-07-04 launch-readiness review) |
+| **Last updated** | 2026-07-04 |
 | **Owner** | Project lead |
 | **Related** | [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md), [`adr/`](adr), [`roadmap.md`](roadmap.md), [`glossary.md`](glossary.md) |
 
@@ -66,6 +66,9 @@ debugging. The same codebase runs **Local, Self-Hosted, Managed Cloud, and Enter
   governance designed in, not bolted on.
 - **G7 — Explainable & debuggable.** Every package, score, and decision inspectable from
   the dashboard.
+- **G8 — Agent-first operations.** Any operation the dashboard offers is available via
+  REST + MCP first; a user's own agent can install, configure, and run Tessera without
+  the dashboard, quickly and token-cheaply. _(see [ADR-0036](adr/0036-agent-first-operations.md))_
 
 ### 3.2 Non-goals (now)
 - **NG1** — We are **not** building a foundation model or an embedding model.
@@ -131,7 +134,7 @@ surface serves an IDE agent, a CLI agent, or an orchestrator's worker identicall
 
 > Priority key: **M**ust / **S**hould / **C**ould / **W** = not-yet. Release = first
 > milestone that delivers it (R0 = MVP/local; R1 = team/self-host; R2 = cloud; R3 =
-> enterprise — see [§11](#11-milestones--phasing)).
+> enterprise & product completeness; R4 = launch — see [§11](#11-milestones--phasing)).
 
 ### 6.1 Ingestion & capture
 | ID | Requirement | Pri | Rel |
@@ -234,6 +237,27 @@ surface serves an IDE agent, a CLI agent, or an orchestrator's worker identicall
 | FR-59 | Plugin lifecycle: discovery, config schema, health, sandboxed failure isolation. | S | R1 |
 | FR-60 | Plugin capability + permission declarations (least privilege). | S | R2 |
 
+### 6.10 Product completeness & launch (added 2026-07-04 review)
+
+> Added after the launch-readiness review: the engine's ingestion→index→retrieve loop
+> must be **wired in the shipped runtime** (not only available as packages), the
+> dashboard must be a complete authenticated product, and launch requires public web
+> surfaces and agent-first distribution ([ADR-0035](adr/0035-public-web-platform-three-surfaces.md),
+> [ADR-0036](adr/0036-agent-first-operations.md), [ADR-0037](adr/0037-multi-project-workspaces.md)).
+
+| ID | Requirement | Pri | Rel |
+|----|-------------|-----|-----|
+| FR-62 | **Runtime source management:** register/scan/remove ingestion sources at runtime via REST + MCP + UI; scans run through the Queue port with progress over SSE; incremental rescan; audited. | M | R3 |
+| FR-63 | **Live corpus indexing:** ingested documents populate the fragment corpus, keyword/semantic/temporal indices, and the knowledge graph (code-symbol extraction + static effect-links), so `search`/`compile_context`/`get_effects` answer from the user's actual repository; manual effect-link assertion via API/MCP. | M | R3 |
+| FR-64 | **Dashboard authentication:** sign-in (API token; OIDC-ready), session handling, tenant context in the shell; zero-auth Local mode unchanged. | M | R3 |
+| FR-65 | **Account & profile surface:** professional profile page (identity, roles, tenant), API-token self-service (create/scope/revoke), admin user management. | S | R3 |
+| FR-66 | **Multi-project workspaces:** projects under a tenant with per-project sources/indices/memory/graph isolation; project switcher; API/MCP project scoping. _( [ADR-0037](adr/0037-multi-project-workspaces.md) )_ | M | R4 |
+| FR-67 | **Marketing website** on the apex domain: positioning, features, pricing (from the billing catalog), enterprise trust page; SEO/OG/sitemap. | M | R4 |
+| FR-68 | **Documentation site** on the docs subdomain (Fumadocs): quickstart, concepts, generated API reference, per-agent MCP setup guides, **self-hosted + managed-cloud deployment guides**. | M | R4 |
+| FR-69 | **Skills registry:** first-party agent skills (SKILL.md) teaching Tessera workflows; browsable `/skills` page; installable via download/CLI/MCP. | S | R4 |
+| FR-70 | **CLI & one-command onboarding:** `npx @tessera/cli init` boots Local (API + MCP), emits agent client configs (Claude Code, Cursor, Cline, …); `source add`, `token issue`, `doctor`; `llms.txt` served on public surfaces. | M | R4 |
+| FR-71 | **Remote MCP:** HTTP/streamable MCP transport with Bearer auth through the existing gateway (auth + quotas + audit) for hosted/remote agents; stdio stays the local default. | S | R4 |
+
 ---
 
 ## 7. Non-functional requirements
@@ -243,7 +267,7 @@ surface serves an IDE agent, a CLI agent, or an orchestrator's worker identicall
 | NFR-1 | **Security** | Input validation at every boundary (Zod); secrets never logged/stored; encryption in transit; encryption at rest for cloud; dependency & secret scanning in CI. |
 | NFR-2 | **AuthZ/AuthN** | OIDC for hosted modes; org RBAC; least-privilege plugins; API keys/tokens scoped & revocable. |
 | NFR-3 | **Privacy/data residency** | Local mode never makes network calls unless explicitly enabled; cloud supports region/residency and per-tenant isolation. |
-| NFR-4 | **Performance** | Targets (to be benchmarked): `search` p95 < 300 ms local; `compile_context` p95 < 2 s for a typical task at default budget; ingestion keeps up with incremental edits in near-real-time. |
+| NFR-4 | **Performance** | Targets **enforced by a repeatable benchmark suite (perf gate)**: `search` p95 < 300 ms local; `compile_context` p95 < 2 s for a typical task at default budget; ingestion keeps up with incremental edits in near-real-time; MCP/REST responses stay **token-lean** (tokens-per-answer tracked alongside latency — agents must not pay for prose). |
 | NFR-5 | **Scalability** | Stateless API horizontally scalable; ingestion/embeddings extractable to workers; storage scales SQLite→Postgres without domain change. |
 | NFR-6 | **Reliability** | Idempotent, retryable jobs; graceful degradation (e.g. compiler returns best-effort within budget); health/readiness endpoints. |
 | NFR-7 | **Observability** | OpenTelemetry traces/metrics/logs; structured logging (Pino); every compile is traceable end-to-end. |
@@ -254,7 +278,10 @@ surface serves an IDE agent, a CLI agent, or an orchestrator's worker identicall
 | NFR-12 | **Cost control** | Local-default avoids API spend; cloud tracks per-tenant usage/cost; embedding/LLM calls batched & cached. |
 | NFR-13 | **Compliance-readiness** | Audit trail, retention, data export/delete (DSR), configurable encryption — designed to support SOC2/GDPR posture. |
 | NFR-14 | **i18n-readiness** | UI strings externalized; not necessarily translated in v1. |
-| NFR-15 | **CI/CD** | Automated pipeline (GitHub Actions, [ADR-0010](adr/0010-ci-cd-github-actions.md)) runs the verification gates + dependency/secret scanning on every change; green required to merge. |
+| NFR-15 | **CI/CD** | Automated pipeline (GitHub Actions, [ADR-0010](adr/0010-ci-cd-github-actions.md)) runs the verification gates + dependency/secret scanning on every change; green required to merge; releases build + publish deployment artifacts (images, packages). |
+| NFR-16 | **Full-stack E2E** | A release gates on an end-to-end journey over the **real assembled system** (boot server → register a fixture repo source → indexed → search/compile via web **and** MCP → memory → audit), mimicking an actual user and environment — not only per-app e2e. |
+| NFR-17 | **Public-web quality** | Marketing/docs surfaces meet SEO baseline (metadata, sitemap, robots, OG) and Core Web Vitals budgets; they hold no credentials and never call the authenticated API. |
+| NFR-18 | **Supply-chain security** | SBOM generation, pinned + audited dependencies, license compliance (open-core, OQ4), signed/verifiable published artifacts (npm packages, container images). |
 
 ---
 
@@ -312,8 +339,16 @@ Selected by a **deployment profile** ([ADR-0003](adr/0003-local-first-cloud-read
 - **R2 — Managed Cloud:** multi-tenancy (FR-52/54), MCP gateway (FR-36), retention
   (FR-15), analytics (FR-47), feature flags (FR-57), plugin permissions (FR-60), **billing**
   (FR-61).
-- **R3 — Enterprise:** governance/audit UI (FR-48/55), full RBAC/SSO, compliance posture
-  (NFR-13), data residency.
+- **R3 — Enterprise & product completeness:** governance/audit UI (FR-48/55 — done),
+  **close the core loop in the shipped runtime** (FR-62/63), dashboard authentication +
+  account/profile (FR-64/65), remaining dashboard views (FR-42/43/45/46), API hardening
+  (NFR-1), compliance completion — retention (FR-15), DSR export/delete (NFR-13) —
+  full-stack E2E (NFR-16) and performance benchmarks (NFR-4).
+- **R4 — Launch:** multi-project workspaces (FR-66), public web platform — marketing
+  (FR-67), docs + deployment guides (FR-68), skills registry (FR-69) — agent-first
+  distribution (FR-70/71), self-hosted profile completion + deployment artifacts
+  (FR-51/NFR-15), analytics & usage (FR-47/NFR-12), feature flags + plugin permissions
+  (FR-57/59/60), launch readiness (license, SBOM — NFR-18).
 
 ## 12. Open questions
 
@@ -326,7 +361,8 @@ Selected by a **deployment profile** ([ADR-0003](adr/0003-local-first-cloud-read
 - **OQ4** — License model — **RESOLVED 2026-07-03: open-core** (permissive-OSS core + a paid Managed
   Cloud / enterprise tier). Confirms [ADR-0011](adr/0011-billing-dodo-payments.md) (billing is committed,
   cloud-only, behind a `Billing` port) and unblocks **F-030**.
-- **OQ5** — Code-symbol extraction approach across languages (tree-sitter vs LSP) for FR-16.
+- **OQ5** — Code-symbol extraction approach across languages (tree-sitter vs LSP) for
+  FR-16/FR-63 — **decides at F-040** (live KG population) via an ADR before that code lands.
 
 ## 13. References
 
@@ -338,7 +374,9 @@ Selected by a **deployment profile** ([ADR-0003](adr/0003-local-first-cloud-read
   [0007](adr/0007-cloudflare-tunnel-documented-not-built.md) ·
   [0008](adr/0008-brand-tessera-and-package-scope.md) ·
   [0009](adr/0009-frontend-stack-and-design-system.md) ·
-  [0010](adr/0010-ci-cd-github-actions.md) · [0011](adr/0011-billing-dodo-payments.md)
+  [0010](adr/0010-ci-cd-github-actions.md) · [0011](adr/0011-billing-dodo-payments.md) ·
+  [0035](adr/0035-public-web-platform-three-surfaces.md) ·
+  [0036](adr/0036-agent-first-operations.md) · [0037](adr/0037-multi-project-workspaces.md)
 - [`architecture/ARCHITECTURE.md`](architecture/ARCHITECTURE.md) ·
   [`design/DESIGN-SYSTEM.md`](design/DESIGN-SYSTEM.md) ·
   [`REQUIREMENTS-COVERAGE.md`](REQUIREMENTS-COVERAGE.md) ·

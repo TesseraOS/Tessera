@@ -2,7 +2,7 @@
   "$schemaRef": "./schemas/feature_list.schema.json",
   "version": 1,
   "project": "tessera",
-  "updated": "2026-07-03",
+  "updated": "2026-07-04",
   "policy": {
     "wip_limit": 1,
     "ordering": "by release, then id; respect blockedBy"
@@ -19,7 +19,8 @@
     "R0",
     "R1",
     "R2",
-    "R3"
+    "R3",
+    "R4"
   ],
   "features": [
     {
@@ -1192,6 +1193,757 @@
         "E-003"
       ],
       "notes": "Done 2026-07-03 (R2 COMPLETE — the last R2 must): real per-tenant row isolation (FR-52) across every domain store, closing the F-025 seam. ADR-0033. Design: promote the tenant primitive TenantId + DEFAULT_TENANT_ID to @tessera/core (dependency-free base; @tessera/api/auth/model re-exports — public API unchanged, E-006), then add a `forTenant(tenantId): Self` scoped view to every store/retriever/service whose base is bound to DEFAULT_TENANT_ID (so every existing test + the zero-auth Local profile are byte-for-byte unchanged; tenancy engages only when a non-default tenantId is threaded). Enforcement lives IN the adapter (a tenant column / composite PK / vec0 per-tenant table injected on write + filtered on every read), not a bypassable wrapper. Per store: VectorStore.forTenant (sqlite-vec = per-tenant vec0 table; pgvector = tenant column + composite PK (tenant,id); shared vector conformance gained an isolation case — pgvector VERIFIED LIVE against the Docker container). MemoryStore/MemoryService.forTenant (memories.tenant_id + additive ALTER migration; isolation conformance). GraphStore/KnowledgeGraphService.forTenant (nodes/edges tenant_id + composite PK since nodeIdFor(kind,key) is deterministic; tenant predicate in every query AND both arms of the getEffects recursive CTE; isolation conformance). Retriever.forTenant on the port + all 5 retrievers + HybridRetriever.forTenant (keyword FTS5 tenant column, temporal composite PK — both filter their owned indices; semantic/graph/symbolic delegate to the scoped stores; keyword/temporal have adapter isolation tests). ContextCompiler.forTenant (scopes retriever + graph; folds a non-default tenantId into the CompilationKey so a shared cache stays tenant-safe). NO wire change: Memory/ContextPackage/CompileRequest/REST/MCP schemas keep NO tenant field — isolation is a server-side storage guarantee driven by AuthContext.tenantId → OpenAPI + generated SDK unaffected. Threading: REST routes call services.X.forTenant(tenantOf(request)) (new auth helper; default → 'default'); MCP tool handlers use guard()'s returned AuthContext.tenantId (ungated → default). Effect-link ripple handled: @tessera/observability instrumentServices' tracing Proxy special-cases forTenant (re-wrap the scoped service, don't Promise-ify it) — E-015. +tests: storage vector isolation (sqlite-vec + pgvector-live) · memory + graph store isolation conformance (in-memory + sqlite) · keyword + temporal adapter isolation · compiler forTenant isolation + key.tenant · api auth e2e cross-tenant memory (acme writes, globex 404s + empty list). Gates green workspace-wide: state (37 features, 19 effect-links) · format · typecheck 30 · lint 17 · test 30 (storage 37 w/ PG, memory 27, knowledge-graph 25, retrieval 33, context-compiler 36) · build 17 · e2e 16 (api 33 incl. cross-tenant, mcp 11, web 5 WCAG). Effects E-018 (data-plane isolation REALIZED — no longer a seam) + E-001/E-007/E-010/E-011/E-012/E-013 (each port gained forTenant + isolation conformance) + E-006 (core TenantId) + E-003 (routes/tools thread tenantId; schemas unchanged) + E-015 (observability Proxy). DEFERRED as documented seams: Postgres-backed memory/graph stores (still SQLite-only; they'll inherit the same tenant_id contract), cross-tenant admin ops, per-tenant quotas/usage + tenant lifecycle (create/delete/migrate), and ingestion populating per-tenant retrieval/vector indices (same forTenant seam)."
+    },
+    {
+      "id": "F-038",
+      "title": "Runtime source management: ingestion wired into the shipped runtime + REST/MCP surface + SSE progress",
+      "requirements": [
+        "FR-62",
+        "FR-6",
+        "FR-7"
+      ],
+      "service": "api",
+      "package": "@tessera/config",
+      "release": "R3",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-006",
+        "F-015",
+        "F-032"
+      ],
+      "acceptance": [
+        "The 2026-07-04 review's #1 finding closed: @tessera/ingestion runs INSIDE the shipped runtime. Config gains a `sources` section + a persistent SourceRegistry (SQLite over the storage handle) so registered sources survive restarts; createLocalRuntime constructs the ingestion coordinator + worker over the Queue port, wired to the runtime DocumentSink, the memory-extraction sink (F-017), and the shared ApiEventBus so scans stream document.ingested/removed + scan lifecycle events on GET /v1/events (FR-38)",
+        "REST: /v1/sources (list/register/get/remove) + POST /v1/sources/:id/scan + scan status — Zod → OpenAPI, SDK regenerated, guarded by a new sources:manage permission (RBAC catalog + ROLE_PERMISSIONS extended), audit-flagged (E-020); MCP tools add_source/list_sources/scan_source wrap the SAME services (ADR-0036 parity rule; gateway TOOL_PERMISSIONS extended)",
+        "Agent-first proof: an agent (MCP or REST, no UI) registers a filesystem or git source, triggers a scan, observes progress, and the scan is incremental + idempotent on re-run (content-hash, F-006); refs are tenant-scoped through the forTenant seam (ADR-0033)",
+        "The API/MCP parity rule (ADR-0036) is recorded in .harness/rules so the evaluator enforces it; unit + e2e (REST route, MCP tool, SSE progress over a live socket) green; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-009",
+        "E-014",
+        "E-003",
+        "E-018",
+        "E-020"
+      ],
+      "notes": "Keystone of R3 (ADR-0036). Spans @tessera/config (composition) + @tessera/api (routes) + @tessera/mcp (tools). Until this lands the product cannot ingest a repo end-to-end outside tests — connectors, pipeline, redaction, and extraction all exist (F-006/F-017) but are not composed into the bootable runtime (F-032). Plan first (.harness/plans/); keep increments small: (1) registry+config, (2) runtime wiring+events, (3) REST, (4) MCP, (5) rules update."
+    },
+    {
+      "id": "F-039",
+      "title": "Live corpus indexing: ingested documents populate fragments + keyword/semantic/temporal indices",
+      "requirements": [
+        "FR-63",
+        "FR-8",
+        "FR-21",
+        "FR-22",
+        "FR-24",
+        "NFR-12"
+      ],
+      "service": "api",
+      "package": "@tessera/config",
+      "release": "R3",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-038"
+      ],
+      "acceptance": [
+        "A persistent indexing DocumentSink (composition root) writes ingested documents as blob fragments (existing FragmentSource contract) AND indexes them: keyword (FTS5), temporal (timestamps), semantic (embed → VectorStore, batched + content-hash-cached so unchanged chunks are never re-embedded, NFR-12); document removal removes index entries; re-scan is idempotent (no duplicate index rows)",
+        "search/compile answer from the user's actual repository: an integration test ingests a fixture repo through the real pipeline and asserts POST /v1/search returns its files with multi-signal attribution and POST /v1/compile produces a budget-bounded package citing them",
+        "Tenant scoping respected end-to-end (indices written through the forTenant/scoped views); chunking strategy documented (plan); embedding remains offline-testable (fake provider drives the deterministic tests, transformers env-guarded)",
+        "Workspace gates green; compile-cache invalidation on index writes addressed (at minimum: document the staleness contract; ideally key on a corpus version)"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test"
+      ],
+      "effects": [
+        "E-008",
+        "E-009",
+        "E-012",
+        "E-013",
+        "E-014"
+      ],
+      "notes": "Second half of closing the core loop: F-038 makes scans run; F-039 makes their output retrievable. The corpus seam was designed for exactly this (F-015 blob FragmentSource + Runtime.keyword/temporal exposure F-018)."
+    },
+    {
+      "id": "F-040",
+      "title": "Code-symbol extraction → live knowledge-graph population + static effect-links + manual assertion surface (resolves OQ5)",
+      "requirements": [
+        "FR-63",
+        "FR-16",
+        "FR-18",
+        "FR-19"
+      ],
+      "service": "api",
+      "package": "@tessera/ingestion",
+      "release": "R3",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-039"
+      ],
+      "acceptance": [
+        "OQ5 decided by ADR before code (tree-sitter vs LSP vs TS compiler API; local-first, multi-language direction with TS/JS first-class); an ingestion processor extracts files/symbols/imports into GraphStore nodes/edges (file/symbol/module) incrementally (a re-scan updates only changed files' subgraphs)",
+        "Static effect-links derived from the extracted import/call/reference edges (existing F-008 inversion logic) so GET /v1/effects returns REAL ranked dependents with paths on the fixture repo — the flagship differentiator becomes live product behavior, not just a service capability",
+        "Manual assertion surface (ADR-0036 parity): POST /v1/effects (assert an effect-link with rationale/confidence) + an assert_effect MCP tool, RBAC-guarded + audited; OpenAPI + SDK regenerated",
+        "Deterministic offline tests (fixture sources); e2e for the REST+MCP assertion path; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-002",
+        "E-009",
+        "E-011",
+        "E-003"
+      ],
+      "notes": "Without this the knowledge graph + get_effects are empty in production — the product's #2 differentiator is currently unreachable by users. ADR for OQ5 is part of this feature's plan step."
+    },
+    {
+      "id": "F-041",
+      "title": "Dashboard: Sources & Settings — connector management UI with live scan progress",
+      "requirements": [
+        "FR-46",
+        "FR-62"
+      ],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R3",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [
+        "F-038"
+      ],
+      "acceptance": [
+        "/sources replaces the ComingSoon stub: list registered sources with status/last-scan, register (filesystem/git/github with connector-specific validated forms), remove, trigger scan; live scan progress via the /v1/events SSE stream; full loading/empty/error states",
+        "/settings replaces the stub: deployment profile, budgets, providers, and audit/retention posture rendered from the API (read-only where the API has no write surface — no fake controls)",
+        "Consumes the typed client; enterprise-grade per DESIGN-SYSTEM.md; WCAG AA (axe e2e) + screenshot-verified; nav updated in BOTH nav sources (app-shared + lib/nav)",
+        "Workspace gates green incl. web e2e"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-004"
+      ]
+    },
+    {
+      "id": "F-042",
+      "title": "Dashboard: memory browser + Monaco authoring + timeline",
+      "requirements": [
+        "FR-45",
+        "FR-43",
+        "FR-13"
+      ],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R3",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "/memory replaces the ComingSoon stub: browse/filter by memory kind + scope, view a lineage's full version history (supersede chain rendered, FR-12), capture and edit memories with a Monaco editor (lazy-loaded, code-split) + metadata form — via the existing /v1/memory surface",
+        "A timeline view (FR-43) renders decisions/lessons/incidents/ingest activity in time order from memory lineages + audit events + SSE (live updates append)",
+        "Enterprise-grade per DESIGN-SYSTEM.md; WCAG AA (axe) + screenshot-verified; virtualized lists for large memory sets; workspace gates green incl. web e2e"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-010",
+        "E-003",
+        "E-004"
+      ]
+    },
+    {
+      "id": "F-043",
+      "title": "Dashboard: knowledge-graph & effect-links visualization (React Flow)",
+      "requirements": [
+        "FR-42",
+        "FR-19"
+      ],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R3",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [
+        "F-040"
+      ],
+      "acceptance": [
+        "/graph replaces the ComingSoon stub: an explorable React Flow view of KG nodes/edges (type filters, search-to-focus, neighborhood expansion) fed by a real graph query surface (extend /v1 as needed — read-only, Zod → OpenAPI + SDK)",
+        "Effects mode: pick a symbol/file → get_effects renders ranked dependents with the PATHS highlighted and per-link rationale/confidence (provenance-first, DESIGN-SYSTEM §7)",
+        "Performs on large graphs (level-of-detail/virtualized rendering; measured on a ≥5k-node fixture); code-split (heavy view lazy-loaded, web-perf conscious)",
+        "WCAG AA (axe; keyboard alternative for graph navigation documented) + screenshot-verified; workspace gates green incl. web e2e"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-002",
+        "E-011",
+        "E-003",
+        "E-004"
+      ]
+    },
+    {
+      "id": "F-044",
+      "title": "API hardening: rate limiting, security headers, SSE auth, per-profile CORS, request-id",
+      "requirements": [
+        "NFR-1",
+        "NFR-2"
+      ],
+      "service": "api",
+      "package": "@tessera/api",
+      "release": "R3",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-025"
+      ],
+      "acceptance": [
+        "Per-principal (fallback per-IP) rate limiting on /v1 behind a limiter port (reuse the F-026 QuotaLimiter pattern; in-memory adapter, distributed store = documented seam) → RATE_LIMITED 429 envelope + standard RateLimit headers; limits configurable per profile (config section + TESSERA_* env, documented)",
+        "Security headers on every response (CSP appropriate per surface, X-Content-Type-Options, frame-ancestors deny, HSTS behind a TLS-enabled flag; @fastify/helmet or explicit hooks — ADR-worthy only if deviating); OpenAPI/docs endpoints keep working",
+        "GET /v1/events (SSE) authenticates like every other route when a non-none provider is configured (today it must not be an unauthenticated bypass); per-profile CORS allowlist from config replaces the blanket registration (local default stays permissive loopback, ADR-0035 app↔api cross-origin supported)",
+        "Request-id/correlation: accept inbound x-request-id (else generate), echo it, thread it into logs/traces; e2e: 429 path, headers present, SSE 401 under token mode, CORS allowlist honored; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-014",
+        "E-018"
+      ]
+    },
+    {
+      "id": "F-045",
+      "title": "Dashboard authentication & session + adopt @tessera/sdk (closes ADR-0022)",
+      "requirements": [
+        "FR-64",
+        "NFR-2"
+      ],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R3",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-034",
+        "F-044"
+      ],
+      "acceptance": [
+        "Sign-in flow: API-token entry (local/self-host; OIDC hosted flow = documented seam wired to the F-036 provider) with the credential held securely (httpOnly cookie via a Next route handler proxy or equivalent — NEVER localStorage; decision recorded in the plan/ADR), sign-out, 401 → sign-in redirect with return path",
+        "The app shell shows the signed-in identity + tenant (replacing the 'Local mode · no account' placeholder when auth is active); zero-auth Local mode auto-signs-in and is byte-for-byte unchanged in behavior",
+        "apps/web migrates from lib/api to the generated @tessera/sdk (ADR-0022's deferred completion) with an auth-aware fetch; all existing views keep working (search/inspector/audit/governance tests stay green)",
+        "e2e covers both modes (zero-auth + token mode against a real token-mode server); WCAG AA; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-018",
+        "E-004"
+      ]
+    },
+    {
+      "id": "F-046",
+      "title": "Account & profile: professional profile page, API-token self-service, admin user management",
+      "requirements": [
+        "FR-65",
+        "FR-48",
+        "NFR-2"
+      ],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R3",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [
+        "F-045"
+      ],
+      "acceptance": [
+        "A professional /profile page (DESIGN-SYSTEM-grade): identity (name/email/avatar initials), roles + effective permissions, tenant/org, plan (from billing), connected-agent hints; no fake data — every field backed by the API",
+        "API-token self-service: /v1/tokens routes (list/create with scopes + expiry/revoke; secret shown exactly once) over the existing TokenStore port, RBAC-guarded + audited, OpenAPI + SDK regenerated + MCP parity tool (ADR-0036); UI in profile/settings with copy-once UX",
+        "Admin user management view (FR-48 completion): principals/roles listing + role assignment where the store supports it (local token principals today; OIDC-user listing = documented seam)",
+        "axe AA + screenshot-verified; e2e (issue token in UI → authenticate with it against the API); workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-018",
+        "E-003",
+        "E-004",
+        "E-020"
+      ]
+    },
+    {
+      "id": "F-047",
+      "title": "Compliance completion: memory retention policies, DSR export/delete, MCP-surface audit",
+      "requirements": [
+        "FR-15",
+        "FR-55",
+        "NFR-13"
+      ],
+      "service": "api",
+      "package": "@tessera/api",
+      "release": "R3",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [
+        "F-027"
+      ],
+      "acceptance": [
+        "Retention & expiry policies per memory kind/scope (FR-15 — flagged R2 but never delivered): config-driven, applied by a prune pass (schedule seam), superseded-version pruning honoring the never-silently-mutate contract; policy reads/writes audited",
+        "DSR (NFR-13): tenant-scoped data export (a complete JSON bundle: memories + lineages, graph, sources, audit trail) and tenant data delete, admin:manage-guarded, audited, e2e-verified against a seeded tenant; documented for operators",
+        "MCP-surface audit recording (closes the F-027 seam): gateway-guarded tool calls record AuditEvents through the same injected AuditLog (actor/tenant/tool/outcome), verified by an MCP e2e",
+        "Workspace gates green; encryption-at-rest posture documented (SQLite/Postgres options + key handling guidance) in docs"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-020",
+        "E-010",
+        "E-003"
+      ]
+    },
+    {
+      "id": "F-048",
+      "title": "Full-stack E2E: real server + fixture repo + real web + real MCP client (new e2e-full gate)",
+      "requirements": [
+        "NFR-16",
+        "NFR-8"
+      ],
+      "service": "root",
+      "package": "—",
+      "release": "R3",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-038",
+        "F-039",
+        "F-041",
+        "F-045"
+      ],
+      "acceptance": [
+        "A new full-stack e2e suite mimics an actual user + environment: boot the REAL @tessera/server (Local profile, temp dirs, ephemeral port; fake embeddings by default, real transformers env-guarded) → register a fixture repository as a source → scan completes → indexed",
+        "Human journey: Playwright drives the REAL apps/web (pointed at that live API — not its own stub server): sign-in (token mode) → sources shows the scan → search returns repo content → inspector compiles a cited package → capture a memory → audit shows the trail",
+        "Agent journey: a real MCP client session against the same runtime exercises search/compile_context/get_effects/capture_memory (+ add_source per ADR-0036) and asserts token-lean, budget-bounded responses",
+        "Registered as the e2e-full gate (gates.json planned→active with this feature) + a CI job; deterministic fixture, flake-budgeted; workspace gates green"
+      ],
+      "verification": [
+        "state",
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-005"
+      ]
+    },
+    {
+      "id": "F-049",
+      "title": "Performance benchmarks & budgets: NFR-4 enforced (latency + token-efficiency) + web-perf activation",
+      "requirements": [
+        "NFR-4",
+        "NFR-12"
+      ],
+      "service": "root",
+      "package": "—",
+      "release": "R3",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-039"
+      ],
+      "acceptance": [
+        "A repeatable benchmark harness over a versioned fixture corpus measures: search p95 (< 300 ms local), compile p95 (< 2 s at default budget), incremental ingest latency, and MCP/REST tokens-per-answer (ADR-0036 token-lean requirement) — results emitted as a machine-readable report + tracked in-repo",
+        "Registered as the perf gate (gates.json planned→active) with thresholds failing CI on regression; NFR-4 stops being an unbenchmarked claim (this was an R0 exit criterion left unmeasured — flagged 2026-07-04)",
+        "web-perf gate ACTIVATED for apps/web (bundle-size budget + Lighthouse CI): heavy views verified code-split, initial bundle lean (ADR-0021 finally realized)",
+        "Any misses produce tuning work items (not silently lowered thresholds); workspace gates green"
+      ],
+      "verification": [
+        "state",
+        "typecheck",
+        "lint",
+        "test"
+      ],
+      "effects": [
+        "E-005",
+        "E-013"
+      ]
+    },
+    {
+      "id": "F-050",
+      "title": "Multi-project workspaces: (tenantId, projectId) scope across the data plane + project switcher (ADR-0037)",
+      "requirements": [
+        "FR-66",
+        "FR-52"
+      ],
+      "service": "api",
+      "package": "@tessera/storage",
+      "release": "R4",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-037",
+        "F-038",
+        "F-039"
+      ],
+      "acceptance": [
+        "Project entity + scope model per ADR-0037: adapter-enforced (tenantId, projectId) isolation extending forTenant across vector/memory/graph/retrieval/fragments/sources/compile-cache keys; reserved `default` project keeps every existing test + single-project deployment byte-for-byte unchanged; conformance suites gain project-isolation cases",
+        "Control plane: /v1/projects CRUD + MCP tools (ADR-0036 parity) + audited lifecycle; REST/MCP project selection (one documented mechanism in OpenAPI; omitted → default), project id validated against the caller's tenant on every request",
+        "Dashboard: project switcher in the app shell + create/manage projects; per-project sources/search/compile verified in e2e (cross-project isolation: project A's content never surfaces in project B)",
+        "Migration assigns existing rows to the default project via the F-024 runner (additive, reversible); workspace gates green incl. e2e"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-001",
+        "E-007",
+        "E-010",
+        "E-011",
+        "E-012",
+        "E-013",
+        "E-003",
+        "E-018"
+      ]
+    },
+    {
+      "id": "F-051",
+      "title": "Marketing site (apps/marketing) on the apex domain — positioning, features, pricing, trust (ADR-0035)",
+      "requirements": [
+        "FR-67",
+        "NFR-17"
+      ],
+      "service": "web",
+      "package": "@tessera/marketing",
+      "release": "R4",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-030"
+      ],
+      "acceptance": [
+        "New apps/marketing (@tessera/marketing) Next.js app per ADR-0035 with its own service-scoped AGENTS.md; DESIGN-SYSTEM tokens; static-first (no authenticated API calls, holds no credentials — NFR-17); enterprise-grade visual quality (frontend bar: screenshot-verified)",
+        "Pages: home (hero, how-it-works, the three differentiators — Context Compiler, effect-links, governance — beyond the unabyss.com reference), features, pricing rendered from the @tessera/billing PLANS catalog (no hand-copied numbers), enterprise/trust (security/compliance posture), and a /skills route (placeholder until F-054); CTAs → the app subdomain",
+        "SEO baseline: per-page metadata, OG images, sitemap.xml, robots.txt + llms.txt (agent-readable index, ADR-0036); Core Web Vitals budget wired into the web-perf gate for this app",
+        "axe WCAG AA e2e; workspace gates green (new app joins typecheck/lint/test/build/e2e pipelines + CI)"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-004",
+        "E-019"
+      ]
+    },
+    {
+      "id": "F-052",
+      "title": "@tessera/cli: one-command onboarding — init/serve/source add/token issue/mcp-config emit/doctor (ADR-0036)",
+      "requirements": [
+        "FR-70"
+      ],
+      "service": "root",
+      "package": "@tessera/cli",
+      "release": "R4",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-038",
+        "F-034"
+      ],
+      "acceptance": [
+        "A new @tessera/cli package (bin `tessera`): `init` scaffolds config + data dir and boots the Local profile (API + MCP) with sensible defaults; `serve` runs it; `source add <path|git-url>` registers + scans via the F-038 surface; `token issue` wraps the F-034 flow; `doctor` checks node/config/storage/embeddings health",
+        "`mcp-config` emits ready-to-paste MCP client config for the major agents (Claude Code, Cursor, Cline, Codex CLI, Continue — table-driven so new agents are data, not code); the one-command story `npx @tessera/cli init` → a connected agent works end-to-end and is proven by an integration test",
+        "Production-grade CLI UX: clear errors, --json output mode for agents (ADR-0036), no interactive-only paths (every prompt has a flag), works on Windows/macOS/Linux (NFR-10)",
+        "Unit + integration tests (boots real Local runtime in temp dirs); npm publish pipeline lands with F-059; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test"
+      ],
+      "effects": [
+        "E-014",
+        "E-018"
+      ]
+    },
+    {
+      "id": "F-053",
+      "title": "Docs site (apps/docs, Fumadocs) on the docs subdomain: quickstart, concepts, API reference, agent guides (ADR-0035)",
+      "requirements": [
+        "FR-68",
+        "NFR-17"
+      ],
+      "service": "web",
+      "package": "@tessera/docs",
+      "release": "R4",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-052"
+      ],
+      "acceptance": [
+        "New apps/docs (@tessera/docs) built with Fumadocs per ADR-0035 (MDX in-repo, versioned with the code, built-in search), DESIGN-SYSTEM tokens, service-scoped AGENTS.md; llms.txt + llms-full.txt served (ADR-0036)",
+        "Information architecture: Quickstart (the F-052 one-command path), Concepts (Context Compiler, effect-links, memory, knowledge graph, provenance — from the PRD/architecture, rewritten for users), How-to guides (sources, tokens, tenants/projects, governance/audit), Reference (generated API reference from the /v1 openapi.json via the SDK generate artifact + MCP tool reference + CLI reference + config/env reference from .env.example)",
+        "Per-agent MCP setup guides (Claude Code, Cursor, Cline, Codex, Continue) with copy-paste config; deployment guides section EXISTS with the Local + self-host (compose) pages (cloud deploy pages complete in F-056)",
+        "SEO + CWV budget (NFR-17, web-perf gate); axe WCAG AA e2e; a docs link-check in CI (no broken internal links); workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-004",
+        "E-003"
+      ]
+    },
+    {
+      "id": "F-054",
+      "title": "Skills registry: first-party agent skills (SKILL.md) + /skills page + install via download/CLI/MCP (ADR-0036)",
+      "requirements": [
+        "FR-69"
+      ],
+      "service": "web",
+      "package": "—",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [
+        "F-051"
+      ],
+      "acceptance": [
+        "A versioned skills/ registry in-repo: first-party SKILL.md skills that teach agents Tessera workflows — at minimum: compile-before-coding (use compile_context instead of reading whole files), effects-before-editing (get_effects before touching a symbol), capture-memory (record decisions/lessons after work), project-onboarding (bootstrap a new repo into Tessera); each skill has a manifest (name/description/version/compatible agents) validated in CI",
+        "The /skills page on the marketing site (beyond unabyss.com/skills: category filters, per-skill detail with what-it-does/why/install) renders FROM the registry (no hand-copied content)",
+        "Install paths: direct download, `tessera skills install <name>` (CLI), and an MCP list_skills/get_skill tool so a connected agent can fetch skills without a browser",
+        "Skills tested against a real agent session (documented transcript or scripted MCP e2e); axe AA on the page; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-004",
+        "E-003"
+      ]
+    },
+    {
+      "id": "F-055",
+      "title": "Remote MCP: HTTP/streamable transport with Bearer auth through the gateway (auth + quotas + audit)",
+      "requirements": [
+        "FR-71",
+        "FR-36"
+      ],
+      "service": "api",
+      "package": "@tessera/mcp",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [
+        "F-026",
+        "F-044"
+      ],
+      "acceptance": [
+        "The MCP server is reachable over the SDK's streamable-HTTP transport (served by apps/server alongside REST, config-gated), with Bearer credentials populating authInfo so the EXISTING F-026 gateway authenticates, authorizes (RBAC), meters quotas, and (with F-047) audits every call — remote MCP never bypasses the gateway",
+        "stdio remains the local default; the HTTP transport requires a non-none auth mode (no unauthenticated remote MCP, NFR-2); session lifecycle + connection teardown are clean under client disconnect",
+        "e2e: a real MCP client connects over HTTP with a token issued by the F-034 store, calls tools with RBAC + quota enforcement verified; unauthenticated connection rejected",
+        "Docs (F-053) gain the remote-MCP setup page; OpenAPI/infra docs updated; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-018"
+      ]
+    },
+    {
+      "id": "F-056",
+      "title": "Self-hosted profile completion + deployment artifacts: PG memory/graph stores, S3, BullMQ, Dockerfiles, full compose, release CD, deploy guides",
+      "requirements": [
+        "FR-51",
+        "FR-53",
+        "NFR-15",
+        "NFR-10"
+      ],
+      "service": "root",
+      "package": "—",
+      "release": "R4",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-023",
+        "F-053"
+      ],
+      "acceptance": [
+        "Profile `self-hosted` boots for real: Postgres-backed MemoryStore + GraphStore adapters (same conformance suites incl. tenant/project isolation, env-guarded like F-023), S3-compatible BlobStore adapter, BullMQ/Redis Queue adapter — createRuntime selects them by config with NO domain change (FR-53; closes the F-023 deferral where non-local profiles throw)",
+        "Deployment artifacts: production Dockerfiles for apps/server (API+MCP) and apps/web (+ marketing/docs), a full docker-compose stack (server, web, postgres+pgvector, minio, redis) that stands up a working self-hosted Tessera from scratch, verified end-to-end",
+        "Release CD (NFR-15): tagged releases build + publish container images (and prep npm publish for sdk/cli); CI gains the compose-boot smoke",
+        "Deployment guides in docs (F-053 section completed): self-host via compose, managed-cloud walkthrough (a mainstream provider end-to-end incl. TLS, domains per ADR-0035 topology, env/secrets, backups via F-024), production checklist (auth mode, CORS allowlist, rate limits, retention, telemetry); workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-001",
+        "E-007",
+        "E-014",
+        "E-005"
+      ]
+    },
+    {
+      "id": "F-057",
+      "title": "Analytics & usage: per-tenant metering, persistent subscriptions, analytics dashboard + billing UI",
+      "requirements": [
+        "FR-47",
+        "NFR-12",
+        "FR-61"
+      ],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [
+        "F-030",
+        "F-035",
+        "F-046"
+      ],
+      "acceptance": [
+        "Usage metering (NFR-12): a persistent per-tenant usage store (compiles/searches/ingested docs/tokens compiled, time-bucketed) fed at the API/MCP boundary; monthly-compile entitlement enforcement closes the F-035 seam; usage queryable via /v1/usage (admin-guarded, OpenAPI + SDK)",
+        "Persistent SubscriptionStore (closes the F-030 in-memory seam) so plan state survives restarts; webhook-driven updates verified",
+        "Dashboard: an Analytics view (FR-47 — retrieval quality proxies, usage, latency from the observability metrics, cost posture) + a Billing view (current plan, entitlements, usage vs. limits, Dodo checkout/upgrade flow behind the existing port); provenance-first charts (Recharts per DESIGN-SYSTEM)",
+        "axe AA + screenshots; e2e incl. metered request → usage visible; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-019",
+        "E-003",
+        "E-004",
+        "E-014"
+      ]
+    },
+    {
+      "id": "F-058",
+      "title": "Feature flags + plugin permissions & health (FR-57/59/60 completion)",
+      "requirements": [
+        "FR-57",
+        "FR-59",
+        "FR-60"
+      ],
+      "service": "api",
+      "package": "@tessera/plugin-host",
+      "release": "R4",
+      "priority": "could",
+      "status": "backlog",
+      "blockedBy": [
+        "F-013"
+      ],
+      "acceptance": [
+        "Feature flags (FR-57): a config-backed FlagProvider port (static local adapter; remote provider = seam) evaluated per tenant at the API boundary; flags surfaced read-only in the dashboard settings",
+        "Plugin health (FR-59 completion): health() in the plugin lifecycle + host aggregation exposed on /ready details; failure isolation extended with restart/backoff policy",
+        "Plugin permissions (FR-60): capability/permission declarations in the plugin manifest (least privilege — e.g. a connector declares network/filesystem needs) validated at load, denied-by-default beyond declarations, surfaced in the host API",
+        "Unit + integration tests; workspace gates green; ADR if the flag/permission model deviates from the plugin-host ADR-0020 envelope"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test"
+      ],
+      "effects": [
+        "E-016",
+        "E-014"
+      ]
+    },
+    {
+      "id": "F-059",
+      "title": "Launch readiness: license (open-core), SBOM/supply-chain, release process, npm publish, repo polish",
+      "requirements": [
+        "NFR-18",
+        "NFR-15"
+      ],
+      "service": "root",
+      "package": "—",
+      "release": "R4",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-051",
+        "F-053"
+      ],
+      "acceptance": [
+        "License executed per OQ4 (open-core): LICENSE file(s) for the OSS core + the enterprise/cloud boundary documented (which packages are which), package.json license fields set, NOTICE.md verified complete; README rewritten for launch (current state, quickstart via CLI, links to docs/marketing) — the 2026-07-04 review found it still says 'pre-coding'",
+        "Supply-chain (NFR-18): SBOM generated in CI (CycloneDX), dependency pinning/audit policy enforced, provenance/signing for published artifacts (npm --provenance, image signing), SECURITY.md (vuln reporting policy)",
+        "Release process: versioning + changelog tooling (changesets or equivalent, ADR), tagged release workflow publishing npm packages (@tessera/sdk, @tessera/cli) + images (with F-056), release checklist in the harness governance docs",
+        "Brand/domain checklist from ADR-0008 executed (domain + trademark verified before public launch); state gate green (this feature is largely docs/CI — verification = state + build + CI run evidence)"
+      ],
+      "verification": [
+        "state",
+        "build"
+      ],
+      "effects": [
+        "E-005"
+      ]
     }
   ]
 }

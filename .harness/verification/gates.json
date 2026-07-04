@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updated": "2026-06-30",
-  "description": "Ordered verification gates. Run in order; stop at first failure. Code gates went 'active' with the F-001 scaffold. 'e2e' went 'active' with F-011 (the REST API — first user-facing surface). Web gates ('a11y', 'web-perf') are 'planned' and activate with F-028 (the dashboard); see ADR-0021.",
+  "updated": "2026-07-04",
+  "description": "Ordered verification gates. Run in order; stop at first failure. Code gates went 'active' with the F-001 scaffold. 'e2e' went 'active' with F-011 (the REST API — first user-facing surface). 'a11y' active since F-028 (ADR-0021). 'web-perf' now activates with F-049 (it was slated for F-028 and never activated — drift caught in the 2026-07-04 launch-readiness review). 'e2e-full' (NFR-16) activates with F-048; 'perf' (NFR-4) activates with F-049.",
   "gates": [
     {
       "id": "state",
@@ -73,7 +73,23 @@
       "status": "planned",
       "command": "pnpm -w test:perf",
       "requiredFor": ["web"],
-      "description": "Frontend performance budget (bundle size / Lighthouse) for apps/web. Planned (ADR-0021); activates with F-028. Enforces code-split of heavy views and a lean initial bundle. Exact command finalized at F-028."
+      "description": "Frontend performance budget (bundle size / Lighthouse CI) for every web app (dashboard + marketing + docs). Planned (ADR-0021); ACTIVATES WITH F-049 (drift fix: originally 'activates with F-028' but was never turned on). Enforces code-split of heavy views, a lean initial bundle, and Core Web Vitals budgets on public surfaces (NFR-17)."
+    },
+    {
+      "id": "e2e-full",
+      "order": 9,
+      "status": "planned",
+      "command": "pnpm -w test:e2e:full",
+      "requiredFor": ["release"],
+      "description": "Full-stack end-to-end (NFR-16): boot the REAL server (Local profile) → register a fixture repo source → indexed → Playwright drives the real dashboard against that live API (sign-in, sources, search, inspector, memory, audit) AND a real MCP client session exercises the tools. Mimics an actual user + environment. Activates with F-048; exact command finalized there."
+    },
+    {
+      "id": "perf",
+      "order": 10,
+      "status": "planned",
+      "command": "pnpm -w bench",
+      "requiredFor": ["release"],
+      "description": "Backend performance benchmarks (NFR-4): search p95 < 300 ms local, compile p95 < 2 s at default budget, incremental-ingest latency, and MCP/REST tokens-per-answer (ADR-0036 token-lean requirement) over a versioned fixture corpus; thresholds fail CI on regression. Activates with F-049; exact command finalized there."
     }
   ]
 }

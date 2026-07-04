@@ -57,12 +57,49 @@ zero external services or API keys.
   (FR-15/47/57/60).
 - Cost/usage metering per tenant (NFR-12).
 
-## R3 — Enterprise
-**Goal:** adoption by regulated organizations.
+## R3 — Enterprise & product completeness
+**Goal:** the shipped runtime does everything the packages can do; the dashboard is a
+complete, authenticated product; an enterprise can trust it. *(Rescoped 2026-07-04 —
+launch-readiness review.)*
 
-- Governance/audit UI, full audit trail (FR-48/55).
-- SSO, advanced RBAC, data residency, compliance posture (NFR-13).
-- Backup/DR guarantees, dedicated/VPC deployment.
+- Governance/audit UI, full audit trail (FR-48/55) — **done** (F-027).
+- **Close the core loop in the running product** (the #1 gap found in review): runtime
+  source management via REST/MCP/UI + SSE progress (FR-62, F-038); live corpus indexing
+  into fragments + all retrieval indices (FR-63, F-039); code-symbol extraction
+  populating the knowledge graph + static effect-links, manual effect assertion via
+  API/MCP — resolves OQ5 (FR-16/18/63, F-040).
+- Dashboard completion: sources & settings UI (FR-46, F-041), memory browser + Monaco
+  authoring + timeline (FR-45/43, F-042), knowledge-graph & effects visualization
+  (FR-42, F-043).
+- **Dashboard authentication + account**: sign-in/session + SDK adoption (FR-64, F-045),
+  profile page + API-token self-service + user management (FR-65/48, F-046).
+- **API hardening** (NFR-1): rate limiting, security headers, SSE auth, per-profile
+  CORS, request-id propagation (F-044).
+- Compliance completion (NFR-13): memory retention policies (FR-15), DSR export/delete,
+  MCP-surface audit (F-047).
+- **Full-stack E2E** mimicking a real user + environment (NFR-16, F-048) and the
+  **performance benchmark suite** enforcing NFR-4 (+ web-perf activation) (F-049).
+
+## R4 — Launch
+**Goal:** public, professional, agent-first product: marketing on the apex domain,
+dashboard on `app.`, docs on `docs.`, one-command agent onboarding. *(Added 2026-07-04;
+ADR-0035/0036/0037.)*
+
+- **Multi-project workspaces** per tenant (FR-66, F-050; ADR-0037).
+- **Marketing site** on the apex domain (FR-67, F-051) and **docs site** on `docs.`
+  with quickstart/concepts/API reference/agent guides + **self-host & cloud deployment
+  guides** (FR-68, F-052).
+- **Skills registry** + `/skills` page — first-party agent skills, installable via
+  download/CLI/MCP (FR-69, F-053).
+- **Agent-first distribution**: `@tessera/cli` one-command onboarding + agent config
+  emit + `llms.txt` (FR-70, F-054); remote MCP over HTTP through the gateway (FR-71,
+  F-055).
+- Self-hosted profile completion (Postgres memory/graph, S3, BullMQ) + Dockerfiles,
+  full compose stack, release CD publishing images (FR-51/53, NFR-15, F-056).
+- Analytics & usage metering + billing UI + persistent subscriptions (FR-47, NFR-12,
+  F-057); feature flags + plugin permissions/health (FR-57/59/60, F-058).
+- **Launch readiness**: license (open-core), SBOM/supply-chain (NFR-18), release
+  process, README/repo polish, brand/domain checklist (F-059).
 
 ---
 

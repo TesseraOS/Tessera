@@ -106,6 +106,29 @@ Micro-interactions ✅ · smooth page transitions ✅ · optimistic updates ✅ 
 tables/lists ✅ · real-time updates ✅ · empty/loading/error states ✅ · high-performance
 rendering ✅ (DESIGN-SYSTEM §5/6/9).
 
+## 2026-07-04 launch-readiness brief (supervisor review) → where it lives
+
+The project lead's launch-readiness brief (professional/enterprise-grade, beyond
+unabyss.com, marketing/docs/app subdomains, agent-first, profile page, full E2E,
+multi-project) traced to requirements/features:
+
+| Brief item | Status | Where |
+|------------|:------:|-------|
+| Marketing page on the main domain | 🟡 | FR-67; ADR-0035; F-051 |
+| Dashboard on the `app.` subdomain | 🟡 | ADR-0035 (topology); F-051/F-056 wire it |
+| Professional docs at the `docs.` subdomain | 🟡 | FR-68; ADR-0035; F-052 |
+| Cloud/self-host deployment steps in docs | 🟡 | FR-68 + FR-51/NFR-15; F-052/F-056 |
+| Skills page (like unabyss.com/skills) | 🟡 | FR-69; ADR-0036; F-053 |
+| Easy for users **and** AI agents; agent-first automation, less dashboard dependence | 🟡 | G8 + FR-70/71; ADR-0036; F-038 (parity rule applied), F-054/F-055 |
+| Fast + low token usage for agents | 🟡 | NFR-4 (extended); F-049 benchmarks |
+| Professional profile page in the dashboard | 🟡 | FR-65; F-046 |
+| Complete E2E mimicking an actual user & environment | 🟡 | NFR-16; F-048 |
+| Multiple projects per account (separate storage) | 🟡 | FR-66; **ADR-0037 — decided yes**; F-050 |
+| Missing features/security found in code review | 🟡 | FR-62/63/64 (core loop + dashboard auth — the biggest gaps), F-044 (API hardening), F-047 (retention/DSR/MCP audit), F-057 (usage/billing UI), F-059 (license/SBOM) |
+
+> Review findings in full: `.harness/state/progress.md` entry 2026-07-04
+> (launch-readiness review). Legend as above; 🟡 = captured as backlog, builds next.
+
 ## Remaining open questions (tracked)
 - **OQ1** default embedding model · **OQ2** graph storage engine · **OQ3** compression
   strategy · **OQ4** license/business model (gates ADR-0011) · **OQ5** symbol extraction

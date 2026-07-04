@@ -3,6 +3,75 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-04 — Launch-readiness review (supervisor/architect session): gap analysis → R3 rescoped + R4 added (F-038…F-059)
+
+A full project review (harness, PRD, ADRs, all 37 features, code wiring, security) against the
+project lead's launch brief (professional/enterprise-grade, beyond unabyss.com, marketing + docs +
+app subdomains, agent-first, profile page, full E2E, multi-project). **No product code changed** —
+this session steers: PRD/ADRs/roadmap/coverage/feature backlog updated so the executor builds from
+`feature_list.json` one feature at a time.
+
+**Verdict: the project is NOT complete.** The engine (R0–R2 packages) is real and well-verified,
+but the *shipped product* has three classes of gaps:
+
+1. **The core loop is not closed in the running product (worst gap).** `@tessera/ingestion`
+   (fs/git/GitHub connectors, redaction, memory extraction) exists and is tested, but is **not
+   composed into the bootable runtime**: no `/v1/sources` route, no MCP source tools, no worker in
+   `createLocalRuntime`, retrieval/vector indices only populated via test seams, and the knowledge
+   graph is never populated (OQ5 unresolved → `get_effects` is empty in production). A user cannot
+   point Tessera at a repo and get context out. → **F-038/F-039/F-040 (R3 musts)**.
+2. **The dashboard is a partial product.** `/sources`, `/settings`, `/memory`, `/graph` are
+   ComingSoon stubs (FR-42/43/45/46 were roadmapped R1 but never became features — traceability
+   gap); **no auth/session in the web app** (nav shows "Local mode · no account"), no profile page,
+   no token self-service, web still on the interim `lib/api` client (ADR-0022 deferral). →
+   **F-041/F-042/F-043/F-045/F-046**.
+3. **Launch surface doesn't exist.** No marketing site, no docs site, no skills registry, no CLI,
+   no deploy artifacts (zero Dockerfiles; compose = postgres only; non-local profiles throw), no
+   LICENSE (OQ4 decided open-core but never executed), README still says "pre-coding".
+   → **R4 (F-050…F-059)**.
+
+**Security review findings** (→ F-044/F-047 + acceptance criteria elsewhere): no REST rate
+limiting (only MCP quotas), no security headers, `GET /v1/events` (SSE) is a public route even in
+token mode, CORS is a blanket registration (needs per-profile allowlist), no request-id
+propagation; MCP surface doesn't record audit events; DSR export/delete (NFR-13) and memory
+retention (FR-15) unbuilt; billing SubscriptionStore + quota store in-memory only; no SBOM/signing.
+**Perf findings** (→ F-049): NFR-4 was an R0 exit criterion but has never been benchmarked; the
+`web-perf` gate said "activates with F-028" and never did (drift fixed in gates.json — now F-049).
+
+**What changed (this session)**
+- **ADR-0035** (public web platform: marketing on apex + dashboard on `app.` + docs on `docs.` via
+  Fumadocs; api at `api.`), **ADR-0036** (agent-first: binding API/MCP parity rule, `@tessera/cli`
+  onboarding, skills registry, remote MCP, token-lean NFR), **ADR-0037** (multi-project: **decided
+  yes** — `(tenantId, projectId)` scope extending the proven forTenant mechanism; `default` project
+  back-compat). ADR index updated.
+- **PRD v1.1**: +G8 (agent-first operations), +§6.10 (FR-62…FR-71), NFR-4 extended (benchmarked +
+  token-lean), +NFR-16 (full-stack E2E), +NFR-17 (public-web quality), +NFR-18 (supply chain);
+  §11 R3 rescoped + R4 added; OQ5 pinned to F-040.
+- **roadmap.md**: R3 = enterprise & product completeness; R4 = launch (both mapped to features).
+- **REQUIREMENTS-COVERAGE.md**: new section tracing the 2026-07-04 launch brief → FR/ADR/feature.
+- **feature_list.json**: releases +R4 (schema enum updated); **+22 backlog features F-038…F-059**
+  with acceptance/verification/blockedBy — R3: F-038 sources runtime+surface (must), F-039 live
+  indexing (must), F-040 symbol extraction→KG+effects (must, decides OQ5), F-041 sources/settings
+  UI, F-042 memory+Monaco+timeline, F-043 graph viz, F-044 API hardening (must), F-045 dashboard
+  auth+SDK adoption (must), F-046 profile+tokens+user mgmt, F-047 retention+DSR+MCP audit,
+  F-048 full-stack E2E (must), F-049 perf benchmarks (must). R4: F-050 multi-project (must),
+  F-051 marketing (must), F-052 CLI (must), F-053 docs site (must), F-054 skills registry,
+  F-055 remote MCP, F-056 self-hosted completion+deploy artifacts+guides (must), F-057
+  analytics/usage/billing UI, F-058 flags+plugin perms (could), F-059 launch readiness (must).
+- **gates.json**: +`e2e-full` (planned → F-048) and +`perf` (planned → F-049); `web-perf`
+  activation moved F-028→F-049 (drift fix). **README**: status refreshed (was "pre-coding").
+
+**Evidence/verification:** `node scripts/verify-state.mjs` valid (59 features, 20 effect-links) —
+see below; docs link-check on changed files.
+
+**Decisions:** multi-project = YES (ADR-0037); docs toolchain = Fumadocs (ADR-0035); agent-first
+parity is now a binding rule (ADR-0036 — F-038 records it into `.harness/rules/`); build order =
+close the core loop before any launch surface (R3 before R4).
+
+**Next step:** executor claims **F-038** via `/next-feature` (plan first, per the working loop).
+
+---
+
 ## 2026-07-04 — F-027 DONE (increment 2): governance & audit web UI — **R3's first feature complete** (@tessera/web)
 The final increment of F-027 (FR-48) — the governance & audit **UI** over the audit trail backend (1a/1b),
 completing the feature and **R3's first delivery**.

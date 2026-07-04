@@ -4,7 +4,8 @@ import {
   createTransformersEmbeddings,
   type Embeddings,
 } from '@tessera/ai';
-import type { ApiServices } from '@tessera/api';
+// `ApiEventMap` is imported TYPE-ONLY (the bus is built via `@tessera/core`) so config stays Fastify-free.
+import type { ApiEventMap, ApiServices } from '@tessera/api';
 // Runtime import via the Fastify-free `@tessera/api/auth` subpath (ADR-0030) — so the composition root
 // (and the MCP process that boots through it) never pulls Fastify.
 import {
@@ -19,7 +20,20 @@ import {
   type BillingProvider,
 } from '@tessera/billing';
 import { createContextCompiler } from '@tessera/context-compiler';
-import { InternalError, ValidationError } from '@tessera/core';
+import { createEventBus, InternalError, ValidationError } from '@tessera/core';
+import {
+  createFilesystemConnector,
+  createGitConnector,
+  createIngestionWorker,
+  createMemoryExtractionSink,
+  createSourceService,
+  defaultMemoryExtractors,
+  documentIdFor,
+  teeSink,
+  type Connector,
+  type IngestionEvents,
+  type SourceRecord,
+} from '@tessera/ingestion';
 import { createKnowledgeGraphService, createSqliteGraphStore } from '@tessera/knowledge-graph';
 import { createMemoryService, createSqliteMemoryStore } from '@tessera/memory';
 import {
@@ -40,10 +54,36 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { createSqliteTokenStore } from '../auth/sqlite-token-store.js';
 import { createSqliteAuditLog } from '../audit/sqlite-audit-log.js';
 import { createBlobFragmentSource } from '../fragment-source.js';
+import { createBlobFragmentSink } from '../sources/ingestion-sink.js';
+import { createSqliteManifest } from '../sources/sqlite-manifest.js';
+import { createSqliteSourceRegistry } from '../sources/sqlite-source-registry.js';
 import type { Env } from '../load.js';
 import type { Runtime, RuntimeAuth } from '../runtime.js';
 import type { TesseraConfig } from '../schema.js';
 import { createSecretsProvider, type SecretsProvider } from '../secrets/index.js';
+
+/** The connector kinds the Local profile can build a source from (FR-6/FR-7). */
+export const SUPPORTED_SOURCE_KINDS = ['filesystem', 'git'] as const;
+
+/** Build the connector for a registered source; throws for an unsupported kind or a missing root. */
+function connectorForRecord(record: SourceRecord): Connector {
+  const root = record.config['root'];
+  if (typeof root !== 'string' || root.length === 0) {
+    throw new ValidationError('source config.root must be a non-empty string', {
+      details: { kind: record.kind },
+    });
+  }
+  switch (record.kind) {
+    case 'filesystem':
+      return createFilesystemConnector({ root });
+    case 'git':
+      return createGitConnector({ root });
+    default:
+      throw new ValidationError(`unsupported source kind "${record.kind}"`, {
+        details: { kind: record.kind, supported: SUPPORTED_SOURCE_KINDS },
+      });
+  }
+}
 
 /**
  * Build the runtime auth from config (F-034): `token` mode wires a persistent SQLite token store behind
@@ -175,12 +215,66 @@ export async function createLocalRuntime(
   });
 
   const billing = await createRuntimeBilling(config.billing, secrets);
+  const memory = createMemoryService(memoryStore);
+
+  // --- Runtime ingestion (F-038): registry + pipeline worker + SSE bridge ---------------------------
+  // The shared SSE bus (built via @tessera/core so config stays Fastify-free) producers emit onto.
+  const events = createEventBus<ApiEventMap>();
+  // The ingestion domain bus the worker (document.*) + source service (source.scan.*) emit onto; bridged
+  // to the SSE bus below as small, non-sensitive summaries.
+  const ingestionEvents = createEventBus<IngestionEvents>();
+  const bridge = [
+    ingestionEvents.on('document.ingested', ({ document }) =>
+      events.emit('document.ingested', {
+        ref: document.id,
+        path: document.path,
+        kind: document.kind,
+      }),
+    ),
+    ingestionEvents.on('document.removed', ({ sourceId, path }) =>
+      events.emit('document.removed', { ref: documentIdFor(sourceId, path), path }),
+    ),
+    ingestionEvents.on('source.scan.started', (event) => events.emit('source.scan.started', event)),
+    ingestionEvents.on('source.scan.completed', (event) =>
+      events.emit('source.scan.completed', {
+        sourceId: event.sourceId,
+        kind: event.kind,
+        label: event.label,
+        summary: event.summary,
+      }),
+    ),
+  ];
+
+  // The manifest is shared by the coordinator (via the source service) and the worker (FR-8).
+  const manifest = createSqliteManifest(relational.db);
+  // The runtime DocumentSink: land documents in the compiler corpus + extract memories from ADRs/settled
+  // items (F-017). Populating the retrieval indices is F-039 (extends this sink).
+  const ingestionSink = teeSink(
+    createBlobFragmentSink(blob),
+    createMemoryExtractionSink({ memory, extractors: defaultMemoryExtractors }),
+  );
+  const sources = createSourceService({
+    registry: createSqliteSourceRegistry(relational.db),
+    queue,
+    manifest,
+    connectorFactory: connectorForRecord,
+    events: ingestionEvents,
+  });
+  const worker = createIngestionWorker({
+    queue,
+    connectors: [],
+    connectorFor: sources.connectorFor,
+    sink: ingestionSink,
+    manifest,
+    events: ingestionEvents,
+  });
 
   const services: ApiServices = {
     search,
     compiler,
     graph: createKnowledgeGraphService(graphStore),
-    memory: createMemoryService(memoryStore),
+    memory,
+    sources,
     billing,
     readiness: async () => {
       const ok = await relational.healthcheck().catch(() => false);
@@ -196,12 +290,17 @@ export async function createLocalRuntime(
     billing,
     // Persistent audit trail (F-027) when enabled; the surface falls back to its in-memory sink otherwise.
     ...(config.audit.enabled ? { audit: createSqliteAuditLog(relational.db) } : {}),
+    sources,
+    events,
     secrets,
     stores: { relational, vector, blob, queue },
     embeddings,
     keyword,
     temporal,
     async close() {
+      // Stop the worker + SSE bridge before draining the queue so no new work is scheduled.
+      worker.subscription.unsubscribe();
+      for (const off of bridge) off();
       await queue.shutdown();
       await vector.close();
       await relational.close();

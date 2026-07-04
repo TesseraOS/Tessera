@@ -16,6 +16,24 @@ export interface ApiEventMap extends Record<string, unknown> {
     readonly kind: string;
     readonly title: string;
   };
+  /** A source scan started (F-038). */
+  readonly 'source.scan.started': {
+    readonly sourceId: string;
+    readonly kind: string;
+    readonly label: string;
+  };
+  /** A source scan finished, with what changed (F-038). Counts only — non-sensitive. */
+  readonly 'source.scan.completed': {
+    readonly sourceId: string;
+    readonly kind: string;
+    readonly label: string;
+    readonly summary: {
+      readonly added: number;
+      readonly modified: number;
+      readonly removed: number;
+      readonly unchanged: number;
+    };
+  };
 }
 
 /** The event names streamed over `/v1/events` (the SSE route subscribes to each). */
@@ -23,6 +41,8 @@ export const API_EVENT_TYPES = [
   'document.ingested',
   'document.removed',
   'memory.captured',
+  'source.scan.started',
+  'source.scan.completed',
 ] as const satisfies readonly (keyof ApiEventMap)[];
 
 export type ApiEventType = (typeof API_EVENT_TYPES)[number];

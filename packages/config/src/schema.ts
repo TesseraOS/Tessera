@@ -138,6 +138,17 @@ const auditSchema = z
   .default({});
 
 /**
+ * Runtime source-management wiring (F-038; FR-62). Sources are registered at runtime via the API/MCP
+ * surface, not statically in config; this section holds ingestion behavior. `autoScanOnRegister`
+ * triggers a scan immediately when a source is registered (off by default — an agent decides when).
+ */
+const sourcesSchema = z
+  .object({
+    autoScanOnRegister: z.boolean().default(false),
+  })
+  .default({});
+
+/**
  * Billing wiring (F-030). `provider: none` = the local/free adapter (OSS default, no external service);
  * `provider: dodo` = Dodo Payments (secrets — apiKey/webhookSecret — come via the SecretsProvider).
  */
@@ -161,6 +172,7 @@ export const configSchema = z.object({
   auth: authSchema,
   billing: billingSchema,
   audit: auditSchema,
+  sources: sourcesSchema,
 });
 
 /** Caller-facing config input (pre-defaults). */

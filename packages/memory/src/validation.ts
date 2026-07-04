@@ -7,11 +7,14 @@ export const DEFAULT_SCOPE = 'global';
 export const DEFAULT_CONFIDENCE = 1;
 const MAX_TITLE_LENGTH = 200;
 
+// `links`/`tags` accept `readonly` arrays (`.readonly()`) to match the `MemoryMetadata` domain type and
+// the structural capture seam auto-extraction writes through (CandidateMemory, @tessera/ingestion) —
+// strictly more permissive, so mutable-array callers are unaffected.
 const metadataSchema = z.object({
   source: z.string().min(1).optional(),
   author: z.string().min(1).optional(),
-  links: z.array(z.string().min(1)).optional(),
-  tags: z.array(z.string().min(1)).optional(),
+  links: z.array(z.string().min(1)).readonly().optional(),
+  tags: z.array(z.string().min(1)).readonly().optional(),
 });
 
 /** Schema for capturing a new memory (FR-13). Applies scope/confidence/metadata defaults. */

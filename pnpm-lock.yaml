@@ -53,6 +53,9 @@ importers:
       '@tessera/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@tessera/ingestion':
+        specifier: workspace:*
+        version: link:../../packages/ingestion
       '@tessera/knowledge-graph':
         specifier: workspace:*
         version: link:../../packages/knowledge-graph
@@ -265,6 +268,9 @@ importers:
       '@tessera/core':
         specifier: workspace:*
         version: link:../core
+      '@tessera/ingestion':
+        specifier: workspace:*
+        version: link:../ingestion
       '@tessera/knowledge-graph':
         specifier: workspace:*
         version: link:../knowledge-graph

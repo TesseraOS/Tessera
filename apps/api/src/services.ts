@@ -1,5 +1,6 @@
 import type { BillingProvider } from '@tessera/billing';
 import type { ContextCompiler } from '@tessera/context-compiler';
+import type { SourceService } from '@tessera/ingestion';
 import type { KnowledgeGraphService } from '@tessera/knowledge-graph';
 import type { MemoryService } from '@tessera/memory';
 import type { HybridRetriever } from '@tessera/retrieval';
@@ -36,6 +37,12 @@ export interface ApiServices {
   readonly graph: KnowledgeGraphService;
   /** Versioned memory (F-007) — `/v1/memory`. */
   readonly memory: MemoryService;
+  /**
+   * Runtime source management (F-038; FR-62) — `/v1/sources*`. Optional; the composition root wires it
+   * (register/scan repositories via the ingestion pipeline). When omitted the `/v1/sources` routes
+   * return a clean "not configured" error (e.g. doc generation with no runtime).
+   */
+  readonly sources?: SourceService;
   /**
    * Billing provider (F-030) — `/v1/billing/*`. Optional; when omitted the routes fall back to the
    * local/free adapter (open-core default), so plans/subscription always answer.

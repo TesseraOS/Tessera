@@ -26,6 +26,7 @@
     "@tessera/billing": "workspace:*",
     "@tessera/context-compiler": "workspace:*",
     "@tessera/core": "workspace:*",
+    "@tessera/ingestion": "workspace:*",
     "@tessera/knowledge-graph": "workspace:*",
     "@tessera/memory": "workspace:*",
     "@tessera/retrieval": "workspace:*",

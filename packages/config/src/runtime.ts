@@ -1,7 +1,10 @@
 import type { Embeddings } from '@tessera/ai';
-import type { ApiServices, AuditLog } from '@tessera/api';
+// `ApiEventBus`/`ApiEventMap` are imported TYPE-ONLY (the bus is built via `@tessera/core`) so
+// `@tessera/config` — and the MCP process booting through it — stays Fastify-free (ADR-0030).
+import type { ApiEventBus, ApiServices, AuditLog } from '@tessera/api';
 import type { AuthProvider, TokenStore } from '@tessera/api/auth';
 import type { BillingProvider } from '@tessera/billing';
+import type { SourceService } from '@tessera/ingestion';
 import type { KeywordRetriever, TemporalRetriever } from '@tessera/retrieval';
 import type { BlobStore, Queue, SqliteStore, VectorStore } from '@tessera/storage';
 import type { TesseraConfig } from './schema.js';
@@ -44,6 +47,17 @@ export interface Runtime {
    * present when `config.audit.enabled`. `undefined` → the surface falls back to its in-memory sink.
    */
   readonly audit?: AuditLog;
+  /**
+   * Runtime source management (F-038; FR-62): register/scan filesystem+git sources through the
+   * ingestion pipeline. The same instance is exposed on {@link ApiServices.sources} for REST/MCP.
+   */
+  readonly sources: SourceService;
+  /**
+   * The shared SSE event bus (F-021/F-038). Producers — the memory-capture route and the ingestion
+   * worker (bridged here) — emit onto it; `GET /v1/events` streams it. `apps/server` passes this to
+   * `buildServer` so the runtime's ingestion events reach connected clients.
+   */
+  readonly events: ApiEventBus;
   readonly secrets: SecretsProvider;
   readonly stores: RuntimeStores;
   readonly embeddings: Embeddings;

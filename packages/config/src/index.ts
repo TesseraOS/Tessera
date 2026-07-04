@@ -16,4 +16,6 @@ export * from './profiles/local.js';
 export * from './auth/sqlite-token-store.js';
 export * from './sources/sqlite-source-registry.js';
 export * from './sources/sqlite-manifest.js';
+export * from './sources/corpus-indexer.js';
 export * from './sources/ingestion-sink.js';
+export * from './sources/memory-indexing.js';

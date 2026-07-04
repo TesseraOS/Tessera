@@ -77,8 +77,9 @@ describe('runtime source management (F-038)', () => {
     expect(streamed).toContain('ingested:docs/adr/0001-use-sqlite.md');
     expect(streamed).toContain('completed:3');
 
-    // Documents land in the compiler corpus (the persistence half of the runtime sink).
-    expect((await rt.stores.blob.list()).length).toBe(3);
+    // Documents land in the compiler corpus (memory fragments — extracted ADRs — are indexed too, F-039).
+    const docFragments = (await rt.stores.blob.list()).filter((ref) => !ref.startsWith('memory/'));
+    expect(docFragments.length).toBe(3);
 
     // The ADR was auto-extracted into a decision memory through the wired runtime (closing the loop).
     const decisions = await rt.services.memory.list({ kind: 'decision' });
@@ -104,7 +105,8 @@ describe('runtime source management (F-038)', () => {
     // Re-scan with no changes → nothing re-indexed.
     const again = await rt.services.sources.scan(source.id);
     expect(again.summary).toEqual({ added: 0, modified: 0, removed: 0, unchanged: 3 });
-    expect((await rt.stores.blob.list()).length).toBe(3);
+    const docFragments = (await rt.stores.blob.list()).filter((ref) => !ref.startsWith('memory/'));
+    expect(docFragments.length).toBe(3);
 
     // Edit a file → exactly one modification.
     await writeFile(join(repo, 'README.md'), '# Project\n\nAuthentication now uses OIDC.\n');

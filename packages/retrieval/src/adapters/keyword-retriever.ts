@@ -16,7 +16,9 @@ export interface KeywordRetrieverOptions {
 export interface KeywordRetriever extends Retriever {
   /** Index (or re-index) an item's text under `ref`. Ingestion populates this in production. */
   index(ref: string, content: string): void;
-  /** A view confined to `tenantId` (FR-52); scopes both `index` and `retrieve`. */
+  /** Drop an item's text under `ref` (no error if absent). Document removal uses this. */
+  remove(ref: string): void;
+  /** A view confined to `tenantId` (FR-52); scopes `index`, `remove`, and `retrieve`. */
   forTenant(tenantId: TenantId): KeywordRetriever;
 }
 
@@ -50,6 +52,10 @@ export function createKeywordRetriever(options: KeywordRetrieverOptions): Keywor
         db.run(
           sql`INSERT INTO ${table}(ref, tenant, content) VALUES (${ref}, ${tenantId}, ${content})`,
         );
+      },
+
+      remove(ref) {
+        db.run(sql`DELETE FROM ${table} WHERE ref = ${ref} AND tenant = ${tenantId}`);
       },
 
       retrieve(query) {

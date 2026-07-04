@@ -30,6 +30,20 @@ describe('keyword retriever (FTS5)', () => {
     }
   });
 
+  it('removes a document from the index (document removal)', async () => {
+    const { sqlite, retriever } = setup();
+    try {
+      expect((await retriever.retrieve({ text: 'oauth' })).map((c) => c.ref)).toEqual(['doc:auth']);
+      retriever.remove('doc:auth');
+      expect(await retriever.retrieve({ text: 'oauth' })).toEqual([]);
+      // Other documents are untouched; removing an absent ref is a no-op.
+      expect((await retriever.retrieve({ text: 'drizzle' })).map((c) => c.ref)).toEqual(['doc:db']);
+      retriever.remove('doc:missing');
+    } finally {
+      await sqlite.close();
+    }
+  });
+
   it('returns no results for a termless query', async () => {
     const { sqlite, retriever } = setup();
     try {

@@ -54,7 +54,9 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { createSqliteTokenStore } from '../auth/sqlite-token-store.js';
 import { createSqliteAuditLog } from '../audit/sqlite-audit-log.js';
 import { createBlobFragmentSource } from '../fragment-source.js';
-import { createBlobFragmentSink } from '../sources/ingestion-sink.js';
+import { createCorpusIndexer } from '../sources/corpus-indexer.js';
+import { createIndexingDocumentSink } from '../sources/ingestion-sink.js';
+import { createIndexingMemoryService } from '../sources/memory-indexing.js';
 import { createSqliteManifest } from '../sources/sqlite-manifest.js';
 import { createSqliteSourceRegistry } from '../sources/sqlite-source-registry.js';
 import type { Env } from '../load.js';
@@ -247,11 +249,17 @@ export async function createLocalRuntime(
 
   // The manifest is shared by the coordinator (via the source service) and the worker (FR-8).
   const manifest = createSqliteManifest(relational.db);
-  // The runtime DocumentSink: land documents in the compiler corpus + extract memories from ADRs/settled
-  // items (F-017). Populating the retrieval indices is F-039 (extends this sink).
+  // The corpus indexer (F-039): one tenant-aware path that lands (ref, text) in the blob corpus AND the
+  // keyword/temporal/semantic indices, so search/compile answer from the real repo. Shared by ingestion
+  // (the DocumentSink) and memory capture (the MemoryService decorator) → one ref space.
+  const indexer = createCorpusIndexer({ blob, keyword, temporal, embeddings, vector });
+  // Indexed memory service: API/MCP captures + auto-extracted memories both become findable (F-039).
+  const indexedMemory = createIndexingMemoryService(memory, indexer);
+  // The runtime DocumentSink: index every document (F-039) + extract memories from ADRs/settled items
+  // (F-017), the extracted memories themselves indexed via the same decorator.
   const ingestionSink = teeSink(
-    createBlobFragmentSink(blob),
-    createMemoryExtractionSink({ memory, extractors: defaultMemoryExtractors }),
+    createIndexingDocumentSink(indexer),
+    createMemoryExtractionSink({ memory: indexedMemory, extractors: defaultMemoryExtractors }),
   );
   const sources = createSourceService({
     registry: createSqliteSourceRegistry(relational.db),
@@ -274,7 +282,7 @@ export async function createLocalRuntime(
     search,
     compiler,
     graph: createKnowledgeGraphService(graphStore),
-    memory,
+    memory: indexedMemory,
     sources,
     billing,
     readiness: async () => {

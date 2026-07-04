@@ -1286,7 +1286,7 @@
       "package": "@tessera/ingestion",
       "release": "R3",
       "priority": "must",
-      "status": "backlog",
+      "status": "in_progress",
       "blockedBy": [
         "F-039"
       ],

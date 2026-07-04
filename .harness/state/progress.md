@@ -3,6 +3,39 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-04 — F-040 KICKOFF (planner phase) + OQ5 RESOLVED → tree-sitter (WASM)
+
+Claimed **F-040** (code-symbol extraction → live knowledge-graph population + static effect-links + a
+manual assertion surface — the product's #2 differentiator, currently empty in production) and completed
+the **planner phase** (plan-before-code): [`F-040`](../plans/F-040-code-symbol-extraction-graph.md) +
+**ADR-0041**. No product code yet — this is the R3-kickoff-style planner deliverable, leaving F-040 cleanly
+`in_progress` with an actionable plan.
+
+**OQ5 RESOLVED → tree-sitter (WASM)** (product-lead decision, 2026-07-04; ADR-0041). Chosen over the TS
+compiler API (TS/JS-only) and LSP (needs per-language server processes) for the PRD's **local-first,
+multi-language, TS/JS-first** direction. **Probe-verified before deciding:** installed
+`web-tree-sitter@0.25` + `tree-sitter-wasms@0.1` and, fully offline, parsed TypeScript and extracted
+import sources, function/class names, and exported consts via a tree-sitter `Query` — the toolchain runs
+in this Node/vitest environment.
+
+**Planned design (ADR-0041):** an ingestion `SymbolExtractor` port + a `createGraphExtractionSink`
+(structural `GraphWriteService` seam, mirroring F-017 — no `@tessera/knowledge-graph` dep in ingestion),
+with the tree-sitter adapter in the composition root `@tessera/config`. Each source file → a `file` node +
+`symbol` nodes (`defines` edges) + `imports` edges (relative specifiers → target file); the existing
+`deriveStaticEffectLinks` inverts imports → `EFFECT_LINK`s so `get_effects(file)` returns real importers.
+Incremental via subgraph replacement, needing one additive `GraphStore.removeNode`. Manual assertion:
+`POST /v1/effects` + `assert_effect` MCP tool (new `effects:write` RBAC + `effects.write` audit), SDK
+regenerated. **5 planned increments:** (1) `GraphStore.removeNode`, (2) extractor port + graph-extraction
+sink (deterministic), (3) tree-sitter adapter + runtime wiring, (4) REST/MCP assertion surface, (5) records.
+
+**Evidence:** `node scripts/verify-state.mjs` valid (65 features, 21 effect-links, env-docs ok); no code
+changed, gates unaffected. Committed as the F-040 kickoff + planner phase (plan-before-code per the harness).
+
+**Next step:** implement increment 1 (`GraphStore.removeNode`) → … → 5, per the plan. New deps
+`web-tree-sitter` + `tree-sitter-wasms` land in increment 3 (recorded in NOTICE.md).
+
+---
+
 ## 2026-07-04 — F-039 DONE — the core loop is CLOSED: search/compile answer from the ingested repo
 
 F-038 made scans run + land documents in the corpus; **F-039 makes that output retrievable**. Ingested

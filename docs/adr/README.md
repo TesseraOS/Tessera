@@ -56,6 +56,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0038](0038-external-agent-skill-adaptations-design-review-and-skill-observer.md) | External agent-skill adaptations (design-review, skill-observer); pm-skills declined | Accepted |
 | [0039](0039-optional-independent-model-adversarial-review-codex.md) | Optional, opt-in independent-model adversarial review (Codex) | Accepted |
 | [0040](0040-runtime-source-management.md) | Runtime source management — ingestion wired into the shipped runtime + REST/MCP surface + SSE | Accepted |
+| [0041](0041-code-symbol-extraction-tree-sitter.md) | Code-symbol extraction with tree-sitter (WASM) → live knowledge-graph population (resolves OQ5) | Accepted |
 
 ## Conventions
 

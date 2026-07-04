@@ -53,6 +53,9 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0035](0035-public-web-platform-three-surfaces.md) | Public web platform — marketing (apex) + dashboard (`app.`) + docs (`docs.`, Fumadocs) | Accepted |
 | [0036](0036-agent-first-operations.md) | Agent-first operations — API/MCP parity rule, CLI onboarding, skills registry, remote MCP | Accepted |
 | [0037](0037-multi-project-workspaces.md) | Multi-project workspaces within a tenant (`(tenantId, projectId)` scope) | Accepted |
+| [0038](0038-external-agent-skill-adaptations-design-review-and-skill-observer.md) | External agent-skill adaptations (design-review, skill-observer); pm-skills declined | Accepted |
+| [0039](0039-optional-independent-model-adversarial-review-codex.md) | Optional, opt-in independent-model adversarial review (Codex) | Accepted |
+| [0040](0040-runtime-source-management.md) | Runtime source management — ingestion wired into the shipped runtime + REST/MCP surface + SSE | Accepted |
 
 ## Conventions
 

@@ -95,6 +95,9 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
     enabled: bool(env.TESSERA_AUDIT_ENABLED),
     ...(auditRetention !== undefined ? { retention: auditRetention } : {}),
   });
+  const sources = section({
+    autoScanOnRegister: bool(env.TESSERA_SOURCES_AUTOSCAN),
+  });
 
   if (storage !== undefined) input.storage = storage;
   if (embeddings !== undefined) input.embeddings = embeddings;
@@ -103,6 +106,7 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
   if (auth !== undefined) input.auth = auth;
   if (billing !== undefined) input.billing = billing;
   if (audit !== undefined) input.audit = audit;
+  if (sources !== undefined) input.sources = sources;
   return input as ConfigInput;
 }
 
@@ -120,6 +124,7 @@ function mergeConfig(base: ConfigInput, over: ConfigInput): ConfigInput {
     ...((base.auth ?? over.auth) ? { auth: { ...base.auth, ...over.auth } } : {}),
     ...((base.billing ?? over.billing) ? { billing: { ...base.billing, ...over.billing } } : {}),
     ...((base.audit ?? over.audit) ? { audit: { ...base.audit, ...over.audit } } : {}),
+    ...((base.sources ?? over.sources) ? { sources: { ...base.sources, ...over.sources } } : {}),
   };
 }
 

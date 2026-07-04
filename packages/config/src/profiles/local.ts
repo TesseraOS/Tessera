@@ -259,6 +259,7 @@ export async function createLocalRuntime(
     manifest,
     connectorFactory: connectorForRecord,
     events: ingestionEvents,
+    autoScanOnRegister: config.sources.autoScanOnRegister,
   });
   const worker = createIngestionWorker({
     queue,

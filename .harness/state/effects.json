@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-07-03",
+  "updated": "2026-07-04",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -307,6 +307,22 @@
       ],
       "kind": "EFFECT_LINK",
       "rationale": "F-027 audit trail (FR-55/NFR-13): sensitive actions are recorded at the /v1 boundary into an append-only, tenant-scoped AuditLog and queried by admins (admin:manage). Changing the AuditEvent model, the AuditLog port, the recording hook's action catalog (config.audit), or the /v1/audit route/schema ripples to the adapters + shared conformance, the OpenAPI/regenerated SDK (E-003), the config wiring (E-014), and the governance UI (FR-48). Events are NON-SENSITIVE (NFR-7 — ids/actions/outcomes only); recording is failure-isolated; tenancy reuses forTenant (ADR-0033) with the actor/tenant from the AuthContext (E-018). Default is an in-memory sink so existing surfaces are unaffected. Increment 1a = in-memory end-to-end; 1b = persistent SQLite + config wiring; increment 2 = the web UI.",
+      "confidence": 0.9,
+      "origin": "manual"
+    },
+    {
+      "id": "E-021",
+      "from": { "kind": "contract", "ref": "@tessera/ingestion runtime source management: SourceRegistry port + SourceService (list/register/get/remove/scan/scanStatus + forTenant) + the runtime ingestion composition (F-038, ADR-0040)" },
+      "to": [
+        { "kind": "module", "ref": "@tessera/ingestion adapters: createInMemorySourceRegistry (reference, drives the conformance) + createSqliteSourceRegistry (@tessera/config, persistent sources table, tenant-scoped) + createSqliteManifest (@tessera/config, durable content-hash index); createSourceService caches a connector per source, tracks scan status, emits scan-lifecycle events, and (Local) awaits Queue.drain so scan() is synchronous-complete" },
+        { "kind": "test", "ref": "@tessera/ingestion SourceRegistry conformance + SourceService unit (register/scan/idempotent-rescan/modified/removed/invalid-kind/NOT_FOUND/tenant/auto-scan) + @tessera/config runtime-sources integration (register→scan→corpus+ADR-memory+SSE, persistence) + api/mcp sources e2e" },
+        { "kind": "module", "ref": "@tessera/config composition (createLocalRuntime, E-014): builds registry + manifest + one createIngestionWorker (connectorFor from the service) + runtime sink = tee(blob-corpus, memory-extraction F-017) + a bridge from IngestionEvents → the shared ApiEventBus; exposes Runtime.{sources,events}; connectorForRecord maps filesystem/git; config.sources.autoScanOnRegister" },
+        { "kind": "module", "ref": "REST /v1/sources (list/register/get/remove + POST/GET :id/scan) + MCP add_source/list_sources/scan_source wrap the SAME service (ADR-0036 parity); guarded by sources:read/sources:manage (E-018) and audited via source.read/source.manage (E-020); OpenAPI + regenerated @tessera/sdk (E-003)" },
+        { "kind": "module", "ref": "@tessera/ingestion worker connectorFor(source) resolver (per-source, additive) + @tessera/storage Queue.drain() (optional, additive on E-007): the two seams that let one worker serve many sources and a fire-and-forget queue back a synchronous scan" },
+        { "kind": "decision", "ref": "docs/adr/0040-runtime-source-management.md" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "F-038 composes the F-006/F-017 ingestion engine into the shipped runtime and exposes it through REST + MCP parity. Changing the SourceRegistry/SourceService contract, the connector factory, the runtime sink composition, or the scan/event model ripples to the SQLite adapters + conformance, the composition root (E-014), the REST/MCP surfaces + regenerated SDK (E-003), the RBAC catalog (E-018), and the audit actions (E-020). The registry is tenant-isolated (ADR-0033); the shared worker/corpus write in the default tenant (correct for the single-tenant Local profile) — per-tenant ingestion pipelines are a documented seam. F-038 lands documents in the blob corpus + extracts memories but does NOT populate the retrieval indices — that is F-039 (E-008/E-012/E-013), so search does not yet return ingested files (deliberate boundary).",
       "confidence": 0.9,
       "origin": "manual"
     }

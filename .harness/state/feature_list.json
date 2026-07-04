@@ -1206,7 +1206,7 @@
       "package": "@tessera/config",
       "release": "R3",
       "priority": "must",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-006",
         "F-015",
@@ -1231,7 +1231,7 @@
         "E-018",
         "E-020"
       ],
-      "notes": "Keystone of R3 (ADR-0036). Spans @tessera/config (composition) + @tessera/api (routes) + @tessera/mcp (tools). Until this lands the product cannot ingest a repo end-to-end outside tests — connectors, pipeline, redaction, and extraction all exist (F-006/F-017) but are not composed into the bootable runtime (F-032). Plan first (.harness/plans/); keep increments small: (1) registry+config, (2) runtime wiring+events, (3) REST, (4) MCP, (5) rules update."
+      "notes": "Done 2026-07-04 (R3 keystone; ADR-0040): the 2026-07-04 review's #1 gap CLOSED — @tessera/ingestion now runs INSIDE the shipped Local runtime, operable by an agent over REST + MCP (ADR-0036 parity, first enforced application). Delivered in 5 verifiable increments. (1) @tessera/ingestion: SourceRegistry port + in-memory adapter + conformance (tenant-scoped, ADR-0033) + SourceService (list/register/get/remove/scan/scanStatus + forTenant, connector-per-source cache, in-memory scan status, scan-lifecycle events, optional autoScanOnRegister); additive seams on verified code — IngestionEvents +source.scan.*, ScanSummary→domain, worker gains connectorFor(source), Queue.drain() (in-process) so a Local scan is a synchronous completion barrier over the fire-and-forget queue. (2) @tessera/config: persistent createSqliteSourceRegistry + createSqliteManifest + createBlobFragmentSink; createLocalRuntime builds one ingestion worker over the Queue, runtime sink = tee(blob-corpus, memory-extraction F-017), + a bridge from the ingestion bus → a shared ApiEventBus so scans stream document.ingested/removed + source.scan.started/completed on GET /v1/events (FR-38); Runtime.{sources,events}; config.sources.autoScanOnRegister + TESSERA_SOURCES_AUTOSCAN. ApiEventMap/SourceService imported TYPE-ONLY (bus via @tessera/core) → config + MCP stay Fastify-free (ADR-0030, verified). @tessera/memory capture input accepts readonly arrays so the real MemoryService satisfies the F-017 seam on first composition. (3) REST /v1/sources (list/register/get/remove + POST/GET :id/scan) — Zod→OpenAPI, regenerated @tessera/sdk (+client methods), sources:read/sources:manage RBAC, source.read/source.manage audit; tenancy off the wire; requireSources guard. (4) MCP add_source/list_sources/scan_source wrap the SAME service, ride the F-026 gateway (TOOL_PERMISSIONS extended). (5) ADR-0040 + effects E-021 + records. Agent-first proof shipped: an agent registers a fixture repo, scans it (incremental + idempotent, ADR auto-extracted to a decision memory), and observes SSE progress — offline. Gates green workspace-wide: format · typecheck 30 · lint 17 · test 30 (ingestion 58, config 27) · e2e 16 (api 40 incl. 6 sources, mcp 14 incl. 3 sources) · build 17 · state valid (21 effect-links). DEFERRED as documented seams (ADR-0040): retrieval-index population so search returns ingested files (F-039 — deliberate F-038/F-039 boundary), multi-tenant ingestion-pipeline scoping (registry is tenant-isolated; shared worker/corpus write in the default tenant), filesystem-path allowlisting for hosted, the web Sources UI (F-041), the RBAC-catalog web mirror drift (F-046)."
     },
     {
       "id": "F-039",

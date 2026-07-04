@@ -3,6 +3,56 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-04 — F-038 DONE — R3 keystone: ingestion wired into the shipped runtime + REST/MCP source surface + SSE
+
+Closed the launch-readiness review's **#1 gap**: `@tessera/ingestion` (F-006 connectors/pipeline/redaction
++ F-017 memory extraction) existed and was tested but was **not composed into the bootable runtime**. It now
+**runs inside the Local runtime** and is **operable by an agent** over REST + MCP (ADR-0036 parity — F-038 is
+its first enforced application). Delivered in 5 verifiable, committed increments; **plan-first**
+([`F-038`](../plans/F-038-runtime-source-management.md), **ADR-0040**).
+
+- **(1) `@tessera/ingestion`** — `SourceRegistry` port + in-memory adapter + conformance (tenant-scoped,
+  ADR-0033); `SourceService` (list/register/get/remove/scan/scanStatus + forTenant), which caches a connector
+  per source, tracks scan status, emits scan-lifecycle events, and (Local) awaits `Queue.drain()` so `scan()`
+  is synchronous-complete. Additive seams on verified code: `IngestionEvents` +`source.scan.*`,
+  `ScanSummary`→domain, worker gains `connectorFor(source)`, `Queue.drain()` on the in-process adapter,
+  `autoScanOnRegister`.
+- **(2) `@tessera/config`** — persistent `createSqliteSourceRegistry` + `createSqliteManifest` +
+  `createBlobFragmentSink`; `createLocalRuntime` builds one ingestion worker (runtime sink =
+  `tee(blob-corpus, memory-extraction)`) + a **bridge** ingestion bus → a shared `ApiEventBus` so scans stream
+  `document.ingested`/`source.scan.*` on `GET /v1/events` (FR-38). `Runtime.{sources,events}`;
+  `config.sources.autoScanOnRegister` + `TESSERA_SOURCES_AUTOSCAN`. `ApiEventMap`/`SourceService` imported
+  **type-only** (bus via `@tessera/core`) → config + MCP stay **Fastify-free** (ADR-0030, verified).
+  `@tessera/memory` capture input now accepts `readonly` arrays so the real service satisfies the F-017 seam.
+- **(3) REST `/v1/sources`** (list/register/get/remove + POST/GET `:id/scan`) — Zod→OpenAPI, regenerated
+  `@tessera/sdk` (+ client methods), `sources:read`/`sources:manage` RBAC, `source.read`/`source.manage`
+  audit; tenancy off the wire; a `requireSources` guard.
+- **(4) MCP** `add_source`/`list_sources`/`scan_source` wrap the SAME service, ride the F-026 gateway
+  (`TOOL_PERMISSIONS` extended).
+- **(5)** ADR-0040 + **E-021** + records; ADR index also gained the missing 0038/0039 rows.
+
+**Agent-first proof shipped:** an agent registers a fixture repo, scans it (incremental + idempotent, the ADR
+auto-extracted into a decision memory), and observes SSE progress — **fully offline**.
+
+**Evidence (all green, workspace-wide):** `node scripts/verify-state.mjs` → valid (65 features, **21
+effect-links**, env-docs ok) · format · typecheck 30 · lint 17 · **test 30** (ingestion 58, config 27) ·
+**e2e 16** (api 40 incl. **6 sources**, mcp 14 incl. **3 sources**) · build 17. Committed per the standing
+per-increment cadence (5 commits + 1 pre-existing-format chore).
+
+**Decisions (ADR-0040):** a `SourceService` domain surface (sources registered at runtime, not configured);
+per-**source** connector resolution (not per-kind); an optional `Queue.drain()` to back a synchronous Local
+scan over the fire-and-forget queue; the runtime sink lands documents in the corpus + extracts memories, but
+**retrieval-index population is F-039** (deliberate boundary — `search` does not yet return ingested files).
+**Lesson:** [[synchronous-scan-over-fire-and-forget-queue-and-per-source-connector]].
+
+**Deferred as documented seams:** F-039 (live indexing), multi-tenant ingestion-pipeline scoping,
+filesystem-path allowlisting for hosted, the web Sources UI (F-041), the RBAC-catalog web-mirror drift (F-046).
+
+**Next step:** **F-039** (live corpus indexing — ingested documents populate keyword/semantic/temporal so
+search/compile answer from the real repo; also index captured memories). It is unblocked (F-038 done).
+
+---
+
 ## 2026-07-04 — Harness: adopt external agent-skills (design-review, skill-observer); codex review opt-in; pm-skills declined
 
 Evaluated four proposed external skill repos and integrated them via the **"adapt into the

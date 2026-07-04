@@ -38,7 +38,10 @@ function fakeConnector(files: Map<string, string>): Connector {
 }
 
 /** Wire a service + a worker sharing one event bus + sink, over a `root → files` filesystem map. */
-function harness(filesystems: Map<string, Map<string, string>>) {
+function harness(
+  filesystems: Map<string, Map<string, string>>,
+  options: { autoScanOnRegister?: boolean } = {},
+) {
   const queue = createInProcessQueue();
   const manifest = createInMemoryManifest();
   const registry = createInMemorySourceRegistry();
@@ -55,7 +58,16 @@ function harness(filesystems: Map<string, Map<string, string>>) {
     return fakeConnector(files);
   };
 
-  const service = createSourceService({ registry, queue, manifest, connectorFactory, events });
+  const service = createSourceService({
+    registry,
+    queue,
+    manifest,
+    connectorFactory,
+    events,
+    ...(options.autoScanOnRegister !== undefined
+      ? { autoScanOnRegister: options.autoScanOnRegister }
+      : {}),
+  });
   const worker = createIngestionWorker({
     queue,
     connectors: [],
@@ -139,6 +151,17 @@ describe('createSourceService', () => {
   it('throws NOT_FOUND scanning an unknown source', async () => {
     const { service } = harness(new Map());
     await expect(service.scan('missing')).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('scans immediately on register when autoScanOnRegister is set', async () => {
+    const files = new Map([['a.md', '# A']]);
+    const { service, sink } = harness(new Map([['/repo', files]]), { autoScanOnRegister: true });
+
+    const source = await service.register({ kind: 'fake', config: { root: '/repo' } });
+    // The document is already persisted by the time register() resolves (no explicit scan call).
+    expect(sink.size).toBe(1);
+    const status = await service.scanStatus(source.id);
+    expect(status?.lastScan?.summary.added).toBe(1);
   });
 
   it('scopes sources by tenant (forTenant)', async () => {

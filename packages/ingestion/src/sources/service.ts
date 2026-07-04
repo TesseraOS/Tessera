@@ -38,6 +38,8 @@ export interface SourceServiceOptions {
   readonly connectorFactory: ConnectorFactory;
   /** Ingestion event bus for scan-lifecycle events (the composition root bridges it to SSE). */
   readonly events?: EventBus<IngestionEvents>;
+  /** Scan a source immediately when it is registered (FR-62; default `false` — the agent scans). */
+  readonly autoScanOnRegister?: boolean;
 }
 
 /**
@@ -66,6 +68,7 @@ export interface SourceService {
 
 export function createSourceService(options: SourceServiceOptions): SourceService {
   const { queue, manifest, connectorFactory, events } = options;
+  const autoScanOnRegister = options.autoScanOnRegister ?? false;
   // Shared across tenant views: a source's connector is resolvable by the worker regardless of which
   // tenant view triggered the scan (source ids are globally unique), and status is process-wide.
   const connectors = new Map<SourceId, Connector>();
@@ -78,6 +81,53 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
       connectors.set(record.id, connector);
     }
     return connector;
+  }
+
+  /** Run one scan for a source in the given tenant view: diff → enqueue → (drain) → status + events. */
+  async function performScan(registry: SourceRegistry, id: SourceId): Promise<SourceScanResult> {
+    const record = await registry.get(id);
+    if (record === undefined) {
+      throw new NotFoundError('source not found', { details: { id } });
+    }
+    const connector = ensureConnector(record);
+    const source: SourceDescriptor = { id: record.id, kind: record.kind, label: record.label };
+
+    const previous = statuses.get(id);
+    statuses.set(id, {
+      state: 'running',
+      ...(previous?.lastScan !== undefined ? { lastScan: previous.lastScan } : {}),
+    });
+    await events?.emit('source.scan.started', {
+      sourceId: id,
+      kind: record.kind,
+      label: record.label,
+    });
+
+    try {
+      const coordinator = createIngestionCoordinator({ queue, connector, source, manifest });
+      const summary = await coordinator.scan();
+      // Turn the fire-and-forget queue into a completion barrier where supported (Local profile),
+      // so the summary reflects fully-processed work; async adapters observe progress via SSE.
+      await queue.drain?.();
+
+      const at = new Date().toISOString();
+      statuses.set(id, { state: 'idle', lastScan: { summary, at } });
+      await events?.emit('source.scan.completed', {
+        sourceId: id,
+        kind: record.kind,
+        label: record.label,
+        summary,
+      });
+      return { source: record, summary };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      statuses.set(id, {
+        state: 'error',
+        error: message,
+        ...(previous?.lastScan !== undefined ? { lastScan: previous.lastScan } : {}),
+      });
+      throw error;
+    }
   }
 
   function viewFor(registry: SourceRegistry): SourceService {
@@ -94,6 +144,10 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
           await registry.remove(record.id);
           throw error;
         }
+        // Optionally scan immediately on registration (config-driven, FR-62); default is manual.
+        if (autoScanOnRegister) {
+          await performScan(registry, record.id);
+        }
         return record;
       },
 
@@ -107,54 +161,8 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
         statuses.delete(id);
       },
 
-      async scan(id) {
-        const record = await registry.get(id);
-        if (record === undefined) {
-          throw new NotFoundError('source not found', { details: { id } });
-        }
-        const connector = ensureConnector(record);
-        const source: SourceDescriptor = {
-          id: record.id,
-          kind: record.kind,
-          label: record.label,
-        };
-
-        const previous = statuses.get(id);
-        statuses.set(id, {
-          state: 'running',
-          ...(previous?.lastScan !== undefined ? { lastScan: previous.lastScan } : {}),
-        });
-        await events?.emit('source.scan.started', {
-          sourceId: id,
-          kind: record.kind,
-          label: record.label,
-        });
-
-        try {
-          const coordinator = createIngestionCoordinator({ queue, connector, source, manifest });
-          const summary = await coordinator.scan();
-          // Turn the fire-and-forget queue into a completion barrier where supported (Local profile),
-          // so the summary reflects fully-processed work; async adapters observe progress via SSE.
-          await queue.drain?.();
-
-          const at = new Date().toISOString();
-          statuses.set(id, { state: 'idle', lastScan: { summary, at } });
-          await events?.emit('source.scan.completed', {
-            sourceId: id,
-            kind: record.kind,
-            label: record.label,
-            summary,
-          });
-          return { source: record, summary };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          statuses.set(id, {
-            state: 'error',
-            error: message,
-            ...(previous?.lastScan !== undefined ? { lastScan: previous.lastScan } : {}),
-          });
-          throw error;
-        }
+      scan(id) {
+        return performScan(registry, id);
       },
 
       async scanStatus(id) {

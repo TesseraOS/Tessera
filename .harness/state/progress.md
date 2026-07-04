@@ -3,6 +3,31 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-04 — Product decisions: 'New project' placement + persistent notification service (+F-065)
+
+Two product-lead questions decided and recorded so they aren't forgotten:
+
+1. **'New memory' → 'New project'? Relocate, don't replace.** Project creation is a rare,
+   structural action; memory capture is the frequent daily action (and feeds UC3 decision recall).
+   Following the established enterprise pattern (GitHub '+' menu / Vercel 'Add New…' / Linear),
+   **'New project' lives inside the F-050 project switcher (+ ⌘K palette)**, and the sidebar's
+   dedicated 'New memory' button **evolves into a single '+ New' quick-create menu**
+   (memory / source / project, contextual default). Recorded in **F-050**'s acceptance — the
+   executor cannot miss it when the switcher is built.
+2. **Notification service: yes — new F-065 (R4, after F-060/F-045).** F-060's bell is live-session
+   SSE only (lost on reload); F-065 makes it a **persistent, per-user notification center**:
+   NotificationStore port (in-memory + SQLite, tenant-isolated, retention-pruned, mirroring the
+   F-027 audit pattern), produced from the SAME domain events as SSE (one event taxonomy),
+   REST + MCP parity (ADR-0036) incl. a `list_notifications` tool so a **reconnecting agent can ask
+   'what changed since my last session'** (agent-first differentiator), read/unread + preferences,
+   dashboard center on the F-063 table pattern; email/Slack/webhook channels = documented seams
+   behind a NotificationChannel port. Cross-link noted on F-060.
+
+**Evidence:** `node scripts/verify-state.mjs` valid (**65 features**, 20 effect-links).
+**Next step:** unchanged — executor claims **F-038**.
+
+---
+
 ## 2026-07-04 — Dashboard hard review (live-verified): craft is enterprise-grade, coverage is not → +F-060…F-064
 
 Follow-up to the launch-readiness review: a file-level + **live** review of `apps/web` (booted the real

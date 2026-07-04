@@ -1631,7 +1631,7 @@
       "acceptance": [
         "Project entity + scope model per ADR-0037: adapter-enforced (tenantId, projectId) isolation extending forTenant across vector/memory/graph/retrieval/fragments/sources/compile-cache keys; reserved `default` project keeps every existing test + single-project deployment byte-for-byte unchanged; conformance suites gain project-isolation cases",
         "Control plane: /v1/projects CRUD + MCP tools (ADR-0036 parity) + audited lifecycle; REST/MCP project selection (one documented mechanism in OpenAPI; omitted → default), project id validated against the caller's tenant on every request",
-        "Dashboard: project switcher in the app shell + create/manage projects; per-project sources/search/compile verified in e2e (cross-project isolation: project A's content never surfaces in project B)",
+        "Dashboard: project switcher in the app shell + create/manage projects; 'New project' lives INSIDE the project switcher (+ command palette), per the 2026-07-04 product decision — the sidebar's dedicated 'New memory' button is NOT replaced but evolves into a single '+ New' quick-create menu (memory / source / project; contextual default) so the frequent capture action stays one click away while project creation gets a first-class home; per-project sources/search/compile verified in e2e (cross-project isolation: project A's content never surfaces in project B)",
         "Migration assigns existing rows to the default project via the F-024 runner (additive, reversible); workspace gates green incl. e2e"
       ],
       "verification": [
@@ -1978,7 +1978,8 @@
       "effects": [
         "E-003",
         "E-004"
-      ]
+      ],
+      "notes": "The bell/feed here is LIVE-SESSION only (SSE, lost on reload). The persistent, per-user notification service (store + read state + preferences + agent-readable surface) is F-065 and builds on this."
     },
     {
       "id": "F-061",
@@ -2108,6 +2109,42 @@
         "e2e"
       ],
       "effects": [
+        "E-004"
+      ]
+    },
+    {
+      "id": "F-065",
+      "title": "Notification service: persistent per-user notification center + preferences + agent-readable surface",
+      "requirements": [
+        "FR-38",
+        "FR-49",
+        "NFR-6"
+      ],
+      "service": "api",
+      "package": "@tessera/api",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [
+        "F-060",
+        "F-045"
+      ],
+      "acceptance": [
+        "Notification domain + NotificationStore port with in-memory (reference) + persistent SQLite adapters (shared conformance suite incl. tenant isolation): typed kinds (scan.completed/failed, memory.captured, token.created/revoked, plan.changed, system.alert) with severity, tenant + recipient scoping, per-user read/unread state, retention prune (mirrors the F-027 audit-log pattern); produced from the SAME domain events that feed SSE — never a second event taxonomy",
+        "REST + MCP surface (ADR-0036 parity): GET /v1/notifications (filter unread/kind/severity, cursor-paginated) + mark-read/mark-all-read + per-user notification preferences (which kinds notify) — Zod → OpenAPI + regenerated SDK; a list_notifications MCP tool so a RECONNECTING AGENT can ask 'what changed since my last session' (agent-first differentiator, token-lean); notification reads/preference writes audited where sensitive",
+        "Dashboard: the F-060 bell upgrades to a persistent notification center (unread badge survives reload; live via SSE, history via the API; F-063 data-table/virtualization pattern for the full list) + a preferences section (settings/profile); honest states; WCAG AA (axe) + screenshot-verified",
+        "Additive & back-compatible (default on with quiet sensible kinds; zero-auth Local maps to the default principal); outbound channels (email/Slack/webhook) are DOCUMENTED SEAMS behind a NotificationChannel port — not built until a customer needs them; unit + e2e (emit → persisted → listed → mark-read → badge clears); workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-014",
+        "E-018",
         "E-004"
       ]
     }

@@ -9,7 +9,7 @@
       "status": "active",
       "command": "node scripts/verify-state.mjs",
       "requiredFor": ["always"],
-      "description": "Validate harness state files (feature_list.json, effects.json) + the env-docs guard (every TESSERA_* var read by config/server is documented in .env.example)."
+      "description": "Harness integrity gate (hardened 2026-07-04): state files (feature_list.json, effects.json, schema sync), workflow invariants (wip_limit, blockers-done before in_progress/done, plan-before-code for in-flight features), PRD requirement traceability, gates.json validity + CI-mirror (E-005), memory index coverage, governed-doc relative links, and the env-docs guard (every TESSERA_* var read by config/server documented in .env.example)."
     },
     {
       "id": "typecheck",
@@ -65,7 +65,8 @@
       "status": "active",
       "command": "pnpm --filter @tessera/web test:e2e",
       "requiredFor": ["web"],
-      "description": "Accessibility (axe / WCAG 2.1 AA) for apps/web — active since F-028 (ADR-0021). Asserted inside the web Playwright e2e (gate 6); CI's e2e step covers it, so no separate CI step is needed. Listed here for traceability."
+      "ciStep": false,
+      "description": "Accessibility (axe / WCAG 2.1 AA) for apps/web — active since F-028 (ADR-0021). Asserted inside the web Playwright e2e (gate 6); CI's e2e step covers it (ciStep:false — the verify-state ci-mirror guard knows this is deliberate). Listed here for traceability."
     },
     {
       "id": "web-perf",

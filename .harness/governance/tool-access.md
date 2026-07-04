@@ -13,6 +13,13 @@ that are hard to reverse or reach outside the repo.
 > (post-action triggers, resource-scoped writes, cost budgets, egress-proxy credentials) are
 > defined in [`policy-model.md`](policy-model.md) — read both together.
 
+> **Env-file deny scope (2026-07-04):** the settings deny list enumerates real secret env
+> files (`.env`, `.env.local`, `.env.production`, …) instead of a blanket `.env.*`, because
+> the blanket rule blocked **`.env.example`** — the committed, secret-free file agents are
+> *required* to keep updated (the env-docs guard in the `state` gate enforces it). An
+> exotic env filename outside the enumerated set is still covered by `.gitignore` +
+> gitleaks in CI.
+
 ## Allowed without prompting (read & verify)
 - Read/search the repo; run the **verification gates** and state validator
   (`node scripts/verify-state.mjs`, `pnpm -w typecheck|lint|test|build`).

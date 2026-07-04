@@ -3,6 +3,55 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-04 — Harness hardening: strict self-audit → 6 new mechanical guards + policy/practice reconciliation
+
+A strict audit of the harness itself (`.harness/` + `.claude/` + `scripts/` + `AGENTS.md`), then
+hardening. Principle applied: **a rule that can be a mechanical check and isn't is a gap** (now
+itself a self-audit item). Verdict: the harness's *design* was already strong (closed loop, modular
+rules, honest protocols); its weakness was **enforcement drift** — several stated invariants had no
+guard, and three written policies contradicted authorized practice.
+
+**Drift found (each now fixed AND guarded):**
+1. **Memory index was stale** — 5 of 25 lessons unindexed (composition-root, zod-v4-bridge,
+   mcp-twin-surface, observability-additive, plugin-sdk-envelope). Fixed; now a `state`-gate check.
+2. **CI didn't literally mirror gates.json** (`pnpm -w typecheck` vs CI's `pnpm typecheck`), and
+   nothing would catch a gate activated without a CI step (exactly how web-perf drifted). Now a
+   ci-mirror check (normalizes the `-w` spelling; explicit `ciStep:false` opt-out — a11y).
+3. **Commit policy contradicted practice**: 'only when the user asks' vs the project lead's
+   standing per-verified-increment cadence followed for weeks. Codified the standing cadence
+   (green-only, diff reviewed, **pushes still always ask**) in commit-policy + git rule +
+   checkpoint + clean-state + AGENTS.md golden rule 10.
+4. **`.claude/settings.json` deny blocked `.env.example`** (`Read(./.env.*)`) — the committed,
+   secret-free file agents are REQUIRED to update (env-docs guard). Deny list now enumerates real
+   secret env files; rationale recorded in tool-access.md.
+5. **`next-feature` said claim from `todo`** but every feature has always been claimed from
+   `backlog` — wording fixed (todo, or backlog directly).
+6. **Schema dual-maintenance trap**: release enum hardcoded in feature_list.schema.json (bit us
+   adding R4). Schema now accepts `^R[0-9]+$`; membership stays strict via verify-state, which
+   also now checks schema↔state sync generically. state/README updated (R4, no-drift note).
+
+**New mechanical guards in `scripts/verify-state.mjs`** (the `state` gate, still zero-dep;
+warnings don't fail, errors do): blockers-must-be-done before `in_progress`/`in_review`/`done` ·
+plan-before-code (in-flight features need `.harness/plans/F-xxx-*.md`; done-without-plan = warning
+— F-031/033/035 are the recorded historical debt) · PRD requirement traceability (every FR/NFR a
+feature cites must exist in docs/PRD.md) · feature `verification` tokens must be real gate ids ·
+gates.json shape/uniqueness/status validation + CI mirror (E-005) · memory-index coverage ·
+governed-doc relative-link check (README/AGENTS/CLAUDE/NOTICE + docs/** + .harness/** — 708 links)
+· env-docs guard (kept). First run caught the real drift above (proof the guards bite).
+
+**Also:** the ADR-0036 **agent-first parity rule** is now a binding rule file
+(`.harness/rules/common/agent-first.md`) — REST+MCP before/with UI, token-lean responses, tools
+ride the gateway; F-038's acceptance updated (it *applies* the rule; no longer records it).
+Self-audit checklist gained 'mechanical enforcement' + 'agent-first parity' items; rules README
+scopes frontend rules to all web apps (ADR-0035); gates.json state-gate description documents the
+expanded guard set.
+
+**Evidence:** `node scripts/verify-state.mjs` → valid: 65 features, 20 effect-links, 11 gates
+CI-mirrored, 708 doc links, env-docs ok; 3 expected historical warnings (plan-less done features).
+**Next step:** unchanged — executor claims **F-038** (now with the parity rule pre-recorded).
+
+---
+
 ## 2026-07-04 — Product decisions: 'New project' placement + persistent notification service (+F-065)
 
 Two product-lead questions decided and recorded so they aren't forgotten:

@@ -37,7 +37,7 @@
         },
         "service": { "type": "string", "enum": ["root", "api", "web"] },
         "package": { "type": "string" },
-        "release": { "type": "string", "enum": ["R0", "R1", "R2", "R3", "R4"] },
+        "release": { "type": "string", "pattern": "^R[0-9]+$" },
         "priority": { "type": "string", "enum": ["must", "should", "could", "wont"] },
         "status": {
           "type": "string",

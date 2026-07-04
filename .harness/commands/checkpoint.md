@@ -16,5 +16,7 @@ Record progress and leave a clean, resumable state. Wrapper over the
 6. `node scripts/verify-state.mjs` to confirm state files are valid.
 
 ## Note
-This does **not** commit. Commits happen only when the user asks
-([commit policy](../governance/commit-policy.md)).
+Committing follows the [commit policy](../governance/commit-policy.md): the standing
+cadence commits each completed, **verified** increment (green only, staged diff reviewed);
+**pushing always requires an explicit user request**. A checkpoint of half-done work is
+recorded in `progress.md`, not committed.

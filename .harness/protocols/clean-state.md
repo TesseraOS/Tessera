@@ -15,8 +15,9 @@ resume from files alone**.
    is updated ([effect-link protocol](effect-link.md)).
 5. **No cruft.** No secrets, debug prints, scratch files, or commented-out code committed
    to the working set.
-6. **Reconcilable git.** `git status` matches what `progress.md` describes. (Commits only
-   on user request — [commit policy](../governance/commit-policy.md).)
+6. **Reconcilable git.** `git status` matches what `progress.md` describes. (Verified
+   increments are committed per the standing cadence; pushes only on user request —
+   [commit policy](../governance/commit-policy.md).)
    - **New code is actually tracked.** A "clean" status does NOT prove a new package/dir is
      committed (ignored files are hidden). For any new top-level/package dir, confirm with
      `git ls-files <dir>` (lesson: a broad `.gitignore` rule once hid a whole package).

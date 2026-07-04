@@ -3,8 +3,18 @@
 Binding. See also the [git rule](../rules/common/git.md).
 
 ## When to commit
-- **Only when the user asks.** Agents do not auto-commit or auto-push. Stage and prepare,
-  but a human authorizes the commit.
+- **Standing cadence (project-lead authorization, in practice since R0; codified
+  2026-07-04):** commit each **completed, verified increment** proactively — a green
+  feature increment, a finished feature, or a coherent docs/state update — without asking
+  again each time. This supersedes the original "only when asked" default, which had
+  drifted from months of authorized practice (files are the system of record, so the
+  written policy now matches reality).
+- **Guardrails on every commit (non-negotiable):**
+  - only **green** states are committed (gates run, evidence recorded — never a red build,
+    never a half-applied multi-file edit);
+  - review the staged diff first — no blind `git add -A`;
+  - **pushing, force-pushing, and anything touching a remote still require an explicit
+    user request, every time.**
 - One logical change per commit; the build is green at each commit.
 
 ## Message format (Conventional Commits)

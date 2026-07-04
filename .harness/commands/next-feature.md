@@ -6,8 +6,10 @@ Select and claim the next feature to work on.
 1. Ensure **no** feature is currently `in_progress` in
    [`../state/feature_list.json`](../state/feature_list.json) (`wip_limit: 1`). If one is,
    resume it instead.
-2. Choose the **lowest-id eligible** feature: status `todo`, for the **current release**,
-   with every `blockedBy` already `done`.
+2. Choose the **lowest-id eligible** feature: status `todo` (or `backlog` when no feature
+   has been promoted to `todo` — the common case; claiming from `backlog` directly is
+   valid), for the **earliest release with open features**, with every `blockedBy` already
+   `done`.
 3. Set its `status` to `in_progress`.
 4. Read its `requirements`, `acceptance`, and linked docs/ADRs.
 5. Proceed into the [`add-feature`](../skills/add-feature/SKILL.md) skill (plan first).

@@ -3,7 +3,9 @@
 See also the binding [commit policy](../../governance/commit-policy.md).
 
 ## Commits
-- **Commit only when the user asks** (engineering standards). Don't auto-commit.
+- **Commit each completed, verified increment** (standing authorization — see the
+  [commit policy](../../governance/commit-policy.md)); never commit red or half-applied
+  states, and **never push without an explicit user request**.
 - **Conventional Commits**: `type(scope): subject` —
   e.g. `feat(retrieval): add BM25 keyword retriever`. Types: `feat, fix, docs, refactor,
   test, chore, perf, build, ci`.

@@ -43,7 +43,8 @@ application code is built next, **one feature at a time**, following this manual
    recorded, tree clean or intentionally staged, no half-applied edits.
 9. **Production-grade only.** No toy code, PoC, or hacky shortcuts (see
    [`.harness/rules/`](.harness/rules/)). Secure, typed, tested, observable.
-10. **Commit only what should be committed, only when asked.** See
+10. **Commit only what should be committed — verified increments per the standing
+    cadence; never push without an explicit request.** See
     [`.harness/governance/commit-policy.md`](.harness/governance/commit-policy.md).
 
 ## 2. The working loop

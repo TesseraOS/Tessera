@@ -11,7 +11,7 @@ monolithic ruleset is skimmed, not followed.
 | [`common/`](common/) | everything (language-agnostic) |
 | [`typescript/`](typescript/) | all TypeScript |
 | [`api/`](api/) | backend (`apps/api`, server packages) |
-| [`frontend/`](frontend/) | dashboard (`apps/web`) |
+| [`frontend/`](frontend/) | all web apps (`apps/web`; `apps/marketing` + `apps/docs` when they land — ADR-0035) |
 | [`security/`](security/) | security-sensitive code everywhere |
 
 Service-scoped harnesses (`../../apps/*/.harness/rules/`) may **add** rules. They may not

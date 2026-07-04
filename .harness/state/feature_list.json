@@ -1216,7 +1216,7 @@
         "The 2026-07-04 review's #1 finding closed: @tessera/ingestion runs INSIDE the shipped runtime. Config gains a `sources` section + a persistent SourceRegistry (SQLite over the storage handle) so registered sources survive restarts; createLocalRuntime constructs the ingestion coordinator + worker over the Queue port, wired to the runtime DocumentSink, the memory-extraction sink (F-017), and the shared ApiEventBus so scans stream document.ingested/removed + scan lifecycle events on GET /v1/events (FR-38)",
         "REST: /v1/sources (list/register/get/remove) + POST /v1/sources/:id/scan + scan status — Zod → OpenAPI, SDK regenerated, guarded by a new sources:manage permission (RBAC catalog + ROLE_PERMISSIONS extended), audit-flagged (E-020); MCP tools add_source/list_sources/scan_source wrap the SAME services (ADR-0036 parity rule; gateway TOOL_PERMISSIONS extended)",
         "Agent-first proof: an agent (MCP or REST, no UI) registers a filesystem or git source, triggers a scan, observes progress, and the scan is incremental + idempotent on re-run (content-hash, F-006); refs are tenant-scoped through the forTenant seam (ADR-0033)",
-        "The API/MCP parity rule (ADR-0036) is recorded in .harness/rules so the evaluator enforces it; unit + e2e (REST route, MCP tool, SSE progress over a live socket) green; workspace gates green"
+        "The API/MCP parity rule (ADR-0036) is ALREADY recorded at .harness/rules/common/agent-first.md (2026-07-04 harness hardening) — this feature is its first enforced application (evaluator checks each operation ships REST + MCP); unit + e2e (REST route, MCP tool, SSE progress over a live socket) green; workspace gates green"
       ],
       "verification": [
         "typecheck",

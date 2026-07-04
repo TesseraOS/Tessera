@@ -18,4 +18,7 @@ window**. These files are the source of truth for scope, history, and consequenc
 ## Conventions
 - Feature ids: `F-00x`. Effect-link ids: `E-00x`.
 - Statuses: `backlog → todo → in_progress → blocked → in_review → done`.
-- Releases: `R0` (local MVP) … `R3` (enterprise), per [`../../docs/roadmap.md`](../../docs/roadmap.md).
+- Releases: `R0` (local MVP) … `R3` (enterprise & product completeness), `R4` (launch),
+  per [`../../docs/roadmap.md`](../../docs/roadmap.md). New releases are added to
+  `releases[]` here; the schema accepts any `R<n>` (membership is enforced by
+  `verify-state`, so there is no dual-maintenance drift).

@@ -1248,7 +1248,7 @@
       "package": "@tessera/config",
       "release": "R3",
       "priority": "must",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-038"
       ],
@@ -1271,7 +1271,7 @@
         "E-013",
         "E-014"
       ],
-      "notes": "Second half of closing the core loop: F-038 makes scans run; F-039 makes their output retrievable. The corpus seam was designed for exactly this (F-015 blob FragmentSource + Runtime.keyword/temporal exposure F-018)."
+      "notes": "Done 2026-07-04 (R3 must): the core loop is CLOSED — F-038 makes scans run + land documents in the corpus; F-039 makes that output RETRIEVABLE, so search/compile answer from the user's actual repository. @tessera/config createCorpusIndexer = one tenant-aware path that lands (ref, text) in the blob corpus AND all three indices — keyword (FTS5, FR-22), temporal (recency, FR-24), semantic (embed → VectorStore, FR-21) — through the forTenant scoped views (ADR-0033); an in-memory ref→sha256(text) cache never re-embeds an unchanged (ref, text) (NFR-12), belt-and-suspenders over the F-006 manifest. createIndexingDocumentSink (replaces the F-038 blob-only sink; skip binary; removal clears corpus + every index; timestamp from git commit / fs mtime) + createIndexingMemoryService (a MemoryService decorator: API/MCP captures AND auto-extracted memories index under memory/<lineageId>, an edit re-indexing the same ref) write through the SAME indexer → one shared ref space (document.id / memory/<lineageId>) so a search hit always resolves in the compiler (the fusion requirement). @tessera/retrieval: KeywordRetriever.remove(ref) added (additive) for document removal. Local profile wires the indexer; services.memory is the indexed service. FIX: memory refs are '/'-delimited — a ':' becomes an NTFS alternate-data-stream on Windows (broke blob list()); caught + fixed while wiring. Verified: an integration test scans a fixture repo then asserts search returns its files with MULTI-SIGNAL attribution (keyword+temporal+semantic) AND compile cites them budget-bounded; a just-captured memory is findable and an edit updates the index; the corpus-indexer unit proves the NFR-12 cache (counting fake embeddings) + remove clears all three signals + tenant isolation. Gates green workspace-wide: format · typecheck 30 · lint 17 · test 30 (config 33, retrieval +1 keyword-remove) · e2e 16 · build 17 · state valid (21 effect-links). DEFERRED/documented: sub-document CHUNKING (whole-document indexing here; the sink seam is unchanged for chunking + embedBatch later); compile-cache staleness (the Local runtime enables NO compilation cache, so index writes are immediately reflected — if enabled later it MUST key on a corpus version); multi-tenant ingestion-pipeline scoping (ingestion indexes in the default tenant; memory in its capture tenant); the F-061 search-depth UI. Effects E-008/E-012/E-013 (index writers realized) + E-014/E-021 (composition + runtime sink evolved) + E-010 (memory indexing decorator)."
     },
     {
       "id": "F-040",

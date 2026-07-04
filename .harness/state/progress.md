@@ -3,6 +3,52 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-04 — F-039 DONE — the core loop is CLOSED: search/compile answer from the ingested repo
+
+F-038 made scans run + land documents in the corpus; **F-039 makes that output retrievable**. Ingested
+documents **and** captured memories now populate the retrieval indices, so `search`/`compile` answer from
+the user's actual repository — closing the loop the 2026-07-04 live check flagged (a just-ingested/captured
+item was unfindable). Plan-first ([`F-039`](../plans/F-039-live-corpus-indexing.md)); no new ADR (a
+composition-root change inside the established seams).
+
+- **`@tessera/config` `createCorpusIndexer`** — one **tenant-aware** path that lands `(ref, text)` in the
+  blob corpus **and** all three indices: keyword (FTS5, FR-22), temporal (recency, FR-24), semantic
+  (`embed → VectorStore`, FR-21), through the `forTenant` scoped views (ADR-0033). An in-memory
+  `ref → sha256(text)` cache **never re-embeds** an unchanged `(ref, text)` (NFR-12), over the F-006
+  manifest that already skips unchanged documents.
+- **Two writers, one ref space** — `createIndexingDocumentSink` (replaces the F-038 blob-only sink; skip
+  binary; removal clears corpus + every index; timestamp from git/mtime) and `createIndexingMemoryService`
+  (a `MemoryService` decorator: API/MCP captures **and** auto-extracted memories index under
+  `memory/<lineageId>`, an edit re-indexing the same ref) both write through the **same** indexer. Shared
+  refs (`document.id` / `memory/<lineageId>`) so a search hit always resolves in the compiler (the fusion
+  requirement).
+- **`@tessera/retrieval`** — `KeywordRetriever.remove(ref)` (additive) for document removal.
+- **Cross-platform fix caught while wiring:** memory refs are `/`-delimited — a `:` becomes an NTFS
+  alternate-data-stream on Windows (broke blob `list()`). Lesson:
+  [[portable-blob-keys-and-one-indexer-two-writers]].
+
+**Evidence (all green, workspace-wide):** state valid (65 features, **21 effect-links**, env-docs ok) ·
+format · typecheck 30 · lint 17 · **test 30** (config 33, retrieval +1 keyword-remove) · **e2e 16** ·
+build 17. The config integration test scans a fixture repo then asserts `search` returns its files with
+**multi-signal attribution** (keyword+temporal+semantic) **and** `compile` cites them budget-bounded; a
+just-captured memory is findable and an edit updates the index; the corpus-indexer unit proves the NFR-12
+cache (a **counting fake embeddings**) + `remove` clears all three signals + tenant isolation. Committed
+per the standing cadence (implementation + records).
+
+**Decisions:** one shared `CorpusIndexer` for ingestion + memory (single ref space); **whole-document**
+indexing for F-039 (sub-document chunking + `embedBatch` is a documented refinement keeping this sink
+seam); the Local runtime enables **no** compilation cache, so index writes are immediately reflected (if a
+cache is enabled later it MUST key on a corpus version — the documented staleness contract).
+
+**Deferred/documented seams:** sub-document chunking; multi-tenant ingestion-pipeline scoping (ingestion
+indexes in the default tenant; memory in its capture tenant); the F-061 search-depth UI.
+
+**Next step:** **F-040** (code-symbol extraction → live knowledge-graph population + static effect-links +
+a manual assertion surface; resolves OQ5). It is unblocked (F-039 done) and its plan step includes an ADR
+for the extraction approach (tree-sitter vs LSP vs TS compiler API).
+
+---
+
 ## 2026-07-04 — F-038 DONE — R3 keystone: ingestion wired into the shipped runtime + REST/MCP source surface + SSE
 
 Closed the launch-readiness review's **#1 gap**: `@tessera/ingestion` (F-006 connectors/pipeline/redaction

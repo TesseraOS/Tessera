@@ -24,6 +24,7 @@ import { createEventBus, InternalError, ValidationError } from '@tessera/core';
 import {
   createFilesystemConnector,
   createGitConnector,
+  createGraphExtractionSink,
   createIngestionWorker,
   createMemoryExtractionSink,
   createSourceService,
@@ -59,6 +60,7 @@ import { createIndexingDocumentSink } from '../sources/ingestion-sink.js';
 import { createIndexingMemoryService } from '../sources/memory-indexing.js';
 import { createSqliteManifest } from '../sources/sqlite-manifest.js';
 import { createSqliteSourceRegistry } from '../sources/sqlite-source-registry.js';
+import { createTreeSitterSymbolExtractor } from '../symbols/tree-sitter-extractor.js';
 import type { Env } from '../load.js';
 import type { Runtime, RuntimeAuth } from '../runtime.js';
 import type { TesseraConfig } from '../schema.js';
@@ -198,6 +200,7 @@ export async function createLocalRuntime(
   });
 
   const graphStore = createSqliteGraphStore(relational.db);
+  const graph = createKnowledgeGraphService(graphStore);
   const memoryStore = createSqliteMemoryStore(relational.db);
 
   const keyword = createKeywordRetriever({ db: relational.db });
@@ -256,10 +259,12 @@ export async function createLocalRuntime(
   // Indexed memory service: API/MCP captures + auto-extracted memories both become findable (F-039).
   const indexedMemory = createIndexingMemoryService(memory, indexer);
   // The runtime DocumentSink: index every document (F-039) + extract memories from ADRs/settled items
-  // (F-017), the extracted memories themselves indexed via the same decorator.
+  // (F-017) + populate the knowledge graph from code symbols/imports (F-040), so get_effects returns
+  // real dependents. Ingestion runs in the default tenant (F-038/ADR-0040 boundary).
   const ingestionSink = teeSink(
     createIndexingDocumentSink(indexer),
     createMemoryExtractionSink({ memory: indexedMemory, extractors: defaultMemoryExtractors }),
+    createGraphExtractionSink({ extractor: createTreeSitterSymbolExtractor(), graph }),
   );
   const sources = createSourceService({
     registry: createSqliteSourceRegistry(relational.db),
@@ -281,7 +286,7 @@ export async function createLocalRuntime(
   const services: ApiServices = {
     search,
     compiler,
-    graph: createKnowledgeGraphService(graphStore),
+    graph,
     memory: indexedMemory,
     sources,
     billing,

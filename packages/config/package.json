@@ -32,6 +32,8 @@
     "@tessera/retrieval": "workspace:*",
     "@tessera/storage": "workspace:*",
     "drizzle-orm": "^0.45.2",
+    "tree-sitter-wasms": "^0.1.12",
+    "web-tree-sitter": "^0.25.0",
     "zod": "^3.25.67"
   },
   "devDependencies": {

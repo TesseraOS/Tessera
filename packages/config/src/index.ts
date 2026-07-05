@@ -19,3 +19,4 @@ export * from './sources/sqlite-manifest.js';
 export * from './sources/corpus-indexer.js';
 export * from './sources/ingestion-sink.js';
 export * from './sources/memory-indexing.js';
+export * from './symbols/tree-sitter-extractor.js';

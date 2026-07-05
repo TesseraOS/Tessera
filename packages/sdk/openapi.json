@@ -658,6 +658,167 @@
             }
           }
         }
+      },
+      "post": {
+        "summary": "Assert an effect-link: changing `from` may require reviewing `to`.",
+        "tags": [
+          "effects"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "file",
+                          "symbol",
+                          "module",
+                          "person",
+                          "decision",
+                          "memory"
+                        ]
+                      },
+                      "key": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "key"
+                    ]
+                  },
+                  "to": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "file",
+                          "symbol",
+                          "module",
+                          "person",
+                          "decision",
+                          "memory"
+                        ]
+                      },
+                      "key": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "key"
+                    ]
+                  },
+                  "rationale": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "rationale"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "from": {
+                      "type": "string"
+                    },
+                    "to": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "rationale": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "confidence": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "origin": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "metadata": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "from",
+                    "to",
+                    "kind",
+                    "rationale",
+                    "confidence",
+                    "origin",
+                    "metadata"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/memory": {
@@ -2181,6 +2342,7 @@
                 "effects.read",
                 "memory.read",
                 "memory.write",
+                "effects.write",
                 "source.read",
                 "source.manage",
                 "billing.read",
@@ -2305,6 +2467,7 @@
                               "effects.read",
                               "memory.read",
                               "memory.write",
+                              "effects.write",
                               "source.read",
                               "source.manage",
                               "billing.read",

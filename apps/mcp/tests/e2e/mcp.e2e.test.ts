@@ -36,6 +36,7 @@ describe('@tessera/mcp tools', () => {
     const { tools } = await client.listTools();
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       'add_source',
+      'assert_effect',
       'capture_memory',
       'compile_context',
       'explain',
@@ -83,6 +84,28 @@ describe('@tessera/mcp tools', () => {
     });
     expect(missing.isError).toBe(true);
     expect((structured(missing).error as { code: string }).code).toBe('NOT_FOUND');
+  });
+
+  it('assert_effect adds a manual effect-link that get_effects then returns', async () => {
+    const asserted = await client.callTool({
+      name: 'assert_effect',
+      arguments: {
+        from: { kind: 'file', key: EFFECT_DEPENDENT_KEY },
+        to: { kind: EFFECT_SOURCE.kind, key: EFFECT_SOURCE.key },
+        rationale: 'app and core share a contract',
+      },
+    });
+    expect(asserted.isError).toBeFalsy();
+    expect(structured(asserted).origin).toBe('manual');
+
+    const effects = await client.callTool({
+      name: 'get_effects',
+      arguments: { kind: 'file', key: EFFECT_DEPENDENT_KEY },
+    });
+    const keys = (structured(effects).effects as { node: { key: string } }[]).map(
+      (h) => h.node.key,
+    );
+    expect(keys).toContain(EFFECT_SOURCE.key);
   });
 
   it('capture_memory stores version 1', async () => {

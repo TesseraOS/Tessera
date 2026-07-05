@@ -9,6 +9,7 @@ import type { McpCallContext, McpGateway, McpToolName } from './gateway.js';
 import { runTool } from './result.js';
 import {
   addSourceShape,
+  assertEffectShape,
   captureMemoryShape,
   compileShape,
   effectsShape,
@@ -150,6 +151,26 @@ export function buildMcpServer(
             .forTenant(tenantOf(ctx))
             .getEffects({ kind: args.kind, key: args.key }, opts),
         };
+      }),
+  );
+
+  server.registerTool(
+    'assert_effect',
+    {
+      description:
+        'Assert an effect-link: changing `from` may require reviewing `to` (rationale-backed).',
+      inputSchema: assertEffectShape,
+    },
+    (args, extra) =>
+      runTool(async () => {
+        const ctx = await guard('assert_effect', extra);
+        return services.graph.forTenant(tenantOf(ctx)).assertEffectLink({
+          from: args.from,
+          to: args.to,
+          rationale: args.rationale,
+          origin: 'manual',
+          ...(args.confidence !== undefined ? { confidence: args.confidence } : {}),
+        });
       }),
   );
 

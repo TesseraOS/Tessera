@@ -20,6 +20,7 @@ export type McpToolName =
   | 'get_effects'
   | 'capture_memory'
   | 'explain'
+  | 'assert_effect'
   | 'add_source'
   | 'list_sources'
   | 'scan_source';
@@ -30,6 +31,7 @@ export const TOOL_PERMISSIONS: Readonly<Record<McpToolName, Permission>> = {
   explain: 'compile:read',
   get_effects: 'effects:read',
   capture_memory: 'memory:write',
+  assert_effect: 'effects:write',
   add_source: 'sources:manage',
   list_sources: 'sources:read',
   scan_source: 'sources:manage',

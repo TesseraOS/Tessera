@@ -30,6 +30,7 @@ export const PERMISSIONS = [
   'effects:read',
   'memory:read',
   'memory:write',
+  'effects:write',
   'sources:read',
   'sources:manage',
   'admin:manage',
@@ -53,7 +54,7 @@ const READ_PERMISSIONS: readonly Permission[] = [
 export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
   owner: PERMISSIONS,
   admin: PERMISSIONS,
-  member: [...READ_PERMISSIONS, 'memory:write', 'sources:manage'],
+  member: [...READ_PERMISSIONS, 'memory:write', 'effects:write', 'sources:manage'],
   viewer: READ_PERMISSIONS,
 };
 

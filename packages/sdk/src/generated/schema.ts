@@ -305,7 +305,58 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        /** Assert an effect-link: changing `from` may require reviewing `to`. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        from: {
+                            /** @enum {string} */
+                            kind: "file" | "symbol" | "module" | "person" | "decision" | "memory";
+                            key: string;
+                        };
+                        to: {
+                            /** @enum {string} */
+                            kind: "file" | "symbol" | "module" | "person" | "decision" | "memory";
+                            key: string;
+                        };
+                        rationale: string;
+                        confidence?: number;
+                        metadata?: {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            from: string;
+                            to: string;
+                            kind: string;
+                            rationale: string | null;
+                            confidence: number | null;
+                            origin: string | null;
+                            metadata: {
+                                [key: string]: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -1034,7 +1085,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Filter by action. */
-                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read";
+                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read";
                     /** @description Filter by actor principal id. */
                     actor?: string;
                     /** @description Filter by outcome. */
@@ -1069,7 +1120,7 @@ export interface paths {
                                     kind: "local" | "user" | "token";
                                 };
                                 /** @enum {string} */
-                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read";
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read";
                                 target?: string;
                                 /** @enum {string} */
                                 outcome: "success" | "denied";

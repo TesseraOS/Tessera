@@ -39,6 +39,15 @@ export const effectsShape = {
   maxDepth: z.number().int().positive().max(20).optional(),
 };
 
+const effectNodeRef = z.object({ kind: z.enum(NODE_KINDS), key: z.string().min(1) });
+
+export const assertEffectShape = {
+  from: effectNodeRef.describe('The node that, when changed, has consequences.'),
+  to: effectNodeRef.describe('The dependent that may need reviewing.'),
+  rationale: z.string().min(1).describe('Why this effect-link holds.'),
+  confidence: z.number().min(0).max(1).optional(),
+};
+
 export const captureMemoryShape = {
   kind: z.enum(MEMORY_KINDS),
   title: z.string().min(1).max(200),

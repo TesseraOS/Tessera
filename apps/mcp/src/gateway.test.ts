@@ -27,6 +27,7 @@ describe('TOOL_PERMISSIONS', () => {
   it('maps every tool to a required permission', () => {
     expect(Object.keys(TOOL_PERMISSIONS).sort()).toEqual([
       'add_source',
+      'assert_effect',
       'capture_memory',
       'compile_context',
       'explain',

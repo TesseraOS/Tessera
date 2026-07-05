@@ -17,6 +17,7 @@ export const AUDIT_ACTIONS = [
   'effects.read',
   'memory.read',
   'memory.write',
+  'effects.write',
   'source.read',
   'source.manage',
   'billing.read',

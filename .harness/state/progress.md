@@ -3,6 +3,56 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-04 — F-040 DONE — code symbols → live knowledge graph; get_effects returns real dependents
+
+The #2 differentiator is now **live**: scanning a repo populates the knowledge graph from real code
+(tree-sitter), so `GET /v1/effects` returns **real ranked dependents** (was empty in production). OQ5
+resolved → **tree-sitter WASM** (ADR-0041). Delivered in 5 verifiable, committed increments.
+
+- **(1) `@tessera/knowledge-graph`** — additive `GraphStore.removeNode` (node + incident edges) +
+  `removeEdges(filter)` (port + in-memory + sqlite + conformance + service) for incremental subgraph
+  replacement.
+- **(2) `@tessera/ingestion`** — a `SymbolExtractor` port + relative-import resolver (extensionless
+  source-relative keys) + `createGraphExtractionSink` (a `DocumentSink` writing `file`/`symbol` nodes +
+  `imports`/`defines` edges through a **structural** `GraphWriteService` — no `@tessera/knowledge-graph`
+  runtime dep; the real service is assignable). Incremental: each `upsert` replaces the file's outgoing
+  edges + clears its stale incoming effect-links (surgical `removeEdges`), without clobbering other files'
+  edges; `deriveStaticEffectLinks` inverts imports → effect-links.
+- **(3) `@tessera/config`** — `createTreeSitterSymbolExtractor` over `web-tree-sitter` (WASM) + prebuilt
+  `tree-sitter-wasms` grammars (TS/JS/TSX; lazy init + per-language cache; offline). **Probe-verified in
+  the real environment before committing the ADR.** Wired into the runtime sink tee.
+- **(4)** `POST /v1/effects` (assert a manual effect-link, `origin` forced server-side, `effects:write`
+  RBAC member+, `effects.write` audit) + `assert_effect` MCP tool (gateway); OpenAPI + regenerated
+  `@tessera/sdk` (`assertEffect`).
+- **(5)** records (ADR-0041 was written at kickoff); effects E-002/E-011 + E-009/E-021 + E-003/E-018/E-020.
+
+**Evidence (all green, workspace-wide):** state valid (65 features, **21 effect-links**, env-docs ok) ·
+format · typecheck 30 · lint 17 · **test 30** (knowledge-graph 29, ingestion 65, config 35) · **e2e 16**
+(api 43, mcp 15) · build 17. A config integration test scans a fixture repo (`a.ts` imports `./b`)
+through the **real tree-sitter** extractor and asserts `get_effects({kind:'file', key:'b'})` returns `a`
+with a path, idempotent on re-scan; the sink unit proves incremental correctness over the real graph
+service; api/mcp e2e cover the assertion path (assert → get_effects returns it; viewer 403).
+
+**Decisions (ADR-0041):** tree-sitter WASM (multi-language, local-first, no native build) over the
+TS-compiler-API (TS/JS-only) and LSP (server processes); parser behind a `SymbolExtractor` port (fake for
+unit tests, WASM in the composition root); **surgical `removeEdges` for incremental correctness** (not
+`removeNode`, which would clobber unchanged files' edges); extensionless file keys so imports connect.
+**Lesson:** [[tree-sitter-wasm-extraction-and-incremental-graph]].
+
+**Deferred/documented seams (ADR-0041):** call/reference edges + intra-file call graphs, directory/index +
+package-import resolution, languages beyond TS/JS (add grammars), orphan symbol-node GC, a TS-compiler-API
+fidelity backend behind the same port, multi-tenant ingestion graph scoping (default tenant), the F-043
+graph-viz UI.
+
+**🎉 R3 core-loop arc COMPLETE** — F-038 (ingestion in the runtime), F-039 (live indexing), F-040 (graph
+population) all done: a user/agent points Tessera at a repo, and search/compile/get_effects answer from it.
+
+**Next step:** the remaining R3 features are dashboard/hardening (F-041 sources UI, F-044 API hardening,
+F-045 dashboard auth+SDK, F-048 full-stack E2E, F-049 perf, etc.) — none blocking the closed core loop.
+F-041 (Sources & Settings UI over the now-live /v1/sources) is a natural next.
+
+---
+
 ## 2026-07-04 — F-040 KICKOFF (planner phase) + OQ5 RESOLVED → tree-sitter (WASM)
 
 Claimed **F-040** (code-symbol extraction → live knowledge-graph population + static effect-links + a

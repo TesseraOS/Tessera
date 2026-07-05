@@ -336,6 +336,10 @@ importers:
       '@tessera/storage':
         specifier: workspace:*
         version: link:../storage
+    devDependencies:
+      '@tessera/knowledge-graph':
+        specifier: workspace:*
+        version: link:../knowledge-graph
 
   packages/knowledge-graph:
     dependencies:

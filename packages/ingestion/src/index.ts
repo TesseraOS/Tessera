@@ -31,3 +31,6 @@ export * from './adapters/tee-sink.js';
 export * from './adapters/memory-extraction-sink.js';
 export * from './sources/registry.js';
 export * from './sources/service.js';
+export * from './symbols/extractor.js';
+export * from './symbols/resolve-import.js';
+export * from './adapters/graph-extraction-sink.js';

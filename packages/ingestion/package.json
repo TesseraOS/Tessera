@@ -23,5 +23,8 @@
   "dependencies": {
     "@tessera/core": "workspace:*",
     "@tessera/storage": "workspace:*"
+  },
+  "devDependencies": {
+    "@tessera/knowledge-graph": "workspace:*"
   }
 }

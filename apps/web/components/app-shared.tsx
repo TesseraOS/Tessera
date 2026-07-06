@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import {
+  Activity,
   Boxes,
   FileSearch,
   LayoutGrid,
@@ -53,6 +54,12 @@ export function buildNavGroups(pathname: string): SidebarNavGroup[] {
           isActive: isActive('/graph'),
         },
         { title: 'Memory', path: '/memory', icon: <NotebookText />, isActive: isActive('/memory') },
+        {
+          title: 'Timeline',
+          path: '/timeline',
+          icon: <Activity />,
+          isActive: isActive('/timeline'),
+        },
       ],
     },
     {

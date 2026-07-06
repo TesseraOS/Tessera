@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useReducer } from 'react';
+import { useEffect, useReducer, useState } from 'react';
 import { API_ORIGIN } from './client';
 import type { ScanSummary } from './types';
 
@@ -141,4 +141,61 @@ function isScanSummary(value: unknown): value is ScanSummary {
     typeof record['removed'] === 'number' &&
     typeof record['unchanged'] === 'number'
   );
+}
+
+/** Event types surfaced on the live activity feed (FR-43 timeline). */
+export const LIVE_ACTIVITY_TYPES = [
+  'memory.captured',
+  'document.ingested',
+  'source.scan.completed',
+] as const;
+
+export type LiveActivityType = (typeof LIVE_ACTIVITY_TYPES)[number];
+
+export interface LiveEvent {
+  /** Stable id for the received event (monotonic within the session). */
+  id: string;
+  type: LiveActivityType;
+  /** Client receive time (ISO) — the wire payloads carry no timestamp. */
+  at: string;
+  data: Record<string, unknown>;
+}
+
+/**
+ * Subscribe to the live activity stream (`/v1/events`) and accumulate the most recent events
+ * (newest first, capped). Feeds the timeline's live-append (FR-43). SSR-safe; torn down on unmount.
+ */
+export function useLiveActivity(limit = 50): LiveEvent[] {
+  const [events, setEvents] = useState<LiveEvent[]>([]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof EventSource === 'undefined') return;
+
+    const source = new EventSource(`${API_ORIGIN}/v1/events`);
+    let seq = 0;
+
+    const listeners = LIVE_ACTIVITY_TYPES.map((type) => {
+      const handler = (event: MessageEvent<string>) => {
+        const data = parseData(event.data) ?? {};
+        const entry: LiveEvent = {
+          id: `${type}-${Date.now()}-${seq++}`,
+          type,
+          at: new Date().toISOString(),
+          data,
+        };
+        setEvents((prev) => [entry, ...prev].slice(0, limit));
+      };
+      source.addEventListener(type, handler as EventListener);
+      return { type, handler };
+    });
+
+    return () => {
+      for (const { type, handler } of listeners) {
+        source.removeEventListener(type, handler as EventListener);
+      }
+      source.close();
+    };
+  }, [limit]);
+
+  return events;
 }

@@ -1,4 +1,5 @@
 import {
+  Activity,
   Boxes,
   FileSearch,
   LayoutGrid,
@@ -32,6 +33,7 @@ export const navGroups: NavGroup[] = [
       { title: 'Inspector', href: '/inspector', icon: FileSearch },
       { title: 'Knowledge graph', href: '/graph', icon: Network },
       { title: 'Memory', href: '/memory', icon: NotebookText },
+      { title: 'Timeline', href: '/timeline', icon: Activity },
     ],
   },
   {

@@ -15,6 +15,7 @@ import {
   effectsShape,
   explainShape,
   listSourcesShape,
+  queryGraphShape,
   scanSourceShape,
   searchShape,
 } from './schemas.js';
@@ -151,6 +152,23 @@ export function buildMcpServer(
             .forTenant(tenantOf(ctx))
             .getEffects({ kind: args.kind, key: args.key }, opts),
         };
+      }),
+  );
+
+  server.registerTool(
+    'query_graph',
+    {
+      description: 'A bounded subgraph of the knowledge graph (nodes + edges) for exploration.',
+      inputSchema: queryGraphShape,
+    },
+    (args, extra) =>
+      runTool(async () => {
+        const ctx = await guard('query_graph', extra);
+        return services.graph.forTenant(tenantOf(ctx)).queryGraph({
+          ...(args.nodeKinds !== undefined ? { nodeKinds: args.nodeKinds } : {}),
+          ...(args.edgeKinds !== undefined ? { edgeKinds: args.edgeKinds } : {}),
+          ...(args.limit !== undefined ? { limit: args.limit } : {}),
+        });
       }),
   );
 

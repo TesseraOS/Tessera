@@ -42,6 +42,7 @@ describe('@tessera/mcp tools', () => {
       'explain',
       'get_effects',
       'list_sources',
+      'query_graph',
       'scan_source',
       'search',
     ]);
@@ -84,6 +85,16 @@ describe('@tessera/mcp tools', () => {
     });
     expect(missing.isError).toBe(true);
     expect((structured(missing).error as { code: string }).code).toBe('NOT_FOUND');
+  });
+
+  it('query_graph returns a bounded subgraph of nodes + edges', async () => {
+    const result = await client.callTool({ name: 'query_graph', arguments: {} });
+    expect(result.isError).toBeFalsy();
+    const graph = structured(result);
+    const nodes = graph.nodes as { key: string }[];
+    const edges = graph.edges as { kind: string }[];
+    expect(nodes.map((node) => node.key)).toContain(EFFECT_SOURCE.key);
+    expect(edges.some((edge) => edge.kind === 'EFFECT_LINK')).toBe(true);
   });
 
   it('assert_effect adds a manual effect-link that get_effects then returns', async () => {

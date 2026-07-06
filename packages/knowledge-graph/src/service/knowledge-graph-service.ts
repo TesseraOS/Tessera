@@ -1,6 +1,7 @@
 import { NotFoundError, ValidationError, type TenantId } from '@tessera/core';
 import type { z } from 'zod';
 import {
+  DEFAULT_GRAPH_LIMIT,
   EFFECT_LINK_KIND,
   edgeIdFor,
   nodeIdFor,
@@ -8,6 +9,8 @@ import {
   type EffectHit,
   type GraphEdge,
   type GraphNode,
+  type GraphQuery,
+  type GraphSnapshot,
   type NodeId,
 } from '../domain.js';
 import type { EdgeFilter, GetEffectsOptions, GraphStore } from '../ports/graph-store.js';
@@ -58,6 +61,11 @@ export interface KnowledgeGraphService {
   removeEdges(filter: { from?: NodeRef; to?: NodeRef; kind?: EdgeKind }): Promise<void>;
   /** What is affected if the referenced node changes — ranked dependents with paths (FR-19). */
   getEffects(node: NodeRef, options?: GetEffectsOptions): Promise<readonly EffectHit[]>;
+  /**
+   * A bounded subgraph for visualization (FR-42): up to `limit` nodes (optionally filtered by kind)
+   * plus the edges that connect them (optionally filtered by kind). Deterministic + read-only.
+   */
+  queryGraph(filter?: GraphQuery): Promise<GraphSnapshot>;
   /**
    * A view of this service confined to `tenantId` (FR-52, ADR-0033). The base service operates in
    * {@link DEFAULT_TENANT_ID}.
@@ -149,6 +157,30 @@ export function createKnowledgeGraphService(store: GraphStore): KnowledgeGraphSe
         throw new NotFoundError('node not found', { details: { kind: ref.kind, key: ref.key } });
       }
       return store.getEffects(id, options);
+    },
+
+    async queryGraph(filter = {}) {
+      const limit = filter.limit ?? DEFAULT_GRAPH_LIMIT;
+      const nodeKinds =
+        filter.nodeKinds && filter.nodeKinds.length > 0 ? new Set(filter.nodeKinds) : undefined;
+      const edgeKinds =
+        filter.edgeKinds && filter.edgeKinds.length > 0 ? new Set(filter.edgeKinds) : undefined;
+
+      const allNodes = await store.listNodes();
+      const selected = (
+        nodeKinds ? allNodes.filter((node) => nodeKinds.has(node.kind)) : allNodes
+      ).slice(0, Math.max(0, limit));
+      const nodeIds = new Set(selected.map((node) => node.id));
+
+      const allEdges = await store.listEdges();
+      const edges = allEdges.filter(
+        (edge) =>
+          nodeIds.has(edge.from) &&
+          nodeIds.has(edge.to) &&
+          (edgeKinds === undefined || edgeKinds.has(edge.kind)),
+      );
+
+      return { nodes: selected, edges };
     },
 
     forTenant(tenantId) {

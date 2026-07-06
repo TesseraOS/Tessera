@@ -1,4 +1,4 @@
-import { NODE_KINDS } from '@tessera/knowledge-graph';
+import { EDGE_KINDS, NODE_KINDS } from '@tessera/knowledge-graph';
 import { MEMORY_KINDS } from '@tessera/memory';
 import { z } from 'zod';
 
@@ -37,6 +37,18 @@ export const effectsShape = {
   kind: z.enum(NODE_KINDS).describe('Kind of the node whose dependents to find.'),
   key: z.string().min(1).describe('Natural key of the node (e.g. a file path or symbol).'),
   maxDepth: z.number().int().positive().max(20).optional(),
+};
+
+export const queryGraphShape = {
+  nodeKinds: z.array(z.enum(NODE_KINDS)).optional().describe('Restrict to these node kinds.'),
+  edgeKinds: z.array(z.enum(EDGE_KINDS)).optional().describe('Restrict to these edge kinds.'),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .max(5000)
+    .optional()
+    .describe('Max nodes to return (LOD cap).'),
 };
 
 const effectNodeRef = z.object({ kind: z.enum(NODE_KINDS), key: z.string().min(1) });

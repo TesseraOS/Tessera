@@ -363,6 +363,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A bounded subgraph of the knowledge graph for visualization. */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    /** @description Comma-separated node kinds to include. */
+                    nodeKinds?: string;
+                    /** @description Comma-separated edge kinds to include. */
+                    edgeKinds?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            nodes: {
+                                id: string;
+                                /** @enum {string} */
+                                kind: "file" | "symbol" | "module" | "person" | "decision" | "memory";
+                                key: string;
+                                label: string;
+                                metadata: {
+                                    [key: string]: unknown;
+                                };
+                            }[];
+                            edges: {
+                                id: string;
+                                from: string;
+                                to: string;
+                                /** @enum {string} */
+                                kind: "imports" | "calls" | "references" | "contains" | "owns" | "defines" | "supersedes" | "EFFECT_LINK";
+                                rationale: string | null;
+                                confidence: number | null;
+                                origin: string | null;
+                                metadata: {
+                                    [key: string]: unknown;
+                                };
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/memory": {
         parameters: {
             query?: never;

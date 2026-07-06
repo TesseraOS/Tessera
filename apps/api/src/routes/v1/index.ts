@@ -7,6 +7,7 @@ import type { ApiServices } from '../../services.js';
 import { registerSearchRoutes } from './search.js';
 import { registerCompileRoutes } from './compile.js';
 import { registerEffectsRoutes } from './effects.js';
+import { registerGraphRoutes } from './graph.js';
 import { registerMemoryRoutes } from './memory.js';
 import { registerSourceRoutes } from './sources.js';
 import { registerEventsRoutes } from './events.js';
@@ -36,6 +37,7 @@ export function registerV1Routes(
       registerSearchRoutes(v1, services);
       registerCompileRoutes(v1, services);
       registerEffectsRoutes(v1, services);
+      registerGraphRoutes(v1, services);
       registerMemoryRoutes(v1, services, events);
       registerSourceRoutes(v1, services);
       registerEventsRoutes(v1, events);

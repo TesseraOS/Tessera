@@ -69,6 +69,25 @@ export interface GraphEdge {
   readonly metadata: GraphMetadata;
 }
 
+/** Filter for a bounded graph query (FR-42 visualization). All fields optional. */
+export interface GraphQuery {
+  /** Restrict to these node kinds (empty/omitted = all kinds). */
+  readonly nodeKinds?: readonly NodeKind[];
+  /** Restrict to these edge kinds (empty/omitted = all kinds). */
+  readonly edgeKinds?: readonly EdgeKind[];
+  /** Maximum number of nodes to return (level-of-detail cap; default {@link DEFAULT_GRAPH_LIMIT}). */
+  readonly limit?: number;
+}
+
+/** A bounded, self-consistent subgraph: `edges` connect only nodes present in `nodes`. */
+export interface GraphSnapshot {
+  readonly nodes: readonly GraphNode[];
+  readonly edges: readonly GraphEdge[];
+}
+
+/** Default node cap for a graph query — keeps the visualization bounded (level-of-detail). */
+export const DEFAULT_GRAPH_LIMIT = 500;
+
 /** One affected node returned by `get_effects`, with the path that reaches it and a score (FR-19). */
 export interface EffectHit {
   readonly nodeId: NodeId;

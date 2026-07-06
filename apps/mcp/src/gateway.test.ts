@@ -33,6 +33,7 @@ describe('TOOL_PERMISSIONS', () => {
       'explain',
       'get_effects',
       'list_sources',
+      'query_graph',
       'scan_source',
       'search',
     ]);

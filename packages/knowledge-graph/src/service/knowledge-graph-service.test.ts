@@ -67,4 +67,33 @@ describe('createKnowledgeGraphService', () => {
       }),
     ).rejects.toBeInstanceOf(ValidationError);
   });
+
+  it('queryGraph returns a coherent subgraph, filtered by kind and capped by limit', async () => {
+    const subject = service();
+    await subject.upsertNode({ kind: 'file', key: 'app.ts', label: 'app' });
+    await subject.upsertNode({ kind: 'file', key: 'util.ts', label: 'util' });
+    await subject.upsertNode({ kind: 'symbol', key: 'helper', label: 'helper' });
+    await subject.upsertEdge({
+      from: { kind: 'file', key: 'app.ts' },
+      to: { kind: 'file', key: 'util.ts' },
+      kind: 'imports',
+    });
+
+    // Full graph: 3 nodes, 1 edge.
+    const all = await subject.queryGraph();
+    expect(all.nodes).toHaveLength(3);
+    expect(all.edges).toHaveLength(1);
+
+    // Kind filter drops the edge whose endpoints are no longer both present (coherent subgraph).
+    const filesOnlyEdges = (await subject.queryGraph({ nodeKinds: ['symbol'] })).edges;
+    expect(filesOnlyEdges).toHaveLength(0);
+    const fileNodes = await subject.queryGraph({ nodeKinds: ['file'] });
+    expect(fileNodes.nodes.map((node) => node.kind)).toEqual(['file', 'file']);
+    expect(fileNodes.edges).toHaveLength(1);
+
+    // Limit caps the node set; edges are confined to the returned nodes.
+    const capped = await subject.queryGraph({ limit: 1 });
+    expect(capped.nodes).toHaveLength(1);
+    expect(capped.edges).toHaveLength(0);
+  });
 });

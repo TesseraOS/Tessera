@@ -11,6 +11,8 @@ export type CompileRequest = paths['/v1/compile']['post']['requestBody']['conten
 export type ContextPackage = paths['/v1/compile']['post']['responses'][200]['content'][Json];
 export type EffectsQuery = NonNullable<paths['/v1/effects']['get']['parameters']['query']>;
 export type EffectsResult = paths['/v1/effects']['get']['responses'][200]['content'][Json];
+export type GraphQuery = NonNullable<paths['/v1/graph']['get']['parameters']['query']>;
+export type GraphSnapshot = paths['/v1/graph']['get']['responses'][200]['content'][Json];
 export type AssertEffectRequest = paths['/v1/effects']['post']['requestBody']['content'][Json];
 export type EffectLink = paths['/v1/effects']['post']['responses'][201]['content'][Json];
 export type CaptureMemoryRequest = paths['/v1/memory']['post']['requestBody']['content'][Json];
@@ -47,6 +49,8 @@ export interface TesseraClient {
   compile(request: CompileRequest): Promise<ContextPackage>;
   /** Ranked, path-bearing dependents of a node ("what breaks if this changes"). */
   getEffects(query: EffectsQuery): Promise<EffectsResult>;
+  /** A bounded subgraph (nodes + edges) of the knowledge graph for visualization. */
+  queryGraph(query?: GraphQuery): Promise<GraphSnapshot>;
   /** Manually assert an effect-link: changing `from` may require reviewing `to`. */
   assertEffect(request: AssertEffectRequest): Promise<EffectLink>;
   /** Capture a new memory (returns its first version). */
@@ -102,6 +106,9 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
     },
     async getEffects(query) {
       return unwrap(await client.GET('/v1/effects', { params: { query } }));
+    },
+    async queryGraph(query = {}) {
+      return unwrap(await client.GET('/v1/graph', { params: { query } }));
     },
     async assertEffect(request) {
       return unwrap(await client.POST('/v1/effects', { body: request }));

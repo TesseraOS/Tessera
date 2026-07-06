@@ -1,12 +1,11 @@
-import { ComingSoon } from '@/components/coming-soon';
+import { SettingsView } from '@/components/settings/settings-view';
 
 export const metadata = { title: 'Settings' };
 
 export default function SettingsPage() {
   return (
-    <ComingSoon
-      title="Settings"
-      description="Deployment profile, budgets, and provider configuration — a later release."
-    />
+    <div className="mx-auto w-full max-w-5xl space-y-4">
+      <SettingsView />
+    </div>
   );
 }

@@ -168,3 +168,92 @@ export interface AuditPage {
   events: AuditEvent[];
   nextCursor?: string;
 }
+
+// --- sources (/v1/sources*) — mirrors the @tessera/api sources schemas (F-038/FR-62) ---
+
+/**
+ * Connector kinds. The Local runtime scans `filesystem` + `git` (both keyed on a working-tree
+ * `root`); `github` is present for labeling only — it is not yet wired into the runtime source
+ * service, so the UI offers it as an explicitly unavailable option (never a form that 400s).
+ */
+export type SourceKind = 'filesystem' | 'git' | 'github';
+
+/** The connector kinds a user can actually register + scan in this deployment. */
+export const REGISTERABLE_SOURCE_KINDS = [
+  'filesystem',
+  'git',
+] as const satisfies readonly SourceKind[];
+
+export interface Source {
+  id: string;
+  kind: string;
+  label: string;
+  config: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface RegisterSourceBody {
+  kind: SourceKind;
+  label?: string;
+  config: { root: string };
+}
+
+export interface SourceListResponse {
+  sources: Source[];
+}
+
+/** Counts of what a scan changed (incremental + idempotent). */
+export interface ScanSummary {
+  added: number;
+  modified: number;
+  removed: number;
+  unchanged: number;
+}
+
+export interface ScanResult {
+  source: Source;
+  summary: ScanSummary;
+}
+
+export type ScanState = 'idle' | 'running' | 'error';
+
+export interface ScanStatus {
+  state: ScanState;
+  lastScan?: { summary: ScanSummary; at: string };
+  error?: string;
+}
+
+// --- billing plans (GET /v1/billing/plans) — mirrors the @tessera/api billing schemas (F-030) ---
+export interface Entitlements {
+  maxMonthlyCompiles: number;
+  maxSeats: number;
+  maxTokensPerCompile: number;
+}
+
+export interface Plan {
+  id: string;
+  name: string;
+  priceCents: number;
+  interval: 'month' | 'year' | null;
+  entitlements: Entitlements;
+}
+
+export interface PlansResponse {
+  plans: Plan[];
+}
+
+// --- ops (unversioned GET /health + GET /ready) — mirrors apps/api/src/routes/health.ts ---
+export interface HealthStatus {
+  status: 'ok';
+}
+
+export interface ReadyCheck {
+  name: string;
+  ok: boolean;
+  detail?: string;
+}
+
+export interface ReadyStatus {
+  status: 'ready' | 'not_ready';
+  checks: ReadyCheck[];
+}

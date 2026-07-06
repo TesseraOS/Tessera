@@ -6,9 +6,17 @@ import type {
   ContextPackage,
   ErrorCode,
   ErrorEnvelope,
+  HealthStatus,
   Memory,
+  PlansResponse,
+  ReadyStatus,
+  RegisterSourceBody,
+  ScanResult,
+  ScanStatus,
   SearchBody,
   SearchResponse,
+  Source,
+  SourceListResponse,
 } from './types';
 
 /** Base URL of the Tessera REST API. Configurable; defaults to the Local profile (F-032). */
@@ -16,6 +24,9 @@ const BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000
   /\/$/,
   '',
 );
+
+/** Origin of the API (the base URL without its `/v1` suffix) — for the unversioned ops routes. */
+export const API_ORIGIN = BASE_URL.replace(/\/v1$/, '');
 
 /** Typed error carrying the API's `{ error: { code, message } }` envelope (NFR-6). */
 export class TesseraApiError extends Error {
@@ -34,12 +45,15 @@ export class TesseraApiError extends Error {
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const { headers, ...rest } = init ?? {};
+  // Only declare a JSON content-type when a body is actually sent — Fastify rejects a bodyless
+  // request that still advertises `application/json` (e.g. POST /sources/:id/scan, DELETE).
+  const jsonHeader = rest.body !== undefined ? { 'content-type': 'application/json' } : {};
 
   let response: Response;
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       ...rest,
-      headers: { 'content-type': 'application/json', ...headers },
+      headers: { ...jsonHeader, ...headers },
     });
   } catch (cause) {
     throw new TesseraApiError('Could not reach the Tessera API.', 'NETWORK', 0, cause);
@@ -49,6 +63,37 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const data: unknown = text ? JSON.parse(text) : undefined;
 
   if (!response.ok) {
+    const envelope = data as ErrorEnvelope | undefined;
+    throw new TesseraApiError(
+      envelope?.error?.message ?? response.statusText,
+      envelope?.error?.code ?? 'INTERNAL',
+      response.status,
+      envelope?.error?.details,
+    );
+  }
+
+  return data as T;
+}
+
+/**
+ * Fetch an **unversioned** ops route (`/health`, `/ready`) off the API origin. `/ready` answers
+ * `503` with a valid readiness body when a dependency is down, so those statuses are read as data
+ * (via `okStatuses`) rather than raised as errors.
+ */
+async function rootFetch<T>(path: string, okStatuses: readonly number[] = [200]): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_ORIGIN}${path}`, {
+      headers: { 'content-type': 'application/json' },
+    });
+  } catch (cause) {
+    throw new TesseraApiError('Could not reach the Tessera API.', 'NETWORK', 0, cause);
+  }
+
+  const text = await response.text();
+  const data: unknown = text ? JSON.parse(text) : undefined;
+
+  if (!okStatuses.includes(response.status)) {
     const envelope = data as ErrorEnvelope | undefined;
     throw new TesseraApiError(
       envelope?.error?.message ?? response.statusText,
@@ -81,4 +126,20 @@ export const api = {
     const qs = params.toString();
     return apiFetch<AuditPage>(`/audit${qs ? `?${qs}` : ''}`);
   },
+
+  // --- sources (F-038/FR-62): register + scan repositories through the ingestion pipeline ---
+  listSources: (): Promise<SourceListResponse> => apiFetch<SourceListResponse>('/sources'),
+  registerSource: (body: RegisterSourceBody): Promise<Source> =>
+    apiFetch<Source>('/sources', { method: 'POST', body: JSON.stringify(body) }),
+  removeSource: (id: string): Promise<{ id: string }> =>
+    apiFetch<{ id: string }>(`/sources/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  scanSource: (id: string): Promise<ScanResult> =>
+    apiFetch<ScanResult>(`/sources/${encodeURIComponent(id)}/scan`, { method: 'POST' }),
+  getScanStatus: (id: string): Promise<ScanStatus> =>
+    apiFetch<ScanStatus>(`/sources/${encodeURIComponent(id)}/scan`),
+
+  // --- settings-facing reads (no config write surface; render read-only) ---
+  getPlans: (): Promise<PlansResponse> => apiFetch<PlansResponse>('/billing/plans'),
+  getHealth: (): Promise<HealthStatus> => rootFetch<HealthStatus>('/health'),
+  getReady: (): Promise<ReadyStatus> => rootFetch<ReadyStatus>('/ready', [200, 503]),
 };

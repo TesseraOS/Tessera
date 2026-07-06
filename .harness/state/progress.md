@@ -3,6 +3,55 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-06 — F-041 DONE — Sources & Settings dashboard (live scan progress); + 2 latent prod bugs fixed
+
+The `/sources` and `/settings` **ComingSoon stubs** are now real, enterprise-grade surfaces over the live
+F-038/F-039/F-040 runtime — **live-verified against a real API** (fake embeddings + scratchpad DB) with
+screenshots, not just stubs. Plan-first ([`F-041`](../plans/F-041-sources-settings-ui.md)); web-only, no
+new ADR (consumes the ADR-0040 source surface via the interim `lib/api` client, ADR-0022).
+
+- **Sources** (`SourcesView` + `RegisterSourceDialog`) — list sources with kind/path/created + live status;
+  register (connector-specific validated forms), **scan** (real `POST` → summary toast), **remove** (confirm);
+  **live scan progress via `GET /v1/events` SSE — the dashboard's FIRST SSE consumer** (`useScanEvents` over a
+  **pure, unit-tested `scanEventsReducer`**); full loading/empty/error states.
+- **Settings** (`SettingsView`) — Deployment (endpoint + `/health` + `/ready` + a dependency-checks table),
+  Plans & budgets (`/v1/billing/plans` entitlements → real compile budgets), Governance & retention posture
+  (read-only, NFR-13). **No fake controls** — read-only where the API has no write surface.
+- **Honest boundary (no fake controls):** registerable kinds are **filesystem + git** (`SUPPORTED_SOURCE_KINDS`);
+  a **github SOURCE is not wired into the runtime** (connector maps only fs/git; wire config is `{ root }`), so
+  GitHub is an **explicitly disabled** option, not a form that 400s. Wiring a github source + a richer
+  `GET /v1/info` (profile/providers) are **documented seams** (api/config side, not this web feature).
+
+**Two latent PRODUCTION bugs caught by the live verification + fixed** (both existed on `main`, unrelated to
+new UI, and would have made the shipped source surface unusable):
+1. **`@tessera/observability` `instrumentServices` silently dropped `services.sources` + `services.billing`**
+   (added by F-038/F-030) — it **rebuilds** the ApiServices object, so any omitted member vanishes. The shipped
+   **instrumented** server therefore 500'd `/v1/sources*` (REST) **and** `add_source`/`list_sources`/`scan_source`
+   (MCP — `apps/server/mcp.ts` instruments too). Fixed: forward both — `sources` traced, `billing` **passed
+   through untraced** (its methods are synchronous, e.g. `[...listPlans()]`, so the tracing Proxy must not
+   Promise-wrap them) — plus a **regression test**. (E-015.)
+2. **`lib/api` sent `content-type: application/json` on bodyless `POST`/`DELETE`** (scan/remove), which Fastify
+   rejects (“Body cannot be empty”). Fixed `apiFetch` to only set the JSON content-type when a body is present.
+
+**Evidence (all green, workspace-wide):** `node scripts/verify-state.mjs` valid (65 features, **21 effect-links**,
+env-docs ok) · format · **typecheck 30** · **lint 17** · **test 30** (web 26) · **build 17** · **e2e 16** (api 43,
+mcp 15, **web 10** incl. 3 new sources/settings axe specs — WCAG A/AA clean; an axe-caught `/70` muted-foreground
+contrast miss was fixed). **Screenshot-verified** live: `/sources` (2 real sources, a git + a filesystem, one
+scanned → “49 added …” with a timestamp), the register dialog (connector-specific form), and `/settings`
+(Live/Ready badges, the sqlite dependency check, real plan budgets Free 8,000 / Pro 32K / Enterprise 128K, the
+read-only governance posture).
+
+**Decisions:** web-only scope (F-041's declared effects are E-003 *consumer* + E-004 *UI* — a `/v1/info` endpoint
+would be an undeclared producer change, so it stays a seam); render Settings from **existing** endpoints
+(health/ready/billing-plans) rather than fabricate; GitHub honest-disabled over a failing form; the SSE reducer is
+pure so it's testable without a socket. **Lesson:** [[instrument-services-must-forward-every-apiservices-member]].
+
+**🎉 R3 dashboard arc begins** — F-041 (Sources & Settings) done. **Next step:** the remaining R3 dashboard/hardening
+features — F-060 (live Overview, also SSE — can reuse `useScanEvents`'s transport), F-061 (search depth), F-042
+(memory browser), F-043 (graph viz), or the `must` F-044 (API hardening) / F-049 (perf). None blocking.
+
+---
+
 ## 2026-07-04 — F-040 DONE — code symbols → live knowledge graph; get_effects returns real dependents
 
 The #2 differentiator is now **live**: scanning a repo populates the knowledge graph from real code

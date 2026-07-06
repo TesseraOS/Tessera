@@ -1321,7 +1321,7 @@
       "package": "@tessera/web",
       "release": "R3",
       "priority": "should",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-038"
       ],
@@ -1339,8 +1339,11 @@
       ],
       "effects": [
         "E-003",
-        "E-004"
-      ]
+        "E-004",
+        "E-015",
+        "E-021"
+      ],
+      "notes": "Done 2026-07-06 (R3 dashboard arc): /sources + /settings ComingSoon stubs are now real, enterprise-grade surfaces over the live F-038/F-039/F-040 runtime, LIVE-VERIFIED against a real API (fake embeddings, scratchpad DB) — screenshots captured. Web-only (per the declared E-003-consumer + E-004-UI effects), consuming the interim lib/api client (ADR-0022; @tessera/sdk adoption is F-045). SOURCES (SourcesView + RegisterSourceDialog): list registered sources with kind/path/created + live status; register (connector-specific validated forms), scan (real POST → summary toast), remove (confirm dialog); LIVE scan progress via GET /v1/events SSE — the dashboard's FIRST SSE consumer (useScanEvents hook over a PURE, unit-tested scanEventsReducer); full loading/empty/error states. SETTINGS (SettingsView): Deployment (endpoint + /health liveness + /ready readiness + dependency-checks table), Plans & budgets (/v1/billing/plans entitlements → real compile budgets), Governance & retention posture (read-only, NFR-13, links to /governance) — no fake controls. HONEST BOUNDARY (no fake controls): registerable kinds are filesystem+git (SUPPORTED_SOURCE_KINDS); a github SOURCE is NOT wired into the runtime (connectorForRecord maps only fs/git; wire config is { root }), so GitHub is an explicitly DISABLED option, not a form that 400s — wiring a github source + a richer GET /v1/info (profile/providers) are documented seams (api/config side, not this web feature). Nav already listed Sources+Settings in both sources (lib/nav + app-shared) — verified consistent. TWO LATENT PRODUCTION BUGS caught by the live verification + fixed: (1) @tessera/observability instrumentServices REBUILDS ApiServices and silently DROPPED services.sources + services.billing (added by F-038/F-030) → /v1/sources* (REST) AND add_source/list_sources/scan_source (MCP — apps/server/mcp.ts also instruments) 500'd on the shipped instrumented server; fixed by forwarding both (sources traced, billing passed through untraced because its methods are synchronous) + a regression test (E-015). (2) lib/api sent content-type:application/json on bodyless POST/DELETE (scan/remove) which Fastify rejects ('Body cannot be empty'); fixed apiFetch to only set the JSON content-type when a body is present. Tests: +23 web (events reducer 4, register-dialog validation+github-disabled 2, sources-view list/empty/error 3, settings-view 1 + prior) + 3 new e2e (sources list+dialog+a11y, sources empty+a11y, settings health/budgets/posture+a11y — all WCAG A/AA clean; an axe-caught /70 muted-foreground contrast miss fixed) + 1 obs regression. Gates green workspace-wide: state · format · typecheck 30 · lint 17 · test 30 (web 26) · build 17 · e2e 16 (web 10). Effects E-003/E-021 (new web consumers of /v1/sources* + SSE + billing/plans + health/ready), E-004 (new token views), E-015 (instrumentServices forwarding fix). DEFERRED/documented seams: github-source runtime wiring, GET /v1/info config introspection, per-source live progress attribution (document.ingested carries no sourceId → counted against the running scan; fine on Local's one-at-a-time synchronous scans), @tessera/sdk adoption (F-045)."
     },
     {
       "id": "F-042",

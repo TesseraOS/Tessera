@@ -3,6 +3,48 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-06 — F-043 DONE — Knowledge-graph & effect-links visualization (React Flow)
+
+The `/graph` **ComingSoon stub** is now an explorable **React Flow** view of the live knowledge graph
+(F-040 populates it from real code) — **live-verified against a real API** (scanned a TS dir → **134 real
+nodes: 15 files + 119 symbols + 131 edges** via tree-sitter) with screenshots (Explore + Effects). Plan-first
+([`F-043`](../plans/F-043-knowledge-graph-visualization.md)); spans 4 packages but each non-web change is
+small/additive. 4 committed increments.
+
+- **(1) Graph query surface** — `KnowledgeGraphService.queryGraph(filter?) → { nodes, edges }` (additive; the
+  `GraphStore` already had `listNodes`/`listEdges`; `limit` LOD cap default 500, optional kind filter, edges
+  confined to the returned nodes = a coherent subgraph) → `GET /v1/graph` (`effects:read`, tenant-scoped,
+  audited) + Zod→OpenAPI + regenerated `@tessera/sdk` (`queryGraph`); `query_graph` **MCP tool** (ADR-0036
+  REST+MCP parity).
+- **(2) De-risked React Flow first** (build spike, reverted) — `@xyflow/react` behind a lazy
+  `next/dynamic ssr:false` wrapper so it + its CSS stay out of the initial bundle; token-themed custom node,
+  viewport culling (`onlyRenderVisibleElements`); verified `next build` green + renders at runtime, **zero
+  console errors**. `lib/api` gains graph+effects types/client/hooks; a **pure `toFlow`** (deterministic O(n)
+  kind-clustered grid, effect-link styling, path highlight).
+- **(3) GraphView explorer** — mode toggle (Explore | Effects), node-kind filter chips, search-to-focus,
+  node/edge stats; Explore = connections + "what does this affect?"; **Effects** = `get_effects` highlights the
+  reaching **paths** in the canvas + a ranked-dependents list (distance · score · path) in the side panel
+  (provenance-first, FR-19). **a11y:** the side-panel node-detail + ranked-list is the documented
+  **keyboard-accessible alternative** to the canvas; reduced-motion-aware fitView.
+- **(4) Perf + tests + records** — a **pure `toFlow` 5000-node** transform test asserts completion within a
+  500ms budget (LOD strategy: culling + a capped API query + Effects-mode focus; a benchmarked gate is F-049).
+
+**Evidence (all green, workspace-wide):** state valid (65 features, **21 effect-links**, env-docs ok) · format ·
+**typecheck 30** · **lint 17** · **test 30** (web **40**, KG 30) · **build 17** · **e2e 16** (api **45**, mcp
+**16**, web **14** — incl. a new graph spec rendering REAL React Flow, **WCAG A/AA clean via axe**).
+**Screenshot-verified** live: `/graph` Explore (134 real tree-sitter nodes, kind-colored) + Effects mode
+(`api/types` selected → its 4 dependents highlighted, the rest dimmed).
+
+**Decisions:** extend `/v1` with a read-only `GET /v1/graph` (the acceptance's "extend as needed") + MCP
+parity; de-risk the heavy React Flow with a build spike before the UI; a dep-light **kind-clustered grid**
+layout (no dagre/elk); the side-panel list as the graph's keyboard-accessible alternative; bounded query + LOD
+over dumping the whole graph. **Lesson:** [[heavy-canvas-dep-offline-lazy-and-accessible-alternative]].
+
+**Next step:** remaining R3 — F-044 (API hardening, `must`), F-049 (perf, `must`), F-060 (live Overview),
+F-061 (search depth), F-047 (compliance). The three dashboard-viz features (F-041/042/043) are done.
+
+---
+
 ## 2026-07-06 — F-042 DONE — Memory browser + Monaco authoring + version history + timeline
 
 The `/memory` + `/timeline` **ComingSoon stubs** are now real, enterprise-grade surfaces over the

@@ -1388,7 +1388,7 @@
       "package": "@tessera/web",
       "release": "R3",
       "priority": "should",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-040"
       ],
@@ -1409,7 +1409,8 @@
         "E-011",
         "E-003",
         "E-004"
-      ]
+      ],
+      "notes": "Done 2026-07-06 (R3 dashboard arc): the /graph ComingSoon stub is now an explorable React Flow view of the LIVE knowledge graph — LIVE-VERIFIED against a real API (scanned a TS dir → 134 real nodes: 15 files + 119 symbols + 131 edges via tree-sitter) with screenshots (Explore + Effects). 4 verifiable, committed increments; spans 4 packages but each non-web change is small/additive. (1) GRAPH QUERY SURFACE: KnowledgeGraphService.queryGraph(filter?) → { nodes, edges } (additive — the GraphStore already had listNodes/listEdges; up to `limit` nodes default 500 LOD cap, optional kind filter, edges confined to the returned nodes = coherent subgraph) → GET /v1/graph (effects:read, tenant-scoped via forTenant, audited) + Zod→OpenAPI + regenerated @tessera/sdk (queryGraph); query_graph MCP tool (ADR-0036 REST+MCP parity, effects:read). (2) DE-RISKED React Flow FIRST (build spike, reverted): @xyflow/react behind a lazy next/dynamic ssr:false wrapper (GraphCanvas) so it + its CSS stay out of the initial bundle; token-themed custom node (kind dot from --chart-*, colorMode from next-themes), viewport culling (onlyRenderVisibleElements), read-only nodes; verified next build green (Turbopack) + renders at runtime with zero console errors. lib/api gains graph+effects types/client/hooks; a PURE lib/graph-layout.toFlow (deterministic O(n) kind-clustered grid, effect-link styling, path highlight). (3) GraphView explorer: mode toggle (Explore | Effects), node-kind filter chips, search-to-focus, node/edge stats; Explore = node connections + 'what does this affect?'; Effects = get_effects highlights the reaching PATHS in the canvas + a ranked-dependents list (distance · score · path) in the side panel (provenance-first, FR-19). a11y: the canvas is supplementary; the side-panel node-detail + ranked-list is the documented keyboard-accessible alternative; canvas aria-label; reduced-motion-aware fitView. (4) tests + records. PERF (≥5k): a pure toFlow 5000-node transform test asserts it completes within a 500ms budget; the canvas uses onlyRenderVisibleElements + the API caps the fetched set (LOD) + neighborhood via Effects mode (a benchmarked gate is F-049). Tests: +8 web unit (toFlow: kind-sort/effect-styling/path-highlight/coherent-subgraph/5k-budget · 4; GraphView: stats/filters/empty/error + search-to-focus, canvas mocked · 4) + 1 web e2e (renders REAL React Flow + search-to-focus, WCAG A/AA clean via axe) + 1 KG unit (queryGraph) + 2 api e2e (subgraph + kind/limit) + 1 mcp e2e (query_graph). Gates green workspace-wide: state · format · typecheck 30 · lint 17 · test 30 (web 40, KG 30) · build 17 · e2e 16 (api 45, mcp 16, web 14). Effects E-011 (queryGraph + surfaces), E-002 (graph/effects web views REALIZED — was a stub), E-003 (GET /v1/graph + query_graph + regenerated SDK), E-004 (React Flow token view). New MIT dep: @xyflow/react. DEFERRED/documented seams: a heavy graph-layout algorithm (dagre/elk) — the kind-clustered grid keeps it dep-light; per-QUERY server-side edge filtering (edges filtered in the coherent-subgraph pass); a benchmarked perf gate on a ≥5k fixture (F-049); @tessera/sdk adoption in web (F-045); neighborhood-expansion-on-click deepening (Effects mode covers the ripple view)."
     },
     {
       "id": "F-044",

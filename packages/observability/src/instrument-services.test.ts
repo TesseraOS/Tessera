@@ -59,4 +59,25 @@ describe('instrumentServices', () => {
     expect(names).toContain('search.search');
     expect(names).toContain('compile');
   });
+
+  it('forwards the optional sources + billing members (regression: they must not be dropped)', async () => {
+    const withOptional = {
+      ...fakeServices,
+      sources: { list: () => Promise.resolve([]) },
+      billing: { listPlans: () => [{ id: 'free' }] },
+    } as unknown as ApiServices;
+
+    const instrumented = instrumentServices(withOptional, silentObservability);
+
+    // Both are present (dropping them silently 500s /v1/sources and the tenant's billing routes).
+    expect(instrumented.sources).toBeDefined();
+    expect(instrumented.billing).toBeDefined();
+
+    // billing is passed through untraced → its synchronous methods still return values (not Promises).
+    expect(instrumented.billing?.listPlans()).toEqual([{ id: 'free' }]);
+
+    // sources is traced like the other services.
+    await instrumented.sources?.list();
+    expect(exporter.getFinishedSpans().map((span) => span.name)).toContain('sources.list');
+  });
 });

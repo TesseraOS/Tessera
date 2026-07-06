@@ -61,6 +61,14 @@ export function instrumentServices(services: ApiServices, obs: Observability): A
     graph: traceObject(services.graph, 'graph', obs),
     memory: traceObject(services.memory, 'memory', obs),
     compiler: traceCompiler(services.compiler, obs),
+    // Optional ApiServices members MUST be forwarded — dropping one silently 500s its routes on the
+    // instrumented (shipped) server. `sources` (F-038) is traced like the others; `billing` (F-030) is
+    // passed through untraced because its methods are synchronous (e.g. `[...listPlans()]`) and must
+    // not be Promise-wrapped by the tracing Proxy.
+    ...(services.sources !== undefined
+      ? { sources: traceObject(services.sources, 'sources', obs) }
+      : {}),
+    ...(services.billing !== undefined ? { billing: services.billing } : {}),
     ...(services.readiness !== undefined ? { readiness: services.readiness } : {}),
   };
 }

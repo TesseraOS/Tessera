@@ -4,10 +4,14 @@ import type {
   CaptureMemoryBody,
   CompileBody,
   ContextPackage,
+  EditMemoryBody,
   ErrorCode,
   ErrorEnvelope,
   HealthStatus,
   Memory,
+  MemoryHistoryResponse,
+  MemoryListFilter,
+  MemoryListResponse,
   PlansResponse,
   ReadyStatus,
   RegisterSourceBody,
@@ -114,6 +118,22 @@ export const api = {
     apiFetch<ContextPackage>('/compile', { method: 'POST', body: JSON.stringify(body) }),
   captureMemory: (body: CaptureMemoryBody): Promise<Memory> =>
     apiFetch<Memory>('/memory', { method: 'POST', body: JSON.stringify(body) }),
+  listMemories: (filter: MemoryListFilter = {}): Promise<MemoryListResponse> => {
+    const params = new URLSearchParams();
+    if (filter.kind) params.set('kind', filter.kind);
+    if (filter.scope) params.set('scope', filter.scope);
+    const qs = params.toString();
+    return apiFetch<MemoryListResponse>(`/memory${qs ? `?${qs}` : ''}`);
+  },
+  getMemory: (lineageId: string): Promise<Memory> =>
+    apiFetch<Memory>(`/memory/${encodeURIComponent(lineageId)}`),
+  memoryHistory: (lineageId: string): Promise<MemoryHistoryResponse> =>
+    apiFetch<MemoryHistoryResponse>(`/memory/${encodeURIComponent(lineageId)}/history`),
+  editMemory: (lineageId: string, body: EditMemoryBody): Promise<Memory> =>
+    apiFetch<Memory>(`/memory/${encodeURIComponent(lineageId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
   getAudit: (query: AuditQuery = {}): Promise<AuditPage> => {
     const params = new URLSearchParams();
     if (query.action) params.set('action', query.action);

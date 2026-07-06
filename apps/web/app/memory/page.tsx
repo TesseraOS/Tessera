@@ -1,12 +1,11 @@
-import { ComingSoon } from '@/components/coming-soon';
+import { MemoryView } from '@/components/memory/memory-view';
 
 export const metadata = { title: 'Memory' };
 
 export default function MemoryPage() {
   return (
-    <ComingSoon
-      title="Memory"
-      description="Browse and author decisions, lessons, and incidents (Monaco) — a later release."
-    />
+    <div className="mx-auto w-full max-w-5xl space-y-4">
+      <MemoryView />
+    </div>
   );
 }

@@ -2,7 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
-import type { AuditQuery, CaptureMemoryBody, CompileBody, RegisterSourceBody } from './types';
+import type {
+  AuditQuery,
+  CaptureMemoryBody,
+  CompileBody,
+  EditMemoryBody,
+  MemoryListFilter,
+  RegisterSourceBody,
+} from './types';
 
 /** Debounced global search (FR-41). The caller debounces `query`; the hook runs when non-empty. */
 export function useSearch(query: string, limit?: number) {
@@ -22,10 +29,44 @@ export function useCompile() {
   });
 }
 
-/** Capture a memory (FR-13) — POST /v1/memory. */
+/** Capture a memory (FR-13) — POST /v1/memory. Refreshes the memory list on success. */
 export function useCaptureMemory() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: CaptureMemoryBody) => api.captureMemory(body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['memories'] }),
+  });
+}
+
+/** List the current memories (FR-45), optionally filtered by kind/scope — GET /v1/memory. */
+export function useMemories(filter: MemoryListFilter = {}) {
+  return useQuery({
+    queryKey: ['memories', filter],
+    queryFn: () => api.listMemories(filter),
+    staleTime: 10_000,
+  });
+}
+
+/** The full version history of a lineage (FR-12), oldest first — GET /v1/memory/:id/history. */
+export function useMemoryHistory(lineageId: string, enabled = true) {
+  return useQuery({
+    queryKey: ['memory-history', lineageId],
+    queryFn: () => api.memoryHistory(lineageId),
+    enabled: enabled && lineageId.length > 0,
+    staleTime: 10_000,
+  });
+}
+
+/** Edit a memory (FR-13) — PATCH appends a superseding version. Refreshes the list + the lineage. */
+export function useEditMemory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ lineageId, body }: { lineageId: string; body: EditMemoryBody }) =>
+      api.editMemory(lineageId, body),
+    onSuccess: (_memory, { lineageId }) => {
+      void queryClient.invalidateQueries({ queryKey: ['memories'] });
+      void queryClient.invalidateQueries({ queryKey: ['memory-history', lineageId] });
+    },
   });
 }
 

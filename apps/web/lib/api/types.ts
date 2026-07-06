@@ -102,17 +102,48 @@ export interface ContextPackage {
   scores: PackageScores;
 }
 
-// --- memory (POST /v1/memory) — mirrors @tessera/memory MEMORY_KINDS + the capture schema ---
+// --- memory (/v1/memory*) — mirrors @tessera/memory MEMORY_KINDS + the memory schemas (F-007) ---
 export type MemoryKind =
   'decision' | 'lesson' | 'incident' | 'failure' | 'architecture' | 'glossary' | 'task';
+
+/** The ordered kinds, for filter dropdowns + labels (mirrors MEMORY_KINDS). */
+export const MEMORY_KINDS: readonly MemoryKind[] = [
+  'decision',
+  'lesson',
+  'incident',
+  'failure',
+  'architecture',
+  'glossary',
+  'task',
+];
+
+/** Provenance/linkage on a memory (FR-11). */
+export interface MemoryMetadata {
+  source?: string;
+  author?: string;
+  links?: string[];
+  tags?: string[];
+}
 
 export interface CaptureMemoryBody {
   kind: MemoryKind;
   title: string;
   body: string;
   scope?: string;
+  confidence?: number;
+  metadata?: MemoryMetadata;
 }
 
+/** `PATCH /v1/memory/:lineageId` — at least one field must change (appends a superseding version). */
+export interface EditMemoryBody {
+  title?: string;
+  body?: string;
+  scope?: string;
+  confidence?: number;
+  metadata?: MemoryMetadata;
+}
+
+/** One immutable memory version (FR-12). `supersededBy === null` marks the current head. */
 export interface Memory {
   id: string;
   lineageId: string;
@@ -121,8 +152,25 @@ export interface Memory {
   body: string;
   scope: string;
   confidence: number;
+  metadata: MemoryMetadata;
   version: number;
+  supersedes: string | null;
+  supersededBy: string | null;
   createdAt: string;
+}
+
+export interface MemoryListFilter {
+  kind?: MemoryKind;
+  scope?: string;
+}
+
+export interface MemoryListResponse {
+  memories: Memory[];
+}
+
+/** `GET /v1/memory/:lineageId/history` — every version, oldest first. */
+export interface MemoryHistoryResponse {
+  versions: Memory[];
 }
 
 // --- audit (GET /v1/audit) — mirrors the @tessera/api audit schemas (F-027) ---

@@ -2,7 +2,7 @@
   "$schemaRef": "./schemas/feature_list.schema.json",
   "version": 1,
   "project": "tessera",
-  "updated": "2026-07-04",
+  "updated": "2026-07-06",
   "policy": {
     "wip_limit": 1,
     "ordering": "by release, then id; respect blockedBy"
@@ -1321,7 +1321,7 @@
       "package": "@tessera/web",
       "release": "R3",
       "priority": "should",
-      "status": "backlog",
+      "status": "in_progress",
       "blockedBy": [
         "F-038"
       ],

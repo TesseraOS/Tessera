@@ -1,12 +1,11 @@
-import { ComingSoon } from '@/components/coming-soon';
+import { GraphView } from '@/components/graph/graph-view';
 
 export const metadata = { title: 'Knowledge graph' };
 
 export default function GraphPage() {
   return (
-    <ComingSoon
-      title="Knowledge graph"
-      description="An explorable graph of files, symbols, and effect-links (React Flow) arrives in a later release."
-    />
+    <div className="mx-auto w-full max-w-6xl space-y-4">
+      <GraphView />
+    </div>
   );
 }

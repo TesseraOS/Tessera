@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { SidebarMenuButton } from '@/components/ui/sidebar';
-import { CaptureMemoryDialog } from '@/components/capture-memory-dialog';
+import { MemoryAuthoringDialog } from '@/components/memory/memory-authoring-dialog';
 
-/** Prominent sidebar quick-action → opens the real Capture-Memory dialog (POST /v1/memory). */
+/** Prominent sidebar quick-action → opens the memory authoring dialog (POST /v1/memory). */
 export function NewMemoryButton() {
   const [open, setOpen] = useState(false);
   return (
@@ -18,7 +18,7 @@ export function NewMemoryButton() {
         <Plus />
         <span>New memory</span>
       </SidebarMenuButton>
-      <CaptureMemoryDialog open={open} onOpenChange={setOpen} />
+      <MemoryAuthoringDialog open={open} onOpenChange={setOpen} />
     </>
   );
 }

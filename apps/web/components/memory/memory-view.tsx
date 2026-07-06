@@ -16,7 +16,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
-import { CaptureMemoryDialog } from '@/components/capture-memory-dialog';
+import { MemoryAuthoringDialog } from '@/components/memory/memory-authoring-dialog';
 import { MemoryDetail } from '@/components/memory/memory-detail';
 import { useMemories } from '@/lib/api/hooks';
 import { MEMORY_KIND_ACCENT, MEMORY_KIND_LABELS, formatTimestamp } from '@/lib/memory';
@@ -33,7 +33,18 @@ export function MemoryView() {
   const [kind, setKind] = useState<MemoryKind | typeof ALL>(ALL);
   const [scope, setScope] = useState<string>(ALL);
   const [selected, setSelected] = useState<string | null>(null);
-  const [captureOpen, setCaptureOpen] = useState(false);
+  const [authoringOpen, setAuthoringOpen] = useState(false);
+  const [editing, setEditing] = useState<Memory | null>(null);
+
+  const openCapture = () => {
+    setEditing(null);
+    setAuthoringOpen(true);
+  };
+  const openEdit = (memory: Memory) => {
+    setSelected(null);
+    setEditing(memory);
+    setAuthoringOpen(true);
+  };
 
   const { data, isPending, isError, error, refetch, isFetching } = useMemories(
     kind === ALL ? {} : { kind },
@@ -61,7 +72,7 @@ export function MemoryView() {
               versioned — edits append a new version, never overwrite.
             </CardDescription>
           </div>
-          <Button size="sm" className="shrink-0 gap-1.5" onClick={() => setCaptureOpen(true)}>
+          <Button size="sm" className="shrink-0 gap-1.5" onClick={openCapture}>
             <Plus className="size-4" aria-hidden="true" />
             New memory
           </Button>
@@ -115,12 +126,7 @@ export function MemoryView() {
           }
           action={
             memories.length === 0 ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-1.5 gap-1.5"
-                onClick={() => setCaptureOpen(true)}
-              >
+              <Button size="sm" variant="outline" className="mt-1.5 gap-1.5" onClick={openCapture}>
                 <Plus className="size-4" aria-hidden="true" />
                 New memory
               </Button>
@@ -131,8 +137,16 @@ export function MemoryView() {
         <MemoryList memories={filtered} busy={isFetching} onSelect={setSelected} />
       )}
 
-      <MemoryDetail lineageId={selected} onOpenChange={(open) => !open && setSelected(null)} />
-      <CaptureMemoryDialog open={captureOpen} onOpenChange={setCaptureOpen} />
+      <MemoryDetail
+        lineageId={selected}
+        onOpenChange={(open) => !open && setSelected(null)}
+        onEdit={openEdit}
+      />
+      <MemoryAuthoringDialog
+        open={authoringOpen}
+        onOpenChange={setAuthoringOpen}
+        editing={editing}
+      />
     </div>
   );
 }

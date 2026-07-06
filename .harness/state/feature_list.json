@@ -1357,7 +1357,7 @@
       "package": "@tessera/web",
       "release": "R3",
       "priority": "should",
-      "status": "backlog",
+      "status": "in_progress",
       "blockedBy": [],
       "acceptance": [
         "/memory replaces the ComingSoon stub: browse/filter by memory kind + scope, view a lineage's full version history (supersede chain rendered, FR-12), capture and edit memories with a Monaco editor (lazy-loaded, code-split) + metadata form — via the existing /v1/memory surface",

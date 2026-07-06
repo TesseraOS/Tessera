@@ -5,8 +5,12 @@ import type {
   CompileBody,
   ContextPackage,
   EditMemoryBody,
+  EffectsQuery,
+  EffectsResponse,
   ErrorCode,
   ErrorEnvelope,
+  GraphQuery,
+  GraphSnapshot,
   HealthStatus,
   Memory,
   MemoryHistoryResponse,
@@ -157,6 +161,23 @@ export const api = {
     apiFetch<ScanResult>(`/sources/${encodeURIComponent(id)}/scan`, { method: 'POST' }),
   getScanStatus: (id: string): Promise<ScanStatus> =>
     apiFetch<ScanStatus>(`/sources/${encodeURIComponent(id)}/scan`),
+
+  // --- knowledge graph (F-043): explore the graph + ranked dependents (get_effects) ---
+  queryGraph: (query: GraphQuery = {}): Promise<GraphSnapshot> => {
+    const params = new URLSearchParams();
+    if (query.limit !== undefined) params.set('limit', String(query.limit));
+    if (query.nodeKinds && query.nodeKinds.length > 0)
+      params.set('nodeKinds', query.nodeKinds.join(','));
+    if (query.edgeKinds && query.edgeKinds.length > 0)
+      params.set('edgeKinds', query.edgeKinds.join(','));
+    const qs = params.toString();
+    return apiFetch<GraphSnapshot>(`/graph${qs ? `?${qs}` : ''}`);
+  },
+  getEffects: (query: EffectsQuery): Promise<EffectsResponse> => {
+    const params = new URLSearchParams({ kind: query.kind, key: query.key });
+    if (query.maxDepth !== undefined) params.set('maxDepth', String(query.maxDepth));
+    return apiFetch<EffectsResponse>(`/effects?${params.toString()}`);
+  },
 
   // --- settings-facing reads (no config write surface; render read-only) ---
   getPlans: (): Promise<PlansResponse> => apiFetch<PlansResponse>('/billing/plans'),

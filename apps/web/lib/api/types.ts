@@ -305,3 +305,74 @@ export interface ReadyStatus {
   status: 'ready' | 'not_ready';
   checks: ReadyCheck[];
 }
+
+// --- knowledge graph (/v1/graph, /v1/effects) — mirrors @tessera/knowledge-graph (F-008/F-040/F-043) ---
+
+export type NodeKind = 'file' | 'symbol' | 'module' | 'person' | 'decision' | 'memory';
+export const NODE_KINDS: readonly NodeKind[] = [
+  'file',
+  'symbol',
+  'module',
+  'person',
+  'decision',
+  'memory',
+];
+
+export type EdgeKind =
+  | 'imports'
+  | 'calls'
+  | 'references'
+  | 'contains'
+  | 'owns'
+  | 'defines'
+  | 'supersedes'
+  | 'EFFECT_LINK';
+
+export interface GraphNode {
+  id: string;
+  kind: NodeKind;
+  key: string;
+  label: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface GraphEdge {
+  id: string;
+  from: string;
+  to: string;
+  kind: EdgeKind;
+  rationale: string | null;
+  confidence: number | null;
+  origin: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface GraphSnapshot {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+export interface GraphQuery {
+  limit?: number;
+  nodeKinds?: NodeKind[];
+  edgeKinds?: EdgeKind[];
+}
+
+/** A node affected by a change, with the path that reaches it and a score (get_effects, FR-19). */
+export interface EffectHit {
+  nodeId: string;
+  node: GraphNode;
+  path: string[];
+  distance: number;
+  score: number;
+}
+
+export interface EffectsResponse {
+  effects: EffectHit[];
+}
+
+export interface EffectsQuery {
+  kind: NodeKind;
+  key: string;
+  maxDepth?: number;
+}

@@ -7,6 +7,8 @@ import type {
   CaptureMemoryBody,
   CompileBody,
   EditMemoryBody,
+  EffectsQuery,
+  GraphQuery,
   MemoryListFilter,
   RegisterSourceBody,
 } from './types';
@@ -145,4 +147,25 @@ export function useHealth() {
 /** Readiness + dependency checks — GET /ready. */
 export function useReady() {
   return useQuery({ queryKey: ['ready'], queryFn: () => api.getReady(), staleTime: 15_000 });
+}
+
+// --- knowledge graph (F-043) ---
+
+/** A bounded subgraph for visualization — GET /v1/graph. */
+export function useGraph(query: GraphQuery = {}) {
+  return useQuery({
+    queryKey: ['graph', query],
+    queryFn: () => api.queryGraph(query),
+    staleTime: 15_000,
+  });
+}
+
+/** Ranked, path-bearing dependents of a node — GET /v1/effects (get_effects). */
+export function useEffects(query: EffectsQuery | null) {
+  return useQuery({
+    queryKey: ['effects', query],
+    queryFn: () => api.getEffects(query as EffectsQuery),
+    enabled: query !== null,
+    staleTime: 15_000,
+  });
 }

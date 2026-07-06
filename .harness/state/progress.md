@@ -3,6 +3,49 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-06 — F-042 DONE — Memory browser + Monaco authoring + version history + timeline
+
+The `/memory` + `/timeline` **ComingSoon stubs** are now real, enterprise-grade surfaces over the
+existing `/v1/memory` surface — **live-verified against a real API** (seeded 3 memories + an edit → a
+**v2 supersede chain**) with screenshots. Plan-first ([`F-042`](../plans/F-042-memory-browser-monaco-timeline.md));
+web-only, no new ADR (interim `lib/api` client, ADR-0022). 5 verifiable, committed increments.
+
+- **(1) De-risked Monaco FIRST** (build spike before building the UI): an **offline** editor —
+  `@monaco-editor/react` + the **bundled** `monaco-editor` (`loader.config({ monaco })`, no CDN) behind a
+  `next/dynamic({ ssr:false })` wrapper so it is **code-split** out of the initial bundle and loads only
+  when authoring opens. Markdown needs no language worker (main-thread, fully offline). Verified `next build`
+  green (Turbopack) + renders at runtime, **zero console errors**. New MIT deps: `@monaco-editor/react`,
+  `monaco-editor`, `@tanstack/react-virtual`.
+- **(2) Data layer:** extended the `Memory` type to the full schema (`metadata`/`supersedes`/`supersededBy`)
+  + `list`/`get`/`history`/`edit` client methods + hooks (capture/edit invalidate the list).
+- **(3) Browser + detail:** `MemoryView` — kind (server) + scope (distinct-values) filters, a **virtualized**
+  list (`@tanstack/react-virtual`), full states; `MemoryDetail` Sheet renders the **immutable version history
+  / supersede chain** (current = head where `supersededBy===null`, FR-12) + metadata.
+- **(4) Authoring:** `MemoryAuthoringDialog` — capture (POST) + edit (PATCH-appends-a-version) with the
+  **Monaco** body + a metadata form; replaced `CaptureMemoryDialog`; wired from the browser, the sidebar
+  quick-action, and the detail's Edit action.
+- **(5) Timeline (FR-43):** a **pure `buildTimeline()`** merges memory lineages + audit events + **live SSE**
+  (`useLiveActivity` appends `memory.captured`/`document.ingested`/`source.scan.completed`; live memory events
+  de-duped against the fetched list); audit is best-effort (admin-scoped → degrades). Nav added to **both**
+  sources (`lib/nav` + `app-shared`).
+
+**Evidence (all green, workspace-wide):** state valid (65 features, **21 effect-links**, env-docs ok) · format ·
+**typecheck 30** · **lint 17** · **test 30** (web **32**) · **build 17** · **e2e 16** (api 43, mcp 15, **web 13**
+incl. 3 new memory/timeline axe specs — WCAG A/AA clean). **Screenshot-verified** live: `/memory` (3 real
+memories with kind accents + versions), the detail Sheet (the **v2→v1 supersede chain** + metadata), the Edit
+dialog (**Monaco** prefilled + metadata), and `/timeline` (real audit + memory feed, time-ordered).
+
+**Decisions:** de-risk the heavy/offline Monaco integration with a build spike before writing the UI; bundle
+Monaco locally (no CDN → works offline/enterprise); a pure SSE-merge reducer so the timeline is testable without
+a socket; scope filtered client-side from distinct values (good UX over the exact-match server filter); the
+detail shows raw text (a markdown renderer would add a dep — kept lean). **Lesson:**
+[[monaco-offline-in-next-and-virtualization-jsdom]].
+
+**Next step:** remaining R3 dashboard/hardening — F-043 (graph viz, React Flow), F-060 (live Overview — reuses
+the SSE hooks), F-061 (search depth), or the `must`s F-044 (API hardening) / F-049 (perf). None blocking.
+
+---
+
 ## 2026-07-06 — F-041 DONE — Sources & Settings dashboard (live scan progress); + 2 latent prod bugs fixed
 
 The `/sources` and `/settings` **ComingSoon stubs** are now real, enterprise-grade surfaces over the live

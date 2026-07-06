@@ -1357,7 +1357,7 @@
       "package": "@tessera/web",
       "release": "R3",
       "priority": "should",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [],
       "acceptance": [
         "/memory replaces the ComingSoon stub: browse/filter by memory kind + scope, view a lineage's full version history (supersede chain rendered, FR-12), capture and edit memories with a Monaco editor (lazy-loaded, code-split) + metadata form — via the existing /v1/memory surface",
@@ -1374,7 +1374,8 @@
         "E-010",
         "E-003",
         "E-004"
-      ]
+      ],
+      "notes": "Done 2026-07-06 (R3 dashboard arc): the /memory + /timeline ComingSoon stubs are now real, enterprise-grade surfaces over the existing /v1/memory surface — LIVE-VERIFIED against a real API (seeded 3 memories + an edit → v2 supersede chain) with screenshots. Web-only, interim lib/api client (ADR-0022; @tessera/sdk = F-045). Delivered in 5 verifiable, committed increments. (1) De-risked Monaco FIRST via a build spike: an OFFLINE editor — @monaco-editor/react + the bundled monaco-editor (loader.config({ monaco }), no CDN) behind a next/dynamic ssr:false wrapper so it is code-split out of the initial bundle and only loads when authoring opens; markdown needs no language worker (main-thread, fully offline); verified next build green (Turbopack) + renders at runtime with zero console errors. New MIT deps: @monaco-editor/react, monaco-editor, @tanstack/react-virtual. (2) Data layer: extended the Memory type to the full schema (metadata/supersedes/supersededBy) + list/get/history/edit client methods + hooks (capture/edit invalidate). (3) MemoryView browser — kind (server) + scope (distinct values) filters, a VIRTUALIZED list (@tanstack/react-virtual), full loading/empty/error states; MemoryDetail Sheet renders the IMMUTABLE version history / supersede chain (current = head supersededBy===null, FR-12) + metadata. (4) MemoryAuthoringDialog — capture (POST) + edit (PATCH appends a version) with the Monaco body + a metadata form (scope/tags/source/author); replaced CaptureMemoryDialog; wired from the browser, the sidebar quick-action, and the detail's Edit action. (5) /timeline (FR-43) — a pure buildTimeline() merges memory lineages + audit events + live SSE (useLiveActivity appends memory.captured/document.ingested/source.scan.completed; live memory events de-duped against the fetched list); audit is best-effort (admin-scoped → degrades gracefully). Timeline added to BOTH nav sources (lib/nav + app-shared). Tests: +9 web unit (buildTimeline merge/sort/dedupe ·3, memory-view list/empty/error ·3, detail supersede-chain ·1, authoring validation + capture-vs-edit ·2 — Monaco mocked to a textarea, the virtualizer stubbed for jsdom's zero-height layout) + 3 e2e (memory browse+version-history, memory empty, timeline merge — all WCAG A/AA clean via axe). Gates green workspace-wide: state · format · typecheck 30 · lint 17 · test 30 (web 32) · build 17 · e2e 16 (web 13). Effects E-010 (memory version-lineage web consumer realized), E-003 (new /v1/memory + /v1/audit + /v1/events consumers), E-004 (new token views + Monaco/virtualization). DEFERRED/documented seams: markdown RENDERING in the detail view (raw text shown; a renderer would add a dep — kept lean), per-QUERY server-side scope filtering (scope filtered client-side from distinct values over the kind-filtered set), links metadata editing (rendered, not yet editable in the form), @tessera/sdk adoption (F-045). LESSON: [[monaco-offline-in-next-and-virtualization-jsdom]]."
     },
     {
       "id": "F-043",

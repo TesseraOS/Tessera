@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Container } from '@/components/ui/container';
 import { siteConfig } from '@/lib/site';
 
@@ -60,8 +61,9 @@ export function SiteFooter() {
         ))}
       </Container>
       <div className="border-t">
-        <Container className="flex flex-wrap items-center justify-between gap-2 py-6">
+        <Container className="flex flex-wrap items-center justify-between gap-4 py-6">
           <p className="text-small text-faint-foreground">© 2026 Tessera. All rights reserved.</p>
+          <ThemeToggle />
           <p className="text-label text-faint-foreground font-mono">agent-readable: /llms.txt</p>
         </Container>
       </div>

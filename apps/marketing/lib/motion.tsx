@@ -10,6 +10,7 @@ import type React from 'react';
 import { LazyMotion, MotionConfig, domAnimation, m } from 'framer-motion';
 
 export { m };
+export { useReducedMotion } from 'framer-motion';
 export type { Variants } from 'framer-motion';
 
 /** The house easing — warm settle (§5). */

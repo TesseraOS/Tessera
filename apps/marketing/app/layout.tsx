@@ -1,15 +1,21 @@
 import type { Metadata, Viewport } from 'next';
 import type React from 'react';
-import { Instrument_Sans, Instrument_Serif } from 'next/font/google';
-import { GeistMono } from 'geist/font/mono';
+import { Instrument_Serif, JetBrains_Mono, Manrope } from 'next/font/google';
 import { MotionProvider } from '@/lib/motion';
 import { siteConfig } from '@/lib/site';
+import { ThemeProvider } from '@/lib/theme';
 import './globals.css';
 
-/* Brand faces (BRAND.md §3) — self-hosted by next/font; zero runtime third-party requests. */
-const instrumentSans = Instrument_Sans({
+/* Brand faces (BRAND.md §3, ADR-0044) — self-hosted by next/font; zero runtime requests. */
+const manrope = Manrope({
   subsets: ['latin'],
-  variable: '--font-instrument-sans',
+  variable: '--font-manrope',
+  display: 'swap',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
   display: 'swap',
 });
 
@@ -39,19 +45,24 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  // Mirrors --background (dusk) in globals.css — see the design-lint allowIn for this file.
-  themeColor: '#161013',
-  colorScheme: 'dark',
+  // Mirrors --background per theme (see the design-lint allowIn for this file).
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#161013' },
+    { media: '(prefers-color-scheme: light)', color: '#fbfbfc' },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
-      className={`${instrumentSans.variable} ${instrumentSerif.variable} ${GeistMono.variable}`}
+      suppressHydrationWarning
+      className={`${manrope.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable}`}
     >
       <body>
-        <MotionProvider>{children}</MotionProvider>
+        <ThemeProvider>
+          <MotionProvider>{children}</MotionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

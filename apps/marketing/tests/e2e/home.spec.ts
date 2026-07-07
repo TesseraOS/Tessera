@@ -15,6 +15,7 @@ test('homepage renders the hero and passes axe WCAG AA', async ({ page }) => {
   await expect(h1).toContainText('Tessera');
 
   // The chapter sections exist with accessible headings.
+  await expect(page.getByRole('heading', { name: 'The context problem' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'From scattered to compiled' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'What makes Tessera different' })).toBeVisible();
 
@@ -38,21 +39,34 @@ test('no horizontal overflow at 375px (mobile)', async ({ page }) => {
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
-test('mobile nav opens, is keyboard-dismissable, and passes axe while open', async ({ page }) => {
+test('full-screen mobile menu opens, is keyboard-dismissable, and passes axe while open', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
 
-  const toggle = page.getByRole('button', { name: 'Open menu' });
-  await toggle.click();
-  await expect(page.locator('#mobile-nav')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Close menu' })).toBeVisible();
+  await page.getByRole('button', { name: 'Open menu' }).click();
+  const menu = page.getByRole('dialog', { name: 'Menu' });
+  await expect(menu).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Close menu' })).toBeFocused();
 
   const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
   expect(results.violations).toEqual([]);
 
   await page.keyboard.press('Escape');
-  await expect(page.locator('#mobile-nav')).toBeHidden();
+  await expect(menu).toBeHidden();
+});
+
+test('footer toggle switches to the light theme, which passes axe', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+
+  await page.getByRole('button', { name: 'Noon' }).click();
+  await expect(page.locator('html')).toHaveClass(/light/);
+
+  const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
+  expect(results.violations).toEqual([]);
 });
 
 test('SEO + agent-readable endpoints respond', async ({ request }) => {
@@ -81,6 +95,10 @@ test('reduced motion: content is fully visible without animation', async ({ page
   // rise-in elements must not be stuck invisible when animations are disabled.
   const ctaRow = page.getByRole('link', { name: 'Start free' }).first();
   await expect(ctaRow).toBeVisible();
-  const opacity = await ctaRow.evaluate((el) => getComputedStyle(el.parentElement!).opacity);
-  expect(Number(opacity)).toBe(1);
+  // The kill-switch shrinks animations to 0.01ms — poll past that instant.
+  await expect
+    .poll(async () =>
+      Number(await ctaRow.evaluate((el) => getComputedStyle(el.parentElement!).opacity)),
+    )
+    .toBe(1);
 });

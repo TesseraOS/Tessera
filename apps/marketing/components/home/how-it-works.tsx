@@ -1,12 +1,11 @@
-import { CodeBlock } from '@/components/ui/code-block';
+import { PipelineFlow } from '@/components/art/pipeline-flow';
 import { Container } from '@/components/ui/container';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { Reveal } from '@/lib/motion';
 
 /**
- * How-it-works — the sand chapter (MARKETING-DESIGN §3.6): the page steps into daylight.
- * Ordered steps (mono numerals allowed here only) on warm paper cards; the code block
- * sits as a dusk artifact on the sand. Real MCP tool names from apps/mcp.
+ * How-it-works — the daylight chapter continues (MARKETING-DESIGN §3.5): three steps on
+ * paper cards, then the pipeline told as flowing brand art (no code blocks — ADR-0044).
  */
 const STEPS = [
   {
@@ -22,15 +21,9 @@ const STEPS = [
   {
     number: '03',
     title: 'Agents pull compiled context',
-    body: 'Any MCP client calls compile_context and receives a budgeted package where every fragment is cited.',
+    body: 'Any MCP client receives a budgeted package where every fragment is cited — and can say why it made the cut.',
   },
 ] as const;
-
-const MCP_TOOLS = `compile_context    budgeted, cited context packages
-search             hybrid retrieval, scores included
-get_effects        what a change touches, before you touch it
-capture_memory     decisions that persist across sessions
-query_graph        files, symbols, decisions — one graph`;
 
 export function HowItWorks() {
   return (
@@ -38,7 +31,7 @@ export function HowItWorks() {
       id="how-it-works"
       data-band="sand"
       aria-labelledby="how-it-works-title"
-      className="bg-background text-foreground scroll-mt-16 border-y"
+      className="bg-background text-foreground scroll-mt-16 border-b"
     >
       <Container className="py-24 md:py-32">
         <Reveal>
@@ -63,11 +56,7 @@ export function HowItWorks() {
           ))}
         </ol>
         <Reveal delay={120}>
-          <CodeBlock
-            label="@tessera/mcp · tools your agent sees"
-            code={MCP_TOOLS}
-            className="mx-auto mt-12 max-w-3xl md:mt-16"
-          />
+          <PipelineFlow className="mx-auto mt-14 max-w-4xl md:mt-20" />
         </Reveal>
       </Container>
     </section>

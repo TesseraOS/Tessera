@@ -1,5 +1,6 @@
 'use client';
 
+import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
@@ -9,35 +10,58 @@ import { siteConfig } from '@/lib/site';
 import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
+  { href: '/#problem', label: 'Why' },
   { href: '/#how-it-works', label: 'How it works' },
   { href: '/#product', label: 'Product' },
-  { href: '/#deploy', label: 'Deploy' },
   { href: siteConfig.docsUrl, label: 'Docs' },
 ] as const;
 
 /**
- * Sticky site nav (MARKETING-DESIGN §3.1) — dusk glass (the one allowed blur), draw-in
- * underlines, focus-managed mobile disclosure (Escape closes, focus moves in).
+ * Site nav (MARKETING-DESIGN §3.1, ADR-0044): transparent over the hero, gaining the
+ * dusk-glass + hairline after ~8px of scroll. Mobile: a full-screen overlay menu with
+ * staggered serif links, scroll lock, Escape and focus management.
  */
 export function SiteNav() {
   const [open, setOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const [scrolled, setScrolled] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
+    const toggle = toggleRef.current;
+    document.body.style.overflow = 'hidden';
+    closeRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false);
     };
     document.addEventListener('keydown', onKeyDown);
-    panelRef.current?.querySelector('a')?.focus();
-    return () => document.removeEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', onKeyDown);
+      toggle?.focus();
+    };
   }, [open]);
 
   return (
-    <header className="bg-background/85 sticky top-0 z-40 border-b backdrop-blur">
+    <header
+      className={cn(
+        'fixed inset-x-0 top-0 z-40 border-b transition-colors duration-300',
+        scrolled
+          ? 'bg-background/85 border-border backdrop-blur'
+          : 'border-transparent bg-transparent',
+      )}
+    >
       <Container className="flex h-16 items-center justify-between">
         <Link href="/" aria-label="Tessera home" className="rounded-md">
-          <Logo />
+          <Logo emberId="ember-nav" />
         </Link>
 
         <nav aria-label="Main" className="hidden items-center gap-8 md:flex">
@@ -62,13 +86,14 @@ export function SiteNav() {
         </div>
 
         <button
+          ref={toggleRef}
           type="button"
           className="text-foreground -mr-2 inline-flex size-11 items-center justify-center rounded-md md:hidden"
           aria-expanded={open}
-          aria-controls="mobile-nav"
-          onClick={() => setOpen((value) => !value)}
+          aria-controls="mobile-menu"
+          onClick={() => setOpen(true)}
         >
-          <span className="sr-only">{open ? 'Close menu' : 'Open menu'}</span>
+          <span className="sr-only">Open menu</span>
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -77,41 +102,79 @@ export function SiteNav() {
             className="size-5"
             aria-hidden="true"
           >
-            {open ? (
-              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
-            ) : (
-              <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
-            )}
+            <path d="M4 8h16M4 16h16" strokeLinecap="round" />
           </svg>
         </button>
       </Container>
 
-      <div
-        id="mobile-nav"
-        ref={panelRef}
-        className={cn('border-t md:hidden', open ? 'block' : 'hidden')}
-      >
-        <Container className="flex flex-col gap-1 py-4">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
+      {/* Full-screen mobile menu (ADR-0044) */}
+      {open ? (
+        <div
+          id="mobile-menu"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu"
+          className="bg-background grain fixed inset-0 z-50 flex flex-col md:hidden"
+        >
+          <div className="atmosphere absolute inset-x-0 top-0 h-1/2" aria-hidden="true" />
+          <Container className="relative flex h-16 shrink-0 items-center justify-between">
+            <Logo emberId="ember-menu" />
+            <button
+              ref={closeRef}
+              type="button"
+              className="text-foreground -mr-2 inline-flex size-11 items-center justify-center rounded-md"
               onClick={() => setOpen(false)}
-              className="text-body text-muted-foreground hover:text-foreground rounded-md py-2.5 transition-colors duration-200"
             >
-              {link.label}
-            </Link>
-          ))}
-          <div className="mt-3 flex items-center gap-3 border-t pt-4">
-            <ButtonLink href={siteConfig.appUrl} variant="secondary" size="md" className="flex-1">
+              <span className="sr-only">Close menu</span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                className="size-5"
+                aria-hidden="true"
+              >
+                <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+              </svg>
+            </button>
+          </Container>
+          <nav
+            aria-label="Menu"
+            className="relative flex flex-1 flex-col justify-center gap-1 px-6 md:px-8"
+          >
+            {NAV_LINKS.map((link, index) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className="rise-in text-title text-foreground hover:text-rose rounded-md py-2.5 font-serif transition-colors duration-200"
+                style={{ '--rise-delay': `${60 + index * 70}ms` } as React.CSSProperties}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          <Container className="relative flex shrink-0 items-center gap-3 pb-10">
+            <ButtonLink
+              href={siteConfig.appUrl}
+              variant="secondary"
+              size="lg"
+              className="flex-1"
+              onClick={() => setOpen(false)}
+            >
               Sign in
             </ButtonLink>
-            <ButtonLink href={siteConfig.appUrl} size="md" className="flex-1">
+            <ButtonLink
+              href={siteConfig.appUrl}
+              size="lg"
+              className="flex-1"
+              onClick={() => setOpen(false)}
+            >
               Start free
             </ButtonLink>
-          </div>
-        </Container>
-      </div>
+          </Container>
+        </div>
+      ) : null}
     </header>
   );
 }

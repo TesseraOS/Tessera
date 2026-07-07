@@ -4,6 +4,7 @@ import { DeployBand } from '@/components/home/deploy-band';
 import { Differentiators } from '@/components/home/differentiators';
 import { Hero } from '@/components/home/hero';
 import { HowItWorks } from '@/components/home/how-it-works';
+import { ProblemBand } from '@/components/home/problem-band';
 import { ProofStrip } from '@/components/home/proof-strip';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteNav } from '@/components/site-nav';
@@ -22,6 +23,7 @@ export default function HomePage() {
       <main>
         <Hero />
         <ProofStrip />
+        <ProblemBand />
         <HowItWorks />
         <Differentiators />
         <DeployBand />

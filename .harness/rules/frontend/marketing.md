@@ -4,9 +4,11 @@ Applies to `apps/marketing` (`@tessera/marketing`) — the public apex-domain su
 (ADR-0035). The general [frontend rule](frontend.md) applies where relevant, **but the
 binding design authority for this app is
 [`docs/design/MARKETING-DESIGN.md`](../../../docs/design/MARKETING-DESIGN.md)** (+ its
-[manifest](../../../docs/design/marketing-design.manifest.json)), locked by
-[ADR-0042](../../../docs/adr/0042-marketing-site-design-direction.md). On marketing pages it
-wins over the dashboard's DESIGN-SYSTEM.md.
+[manifest](../../../docs/design/marketing-design.manifest.json)) with the brand foundation
+in [`docs/design/BRAND.md`](../../../docs/design/BRAND.md) — direction locked by
+[ADR-0043](../../../docs/adr/0043-terra-mosaic-brand-and-marketing-overhaul.md) (mechanism:
+[ADR-0042](../../../docs/adr/0042-marketing-site-design-direction.md)). On marketing pages
+these win over the dashboard's DESIGN-SYSTEM.md.
 
 ## Hard constraints (gate-enforced where possible)
 
@@ -39,8 +41,9 @@ wins over the dashboard's DESIGN-SYSTEM.md.
   `robots.ts`, `llms.txt` (ADR-0036).
 - axe WCAG 2.1 AA in e2e with zero violations; one `h1` per page; no horizontal overflow
   at 375px; full keyboard paths (incl. mobile nav).
-- First-load JS ≤ 130KB gzip per page; CSS-only motion (no framer-motion — banned import);
-  LCP element never animated from invisible.
+- First-load JS ≤ 160KB gzip per page; motion via the **`lib/motion.tsx` seam only**
+  (LazyMotion + MotionConfig — importing framer-motion anywhere else fails design-lint);
+  LCP element never animated from invisible; reduced-motion = complete stillness.
 
 ## Definition of done for any marketing screen
 

@@ -16,14 +16,17 @@ exists to make that failure structurally impossible.
 
 ## Authorities (read before writing any JSX)
 
-1. **[`docs/design/MARKETING-DESIGN.md`](../../../docs/design/MARKETING-DESIGN.md)** — binding.
-   Direction (§0), the ten non-negotiables (§1), exact tokens (§2), **section archetypes
-   (§3)** — pages are composed from that inventory only.
-2. **[`marketing-design.manifest.json`](../../../docs/design/marketing-design.manifest.json)**
+1. **[`docs/design/BRAND.md`](../../../docs/design/BRAND.md)** + the
+   [Terra Mosaic philosophy](../../../docs/design/brand/terra-mosaic-philosophy.md) — the
+   brand: palette story, logo system, motion personality, brand metrics.
+2. **[`docs/design/MARKETING-DESIGN.md`](../../../docs/design/MARKETING-DESIGN.md)** — binding.
+   Direction (§0), the ten non-negotiables (§1), exact tokens for BOTH grounds (§2),
+   **section archetypes (§3)** — pages are composed from that inventory only.
+3. **[`marketing-design.manifest.json`](../../../docs/design/marketing-design.manifest.json)**
    — the enforced contract; the design-lint gate compiles its patterns.
-3. **[ADR-0042](../../../docs/adr/0042-marketing-site-design-direction.md)** — why these
-   parameters are locked; what needs a superseding decision to change.
-4. Rule: [`rules/frontend/marketing.md`](../../rules/frontend/marketing.md) · service manual
+4. **[ADR-0043](../../../docs/adr/0043-terra-mosaic-brand-and-marketing-overhaul.md)** (direction)
+   + **[ADR-0042](../../../docs/adr/0042-marketing-site-design-direction.md)** (mechanism).
+5. Rule: [`rules/frontend/marketing.md`](../../rules/frontend/marketing.md) · service manual
    `apps/marketing/AGENTS.md`.
 
 ## The loop
@@ -39,8 +42,10 @@ exists to make that failure structurally impossible.
    only; spacing rhythm from §2.4.
 4. **Spend the accent deliberately.** ≤ 2 emerald elements per viewport; primary CTA is
    near-white. If unsure where the accent goes: the one insight you want remembered.
-5. **Motion last, CSS only** (§5): entrances on secondary elements, one-shot mosaic
-   assembly, reduced-motion-safe, LCP never animated from invisible.
+5. **Motion is the thermal system** (§5): micro-interactions on everything touchable,
+   in-view reveals that settle once, ≤1 ambient system per viewport, the gilded tile
+   arriving once — all through the `lib/motion.tsx` seam (the only framer-motion import),
+   reduced-motion = complete stillness, LCP never animated from invisible.
 6. **Static-first discipline:** server components; client islands only for the manifest's
    allowed list; no data fetching; no third-party requests; URLs from `NEXT_PUBLIC_*` env.
 

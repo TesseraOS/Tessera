@@ -57,7 +57,8 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0039](0039-optional-independent-model-adversarial-review-codex.md) | Optional, opt-in independent-model adversarial review (Codex) | Accepted |
 | [0040](0040-runtime-source-management.md) | Runtime source management — ingestion wired into the shipped runtime + REST/MCP surface + SSE | Accepted |
 | [0041](0041-code-symbol-extraction-tree-sitter.md) | Code-symbol extraction with tree-sitter (WASM) → live knowledge-graph population (resolves OQ5) | Accepted |
-| [0042](0042-marketing-site-design-direction.md) | Marketing site design direction — dark-only, monochrome + emerald, gate-enforced design system | Accepted |
+| [0042](0042-marketing-site-design-direction.md) | Marketing site design direction — dark-only, monochrome + emerald, gate-enforced design system | Amended by 0043 |
+| [0043](0043-terra-mosaic-brand-and-marketing-overhaul.md) | Terra Mosaic brand + marketing design v2 — warm palette, serif voice, living motion | Accepted |
 
 ## Conventions
 

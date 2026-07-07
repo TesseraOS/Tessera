@@ -1,6 +1,6 @@
 # ADR-0042: Marketing site design direction — dark-only, monochrome + emerald, gate-enforced design system
 
-- **Status:** Accepted
+- **Status:** Accepted — **visual parameters amended by [ADR-0043](0043-terra-mosaic-brand-and-marketing-overhaul.md)** (the enforcement mechanism decided here stands; the dark-only/emerald/CSS-only-motion parameters were superseded after stakeholder review)
 - **Date:** 2026-07-07
 - **Deciders:** Project lead + F-051 session
 - **Tags:** frontend, design, marketing, harness

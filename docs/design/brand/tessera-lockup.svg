@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 112" role="img" aria-label="Tessera logo lockup">
+  <!-- NOTE: the wordmark uses Instrument Serif (fonts/ in this directory; the site self-hosts
+       it). For contexts without the font, use the rendered PNG exports instead. -->
+  <defs>
+    <linearGradient id="ember" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#E2A3A8"/>
+      <stop offset="1" stop-color="#E4B65A"/>
+    </linearGradient>
+  </defs>
+  <g fill="#F4EDE7">
+    <rect x="14" y="14" width="24" height="24" rx="7" fill-opacity="0.55"/>
+    <rect x="44" y="14" width="24" height="24" rx="7" fill-opacity="0.80"/>
+    <rect x="14" y="44" width="24" height="24" rx="7" fill-opacity="0.80"/>
+    <rect x="44" y="44" width="24" height="24" rx="7"/>
+    <rect x="74" y="44" width="24" height="24" rx="7" fill-opacity="0.90"/>
+    <rect x="14" y="74" width="24" height="24" rx="7" fill-opacity="0.45"/>
+    <rect x="44" y="74" width="24" height="24" rx="7" fill-opacity="0.90"/>
+    <rect x="74" y="74" width="24" height="24" rx="7" fill-opacity="0.70"/>
+  </g>
+  <rect x="75" y="15" width="22" height="22" rx="6.4" fill="none" stroke="#F4EDE7" stroke-opacity="0.28" stroke-width="1.6"/>
+  <rect x="83" y="5" width="24" height="24" rx="7" fill="url(#ember)"/>
+  <text x="132" y="79" font-family="Instrument Serif, Georgia, serif" font-size="66" fill="#F4EDE7" letter-spacing="0.5">tessera</text>
+</svg>

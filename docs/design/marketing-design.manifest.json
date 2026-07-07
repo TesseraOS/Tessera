@@ -1,103 +1,143 @@
 {
-  "$comment": "Machine-readable projection of docs/design/MARKETING-DESIGN.md (the human source of truth). The design-lint gate in apps/marketing COMPILES enforcement.bannedPatterns/requiredPatterns from this file — editing a pattern here changes what the gate fails. Keep doc and manifest in lockstep.",
+  "$comment": "Machine-readable projection of docs/design/MARKETING-DESIGN.md v2 (Terra Mosaic — ADR-0043; BRAND.md carries the brand). The design-lint gate in apps/marketing COMPILES enforcement.bannedPatterns/requiredPatterns from this file — editing a pattern changes what the gate fails. Keep doc and manifest in lockstep.",
   "name": "tessera-marketing-design",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "status": "accepted",
   "source": "docs/design/MARKETING-DESIGN.md",
   "authority": [
+    "docs/adr/0043-terra-mosaic-brand-and-marketing-overhaul.md",
     "docs/adr/0042-marketing-site-design-direction.md",
     "docs/adr/0035-public-web-platform-three-surfaces.md"
   ],
+  "brand": "docs/design/BRAND.md",
   "scope": ["apps/marketing"],
   "updated": "2026-07-07",
   "direction": {
-    "summary": "A precision instrument, not a billboard. Dark-only, near-black, typography-led, monochrome + one emerald accent (budgeted), hairline borders, flat surfaces, tessera-mosaic signature visual, CSS-only motion, honest content.",
-    "aestheticFamily": ["linear", "vercel", "stripe-docs"],
-    "explicitlyNot": ["purple-gradient SaaS template", "glassmorphism", "3D blobs/particles", "carousel landing pages"]
+    "summary": "Terra Mosaic — an archivist with a jeweler's hands, working at dusk. Warm espresso-plum ground + sand light bands, dusty-rose primary accent + one ember-gold moment per band, Instrument Serif voice, living tessellation art, thermal motion (settle/drift/glow-once), grain over flat black. Honest, accessible, award-grade.",
+    "themeLineage": ["theme-factory: Desert Rose", "theme-factory: Modern Minimalist"],
+    "explicitlyNot": ["indigo/neon AI gradients", "glassmorphism", "particle storms", "3D blobs", "carousels", "fabricated social proof", "hype vocabulary", "cold pure-black monochrome"]
   },
-  "theme": { "mode": "dark-only", "toggle": false, "revisit": "post-launch, ADR-0042" },
+  "theme": {
+    "mode": "single theme, two grounds",
+    "grounds": { "dusk": ":root (default)", "sand": "[data-band='sand'] scoped overrides" },
+    "toggle": false
+  },
   "tokens": {
-    "rule": "Components reference semantic CSS variables only. Values below are exact and pre-verified for AA contrast — do not invent new pairs.",
-    "color": {
-      "background": "#030303",
-      "foreground": "#f5f5f5",
-      "muted-foreground": "#a1a1a1",
-      "faint-foreground": "#8a8a8a",
-      "surface": "#0a0a0a",
-      "card": "#101010",
-      "card-foreground": "#f5f5f5",
-      "primary": "#fafafa",
-      "primary-foreground": "#0a0a0a",
-      "secondary": "#1a1a1a",
-      "secondary-foreground": "#f5f5f5",
-      "accent": "#34d399",
-      "accent-foreground": "#04150d",
-      "border": "rgba(255,255,255,0.08)",
-      "border-strong": "rgba(255,255,255,0.16)",
-      "input": "rgba(255,255,255,0.12)",
-      "ring": "#34d399",
-      "code": "#0c0c0c"
+    "rule": "Components reference semantic CSS variables only; every pairing below is pre-verified AA — do not invent new pairs.",
+    "dusk": {
+      "background": "#161013",
+      "surface": "#1E1519",
+      "card": "#251A20",
+      "card-foreground": "#F4EDE7",
+      "foreground": "#F4EDE7",
+      "muted-foreground": "#B7A8A8",
+      "faint-foreground": "#968690",
+      "primary": "#F4EDE7",
+      "primary-foreground": "#261720",
+      "secondary": "#2A1E24",
+      "secondary-foreground": "#F4EDE7",
+      "rose": "#E2A3A8",
+      "rose-foreground": "#2B1218",
+      "gold": "#E4B65A",
+      "clay": "#C8836C",
+      "burgundy": "#5D2E46",
+      "border": "rgba(244,237,231,0.10)",
+      "border-strong": "rgba(244,237,231,0.18)",
+      "input": "rgba(244,237,231,0.14)",
+      "ring": "#E2A3A8",
+      "code": "#120D10"
+    },
+    "sand": {
+      "background": "#F1E8DF",
+      "surface": "#EADFD3",
+      "card": "#FAF4EE",
+      "foreground": "#2B1E25",
+      "muted-foreground": "#63525A",
+      "faint-foreground": "#7E6B73",
+      "primary": "#2B1E25",
+      "primary-foreground": "#F4EDE7",
+      "secondary": "#E3D6C9",
+      "secondary-foreground": "#2B1E25",
+      "rose": "#9E4A56",
+      "rose-foreground": "#FBF3EE",
+      "gold": "#7A5A1E",
+      "border": "rgba(43,30,37,0.14)",
+      "border-strong": "rgba(43,30,37,0.26)",
+      "ring": "#9E4A56"
+    },
+    "sanctionedDecoration": {
+      "gradients": ["--gradient-ember (linear 120deg rose→gold)", "--gradient-dusk (radial atmosphere <=18% alpha)", ".text-ember (display-only gradient text; counts as the band's gold moment)"],
+      "shadows": ["--shadow-soft", "--shadow-lift — sand-band cards only; dusk stays flat + hairlines"],
+      "texture": ".grain — SVG turbulence overlay ~2.8% opacity, dark grounds only",
+      "rule": "All defined ONCE in app/globals.css; components consume classes/tokens, never re-declare."
     },
     "accentBudget": {
-      "maxEmeraldElementsPerViewport": 2,
-      "allowed": ["small text/glyph highlights", "mosaic assembled-core tiles", "focus rings (free)", "<=1 accent border or badge per section"],
-      "never": ["button fills larger than a badge", "section tints", "body text color", "large area fills"]
+      "rosePerViewport": 3,
+      "goldMomentsPerBand": 1,
+      "free": ["focus rings"],
+      "never": ["rose/gold section tints", "gradient body text", "a third hue"]
     },
-    "radius": { "base": "0.65rem", "derived": ["sm", "md", "lg", "xl"], "buttons": "md", "panels": "lg" },
-    "elevation": "none — background steps + hairline borders; all shadow utilities banned",
+    "radius": { "base": "0.65rem", "derived": ["sm", "md", "lg", "xl"] },
     "zIndex": { "base": 0, "nav": 40, "overlay": 50 }
   },
   "typography": {
-    "families": { "sans": "Geist Sans (geist package, self-hosted)", "mono": "Geist Mono" },
-    "closedScale": {
-      "display": { "size": "clamp(2.75rem, 4.5vw + 1.5rem, 4.75rem)", "lineHeight": 1.04, "tracking": "-0.035em", "weight": 600, "role": "hero h1 only" },
-      "title": { "size": "clamp(1.875rem, 2vw + 1.25rem, 2.625rem)", "lineHeight": 1.12, "tracking": "-0.025em", "weight": 600, "role": "section h2" },
-      "heading": { "size": "1.375rem", "lineHeight": 1.35, "tracking": "-0.015em", "weight": 500, "role": "h3" },
-      "lead": { "size": "1.1875rem", "lineHeight": 1.55, "tracking": "-0.005em", "weight": 400, "role": "hero subhead / section intro" },
-      "body": { "size": "1rem", "lineHeight": 1.65, "tracking": "0", "weight": 400, "role": "prose" },
-      "small": { "size": "0.875rem", "lineHeight": 1.55, "tracking": "0", "weight": 400, "role": "secondary UI text" },
-      "label": { "size": "0.8125rem", "lineHeight": 1.4, "tracking": "0.06em", "weight": 500, "role": "mono — eyebrow, wordmarks, code captions" }
+    "families": {
+      "serif": "Instrument Serif (400 + italic; NEVER bold — emphasis is italic/scale)",
+      "sans": "Instrument Sans (variable)",
+      "mono": "Geist Mono"
     },
-    "rules": ["text-wrap: balance on headings", "text-wrap: pretty on prose", "lead measure <= 56ch", "body measure 60-72ch", "headlines <= 8 words", "sentence case everywhere", "no italic, no font-bold+, underline = links only"]
+    "closedScale": {
+      "display": { "face": "serif", "size": "clamp(3.25rem, 6vw + 1.5rem, 6.75rem)", "lineHeight": 1.02, "tracking": "-0.01em", "weight": 400, "role": "hero h1 only" },
+      "title": { "face": "serif", "size": "clamp(2.375rem, 3vw + 1.25rem, 3.875rem)", "lineHeight": 1.08, "tracking": "-0.005em", "weight": 400, "role": "section h2" },
+      "heading": { "face": "sans", "size": "1.5rem", "lineHeight": 1.3, "tracking": "-0.01em", "weight": 500, "role": "h3" },
+      "lead": { "face": "sans", "size": "1.25rem", "lineHeight": 1.55, "tracking": "0", "weight": 400, "role": "subheads/intros" },
+      "body": { "face": "sans", "size": "1.0625rem", "lineHeight": 1.65, "tracking": "0", "weight": 400, "role": "prose" },
+      "small": { "face": "sans", "size": "0.9375rem", "lineHeight": 1.5, "tracking": "0", "weight": 400, "role": "secondary UI" },
+      "label": { "face": "mono", "size": "0.8125rem", "lineHeight": 1.4, "tracking": "0.08em", "weight": 500, "role": "eyebrow, wordmarks, annotations" }
+    },
+    "rules": ["h1/h2 serif via base layer", "italic (often rose) is the only display emphasis", "balance headings / pretty prose", "lead <=56ch, body 60-72ch", "headlines <=8 words", "sentence case"]
   },
   "layout": {
-    "container": "mx-auto w-full max-w-6xl px-6 md:px-8 (single Container component)",
-    "sectionPadding": "py-24 md:py-32 (hero pt-36 md:pt-44 pb-20 md:pb-24; min py-16)",
+    "container": "mx-auto w-full max-w-6xl px-6 md:px-8",
+    "sectionPadding": "py-24 md:py-32 (hero pt-28 md:pt-36); >=50% quiet ground per band",
+    "bands": "full-bleed grounds with hairline seams; page arc dusk → sand → dusk",
     "spacingSteps": [1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 32, 36, 44],
-    "grid": "grid-cols-12 asymmetric feature rows (5/7); grid-cols-2/3/4 for footer/steps; flex 1-D only",
-    "bands": "full-bleed --surface background + top/bottom hairline; content stays in Container"
+    "grid": "grid-cols-12 asymmetric rows (5/7); 2/3/4-col simple grids; flex 1-D only"
   },
-  "sections": ["nav", "hero", "proof-strip", "feature-row", "steps", "code-block", "pricing-table", "faq", "cta-band", "footer"],
-  "components": ["Container", "Button(primary|secondary|ghost; sm|md|lg)", "TextLink", "Badge", "Panel", "CodeBlock", "SectionHeading", "Wordmark", "LogoIcon"],
+  "sections": ["nav", "hero", "marquee-strip", "steps", "feature-row", "sand-band", "code-block", "pricing-table", "faq", "cta-band", "footer"],
+  "components": ["Container", "Button(primary|secondary|ghost; sm|md|lg; hover lift+sheen)", "TextLink(draw-in underline)", "Badge", "Panel", "CodeBlock", "SectionHeading", "Wordmark", "Logo/LogoIcon(v2 mark)", "MosaicField(seeded ambient tessellation)", "Reveal(in-view rise)", "Marquee(hover-paused)", "lib/motion.tsx (the ONLY framer-motion import)"],
   "motion": {
-    "library": "CSS only (framer-motion banned in this app, v1)",
-    "entrances": "<=300ms ease-out, opacity + <=12px translate, secondary elements only",
-    "hover": "<=200ms color/background/border/transform",
-    "signature": "mosaic assembly animates once on load (<=900ms) then static",
-    "banned": ["animating h1/LCP from invisible", "infinite loops (pulse/bounce/marquee)", "scroll-jacking/parallax", "transition-all", "layout-property animation"],
-    "reducedMotion": "every animation behind prefers-reduced-motion: no-preference + global kill-switch"
+    "system": "thermal — settle, drift, glow once; stillness is the default state",
+    "library": "framer-motion via LazyMotion(domAnimation) + m, imported ONLY by lib/motion.tsx; MotionConfig reducedMotion='user'",
+    "micro": "150-250ms ease-out (underline draw, button lift 1-2px + one sheen sweep, icon nudge)",
+    "reveal": "opacity + 16-24px rise, 500-700ms, stagger 60-90ms, once, ~20% in view",
+    "livingPanels": "in-view once: budget fills (~800ms), SVG edges draw (dashoffset), rows cascade",
+    "ambient": "<=1 system per viewport: tile drift <=8px over 9-14s alternate loops; marquee ~40s linear with hover/focus pause",
+    "signature": "the gilded tile arrives once per page load (<=1.2s) then stillness",
+    "banned": ["animating h1/LCP from invisible", "scroll-jacking/parallax", "transition-all", "layout-property animation", "bounce/spin/flash", "typing effects"],
+    "reducedMotion": "complete, still, final layout — global CSS kill-switch + MotionConfig"
   },
   "voice": {
-    "case": "sentence case (headings, buttons, nav); mono eyebrow may be uppercase",
+    "case": "sentence case; mono labels may be uppercase",
     "bannedWords": ["unleash", "supercharge", "revolutionize", "game-changing", "blazing", "effortless", "seamless", "magic", "10x", "next-level", "turbocharge"],
-    "honesty": "no invented logos/testimonials/ratings/user counts/metrics; pricing from @tessera/billing PLANS; integrations as typographic wordmarks",
+    "honesty": "no invented logos/testimonials/ratings/counts/metrics; pricing from @tessera/billing PLANS; integrations as typographic wordmarks; product visuals mirror real surfaces",
     "ctas": "verbs; primary -> NEXT_PUBLIC_APP_URL; docs -> NEXT_PUBLIC_DOCS_URL; no hardcoded domains"
   },
   "budgets": {
-    "firstLoadJsGzipKb": 130,
-    "clientIslands": ["nav toggle", "copy buttons"],
+    "firstLoadJsGzipKb": 160,
+    "clientIslands": ["nav", "motion-seam consumers (Reveal/living panels/mosaic)", "marquee", "copy buttons"],
     "clientDataFetching": "none",
     "thirdPartyRequests": "none",
     "webVitals": { "lcpMs": 2000, "cls": 0.05, "inpMs": 200 }
   },
   "seo": {
-    "perPage": ["metadata title <=60ch", "description 140-160ch", "canonical", "og+twitter 1200x630"],
+    "perPage": ["metadata title <=60ch", "description 140-160ch", "canonical", "og 1200x630 (brand plate)"],
     "site": ["sitemap.ts", "robots.ts", "llms.txt (ADR-0036)", "NEXT_PUBLIC_SITE_URL drives absolute URLs"]
   },
   "enforcement": {
     "enforcedBy": "apps/marketing/tests/design-lint.test.ts (vitest — runs in the standard `test` gate)",
     "sourceGlobs": ["app/**/*.{ts,tsx,css}", "components/**/*.{ts,tsx,css}", "lib/**/*.{ts,tsx}"],
-    "$patternNotes": "Patterns are JS regexes (string-escaped). `files` limits which relative paths are scanned; `allowIn` exempts specific relative paths. Adding an allowIn entry is a deliberate, reviewed act.",
+    "$patternNotes": "Patterns are JS regexes (string-escaped). `files` limits scanned relative paths; `allowIn` exempts exact paths. Adding an allowIn is a reviewed design decision (doc + manifest together).",
     "bannedPatterns": [
       {
         "id": "gradient-utilities",
@@ -105,23 +145,23 @@
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts"],
         "allowIn": [],
-        "reason": "No gradients (MARKETING-DESIGN §1.3) — flat surfaces + hairlines only."
+        "reason": "Gradients exist only as the sanctioned tokens in globals.css (§2.3) — never as utilities."
       },
       {
-        "id": "gradient-text",
-        "pattern": "bg-clip-text|text-transparent",
+        "id": "gradient-text-outside-globals",
+        "pattern": "bg-clip-text|text-transparent|background-clip\\s*:\\s*text",
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts", "**/*.css"],
-        "allowIn": [],
-        "reason": "Gradient text is the #1 AI-slop tell (§1.3)."
+        "allowIn": ["app/globals.css"],
+        "reason": "Gradient text exists only as the .text-ember display treatment defined once in globals (§2.3); ad-hoc gradient text is the #1 slop tell."
       },
       {
-        "id": "css-gradients",
+        "id": "css-gradients-outside-globals",
         "pattern": "(?:linear|radial|conic)-gradient\\(",
         "flags": "",
         "files": ["**/*.css", "**/*.tsx", "**/*.ts"],
-        "allowIn": [],
-        "reason": "No gradients anywhere, including CSS (§1.3)."
+        "allowIn": ["app/globals.css"],
+        "reason": "The two brand gradients are tokens defined once in globals.css (§2.3)."
       },
       {
         "id": "raw-tailwind-palette",
@@ -137,7 +177,7 @@
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts"],
         "allowIn": [],
-        "reason": "No arbitrary Tailwind values (§1.1) — the closed token/scale set only. CSS-var parens syntax `util-(--token)` remains available."
+        "reason": "No arbitrary Tailwind values (§1.1) — the closed token/scale set only; CSS-var parens `util-(--token)` remains available."
       },
       {
         "id": "inline-hex-color",
@@ -145,23 +185,23 @@
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts"],
         "allowIn": ["app/layout.tsx", "app/opengraph-image.tsx", "app/icon.tsx", "app/apple-icon.tsx", "app/twitter-image.tsx"],
-        "reason": "Hex colors live in globals.css tokens only (§2). OG/icon image routes (inline-style renderer) and the layout themeColor mirror are the deliberate exceptions."
+        "reason": "Hex lives in globals.css tokens only (§2); OG/icon renderers and the layout themeColor mirror are the exceptions."
       },
       {
-        "id": "shadows",
-        "pattern": "\\b(?:drop-)?shadow-(?!none\\b)[a-z0-9(\\[]",
+        "id": "unsanctioned-shadows",
+        "pattern": "\\b(?:drop-)?shadow-(?!none\\b|soft\\b|lift\\b)[a-z0-9(\\[]",
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts"],
         "allowIn": [],
-        "reason": "Elevation is none (§2.2) — surfaces separate by background step + hairline."
+        "reason": "Only the tokenized soft/lift shadows exist, and only on sand-band cards (§2.3)."
       },
       {
         "id": "box-shadow-css",
         "pattern": "box-shadow\\s*:\\s*(?!none)",
         "flags": "",
         "files": ["**/*.css"],
-        "allowIn": [],
-        "reason": "Elevation is none (§2.2)."
+        "allowIn": ["app/globals.css"],
+        "reason": "Shadow values are defined once as tokens in globals (§2.3)."
       },
       {
         "id": "blur-outside-nav",
@@ -169,7 +209,7 @@
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts", "**/*.css"],
         "allowIn": ["components/site-nav.tsx"],
-        "reason": "Blur is allowed only on the sticky nav background (§3.1); glassmorphism is banned (§1.3)."
+        "reason": "Blur is the sticky nav's device only (§3.1); glassmorphism stays banned."
       },
       {
         "id": "infinite-animation-utilities",
@@ -177,7 +217,7 @@
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts"],
         "allowIn": [],
-        "reason": "No infinite animation loops (§5)."
+        "reason": "Ambient motion is the named thermal set (§5), not Tailwind's attention-seeking loops."
       },
       {
         "id": "transition-all",
@@ -193,7 +233,7 @@
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts"],
         "allowIn": [],
-        "reason": "The type scale is a closed set (§2.3) — use text-display/title/heading/lead/body/small/label."
+        "reason": "The type scale is a closed set (§2.4) — display/title/heading/lead/body/small/label."
       },
       {
         "id": "heavy-font-weights",
@@ -201,7 +241,7 @@
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts"],
         "allowIn": [],
-        "reason": "Max weight is 600/semibold (§2.3) — premium reads as medium weight + tight tracking, not bold."
+        "reason": "The serif never bolds; sans tops out at medium/semibold (§2.4)."
       },
       {
         "id": "ad-hoc-leading-tracking",
@@ -209,7 +249,7 @@
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts"],
         "allowIn": [],
-        "reason": "Line-height and tracking ship inside the closed type scale tokens (§2.3)."
+        "reason": "Line-height and tracking ship inside the closed type tokens (§2.4)."
       },
       {
         "id": "dark-variant",
@@ -217,15 +257,15 @@
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts"],
         "allowIn": [],
-        "reason": "Marketing is dark-only single-theme (§0) — a dark: variant signals dashboard idioms leaking in."
+        "reason": "One theme, two grounds via [data-band] scoping (§0) — never dark: variants."
       },
       {
-        "id": "framer-motion",
+        "id": "framer-motion-outside-seam",
         "pattern": "from\\s+['\"]framer-motion|from\\s+['\"]motion/",
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts"],
-        "allowIn": [],
-        "reason": "Motion is CSS-only in this app (§5, ADR-0042)."
+        "allowIn": ["lib/motion.tsx"],
+        "reason": "framer-motion enters only through the lib/motion.tsx seam (LazyMotion + MotionConfig reducedMotion, ADR-0043) so reduced-motion and bundle discipline hold everywhere."
       },
       {
         "id": "inline-color-styles",
@@ -233,7 +273,7 @@
         "flags": "",
         "files": ["**/*.tsx"],
         "allowIn": ["app/opengraph-image.tsx", "app/icon.tsx", "app/apple-icon.tsx", "app/twitter-image.tsx"],
-        "reason": "No inline color styling (§1.1); OG/icon renderers are the deliberate exception. Inline style may still set CSS custom properties / transforms (mosaic tile positions)."
+        "reason": "No inline color styling (§1.1); OG/icon renderers excepted. Inline style may still set CSS custom properties / transforms (tile positions, delays)."
       },
       {
         "id": "script-tags-and-third-party",
@@ -241,7 +281,7 @@
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts"],
         "allowIn": [],
-        "reason": "Zero third-party requests; fonts self-hosted via the geist package (§1.9)."
+        "reason": "Zero third-party runtime requests; fonts self-hosted via next/font (§1.9)."
       },
       {
         "id": "hardcoded-cross-surface-domain",
@@ -249,7 +289,7 @@
         "flags": "i",
         "files": ["**/*.tsx", "**/*.ts"],
         "allowIn": [],
-        "reason": "TLD not final — cross-surface URLs come from NEXT_PUBLIC_APP_URL / NEXT_PUBLIC_DOCS_URL / NEXT_PUBLIC_SITE_URL (§6)."
+        "reason": "TLD undecided — URLs come from NEXT_PUBLIC_* env (§6)."
       },
       {
         "id": "hype-vocabulary",
@@ -273,7 +313,7 @@
         "flags": "u",
         "files": ["**/*.tsx", "**/*.ts"],
         "allowIn": [],
-        "reason": "No emoji (§1.6) — Lucide-style inline SVG or typographic marks only."
+        "reason": "No emoji (§1.6) — inline SVG or typographic marks only."
       },
       {
         "id": "exclamation-in-copy",
@@ -281,7 +321,7 @@
         "flags": "",
         "files": ["**/*.tsx"],
         "allowIn": [],
-        "reason": "No exclamation marks in copy (§1.6). (JSX-expression `!` negation does not match this shape.)"
+        "reason": "No exclamation marks in copy (§1.6)."
       }
     ],
     "requiredPatterns": [
@@ -292,28 +332,46 @@
         "reason": "Per-page SEO metadata is mandatory (§7)."
       },
       {
-        "id": "tokens-present-background",
+        "id": "tokens-present-dusk-background",
         "files": ["app/globals.css"],
-        "pattern": "--background:\\s*#030303",
-        "reason": "Token drift guard — canvas value is locked (§2.1)."
+        "pattern": "--background:\\s*#161013",
+        "reason": "Token drift guard — the dusk canvas is locked (§2.1)."
       },
       {
-        "id": "tokens-present-accent",
+        "id": "tokens-present-rose",
         "files": ["app/globals.css"],
-        "pattern": "--accent:\\s*#34d399",
-        "reason": "Token drift guard — the single accent is locked (§2.1)."
+        "pattern": "--rose:\\s*#E2A3A8",
+        "reason": "Token drift guard — the primary accent is locked (§2.1)."
+      },
+      {
+        "id": "tokens-present-ember-gradient",
+        "files": ["app/globals.css"],
+        "pattern": "--gradient-ember:",
+        "reason": "The sanctioned gradient set must exist as tokens (§2.3)."
+      },
+      {
+        "id": "sand-band-scope-defined",
+        "files": ["app/globals.css"],
+        "pattern": "\\[data-band='sand'\\]",
+        "reason": "The two-ground system is implemented as band-scoped custom properties (§2.2)."
       },
       {
         "id": "reduced-motion-kill-switch",
         "files": ["app/globals.css"],
         "pattern": "prefers-reduced-motion",
         "reason": "Global reduced-motion kill-switch is mandatory (§5)."
+      },
+      {
+        "id": "motion-seam-exists",
+        "files": ["lib/motion.tsx"],
+        "pattern": "LazyMotion",
+        "reason": "All framer-motion flows through the LazyMotion seam with MotionConfig (§5, ADR-0043)."
       }
     ]
   },
   "reviewProtocol": {
-    "screenshots": ["1440x900", "1280x800", "375x812", "full-page", "reduced-motion"],
+    "screenshots": ["1440x900", "1280x800", "375x812", "full-page", "reduced-motion", "both grounds"],
     "checklist": "MARKETING-DESIGN.md §8",
-    "brandSwapTest": "cover the logo — if the page could be any AI SaaS template, it fails"
+    "brandSwapTest": "cover the logo — tessellation + dusk/rose/gold + serif voice must still say Tessera"
   }
 }

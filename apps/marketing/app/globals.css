@@ -1,0 +1,168 @@
+@import 'tailwindcss';
+
+/*
+ * Marketing design tokens — docs/design/MARKETING-DESIGN.md §2 (ADR-0042). Dark-only:
+ * one theme, defined at :root; there is no .dark mechanism and no theme toggle here.
+ * Components reference semantic tokens only — the design-lint gate
+ * (tests/design-lint.test.ts) compiles the manifest and fails the build otherwise.
+ */
+:root {
+  --radius: 0.65rem;
+
+  --background: #030303;
+  --foreground: #f5f5f5;
+  --muted-foreground: #a1a1a1;
+  --faint-foreground: #8a8a8a;
+  --surface: #0a0a0a;
+  --card: #101010;
+  --card-foreground: #f5f5f5;
+  --primary: #fafafa;
+  --primary-foreground: #0a0a0a;
+  --secondary: #1a1a1a;
+  --secondary-foreground: #f5f5f5;
+  --accent: #34d399;
+  --accent-foreground: #04150d;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #34d399;
+  --code: #0c0c0c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint-foreground: var(--faint-foreground);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-code: var(--code);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /*
+   * Closed type scale (MARKETING-DESIGN §2.3) — the ONLY text sizes on this site.
+   * Tailwind's default text-* utilities are removed on purpose: text-sm etc. do not exist
+   * in this app. Use: display / title / heading / lead / body / small / label.
+   */
+  --text-*: initial;
+  --text-display: clamp(2.75rem, 4.5vw + 1.5rem, 4.75rem);
+  --text-display--line-height: 1.04;
+  --text-display--letter-spacing: -0.035em;
+  --text-display--font-weight: 600;
+  --text-title: clamp(1.875rem, 2vw + 1.25rem, 2.625rem);
+  --text-title--line-height: 1.12;
+  --text-title--letter-spacing: -0.025em;
+  --text-title--font-weight: 600;
+  --text-heading: 1.375rem;
+  --text-heading--line-height: 1.35;
+  --text-heading--letter-spacing: -0.015em;
+  --text-heading--font-weight: 500;
+  --text-lead: 1.1875rem;
+  --text-lead--line-height: 1.55;
+  --text-lead--letter-spacing: -0.005em;
+  --text-body: 1rem;
+  --text-body--line-height: 1.65;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.55;
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.4;
+  --text-label--letter-spacing: 0.06em;
+  --text-label--font-weight: 500;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground text-body font-sans antialiased;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  button,
+  [role='button'] {
+    cursor: pointer;
+  }
+
+  /* Visible focus everywhere — the ring is the accent's one always-free use (§2.1). */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+}
+
+/*
+ * One-shot entrance (MARKETING-DESIGN §5): <=300ms, ease-out, opacity + small rise.
+ * Secondary elements only — NEVER the hero h1/LCP. Stagger via --rise-delay (<=600ms total).
+ * Gated behind no-preference so reduced-motion users get the final layout immediately.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .rise-in {
+    animation: rise-in 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    animation-delay: var(--rise-delay, 0ms);
+  }
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Global reduced-motion kill-switch (§5) — belt and braces over the gate above. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

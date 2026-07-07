@@ -55,9 +55,12 @@ jobs:
       - name: Build (gate 5)
         run: pnpm build
 
-      # The web e2e (gate 6) drives a real browser via Playwright; install it before running.
+      # The web/marketing e2e (gate 6) drives a real browser via Playwright; install it
+      # before running (both apps pin the same @playwright/test — one browser build).
       - name: Install Playwright browser (web e2e + a11y)
-        run: pnpm --filter @tessera/web exec playwright install --with-deps chromium
+        run: |
+          pnpm --filter @tessera/web exec playwright install --with-deps chromium
+          pnpm --filter @tessera/marketing exec playwright install chromium
 
       - name: E2E + a11y (gate 6)
         run: pnpm test:e2e

@@ -3,6 +3,62 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-07 — F-051 IN PROGRESS — marketing design harness + apps/marketing scaffold + homepage
+
+The marketing site's first increment, built **harness-first** by explicit direction: encode the
+visual quality bar as an executable contract *before* any page code, so future sessions (any
+model) are constrained into it. Plan-first ([`F-051`](../plans/F-051-marketing-site.md)); 3
+committed increments this session.
+
+- **(1) Binding marketing design system (ADR-0042)** —
+  [`docs/design/MARKETING-DESIGN.md`](../../docs/design/MARKETING-DESIGN.md) (direction: dark-only
+  near-black, typography-led, monochrome + ONE budgeted emerald accent, tessera-mosaic signature,
+  CSS-only motion, honest-content hard rules, closed 7-style type scale, fixed section archetypes
+  §3 + component set §4, review protocol §8) + machine-readable
+  [`marketing-design.manifest.json`](../../docs/design/marketing-design.manifest.json) whose
+  `enforcement.bannedPatterns/requiredPatterns` (23+4 regexes) **are compiled into gate failures**
+  by `apps/marketing/tests/design-lint.test.ts` (runs in the standard `test` gate). Harness wiring:
+  rule [`frontend/marketing.md`](../rules/frontend/marketing.md), skill
+  [`marketing-ui`](../skills/marketing-ui/SKILL.md) (+ Claude shim), DESIGN-SYSTEM scope note
+  (dashboard vs public surfaces), ADR/skills/rules indexes.
+- **(2) `apps/marketing` (@tessera/marketing) scaffold** — Next.js App Router, static-first
+  (every route prerendered ○; no client data fetching; no third-party requests; NFR-17), marketing
+  token set + closed type scale in `globals.css` (`--text-*: initial` — Tailwind's default text
+  sizes don't exist in this app), env-driven cross-surface URLs (`NEXT_PUBLIC_SITE_URL/APP_URL/
+  DOCS_URL`, TLD undecided), SEO baseline (per-page metadata, generated OG image + favicon from
+  tokens, `sitemap.ts`, `robots.ts`, **`llms.txt`** with the real MCP tool names — ADR-0036),
+  Playwright e2e (port 3200) + axe WCAG AA, joins all turbo pipelines + CI (Playwright install
+  step extended; `.claude/launch.json` gains a `marketing` preview on 3300).
+- **(3) Homepage** — nav (blur allowed here only, mobile disclosure w/ Esc + focus), hero
+  (eyebrow → two-tone `display` h1 "Your agents forget. / Tessera doesn't." (LCP never animated)
+  → subhead → 2 CTAs → **compile-trace panel**: 6 fragments in → budget bar → cited, scored
+  package out; accent budget = top score + budget bar), MCP-clients proof strip (typographic
+  wordmarks), how-it-works (3 steps + real `@tessera/mcp` tool listing), 3 asymmetric
+  differentiator rows (compiler stages / effect-link SVG graph / audit-trail mock — all
+  product-true, token-built), deploy band, CTA band, footer.
+- **Design-lint proved itself immediately:** caught `PR #142` (matches the 3-hex-color ban) —
+  fixed the copy, not the pattern. axe caught two real bugs: (a) tailwind-merge silently dropped
+  `text-primary-foreground` next to the custom `text-small` token → 1.04:1 button (fixed by
+  extending twMerge's font-size classGroup with the closed scale); (b) scrollable `<pre>` needed
+  `tabIndex=0 role=region` (jsx-a11y rule scoped accordingly). Both captured as memory lessons.
+
+**Evidence/verification** — full workspace gates green: state ✓ (65 features, 22 effect-links),
+typecheck ✓ (31 tasks), lint ✓, format ✓, test ✓ (marketing design-lint 29 tests), build ✓
+(all marketing routes static), e2e ✓ (17 tasks; marketing 6/6 incl. axe AA desktop + mobile-nav-open,
+375px no-overflow, env-driven CTAs, SEO endpoints, reduced-motion visibility). Visual review per
+MARKETING-DESIGN §8: preview screenshots at 1440 + 375 (hero, how-it-works, differentiators,
+deploy, CTA, footer), `preview_inspect` confirms display token (76px/1.04/−0.035em/600 Geist),
+primary CTA `#fafafa`/`#0a0a0a`, accent `#34d399`; brand-swap test passes (compile-trace +
+effect-graph are Tessera-specific).
+
+**Decisions** — ADR-0042 (dark-only v1 + emerald accent + CSS-only motion + gate-enforced design
+system); effects: **+E-022** (marketing design contract → globals.css/design-lint/twMerge group;
+E-004 untouched — marketing has its own token values, same semantic structure).
+
+**Next step** — F-051 remaining increments: features page, **pricing from `@tessera/billing`
+PLANS** (never hand-copied), enterprise/trust page, `/skills` placeholder (F-054 seam), then
+gates + §8 review per page; `web-perf` budget wiring activates with F-049.
+
 ## 2026-07-06 — F-043 DONE — Knowledge-graph & effect-links visualization (React Flow)
 
 The `/graph` **ComingSoon stub** is now an explorable **React Flow** view of the live knowledge graph

@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-07-06",
+  "updated": "2026-07-07",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -335,6 +335,21 @@
       "kind": "EFFECT_LINK",
       "rationale": "F-038 composes the F-006/F-017 ingestion engine into the shipped runtime and exposes it through REST + MCP parity; F-039 makes its output RETRIEVABLE by writing every ingested document + captured memory into the keyword/temporal/semantic indices + the blob corpus via one shared createCorpusIndexer (the seam E-008/E-012/E-013 left for ingestion). Changing the SourceRegistry/SourceService contract, the connector factory, the runtime sink/indexer composition, or the scan/event model ripples to the SQLite adapters + conformance, the composition root (E-014), the REST/MCP surfaces + regenerated SDK (E-003), the RBAC catalog (E-018), the audit actions (E-020), and now the retrieval indices (E-008/E-012/E-013). The registry is tenant-isolated (ADR-0033); ingestion indexes in the default tenant (memory indexes in its capture tenant via the decorator's forTenant) — per-tenant ingestion pipelines are a documented seam. NFR-12: the indexer's content-hash cache + the F-006 manifest keep unchanged content from being re-embedded. Chunking is whole-document for F-039 (sub-document chunking is a documented refinement keeping this sink seam); the Local runtime enables no compilation cache so index writes are immediately reflected.",
       "confidence": 0.9,
+      "origin": "manual"
+    },
+    {
+      "id": "E-022",
+      "from": { "kind": "contract", "ref": "docs/design/MARKETING-DESIGN.md + marketing-design.manifest.json — the public-surface design contract (tokens, closed type scale, section archetypes, banned/required patterns; ADR-0042, F-051)" },
+      "to": [
+        { "kind": "file", "ref": "apps/marketing/app/globals.css — token values (:root, dark-only) + Tailwind v4 @theme mapping incl. the CLOSED type scale (--text-*: initial → display/title/heading/lead/body/small/label) + the reduced-motion kill-switch. requiredPatterns drift-guard pins key values (--background, --accent, prefers-reduced-motion)" },
+        { "kind": "test", "ref": "apps/marketing/tests/design-lint.test.ts — COMPILES enforcement.bannedPatterns/requiredPatterns from the manifest into standard `test`-gate failures; editing a manifest pattern or allowIn changes what builds pass, so manifest edits are design decisions (doc + manifest together, reviewed)" },
+        { "kind": "module", "ref": "@tessera/marketing components (closed ui/* set + section components) — tokens-only. lib/utils.ts EXTENDS tailwind-merge with the custom font-size classGroup (display/title/heading/lead/body/small/label): a text token added to globals.css but not to that list makes twMerge treat it as a color and silently drop real color classes (the F-051 axe 1.04:1 button incident)" },
+        { "kind": "file", "ref": "docs/design/DESIGN-SYSTEM.md scope note — declares the two-document precedence (dashboard vs public surfaces); principles are shared, values are not" },
+        { "kind": "decision", "ref": "docs/adr/0042-marketing-site-design-direction.md" }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "The marketing design contract is executable: the manifest's patterns ARE the design-lint gate, the type scale exists in three places that must agree (globals.css @theme, the tailwind-merge font-size group, the manifest), and key token values are pinned by requiredPatterns. Changing any of tokens/scale/patterns therefore ripples across globals.css, lib/utils.ts, the design-lint suite, and the doc+manifest pair — and a silent mismatch degrades to WCAG failures caught only by axe e2e.",
+      "confidence": 0.95,
       "origin": "manual"
     }
   ]

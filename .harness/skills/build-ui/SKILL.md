@@ -9,6 +9,10 @@ The orchestration skill for any UI work in `apps/web` (F-028, F-014, later dashb
 features). It sequences the frontend sub-skills and enforces the binding design system. Use it
 whenever you add or change a screen, component, or interaction.
 
+> **Wrong surface?** For the marketing site (`apps/marketing`) use
+> [`marketing-ui`](../marketing-ui/SKILL.md) — public pages are bound to
+> [`MARKETING-DESIGN.md`](../../../docs/design/MARKETING-DESIGN.md), not this skill.
+
 > This does not replace [`add-feature`](../add-feature/SKILL.md) (the global feature loop) — it
 > specializes the **implement** step for the dashboard. Plan → implement → verify → trace →
 > record still applies.

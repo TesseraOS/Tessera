@@ -21,6 +21,9 @@ anti-patterns, then a restraint-first polish. Complements
 > [`DESIGN-SYSTEM.md`](../../../docs/design/DESIGN-SYSTEM.md) or its manifest, **our design
 > system wins** — our tokens, elevation set, z-index scale, radius, and motion params. Principle
 > #1 stays **restraint over richness**: this audit removes slop; it never licenses decoration.
+> For `apps/marketing` the binding authority is
+> [`MARKETING-DESIGN.md`](../../../docs/design/MARKETING-DESIGN.md) (ADR-0042) — run these
+> detectors on top of it (note its scoped allowances: the hero eyebrow, `steps` numbering).
 
 ## Workflow (verb-driven)
 Pick the pass you need; run them in order for a full review:

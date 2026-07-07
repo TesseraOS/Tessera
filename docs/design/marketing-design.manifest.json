@@ -1,0 +1,319 @@
+{
+  "$comment": "Machine-readable projection of docs/design/MARKETING-DESIGN.md (the human source of truth). The design-lint gate in apps/marketing COMPILES enforcement.bannedPatterns/requiredPatterns from this file — editing a pattern here changes what the gate fails. Keep doc and manifest in lockstep.",
+  "name": "tessera-marketing-design",
+  "version": "1.0.0",
+  "status": "accepted",
+  "source": "docs/design/MARKETING-DESIGN.md",
+  "authority": [
+    "docs/adr/0042-marketing-site-design-direction.md",
+    "docs/adr/0035-public-web-platform-three-surfaces.md"
+  ],
+  "scope": ["apps/marketing"],
+  "updated": "2026-07-07",
+  "direction": {
+    "summary": "A precision instrument, not a billboard. Dark-only, near-black, typography-led, monochrome + one emerald accent (budgeted), hairline borders, flat surfaces, tessera-mosaic signature visual, CSS-only motion, honest content.",
+    "aestheticFamily": ["linear", "vercel", "stripe-docs"],
+    "explicitlyNot": ["purple-gradient SaaS template", "glassmorphism", "3D blobs/particles", "carousel landing pages"]
+  },
+  "theme": { "mode": "dark-only", "toggle": false, "revisit": "post-launch, ADR-0042" },
+  "tokens": {
+    "rule": "Components reference semantic CSS variables only. Values below are exact and pre-verified for AA contrast — do not invent new pairs.",
+    "color": {
+      "background": "#030303",
+      "foreground": "#f5f5f5",
+      "muted-foreground": "#a1a1a1",
+      "faint-foreground": "#8a8a8a",
+      "surface": "#0a0a0a",
+      "card": "#101010",
+      "card-foreground": "#f5f5f5",
+      "primary": "#fafafa",
+      "primary-foreground": "#0a0a0a",
+      "secondary": "#1a1a1a",
+      "secondary-foreground": "#f5f5f5",
+      "accent": "#34d399",
+      "accent-foreground": "#04150d",
+      "border": "rgba(255,255,255,0.08)",
+      "border-strong": "rgba(255,255,255,0.16)",
+      "input": "rgba(255,255,255,0.12)",
+      "ring": "#34d399",
+      "code": "#0c0c0c"
+    },
+    "accentBudget": {
+      "maxEmeraldElementsPerViewport": 2,
+      "allowed": ["small text/glyph highlights", "mosaic assembled-core tiles", "focus rings (free)", "<=1 accent border or badge per section"],
+      "never": ["button fills larger than a badge", "section tints", "body text color", "large area fills"]
+    },
+    "radius": { "base": "0.65rem", "derived": ["sm", "md", "lg", "xl"], "buttons": "md", "panels": "lg" },
+    "elevation": "none — background steps + hairline borders; all shadow utilities banned",
+    "zIndex": { "base": 0, "nav": 40, "overlay": 50 }
+  },
+  "typography": {
+    "families": { "sans": "Geist Sans (geist package, self-hosted)", "mono": "Geist Mono" },
+    "closedScale": {
+      "display": { "size": "clamp(2.75rem, 4.5vw + 1.5rem, 4.75rem)", "lineHeight": 1.04, "tracking": "-0.035em", "weight": 600, "role": "hero h1 only" },
+      "title": { "size": "clamp(1.875rem, 2vw + 1.25rem, 2.625rem)", "lineHeight": 1.12, "tracking": "-0.025em", "weight": 600, "role": "section h2" },
+      "heading": { "size": "1.375rem", "lineHeight": 1.35, "tracking": "-0.015em", "weight": 500, "role": "h3" },
+      "lead": { "size": "1.1875rem", "lineHeight": 1.55, "tracking": "-0.005em", "weight": 400, "role": "hero subhead / section intro" },
+      "body": { "size": "1rem", "lineHeight": 1.65, "tracking": "0", "weight": 400, "role": "prose" },
+      "small": { "size": "0.875rem", "lineHeight": 1.55, "tracking": "0", "weight": 400, "role": "secondary UI text" },
+      "label": { "size": "0.8125rem", "lineHeight": 1.4, "tracking": "0.06em", "weight": 500, "role": "mono — eyebrow, wordmarks, code captions" }
+    },
+    "rules": ["text-wrap: balance on headings", "text-wrap: pretty on prose", "lead measure <= 56ch", "body measure 60-72ch", "headlines <= 8 words", "sentence case everywhere", "no italic, no font-bold+, underline = links only"]
+  },
+  "layout": {
+    "container": "mx-auto w-full max-w-6xl px-6 md:px-8 (single Container component)",
+    "sectionPadding": "py-24 md:py-32 (hero pt-36 md:pt-44 pb-20 md:pb-24; min py-16)",
+    "spacingSteps": [1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 32, 36, 44],
+    "grid": "grid-cols-12 asymmetric feature rows (5/7); grid-cols-2/3/4 for footer/steps; flex 1-D only",
+    "bands": "full-bleed --surface background + top/bottom hairline; content stays in Container"
+  },
+  "sections": ["nav", "hero", "proof-strip", "feature-row", "steps", "code-block", "pricing-table", "faq", "cta-band", "footer"],
+  "components": ["Container", "Button(primary|secondary|ghost; sm|md|lg)", "TextLink", "Badge", "Panel", "CodeBlock", "SectionHeading", "Wordmark", "LogoIcon"],
+  "motion": {
+    "library": "CSS only (framer-motion banned in this app, v1)",
+    "entrances": "<=300ms ease-out, opacity + <=12px translate, secondary elements only",
+    "hover": "<=200ms color/background/border/transform",
+    "signature": "mosaic assembly animates once on load (<=900ms) then static",
+    "banned": ["animating h1/LCP from invisible", "infinite loops (pulse/bounce/marquee)", "scroll-jacking/parallax", "transition-all", "layout-property animation"],
+    "reducedMotion": "every animation behind prefers-reduced-motion: no-preference + global kill-switch"
+  },
+  "voice": {
+    "case": "sentence case (headings, buttons, nav); mono eyebrow may be uppercase",
+    "bannedWords": ["unleash", "supercharge", "revolutionize", "game-changing", "blazing", "effortless", "seamless", "magic", "10x", "next-level", "turbocharge"],
+    "honesty": "no invented logos/testimonials/ratings/user counts/metrics; pricing from @tessera/billing PLANS; integrations as typographic wordmarks",
+    "ctas": "verbs; primary -> NEXT_PUBLIC_APP_URL; docs -> NEXT_PUBLIC_DOCS_URL; no hardcoded domains"
+  },
+  "budgets": {
+    "firstLoadJsGzipKb": 130,
+    "clientIslands": ["nav toggle", "copy buttons"],
+    "clientDataFetching": "none",
+    "thirdPartyRequests": "none",
+    "webVitals": { "lcpMs": 2000, "cls": 0.05, "inpMs": 200 }
+  },
+  "seo": {
+    "perPage": ["metadata title <=60ch", "description 140-160ch", "canonical", "og+twitter 1200x630"],
+    "site": ["sitemap.ts", "robots.ts", "llms.txt (ADR-0036)", "NEXT_PUBLIC_SITE_URL drives absolute URLs"]
+  },
+  "enforcement": {
+    "enforcedBy": "apps/marketing/tests/design-lint.test.ts (vitest — runs in the standard `test` gate)",
+    "sourceGlobs": ["app/**/*.{ts,tsx,css}", "components/**/*.{ts,tsx,css}", "lib/**/*.{ts,tsx}"],
+    "$patternNotes": "Patterns are JS regexes (string-escaped). `files` limits which relative paths are scanned; `allowIn` exempts specific relative paths. Adding an allowIn entry is a deliberate, reviewed act.",
+    "bannedPatterns": [
+      {
+        "id": "gradient-utilities",
+        "pattern": "\\bbg-gradient-|\\b(?:from|via|to)-(?:inherit|current|transparent|black|white|[a-z]+-\\d{2,3})\\b",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "No gradients (MARKETING-DESIGN §1.3) — flat surfaces + hairlines only."
+      },
+      {
+        "id": "gradient-text",
+        "pattern": "bg-clip-text|text-transparent",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts", "**/*.css"],
+        "allowIn": [],
+        "reason": "Gradient text is the #1 AI-slop tell (§1.3)."
+      },
+      {
+        "id": "css-gradients",
+        "pattern": "(?:linear|radial|conic)-gradient\\(",
+        "flags": "",
+        "files": ["**/*.css", "**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "No gradients anywhere, including CSS (§1.3)."
+      },
+      {
+        "id": "raw-tailwind-palette",
+        "pattern": "\\b(?:bg|text|border|ring|fill|stroke|divide|outline|decoration|accent|caret|shadow)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\\d{2,3}\\b",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "Tokens only (§1.1) — semantic variables, never raw palette classes."
+      },
+      {
+        "id": "arbitrary-bracket-values",
+        "pattern": "\\b[a-z][a-z-]*-\\[[^\\]]+\\]",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "No arbitrary Tailwind values (§1.1) — the closed token/scale set only. CSS-var parens syntax `util-(--token)` remains available."
+      },
+      {
+        "id": "inline-hex-color",
+        "pattern": "#[0-9a-fA-F]{6}\\b|#[0-9a-fA-F]{3}(?![0-9a-zA-Z])",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": ["app/layout.tsx", "app/opengraph-image.tsx", "app/icon.tsx", "app/apple-icon.tsx", "app/twitter-image.tsx"],
+        "reason": "Hex colors live in globals.css tokens only (§2). OG/icon image routes (inline-style renderer) and the layout themeColor mirror are the deliberate exceptions."
+      },
+      {
+        "id": "shadows",
+        "pattern": "\\b(?:drop-)?shadow-(?!none\\b)[a-z0-9(\\[]",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "Elevation is none (§2.2) — surfaces separate by background step + hairline."
+      },
+      {
+        "id": "box-shadow-css",
+        "pattern": "box-shadow\\s*:\\s*(?!none)",
+        "flags": "",
+        "files": ["**/*.css"],
+        "allowIn": [],
+        "reason": "Elevation is none (§2.2)."
+      },
+      {
+        "id": "blur-outside-nav",
+        "pattern": "backdrop-blur|\\bblur-",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts", "**/*.css"],
+        "allowIn": ["components/site-nav.tsx"],
+        "reason": "Blur is allowed only on the sticky nav background (§3.1); glassmorphism is banned (§1.3)."
+      },
+      {
+        "id": "infinite-animation-utilities",
+        "pattern": "\\banimate-(?:pulse|bounce|spin|ping)\\b",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "No infinite animation loops (§5)."
+      },
+      {
+        "id": "transition-all",
+        "pattern": "\\btransition-all\\b",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "Transition specific compositor properties only (§5)."
+      },
+      {
+        "id": "default-text-scale",
+        "pattern": "\\btext-(?:xs|sm|base|lg|xl|\\dxl)\\b",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "The type scale is a closed set (§2.3) — use text-display/title/heading/lead/body/small/label."
+      },
+      {
+        "id": "heavy-font-weights",
+        "pattern": "\\bfont-(?:bold|extrabold|black)\\b",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "Max weight is 600/semibold (§2.3) — premium reads as medium weight + tight tracking, not bold."
+      },
+      {
+        "id": "ad-hoc-leading-tracking",
+        "pattern": "\\b(?:leading|tracking)-(?:none|tighter|tight|normal|snug|relaxed|loose|wide|wider|widest|\\d+)\\b",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "Line-height and tracking ship inside the closed type scale tokens (§2.3)."
+      },
+      {
+        "id": "dark-variant",
+        "pattern": "\\bdark:",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "Marketing is dark-only single-theme (§0) — a dark: variant signals dashboard idioms leaking in."
+      },
+      {
+        "id": "framer-motion",
+        "pattern": "from\\s+['\"]framer-motion|from\\s+['\"]motion/",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "Motion is CSS-only in this app (§5, ADR-0042)."
+      },
+      {
+        "id": "inline-color-styles",
+        "pattern": "style=\\{\\{[^}]*(?:color|background|boxShadow|border(?:Color)?)\\s*:",
+        "flags": "",
+        "files": ["**/*.tsx"],
+        "allowIn": ["app/opengraph-image.tsx", "app/icon.tsx", "app/apple-icon.tsx", "app/twitter-image.tsx"],
+        "reason": "No inline color styling (§1.1); OG/icon renderers are the deliberate exception. Inline style may still set CSS custom properties / transforms (mosaic tile positions)."
+      },
+      {
+        "id": "script-tags-and-third-party",
+        "pattern": "<script|next/script|fonts\\.googleapis|fonts\\.gstatic",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "Zero third-party requests; fonts self-hosted via the geist package (§1.9)."
+      },
+      {
+        "id": "hardcoded-cross-surface-domain",
+        "pattern": "https?://(?:app|docs|www)\\.tessera|tessera\\.(?:dev|com|io|ai|app)",
+        "flags": "i",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "TLD not final — cross-surface URLs come from NEXT_PUBLIC_APP_URL / NEXT_PUBLIC_DOCS_URL / NEXT_PUBLIC_SITE_URL (§6)."
+      },
+      {
+        "id": "hype-vocabulary",
+        "pattern": "\\b(?:unleash\\w*|supercharg\\w*|revolutioniz\\w*|game-?chang\\w*|blazingly?|effortless(?:ly)?|seamless(?:ly)?|magic(?:al(?:ly)?)?|next-level|turbocharg\\w*|10x)\\b",
+        "flags": "i",
+        "files": ["**/*.tsx"],
+        "allowIn": [],
+        "reason": "Banned vocabulary (§6) — concrete mechanisms, not hype."
+      },
+      {
+        "id": "fake-social-proof",
+        "pattern": "[★⭐]|\\btrusted by\\b|\\bloved by\\b|\\bjoin \\d",
+        "flags": "i",
+        "files": ["**/*.tsx"],
+        "allowIn": [],
+        "reason": "Honesty rule (§1.5) — no fabricated social proof."
+      },
+      {
+        "id": "emoji-in-source",
+        "pattern": "[\\u{1F300}-\\u{1FAFF}\\u{2700}-\\u{27BF}\\u{2600}-\\u{26FF}]",
+        "flags": "u",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "No emoji (§1.6) — Lucide-style inline SVG or typographic marks only."
+      },
+      {
+        "id": "exclamation-in-copy",
+        "pattern": "\\w!(?:<|\\s|\"|')",
+        "flags": "",
+        "files": ["**/*.tsx"],
+        "allowIn": [],
+        "reason": "No exclamation marks in copy (§1.6). (JSX-expression `!` negation does not match this shape.)"
+      }
+    ],
+    "requiredPatterns": [
+      {
+        "id": "page-exports-metadata",
+        "files": ["app/**/page.tsx"],
+        "pattern": "export\\s+(?:const\\s+metadata|async\\s+function\\s+generateMetadata)",
+        "reason": "Per-page SEO metadata is mandatory (§7)."
+      },
+      {
+        "id": "tokens-present-background",
+        "files": ["app/globals.css"],
+        "pattern": "--background:\\s*#030303",
+        "reason": "Token drift guard — canvas value is locked (§2.1)."
+      },
+      {
+        "id": "tokens-present-accent",
+        "files": ["app/globals.css"],
+        "pattern": "--accent:\\s*#34d399",
+        "reason": "Token drift guard — the single accent is locked (§2.1)."
+      },
+      {
+        "id": "reduced-motion-kill-switch",
+        "files": ["app/globals.css"],
+        "pattern": "prefers-reduced-motion",
+        "reason": "Global reduced-motion kill-switch is mandatory (§5)."
+      }
+    ]
+  },
+  "reviewProtocol": {
+    "screenshots": ["1440x900", "1280x800", "375x812", "full-page", "reduced-motion"],
+    "checklist": "MARKETING-DESIGN.md §8",
+    "brandSwapTest": "cover the logo — if the page could be any AI SaaS template, it fails"
+  }
+}

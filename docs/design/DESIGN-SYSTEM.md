@@ -7,6 +7,10 @@
 | **Authority** | [ADR-0009](../adr/0009-frontend-stack-and-design-system.md) (frontend stack & design foundation) |
 | **Enforced by** | [`.harness/rules/frontend/frontend.md`](../../.harness/rules/frontend/frontend.md), [`apps/web/.harness/rules/frontend.md`](../../apps/web/.harness/rules/frontend.md) |
 
+> **Scope note (F-051 / ADR-0042):** this document governs the **dashboard** (`apps/web`).
+> The public surfaces (`apps/marketing`, later the public chrome of `apps/docs`) are governed
+> by [`MARKETING-DESIGN.md`](./MARKETING-DESIGN.md) — on marketing pages that document wins.
+>
 > This is the **single source of truth for the dashboard's look, feel, and interaction**.
 > Every UI feature (starting F-028 UI foundation, then F-014) must conform. It operationalizes
 > the UI/UX requirements in [`../PRD.md`](../PRD.md) (FR-49, NFR-9) and the references the

@@ -20,12 +20,15 @@ and tool-agnostic; each lives in its own folder as `SKILL.md` with a small front
 | [`frontend-craft`](frontend-craft/SKILL.md) | Typography, spacing, restraint — avoiding generic UI. |
 | [`motion`](motion/SKILL.md) | Functional, `prefers-reduced-motion`-safe animation. |
 | [`design-review`](design-review/SKILL.md) | Auditing a built/changed screen against design anti-patterns before UI is done. |
+| [`marketing-ui`](marketing-ui/SKILL.md) | Building a marketing-site (`apps/marketing`) page/section — MARKETING-DESIGN archetypes, honest content, design-lint. |
 
 `coding-standards`, `strategic-compact`, and `continuous-learning` are **general-purpose execution
 skills** (adapted from ECC, MIT); `skill-observer` extends that self-improvement loop (adapted
-CC BY 4.0). `build-ui`, `shadcn`, `frontend-craft`, `motion`, and `design-review` are the
+CC BY 4.0). `build-ui`, `shadcn`, `frontend-craft`, `motion`, `design-review`, and `marketing-ui` are the
 **frontend/design** skills — subordinate to
-[`DESIGN-SYSTEM.md`](../../docs/design/DESIGN-SYSTEM.md). The rest are Tessera workflow skills. All
+[`DESIGN-SYSTEM.md`](../../docs/design/DESIGN-SYSTEM.md) for the dashboard and to
+[`MARKETING-DESIGN.md`](../../docs/design/MARKETING-DESIGN.md) for the public surfaces
+(ADR-0042). The rest are Tessera workflow skills. All
 adaptations are attributed in [`../../NOTICE.md`](../../NOTICE.md).
 
 New skills: keep them short, action-oriented, and linked from this index.

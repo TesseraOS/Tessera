@@ -41,7 +41,9 @@ these win over the dashboard's DESIGN-SYSTEM.md.
   `robots.ts`, `llms.txt` (ADR-0036).
 - axe WCAG 2.1 AA in e2e with zero violations; one `h1` per page; no horizontal overflow
   at 375px; full keyboard paths (incl. mobile nav).
-- First-load JS ≤ 160KB gzip per page; motion via the **`lib/motion.tsx` seam only**
+- First-load JS ≤ 240KB gzip per page (framework baseline ~185KB — the cap is on app
+  code + motion; Lighthouse CWV enforcement lands with F-049); motion via the
+  **`lib/motion.tsx` seam only**
   (LazyMotion + MotionConfig — importing framer-motion anywhere else fails design-lint);
   LCP element never animated from invisible; reduced-motion = complete stillness.
 

@@ -2,39 +2,71 @@ import type React from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * Tessera mark — "fragments of memory coming together": scattered tesserae converge into a
- * solid core. Ported from the dashboard (apps/web/components/logo.tsx) per
- * MARKETING-DESIGN §4 — same mark, no redesign. Monochrome (currentColor).
+ * Tessera mark v2 (BRAND.md §4, masters in docs/design/brand/): a 3×3 mosaic of ivory
+ * tiles with the top-right tile lifted out of the grid, gilded in the ember gradient —
+ * the fragment that completes the picture. Tiles ride currentColor; the ember gradient
+ * uses the brand tokens. Pass a unique `emberId` when several marks share a page.
  */
-export const LogoIcon = ({ className, ...props }: React.ComponentProps<'svg'>) => (
+interface LogoIconProps extends React.ComponentProps<'svg'> {
+  emberId?: string | undefined;
+}
+
+export const LogoIcon = ({ className, emberId = 'ember-mark', ...props }: LogoIconProps) => (
   <svg
-    viewBox="0 0 32 32"
-    fill="currentColor"
+    viewBox="0 0 112 112"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
     aria-hidden="true"
     {...props}
   >
-    {/* assembled core */}
-    <rect x="13" y="13" width="6.5" height="6.5" rx="1.4" />
-    <rect x="20.5" y="13" width="6.5" height="6.5" rx="1.4" fillOpacity="0.82" />
-    <rect x="13" y="20.5" width="6.5" height="6.5" rx="1.4" fillOpacity="0.82" />
-    {/* converging fragments */}
-    <rect x="6" y="13.5" width="5" height="5" rx="1.1" fillOpacity="0.5" />
-    <rect x="13.5" y="6" width="5" height="5" rx="1.1" fillOpacity="0.5" />
-    <rect x="21.5" y="21.5" width="4" height="4" rx="1" fillOpacity="0.3" />
-    <rect x="6.5" y="6.5" width="4" height="4" rx="1" fillOpacity="0.3" />
+    <defs>
+      <linearGradient id={emberId} x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stopColor="var(--rose)" />
+        <stop offset="1" stopColor="var(--gold)" />
+      </linearGradient>
+    </defs>
+    <g fill="currentColor">
+      <rect x="14" y="14" width="24" height="24" rx="7" fillOpacity="0.55" />
+      <rect x="44" y="14" width="24" height="24" rx="7" fillOpacity="0.8" />
+      <rect x="14" y="44" width="24" height="24" rx="7" fillOpacity="0.8" />
+      <rect x="44" y="44" width="24" height="24" rx="7" />
+      <rect x="74" y="44" width="24" height="24" rx="7" fillOpacity="0.9" />
+      <rect x="14" y="74" width="24" height="24" rx="7" fillOpacity="0.45" />
+      <rect x="44" y="74" width="24" height="24" rx="7" fillOpacity="0.9" />
+      <rect x="74" y="74" width="24" height="24" rx="7" fillOpacity="0.7" />
+    </g>
+    <rect
+      x="75"
+      y="15"
+      width="22"
+      height="22"
+      rx="6.4"
+      fill="none"
+      stroke="currentColor"
+      strokeOpacity="0.28"
+      strokeWidth="1.6"
+    />
+    <rect x="83" y="5" width="24" height="24" rx="7" fill={`url(#${emberId})`} />
   </svg>
 );
 
 interface LogoProps extends React.ComponentProps<'span'> {
+  emberId?: string;
   iconClassName?: string;
   textClassName?: string;
 }
 
-export const Logo = ({ className, iconClassName, textClassName, ...props }: LogoProps) => (
+/** Horizontal lockup: mark + lowercase serif wordmark (never bold). */
+export const Logo = ({ className, emberId, iconClassName, textClassName, ...props }: LogoProps) => (
   <span className={cn('flex items-center gap-2.5', className)} {...props}>
-    <LogoIcon className={cn('text-foreground size-6', iconClassName)} />
-    <span className={cn('text-foreground text-heading select-none', textClassName)}>Tessera</span>
+    <LogoIcon emberId={emberId} className={cn('text-foreground size-7', iconClassName)} />
+    <span
+      className={cn(
+        'text-foreground font-serif text-heading font-normal select-none',
+        textClassName,
+      )}
+    >
+      tessera
+    </span>
   </span>
 );

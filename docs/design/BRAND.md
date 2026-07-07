@@ -135,7 +135,8 @@ scroll-jack.
 - **Accent budget:** ≤1 gilded (gold/ember) moment per band; rose ≤3 elements per viewport.
 - **Motion budget:** ≤1 ambient system per viewport; reveal stagger total ≤700ms; zero
   layout-shift animation (CLS <0.05).
-- **Performance:** LCP <2.0s, INP <200ms, first-load JS ≤160KB gz (motion library included).
+- **Performance:** LCP <2.0s, INP <200ms, first-load JS ≤240KB gz (framework baseline
+  ~185KB + app/motion ≤55KB).
 - **Honesty:** zero fabricated logos/testimonials/metrics (design-lint enforced).
 - **Brand-swap test:** logo covered ⇒ still identifiable by tessellation + dusk/rose/gold +
   serif voice.

@@ -14,8 +14,8 @@ test('homepage renders the hero and passes axe WCAG AA', async ({ page }) => {
   await expect(h1).toHaveCount(1);
   await expect(h1).toContainText('Tessera');
 
-  // The differentiator sections exist with accessible headings.
-  await expect(page.getByRole('heading', { name: 'How it works' })).toBeVisible();
+  // The chapter sections exist with accessible headings.
+  await expect(page.getByRole('heading', { name: 'From scattered to compiled' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'What makes Tessera different' })).toBeVisible();
 
   const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();

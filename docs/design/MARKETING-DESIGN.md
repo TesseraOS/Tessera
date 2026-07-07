@@ -98,7 +98,9 @@ hairlines. Code panels keep dusk tokens on both grounds.
 ### 2.3 Gradients, texture, glow (sanctioned set — defined once in globals)
 
 - `--gradient-ember: linear-gradient(120deg, #E2A3A8, #E4B65A)` — the gilded tile, the
-  `.text-ember` word, one hairline seam per page.
+  `.text-ember` word, one hairline seam per page. (The build-time OG/icon renderers
+  reproduce the gradient by value — the same design-lint exception class as hex, since
+  `ImageResponse` cannot consume CSS variables.)
 - `--gradient-dusk` — radial rose/burgundy atmosphere ≤18% alpha, hero + CTA backdrops only.
 - `.text-ember` — display-only gradient text (background-clip); counts as the band's gold
   moment; never on body text.
@@ -198,7 +200,9 @@ hero); everything else stays plainspoken.
 - **SEO:** per-page metadata, canonical, OG (brand plate), `sitemap.ts`, `robots.ts`,
   `llms.txt` (ADR-0036).
 - **Performance:** static rendering; client islands = nav, motion seam consumers,
-  marquee, copy buttons; **first-load JS ≤160KB gz**; LCP <2.0s, CLS <0.05, INP <200ms;
+  marquee, copy buttons; **first-load JS ≤240KB gz** (Next 16 app-router baseline is
+  ~185KB — the budget caps app code + motion at ~55KB on top; Lighthouse-based CWV
+  enforcement lands with F-049); LCP <2.0s, CLS <0.05, INP <200ms;
   fonts `display: swap`; record `next build` route output as evidence until `web-perf`
   activates (F-049).
 

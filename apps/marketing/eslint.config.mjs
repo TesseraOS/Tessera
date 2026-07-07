@@ -24,6 +24,13 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    // Dev utilities (brand renderer): Node process + browser code inside page.evaluate().
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: { console: 'readonly', process: 'readonly', document: 'readonly' },
+    },
+  },
   jsxA11y.flatConfigs.recommended,
   {
     files: ['**/*.{ts,tsx}'],

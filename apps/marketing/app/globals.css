@@ -1,90 +1,134 @@
 @import 'tailwindcss';
 
 /*
- * Marketing design tokens — docs/design/MARKETING-DESIGN.md §2 (ADR-0042). Dark-only:
- * one theme, defined at :root; there is no .dark mechanism and no theme toggle here.
- * Components reference semantic tokens only — the design-lint gate
- * (tests/design-lint.test.ts) compiles the manifest and fails the build otherwise.
+ * Terra Mosaic tokens — docs/design/MARKETING-DESIGN.md v2 §2 (ADR-0043, BRAND.md).
+ * One theme, two grounds: dusk (:root, default) and sand ([data-band='sand'] overrides).
+ * Components reference semantic tokens only — the design-lint gate compiles the manifest
+ * and fails the build otherwise. Sanctioned decoration (gradients, shadows, grain,
+ * .text-ember) is defined ONCE here and nowhere else.
  */
-:root {
+:root,
+[data-band='dusk'] {
   --radius: 0.65rem;
 
-  --background: #030303;
-  --foreground: #f5f5f5;
-  --muted-foreground: #a1a1a1;
-  --faint-foreground: #8a8a8a;
-  --surface: #0a0a0a;
-  --card: #101010;
-  --card-foreground: #f5f5f5;
-  --primary: #fafafa;
-  --primary-foreground: #0a0a0a;
-  --secondary: #1a1a1a;
-  --secondary-foreground: #f5f5f5;
-  --accent: #34d399;
-  --accent-foreground: #04150d;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --input: rgba(255, 255, 255, 0.12);
-  --ring: #34d399;
-  --code: #0c0c0c;
+  /* dusk ground */
+  --background: #161013;
+  --surface: #1e1519;
+  --card: #251a20;
+  --card-foreground: #f4ede7;
+  --foreground: #f4ede7;
+  --muted-foreground: #b7a8a8;
+  --faint-foreground: #968690;
+  --primary: #f4ede7;
+  --primary-foreground: #261720;
+  --secondary: #2a1e24;
+  --secondary-foreground: #f4ede7;
+  --rose: #e2a3a8;
+  --rose-foreground: #2b1218;
+  --gold: #e4b65a;
+  --clay: #c8836c;
+  --burgundy: #5d2e46;
+  --border: rgba(244, 237, 231, 0.1);
+  --border-strong: rgba(244, 237, 231, 0.18);
+  --input: rgba(244, 237, 231, 0.14);
+  --ring: #e2a3a8;
+  --code: #120d10;
+
+  /* sanctioned decoration (§2.3) */
+  --gradient-ember: linear-gradient(120deg, #e2a3a8, #e4b65a);
+  --gradient-dusk: radial-gradient(
+    100% 80% at 50% 0%,
+    rgba(93, 46, 70, 0.4),
+    rgba(226, 163, 168, 0.06) 45%,
+    transparent 72%
+  );
+}
+
+/* sand ground — the light chapter (§2.2) */
+[data-band='sand'] {
+  --background: #f1e8df;
+  --surface: #eadfd3;
+  --card: #faf4ee;
+  --card-foreground: #2b1e25;
+  --foreground: #2b1e25;
+  --muted-foreground: #63525a;
+  --faint-foreground: #7e6b73;
+  --primary: #2b1e25;
+  --primary-foreground: #f4ede7;
+  --secondary: #e3d6c9;
+  --secondary-foreground: #2b1e25;
+  --rose: #9e4a56;
+  --rose-foreground: #fbf3ee;
+  --gold: #7a5a1e;
+  --border: rgba(43, 30, 37, 0.14);
+  --border-strong: rgba(43, 30, 37, 0.26);
+  --input: rgba(43, 30, 37, 0.18);
+  --ring: #9e4a56;
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-faint-foreground: var(--faint-foreground);
   --color-surface: var(--surface);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint-foreground: var(--faint-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
+  --color-rose: var(--rose);
+  --color-rose-foreground: var(--rose-foreground);
+  --color-gold: var(--gold);
+  --color-clay: var(--clay);
+  --color-burgundy: var(--burgundy);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-code: var(--code);
+  --color-code: #120d10;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* soft elevation — sand-band cards only (§2.3) */
+  --shadow-soft: 0 1px 2px rgba(43, 30, 37, 0.05), 0 8px 32px rgba(43, 30, 37, 0.08);
+  --shadow-lift: 0 2px 6px rgba(43, 30, 37, 0.08), 0 16px 48px rgba(43, 30, 37, 0.14);
+
+  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), Georgia, 'Times New Roman', serif;
   --font-mono: var(--font-geist-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
   /*
-   * Closed type scale (MARKETING-DESIGN §2.3) — the ONLY text sizes on this site.
-   * Tailwind's default text-* utilities are removed on purpose: text-sm etc. do not exist
-   * in this app. Use: display / title / heading / lead / body / small / label.
+   * Closed type scale v2 (§2.4) — the ONLY text sizes on this site. Tailwind defaults are
+   * removed on purpose. display/title are serif (base layer applies the family to h1/h2).
    */
   --text-*: initial;
-  --text-display: clamp(2.75rem, 4.5vw + 1.5rem, 4.75rem);
-  --text-display--line-height: 1.04;
-  --text-display--letter-spacing: -0.035em;
-  --text-display--font-weight: 600;
-  --text-title: clamp(1.875rem, 2vw + 1.25rem, 2.625rem);
-  --text-title--line-height: 1.12;
-  --text-title--letter-spacing: -0.025em;
-  --text-title--font-weight: 600;
-  --text-heading: 1.375rem;
-  --text-heading--line-height: 1.35;
-  --text-heading--letter-spacing: -0.015em;
+  --text-display: clamp(3.25rem, 6vw + 1.5rem, 6.75rem);
+  --text-display--line-height: 1.02;
+  --text-display--letter-spacing: -0.01em;
+  --text-display--font-weight: 400;
+  --text-title: clamp(2.375rem, 3vw + 1.25rem, 3.875rem);
+  --text-title--line-height: 1.08;
+  --text-title--letter-spacing: -0.005em;
+  --text-title--font-weight: 400;
+  --text-heading: 1.5rem;
+  --text-heading--line-height: 1.3;
+  --text-heading--letter-spacing: -0.01em;
   --text-heading--font-weight: 500;
-  --text-lead: 1.1875rem;
+  --text-lead: 1.25rem;
   --text-lead--line-height: 1.55;
-  --text-lead--letter-spacing: -0.005em;
-  --text-body: 1rem;
+  --text-lead--letter-spacing: 0em;
+  --text-body: 1.0625rem;
   --text-body--line-height: 1.65;
-  --text-small: 0.875rem;
-  --text-small--line-height: 1.55;
+  --text-small: 0.9375rem;
+  --text-small--line-height: 1.5;
   --text-label: 0.8125rem;
   --text-label--line-height: 1.4;
-  --text-label--letter-spacing: 0.06em;
+  --text-label--letter-spacing: 0.08em;
   --text-label--font-weight: 500;
 }
 
@@ -95,6 +139,7 @@
 
   html {
     color-scheme: dark;
+    scroll-behavior: smooth;
   }
 
   body {
@@ -104,8 +149,13 @@
       'calt' 1;
   }
 
+  /* The serif voice: statements are Instrument Serif; emphasis is italic, never bold. */
   h1,
-  h2,
+  h2 {
+    font-family: var(--font-serif);
+    text-wrap: balance;
+  }
+
   h3,
   h4 {
     text-wrap: balance;
@@ -120,43 +170,184 @@
     cursor: pointer;
   }
 
-  /* Visible focus everywhere — the ring is the accent's one always-free use (§2.1). */
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
 
   ::selection {
-    background: var(--accent);
-    color: var(--accent-foreground);
+    background: var(--rose);
+    color: var(--rose-foreground);
   }
 }
 
-/*
- * One-shot entrance (MARKETING-DESIGN §5): <=300ms, ease-out, opacity + small rise.
- * Secondary elements only — NEVER the hero h1/LCP. Stagger via --rise-delay (<=600ms total).
- * Gated behind no-preference so reduced-motion users get the final layout immediately.
- */
+/* ---------------------------------------------------------------------------
+ * Sanctioned decoration (§2.3) — defined once, consumed as classes.
+ * ------------------------------------------------------------------------- */
+
+/* Display-only gradient text — counts as the band's single gold moment. */
+.text-ember {
+  background: var(--gradient-ember);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Dusk atmosphere backdrop (hero, cta) — position it absolute behind content. */
+.atmosphere {
+  background: var(--gradient-dusk);
+}
+
+/* Film grain over dark grounds — kills flat-black lifelessness (~2.8%). */
+.grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* SVG tiles animate their own box, not the canvas. */
+.tile-drift,
+.tile-arrive {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Soft horizontal fade for full-bleed art strips (mask, defined once — §2.3). */
+.fade-x {
+  mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+}
+
+/* Draw-in link underline (micro-interaction, §5). */
+.link-underline {
+  position: relative;
+}
+.link-underline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.link-underline:hover::after,
+.link-underline:focus-visible::after {
+  transform: scaleX(1);
+}
+
+/* One sheen sweep across the primary CTA on hover (§5 micro). */
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.btn-sheen::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  left: -60%;
+  background: rgba(244, 237, 231, 0.35);
+  transform: skewX(-20deg);
+  transition: left 450ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.btn-sheen:hover::after {
+  left: 130%;
+}
+
+/* ---------------------------------------------------------------------------
+ * Thermal motion (§5) — one-shot entrances, ambient drift, the arriving tile,
+ * the marquee. All behind prefers-reduced-motion: no-preference.
+ * ------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: no-preference) {
   .rise-in {
-    animation: rise-in 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    animation: rise-in 600ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
     animation-delay: var(--rise-delay, 0ms);
   }
 
   @keyframes rise-in {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translateY(18px);
     }
     to {
       opacity: 1;
       transform: translateY(0);
     }
   }
+
+  /* ambient tessellation drift — <=8px, 9–14s, alternating (one system per viewport) */
+  .tile-drift {
+    animation: tile-drift var(--drift-dur, 11s) ease-in-out var(--drift-delay, 0s) infinite
+      alternate;
+  }
+
+  @keyframes tile-drift {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(var(--drift-y, -6px));
+    }
+  }
+
+  /* the gilded tile arrives once (<=1.2s), then stillness */
+  .tile-arrive {
+    animation: tile-arrive 1.1s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+    animation-delay: var(--arrive-delay, 250ms);
+  }
+
+  @keyframes tile-arrive {
+    from {
+      opacity: 0;
+      transform: translate(var(--arrive-dx, 24px), var(--arrive-dy, -28px));
+    }
+    60% {
+      opacity: 1;
+    }
+    to {
+      opacity: 1;
+      transform: translate(0, 0);
+    }
+  }
+
+  /* wordmark marquee — slow, linear, pauses on hover/focus */
+  .marquee-track {
+    animation: marquee 40s linear infinite;
+  }
+
+  .marquee:hover .marquee-track,
+  .marquee:focus-within .marquee-track {
+    animation-play-state: paused;
+  }
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
 }
 
-/* Global reduced-motion kill-switch (§5) — belt and braces over the gate above. */
+/* Reduced motion: the still, final layout — plus a global kill-switch. */
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .marquee-track {
+    animation: none;
+  }
+
   *,
   *::before,
   *::after {

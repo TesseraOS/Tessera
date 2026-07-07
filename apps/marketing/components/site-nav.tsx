@@ -16,8 +16,8 @@ const NAV_LINKS = [
 ] as const;
 
 /**
- * Sticky site nav (MARKETING-DESIGN §3.1) — the one place backdrop-blur is allowed.
- * The mobile disclosure closes on Escape and on link navigation; the toggle keeps focus.
+ * Sticky site nav (MARKETING-DESIGN §3.1) — dusk glass (the one allowed blur), draw-in
+ * underlines, focus-managed mobile disclosure (Escape closes, focus moves in).
  */
 export function SiteNav() {
   const [open, setOpen] = useState(false);
@@ -34,7 +34,7 @@ export function SiteNav() {
   }, [open]);
 
   return (
-    <header className="bg-background/90 sticky top-0 z-40 border-b backdrop-blur">
+    <header className="bg-background/85 sticky top-0 z-40 border-b backdrop-blur">
       <Container className="flex h-16 items-center justify-between">
         <Link href="/" aria-label="Tessera home" className="rounded-md">
           <Logo />
@@ -45,7 +45,7 @@ export function SiteNav() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-small text-muted-foreground hover:text-foreground rounded-md transition-colors"
+              className="link-underline text-small text-muted-foreground hover:text-foreground transition-colors duration-200"
             >
               {link.label}
             </Link>
@@ -63,7 +63,7 @@ export function SiteNav() {
 
         <button
           type="button"
-          className="text-foreground -mr-2 inline-flex size-10 items-center justify-center rounded-md md:hidden"
+          className="text-foreground -mr-2 inline-flex size-11 items-center justify-center rounded-md md:hidden"
           aria-expanded={open}
           aria-controls="mobile-nav"
           onClick={() => setOpen((value) => !value)}
@@ -97,7 +97,7 @@ export function SiteNav() {
               key={link.href}
               href={link.href}
               onClick={() => setOpen(false)}
-              className="text-body text-muted-foreground hover:text-foreground rounded-md py-2 transition-colors"
+              className="text-body text-muted-foreground hover:text-foreground rounded-md py-2.5 transition-colors duration-200"
             >
               {link.label}
             </Link>

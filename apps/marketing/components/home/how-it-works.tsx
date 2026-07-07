@@ -1,10 +1,12 @@
 import { CodeBlock } from '@/components/ui/code-block';
 import { Container } from '@/components/ui/container';
 import { SectionHeading } from '@/components/ui/section-heading';
+import { Reveal } from '@/lib/motion';
 
 /**
- * How-it-works (MARKETING-DESIGN §3.5): a real ordered sequence — the one place mono step
- * numbers are allowed. The code block lists the actual MCP tools shipped in apps/mcp.
+ * How-it-works — the sand chapter (MARKETING-DESIGN §3.6): the page steps into daylight.
+ * Ordered steps (mono numerals allowed here only) on warm paper cards; the code block
+ * sits as a dusk artifact on the sand. Real MCP tool names from apps/mcp.
  */
 const STEPS = [
   {
@@ -34,29 +36,39 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
+      data-band="sand"
       aria-labelledby="how-it-works-title"
-      className="scroll-mt-16 py-24 md:py-32"
+      className="bg-background text-foreground scroll-mt-16 border-y"
     >
-      <Container>
-        <SectionHeading
-          id="how-it-works-title"
-          title="How it works"
-          lead="From scattered repositories to compiled, explainable context in three steps."
-        />
-        <ol className="mt-12 grid gap-10 md:mt-16 md:grid-cols-3 md:gap-8">
-          {STEPS.map((step) => (
-            <li key={step.number}>
-              <p className="text-label text-faint-foreground font-mono">{step.number}</p>
-              <h3 className="text-heading text-foreground mt-3">{step.title}</h3>
-              <p className="text-body text-muted-foreground mt-3">{step.body}</p>
+      <Container className="py-24 md:py-32">
+        <Reveal>
+          <SectionHeading
+            id="how-it-works-title"
+            title="From scattered to compiled"
+            lead="Three steps between a pile of repositories and context your agents can cite."
+          />
+        </Reveal>
+        <ol className="mt-12 grid gap-5 md:mt-16 md:grid-cols-3 md:gap-6">
+          {STEPS.map((step, index) => (
+            <li key={step.number} className="h-full">
+              <Reveal
+                delay={index * 90}
+                className="bg-card shadow-soft hover:shadow-lift h-full rounded-lg border p-6 transition duration-200 hover:-translate-y-0.5 md:p-7"
+              >
+                <p className="text-label text-rose font-mono">{step.number}</p>
+                <h3 className="text-heading text-foreground mt-4">{step.title}</h3>
+                <p className="text-body text-muted-foreground mt-3">{step.body}</p>
+              </Reveal>
             </li>
           ))}
         </ol>
-        <CodeBlock
-          label="@tessera/mcp · tools your agent sees"
-          code={MCP_TOOLS}
-          className="mx-auto mt-12 max-w-3xl md:mt-16"
-        />
+        <Reveal delay={120}>
+          <CodeBlock
+            label="@tessera/mcp · tools your agent sees"
+            code={MCP_TOOLS}
+            className="mx-auto mt-12 max-w-3xl md:mt-16"
+          />
+        </Reveal>
       </Container>
     </section>
   );

@@ -17,6 +17,7 @@ const COLUMNS = [
     links: [
       { href: siteConfig.docsUrl, label: 'Documentation' },
       { href: '/llms.txt', label: 'llms.txt' },
+      { href: '/brand/tessera-brand-canvas.png', label: 'Brand' },
     ],
   },
   {
@@ -28,14 +29,17 @@ const COLUMNS = [
   },
 ] as const;
 
-/** Site footer (MARKETING-DESIGN §3.10). */
+/** Site footer (MARKETING-DESIGN §3.11) — the last register of the plate. */
 export function SiteFooter() {
   return (
     <footer className="border-t">
       <Container className="grid gap-12 py-16 md:grid-cols-12">
         <div className="md:col-span-5">
-          <Logo />
+          <Logo emberId="ember-footer" />
           <p className="text-small text-muted-foreground mt-4 max-w-xs">{siteConfig.tagline}.</p>
+          <p className="font-serif text-lead text-faint-foreground mt-6 max-w-xs italic">
+            the fragment that completes the picture
+          </p>
         </div>
         {COLUMNS.map((column) => (
           <nav key={column.title} aria-label={column.title} className="md:col-span-2">
@@ -45,7 +49,7 @@ export function SiteFooter() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-small text-muted-foreground hover:text-foreground rounded-md transition-colors"
+                    className="text-small text-muted-foreground hover:text-foreground rounded-md transition-colors duration-200"
                   >
                     {link.label}
                   </Link>

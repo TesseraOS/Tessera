@@ -3,6 +3,47 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-07 (v3) — F-051 IN PROGRESS — dual themes, illustration-first, live-graph hero (ADR-0044)
+
+**Third stakeholder review demanded:** no terminal mockups anywhere ("this is a marketing
+site"), a live interactive knowledge-graph hero on a trusted package, two themes (Desert Rose
+dark / Modern Minimalist light, footer toggle), distinctive text fonts, transparent-at-top nav,
+a full-screen mobile menu, a branded scrollbar, a problem-statement section, and Awwwards-grade
+interactivity. All delivered; 2 committed increments.
+
+- **(1) Harness v3 (ADR-0044)** — MARKETING-DESIGN v3 + manifest v3: dual themes on one token
+  architecture (`:root` dark default, `.light` via the **`lib/theme.tsx` next-themes seam**,
+  per-theme sand chapters + gradients; `dark:` variants still banned); **illustration-first is a
+  hard rule** (bannedArchetypes: terminals/code-blocks/file-trees/fake dashboards); `@xyflow/react`
+  confined to `components/art/*` by a design-lint pattern; fonts → **Manrope + JetBrains Mono**
+  (+ Instrument Serif); required patterns now pin the light theme block, branded scrollbar, and
+  loaded fonts (25 banned + 10 required).
+- **(2) The site itself** — **hero = full-bleed LiveGraph** (React Flow: draggable token-themed
+  nodes sources→hub→agents, animated bezier edges with rotating rose pulses, ticking simulated
+  telemetry labeled `demo`, zoom/scroll hijack off, keyboard-inert + aria-hidden with sr-only
+  alternative, reduced-motion frozen, `ssr:false` behind the server-rendered H1, canvas offset
+  `lg:left-2/5` under the theme-aware `.hero-scrim`); nav transparent at top → dusk-glass after
+  8px; **full-screen mobile menu** (serif links staggering, scroll lock, Esc/close/focus);
+  **problem band** (3 pain illustrations in the tile language) opening the sand chapter;
+  pipeline-flow art replaces the MCP code block; differentiator visuals are now **brand art**
+  (CompilerAssembly with count-up token meter, lazy EffectWeb mini-graph, GovernanceGate
+  sequence); footer **ThemeToggle** (Dusk/Noon, aria-pressed); branded scrollbar (clay/rose).
+- **Gate catches:** design-lint flagged my own `leading-none` (fixed the code); axe caught the
+  light `--faint-foreground` at 4.14:1 (darkened to `#61707c`, ≥4.6 on both light grounds); the
+  budget caught EffectWeb importing the graph engine eagerly (283 → **227KB gz** once lazy —
+  captured as [[decorative-interactive-canvas-pattern]]).
+
+**Evidence/verification** — all workspace gates green (marketing design-lint 37 checks; e2e 7/7:
+axe AA **dark + light**, full-screen menu focus/Escape, theme toggle, 375px no-overflow, CTAs,
+SEO endpoints, reduced-motion poll); `pnpm -w` typecheck/lint/format/test/build/e2e 17/17.
+Screenshots reviewed: dark hero w/ live graph, light hero, problem band both themes, sand
+chapter, full-screen mobile menu. First-load JS 227KB gz (budget 240; graph chunks lazy).
+
+**Decisions** — ADR-0044; E-022 extended (theme seam, art suite, engine confinement).
+
+**Next step** — F-051 remaining: features page, pricing from `@tessera/billing` PLANS,
+enterprise/trust, `/skills` placeholder; then the Awwwards-readiness review across the site.
+
 ## 2026-07-07 (later) — F-051 IN PROGRESS — Terra Mosaic overhaul: brand, logo, living homepage (ADR-0043)
 
 **Stakeholder review of the first increment: rejected** — "lifeless, only text, where is art?"

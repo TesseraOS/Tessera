@@ -7,6 +7,7 @@ One line per memory entry. Keep newest-relevant at top of each section.
 - [external-agent-skill-adaptations](decisions/external-agent-skill-adaptations.md) — adapted design-review (impeccable) + skill-observer (one-skill) into the core; codex review opt-in; pm-skills declined (ADR-0038/0039).
 
 ## Lessons
+- [decorative-interactive-canvas-pattern](lessons/decorative-interactive-canvas-pattern.md) — interactive marketing canvases (React Flow hero) ship keyboard-inert + aria-hidden + scroll-priority + lazy (EVERY engine instance) + demo-labeled + reduced-motion-frozen (F-051 v3).
 - [design-contract-mechanism-outlives-parameters](lessons/design-contract-mechanism-outlives-parameters.md) — the design-lint mechanism absorbed a full taste reversal (ADR-0043) as a data change; sanction+budget expressive devices instead of banning them; this project lead reads austere minimalism as lifeless — design warm/artistic/animated (F-051).
 - [custom-text-tokens-require-twmerge-font-size-group](lessons/custom-text-tokens-require-twmerge-font-size-group.md) — custom Tailwind text tokens make tailwind-merge silently drop color classes (axe caught 1.04:1 buttons); extend the twMerge font-size classGroup with the exact closed scale (F-051).
 - [axe-steady-state-scan-and-scrollable-regions](lessons/axe-steady-state-scan-and-scrollable-regions.md) — run axe e2e under `reducedMotion: 'reduce'` (mid-animation scans measure blended colors); scrollable `<pre>` needs `tabIndex=0 role=region aria-label` with a scoped jsx-a11y allowance (F-051).

@@ -5,7 +5,7 @@
 | **Status** | Accepted — F-051 overhaul (ADR-0043) |
 | **Date** | 2026-07-07 |
 | **Philosophy** | [Terra Mosaic](./brand/terra-mosaic-philosophy.md) (canvas-design movement) |
-| **Theme lineage** | theme-factory **Desert Rose** × **Modern Minimalist** fusion, adapted for a developer-tool brand |
+| **Theme lineage** | theme-factory **Desert Rose** (dark theme) + **Modern Minimalist** (light theme), adapted for a developer-tool brand (ADR-0044: dual themes, footer toggle) |
 | **Applied by** | [`MARKETING-DESIGN.md`](./MARKETING-DESIGN.md) (site), logo assets in [`brand/`](./brand/) + `apps/marketing/public/brand/` |
 
 ## 1. Brand discovery
@@ -80,13 +80,14 @@ illustrative-only. Two accent families is the budget — never a third hue.
 | Register | Face | Usage |
 |----------|------|-------|
 | **Display** | **Instrument Serif** (400 + italic) | headlines, big statements; *italic for the one emotional word*, often in rose |
-| **Text/UI** | **Instrument Sans** (variable) | body, nav, buttons — same foundry, drawn to pair |
-| **Witness** | **Geist Mono** | code, coordinates, citations, eyebrow labels |
+| **Text/UI** | **Manrope** (variable) | body, nav, buttons — a distinctive, enterprise-grade working grotesque (ADR-0044) |
+| **Witness** | **JetBrains Mono** | coordinates, citations, eyebrow labels — the developer-culture face |
 
-Instrument Serif at large optical sizes is the brand's voice; Instrument Sans keeps work
-plain; the mono register is the "archival annotation" from the philosophy. All three are
-self-hosted (next/font — zero runtime third-party requests). Sentence case everywhere; the
-serif never bolds (weight 400 is the aesthetic); emphasis = *italic* or scale, not weight.
+Instrument Serif at large optical sizes is the brand's voice; Manrope keeps work plain but
+never default; the mono register is the "archival annotation" from the philosophy. All
+three are self-hosted (next/font — zero runtime third-party requests). Sentence case
+everywhere; the serif never bolds (weight 400 is the aesthetic); emphasis = *italic* or
+scale, not weight.
 
 ## 4. Logo system
 

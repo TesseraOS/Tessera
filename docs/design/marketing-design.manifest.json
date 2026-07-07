@@ -1,10 +1,11 @@
 {
   "$comment": "Machine-readable projection of docs/design/MARKETING-DESIGN.md v2 (Terra Mosaic — ADR-0043; BRAND.md carries the brand). The design-lint gate in apps/marketing COMPILES enforcement.bannedPatterns/requiredPatterns from this file — editing a pattern changes what the gate fails. Keep doc and manifest in lockstep.",
   "name": "tessera-marketing-design",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "status": "accepted",
   "source": "docs/design/MARKETING-DESIGN.md",
   "authority": [
+    "docs/adr/0044-marketing-v3-dual-themes-illustration-first-live-graph.md",
     "docs/adr/0043-terra-mosaic-brand-and-marketing-overhaul.md",
     "docs/adr/0042-marketing-site-design-direction.md",
     "docs/adr/0035-public-web-platform-three-surfaces.md"
@@ -13,14 +14,15 @@
   "scope": ["apps/marketing"],
   "updated": "2026-07-07",
   "direction": {
-    "summary": "Terra Mosaic — an archivist with a jeweler's hands, working at dusk. Warm espresso-plum ground + sand light bands, dusty-rose primary accent + one ember-gold moment per band, Instrument Serif voice, living tessellation art, thermal motion (settle/drift/glow-once), grain over flat black. Honest, accessible, award-grade.",
-    "themeLineage": ["theme-factory: Desert Rose", "theme-factory: Modern Minimalist"],
-    "explicitlyNot": ["indigo/neon AI gradients", "glassmorphism", "particle storms", "3D blobs", "carousels", "fabricated social proof", "hype vocabulary", "cold pure-black monochrome"]
+    "summary": "Terra Mosaic, alive — dual themes (Desert Rose dark / Modern Minimalist light), illustration-first (product truths as animated brand art, never UI chrome), a live interactive knowledge-graph hero on @xyflow/react, Instrument Serif voice over Manrope + JetBrains Mono, thermal motion, honest and accessible on both themes.",
+    "themeLineage": ["theme-factory: Desert Rose (dark)", "theme-factory: Modern Minimalist (light)"],
+    "explicitlyNot": ["indigo/neon AI gradients", "glassmorphism", "particle storms", "3D blobs", "carousels", "fabricated social proof", "hype vocabulary", "cold pure-black monochrome", "terminal/code-block/file-tree/dashboard-chrome mockups as marketing visuals"]
   },
   "theme": {
-    "mode": "single theme, two grounds",
-    "grounds": { "dusk": ":root (default)", "sand": "[data-band='sand'] scoped overrides" },
-    "toggle": false
+    "mode": "dual themes, one token architecture (next-themes, class attribute)",
+    "themes": { "dark": ":root — Desert Rose dusk (default)", "light": ".light — Modern Minimalist noon" },
+    "bands": "[data-band='sand'] chapter re-tokenizes per theme",
+    "toggle": "footer (ThemeToggle, aria-pressed states); dark: variants remain banned — tokens only"
   },
   "tokens": {
     "rule": "Components reference semantic CSS variables only; every pairing below is pre-verified AA — do not invent new pairs.",
@@ -83,8 +85,8 @@
   "typography": {
     "families": {
       "serif": "Instrument Serif (400 + italic; NEVER bold — emphasis is italic/scale)",
-      "sans": "Instrument Sans (variable)",
-      "mono": "Geist Mono"
+      "sans": "Manrope (variable — the distinctive working face)",
+      "mono": "JetBrains Mono"
     },
     "closedScale": {
       "display": { "face": "serif", "size": "clamp(3.25rem, 6vw + 1.5rem, 6.75rem)", "lineHeight": 1.02, "tracking": "-0.01em", "weight": 400, "role": "hero h1 only" },
@@ -104,8 +106,9 @@
     "spacingSteps": [1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 32, 36, 44],
     "grid": "grid-cols-12 asymmetric rows (5/7); 2/3/4-col simple grids; flex 1-D only"
   },
-  "sections": ["nav", "hero", "marquee-strip", "steps", "feature-row", "sand-band", "code-block", "pricing-table", "faq", "cta-band", "footer"],
-  "components": ["Container", "Button(primary|secondary|ghost; sm|md|lg; hover lift+sheen)", "TextLink(draw-in underline)", "Badge", "Panel", "CodeBlock", "SectionHeading", "Wordmark", "Logo/LogoIcon(v2 mark)", "MosaicField(seeded ambient tessellation)", "Reveal(in-view rise)", "Marquee(hover-paused)", "lib/motion.tsx (the ONLY framer-motion import)"],
+  "sections": ["nav (transparent at top; full-screen mobile menu)", "hero (full-bleed live knowledge graph)", "marquee-strip", "problem-band", "steps (+ pipeline illustration)", "feature-row (brand-language art only)", "sand-band", "pricing-table", "faq", "cta-band", "footer (+ theme toggle)"],
+  "bannedArchetypes": ["terminal windows", "code-block panels", "file trees", "fake dashboards", "browser-chrome screenshots"],
+  "components": ["Container", "Button(primary|secondary|ghost; sm|md|lg; hover lift+sheen)", "TextLink(draw-in underline)", "Badge", "Panel", "SectionHeading", "Wordmark", "Logo/LogoIcon(v2 mark)", "MosaicField(seeded ambient tessellation)", "LiveGraph(hero; @xyflow/react)", "EffectWeb(mini React Flow)", "PipelineFlow", "CompilerAssembly", "GovernanceGate", "ProblemBand illustrations", "ThemeToggle(footer)", "Reveal(in-view rise)", "Marquee(hover-paused)", "lib/motion.tsx (the ONLY framer-motion import)", "lib/theme.tsx (the ONLY next-themes import)"],
   "motion": {
     "system": "thermal — settle, drift, glow once; stillness is the default state",
     "library": "framer-motion via LazyMotion(domAnimation) + m, imported ONLY by lib/motion.tsx; MotionConfig reducedMotion='user'",
@@ -114,6 +117,7 @@
     "livingPanels": "in-view once: budget fills (~800ms), SVG edges draw (dashoffset), rows cascade",
     "ambient": "<=1 system per viewport: tile drift <=8px over 9-14s alternate loops; marquee ~40s linear with hover/focus pause",
     "signature": "the gilded tile arrives once per page load (<=1.2s) then stillness",
+    "liveGraph": "hero canvas: edges animated (marching dash), one rose pulse rotates ~1.6s, telemetry ticks 1.2-2s labeled 'demo'; zoomOnScroll:false, preventScrolling:false (page scroll wins), nodesFocusable:false + keyboard a11y disabled, aria-hidden + text alternative; reduced motion = static layout, frozen values",
     "banned": ["animating h1/LCP from invisible", "scroll-jacking/parallax", "transition-all", "layout-property animation", "bounce/spin/flash", "typing effects"],
     "reducedMotion": "complete, still, final layout — global CSS kill-switch + MotionConfig"
   },
@@ -269,6 +273,22 @@
         "reason": "framer-motion enters only through the lib/motion.tsx seam (LazyMotion + MotionConfig reducedMotion, ADR-0043) so reduced-motion and bundle discipline hold everywhere."
       },
       {
+        "id": "react-flow-outside-art",
+        "pattern": "from\\s+['\"]@xyflow/",
+        "flags": "",
+        "files": ["app/**/*.tsx", "app/**/*.ts", "components/**/*.tsx", "lib/**/*.tsx", "lib/**/*.ts"],
+        "allowIn": ["components/art/live-graph.tsx", "components/art/effect-web.tsx"],
+        "reason": "The graph engine is confined to the art components (ADR-0044) — canvases stay decorative-interactive, lazy-loaded, and consistently configured."
+      },
+      {
+        "id": "next-themes-outside-seam",
+        "pattern": "from\\s+['\"]next-themes",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": ["lib/theme.tsx"],
+        "reason": "Theme state enters only through lib/theme.tsx (provider + toggle hook re-export) so theming stays one seam (ADR-0044)."
+      },
+      {
         "id": "inline-color-styles",
         "pattern": "style=\\{\\{[^}]*(?:color|background|boxShadow|border(?:Color)?)\\s*:",
         "flags": "",
@@ -361,6 +381,24 @@
         "files": ["app/globals.css"],
         "pattern": "prefers-reduced-motion",
         "reason": "Global reduced-motion kill-switch is mandatory (§5)."
+      },
+      {
+        "id": "light-theme-defined",
+        "files": ["app/globals.css"],
+        "pattern": "\\.light\\s*[,{]",
+        "reason": "The Modern Minimalist light theme must exist as a .light token block (§2.2, ADR-0044)."
+      },
+      {
+        "id": "branded-scrollbar",
+        "files": ["app/globals.css"],
+        "pattern": "::-webkit-scrollbar",
+        "reason": "The scrollbar is part of the brand surface (§2.3, ADR-0044)."
+      },
+      {
+        "id": "brand-fonts-loaded",
+        "files": ["app/layout.tsx"],
+        "pattern": "Manrope[\\s\\S]*JetBrains_Mono|JetBrains_Mono[\\s\\S]*Manrope",
+        "reason": "The v3 text faces (Manrope + JetBrains Mono) must be the loaded fonts (§2.4, ADR-0044)."
       },
       {
         "id": "motion-seam-exists",

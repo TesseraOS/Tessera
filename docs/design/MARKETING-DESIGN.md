@@ -1,232 +1,202 @@
-# Tessera — Marketing Design System v2 (public surfaces)
+# Tessera — Marketing Design System v3 (public surfaces)
 
 | Field | Value |
 |-------|-------|
-| **Status** | Accepted v2.0 — F-051 overhaul ("Terra Mosaic") |
+| **Status** | Accepted v3.0 — F-051 ("Terra Mosaic", dual-theme, illustration-first) |
 | **Last updated** | 2026-07-07 |
 | **Scope** | `apps/marketing` (apex domain). Later: the public chrome of `apps/docs`. |
 | **Brand** | [`BRAND.md`](./BRAND.md) + [Terra Mosaic philosophy](./brand/terra-mosaic-philosophy.md) — read both first |
-| **Authority** | [ADR-0043](../adr/0043-terra-mosaic-brand-and-marketing-overhaul.md) (direction) · [ADR-0042](../adr/0042-marketing-site-design-direction.md) (enforcement mechanism) · [ADR-0035](../adr/0035-public-web-platform-three-surfaces.md) |
-| **Enforced by** | design-lint (vitest, compiles [`marketing-design.manifest.json`](./marketing-design.manifest.json)) · axe AA e2e · screenshot review (§8) |
+| **Authority** | [ADR-0044](../adr/0044-marketing-v3-dual-themes-illustration-first-live-graph.md) (v3 directives) · [ADR-0043](../adr/0043-terra-mosaic-brand-and-marketing-overhaul.md) (brand) · [ADR-0042](../adr/0042-marketing-site-design-direction.md) (enforcement mechanism) |
+| **Enforced by** | design-lint (vitest, compiles [`marketing-design.manifest.json`](./marketing-design.manifest.json)) · axe AA e2e **on both themes** · screenshot review (§8) |
 
-> **Binding for every pixel of the marketing site.** v1's austerity was rejected by the
-> project lead as lifeless; v2 encodes the corrected ambition: **a warm, artistic,
-> animated, award-grade surface** (Awwwards lens: design 40 / usability 30 / creativity 20
-> / content 10) that still never lies, never excludes, and never ships slop. Where this
-> document and the dashboard's DESIGN-SYSTEM.md disagree on marketing pages, this wins.
+> **Binding for every pixel of the marketing site.** v3 encodes the stakeholder's
+> corrected directives: **two themes** (Desert Rose dark / Modern Minimalist light),
+> **illustration-first** (terminal and file-system mockups are banned as marketing
+> visuals), and a **live interactive knowledge-graph hero**. Awwwards lens throughout
+> (design 40 / usability 30 / creativity 20 / content 10). Where this document and the
+> dashboard's DESIGN-SYSTEM.md disagree on marketing pages, this wins.
 
 ---
 
-## 0. Direction — Terra Mosaic
+## 0. Direction — Terra Mosaic, alive
 
-**"An archivist with a jeweler's hands, working at dusk."** The desert at last light:
-warm darkness, rose and ember accents, sand interludes. The recurring gesture is the
-**tessera** — fields of small tiles patiently assembled, one gilded tile forever arriving.
+**"An archivist with a jeweler's hands, working at dusk."** The recurring gesture is the
+**tessera** — and in v3 the mosaic *moves*: the hero is a living knowledge graph, every
+product truth is told as animated brand art, and the page works in two lights.
 
-- **Two grounds, one theme:** default **dusk** (espresso-plum `#161013`) and scoped
-  **sand** bands (`#F1E8DF`) via `data-band="sand"` — the page breathes dusk → sand →
-  dusk. Never a theme toggle, never `dark:` variants.
-- **Serif voice:** Instrument Serif carries the statements (never bold — *italic* is the
-  emphasis); Instrument Sans works; Geist Mono witnesses (coordinates, citations, labels).
-- **Alive, not busy:** grain on the dark grounds, one ambient tessellation per viewport,
-  reveals that settle like warm air, microinteractions on everything touchable — and
-  stillness as the default state.
+- **Two themes, one token architecture:** default **dark = Desert Rose dusk**
+  (espresso-plum, ivory, rose/gold embers); **light = Modern Minimalist noon**
+  (near-white, charcoal, slate — brand rose/gold in their deep variants). Managed by
+  next-themes (`.light` class); **the toggle lives in the footer**. Components are
+  tokens-only; `dark:` variants stay banned.
+- **Illustration-first (hard rule):** never terminal windows, code blocks, file trees, or
+  dashboard chrome as marketing visuals. Product truths become **brand-language art** —
+  mosaics assembling, pipelines flowing, graphs breathing, gates deciding.
+- **Serif voice** (Instrument Serif, italic emphasis) over a distinctive working grotesque
+  (**Manrope**) and a developer-culture mono (**JetBrains Mono**).
 - **Still explicitly not:** indigo/neon AI gradients, glassmorphism, particle storms,
-  3D blobs, carousels, fabricated social proof, hype vocabulary.
+  3D blobs, carousels, fabricated social proof, hype vocabulary, UI-chrome cosplay.
 
 ## 1. Non-negotiables (the ten)
 
-1. **Tokens only** (§2) — no raw palette classes, no arbitrary bracket values, no hex in
-   components. Gate-enforced.
-2. **Accent budget:** rose ≤3 elements per viewport; **gold/ember ≤1 moment per band**
-   (the arriving tile, an ember word, or a gilded seam — one). Focus rings are free.
-3. **Decoration must be sanctioned:** the only gradients are `--gradient-ember`,
-   `--gradient-dusk`, and the `.text-ember` treatment — all defined once in
-   `globals.css`. Soft shadows only on sand-band cards via `shadow-soft`/`shadow-lift`.
-   Grain ≤3% opacity. Everything else decorative is banned.
-4. **Hero H1 is server-rendered and immediately visible.** No typing effects, no
-   word-cycling, LCP never animated from invisible.
-5. **Honest content only.** No invented logos/testimonials/ratings/metrics; pricing from
-   `@tessera/billing` PLANS; integrations as typographic wordmarks; product visuals mirror
-   real surfaces (compile trace, effect graph, audit rows).
-6. **Sentence case everywhere; serif never bold; no emoji; no exclamation marks.** The
-   mono eyebrow (hero) and mono labels may be uppercase.
-7. **One `h1` per page; heading levels never skip;** every section landmark labelled.
-8. **Motion is the thermal system (§5)** — framer-motion only through the `lib/motion.tsx`
-   seam; everything `prefers-reduced-motion`-safe (reduced = complete, still layout); no
-   scroll-jacking; no `transition-all`; ≤1 ambient system per viewport.
-9. **Static-first, zero client data fetching, zero third-party requests.** Fonts
-   self-hosted (next/font); no analytics, no iframes, no cookies (NFR-17).
-10. **Screenshot-verified before "done"** (§8): 1440/1280/375, full-page, reduced-motion,
-    both grounds — plus the brand-swap test.
+1. **Tokens only** (§2) — no raw palette classes, no arbitrary brackets, no hex in
+   components; both themes come from the same semantic tokens. Gate-enforced.
+2. **Accent budget per theme:** rose ≤3 elements per viewport; **gold ≤1 moment per
+   band**; focus rings free.
+3. **Sanctioned decoration only:** the tokenized gradients (`--gradient-ember`,
+   `--gradient-dusk`), `.text-ember`, `.grain`, the `.hero-scrim`, and `shadow-soft/lift`
+   (light-ground cards) — all declared once per theme in `globals.css`.
+4. **Hero H1 is server-rendered and immediately visible.** The live graph loads behind it
+   (`ssr:false`); LCP is never animated from invisible; no typing effects.
+5. **Honest content only.** No invented logos/testimonials/metrics; simulated telemetry
+   is **visibly labeled "demo"**; product visuals mirror real mechanics; pricing from
+   `@tessera/billing` PLANS; integrations as typographic wordmarks.
+6. **Sentence case; serif never bold; no emoji; no exclamation marks.** Mono labels may
+   be uppercase.
+7. **One `h1`; heading levels never skip; every section landmark labelled.** Interactive
+   art is `aria-hidden` + keyboard-inert with a text alternative.
+8. **Motion = the thermal system (§5)**, framer-motion only via `lib/motion.tsx`;
+   reduced-motion ⇒ complete stillness (graph static, telemetry frozen); no scroll
+   hijacking (`zoomOnScroll` off on canvases); no `transition-all`.
+9. **Static-first, zero client data fetching, zero third-party requests.** Telemetry is
+   client-side simulation, never a network call.
+10. **Screenshot-verified on BOTH themes** (§8): 1440/1280/375, full-page, reduced-motion
+    — plus the brand-swap test.
 
 ## 2. Tokens (exact values — `app/globals.css` is the single source)
 
-### 2.1 Dusk ground (`:root`, default)
+### 2.1 Dark — Desert Rose dusk (`:root`, default)
 
-| Token | Value | Use |
-|-------|-------|-----|
-| `--background` | `#161013` | page canvas (espresso-plum) |
-| `--surface` | `#1E1519` | raised bands |
-| `--card` / `--card-foreground` | `#251A20` / `#F4EDE7` | panels |
-| `--foreground` | `#F4EDE7` | headings, primary text (warm ivory) |
-| `--muted-foreground` | `#B7A8A8` | body (≈7.6:1) |
-| `--faint-foreground` | `#968690` | metadata (≈5.0:1) |
-| `--primary` / `--primary-foreground` | `#F4EDE7` / `#261720` | primary CTA (ivory; hovers to rose) |
-| `--secondary` / `--secondary-foreground` | `#2A1E24` / `#F4EDE7` | secondary buttons |
-| `--rose` (= `--accent`) / `--rose-foreground` | `#E2A3A8` / `#2B1218` | **primary accent** (≈8.3:1 as text) |
-| `--gold` | `#E4B65A` | ember punctuation (≈9.4:1) |
-| `--clay` | `#C8836C` | illustrative tiles only |
-| `--burgundy` | `#5D2E46` | quiet large fills, gradient stop |
-| `--border` / `--border-strong` | `rgba(244,237,231,0.10)` / `0.18` | hairlines |
-| `--input` | `rgba(244,237,231,0.14)` | fields |
-| `--ring` | `#E2A3A8` | focus (free of budget) |
-| `--code` | `#120D10` | code/terminal panels (stays dusk on every ground) |
+| Token | Value | | Token | Value |
+|-------|-------|-|-------|-------|
+| `--background` | `#161013` | | `--rose` / fg | `#e2a3a8` / `#2b1218` |
+| `--surface` | `#1e1519` | | `--gold` | `#e4b65a` |
+| `--card` / fg | `#251a20` / `#f4ede7` | | `--clay` | `#c8836c` |
+| `--foreground` | `#f4ede7` | | `--burgundy` | `#5d2e46` |
+| `--muted-foreground` | `#b7a8a8` | | `--border` / strong | `rgba(244,237,231,.10)` / `.18` |
+| `--faint-foreground` | `#968690` | | `--input` | `rgba(244,237,231,.14)` |
+| `--primary` / fg | `#f4ede7` / `#261720` | | `--ring` | `#e2a3a8` |
+| `--secondary` / fg | `#2a1e24` / `#f4ede7` | | `--code` | `#120d10` |
 
-### 2.2 Sand ground (`[data-band='sand']` — scoped overrides)
+Sand chapter (`[data-band='sand']`): as v2 (sand `#f1e8df`, espresso text, deep accents,
+`shadow-soft` cards).
 
-| Token | Value |
-|-------|-------|
-| `--background` `#F1E8DF` · `--surface` `#EADFD3` · `--card` `#FAF4EE` |
-| `--foreground` `#2B1E25` · `--muted-foreground` `#63525A` · `--faint-foreground` `#7E6B73` |
-| `--primary` `#2B1E25` / `--primary-foreground` `#F4EDE7` · `--secondary` `#E3D6C9` / fg `#2B1E25` |
-| `--rose` `#9E4A56` / fg `#FBF3EE` · `--gold` `#7A5A1E` · `--border` `rgba(43,30,37,0.14)` / strong `0.26` · `--ring` `#9E4A56` |
+### 2.2 Light — Modern Minimalist noon (`.light`)
 
-Sand-band cards may carry `shadow-soft` (rest) / `shadow-lift` (hover). Dusk stays flat +
-hairlines. Code panels keep dusk tokens on both grounds.
+| Token | Value | | Token | Value |
+|-------|-------|-|-------|-------|
+| `--background` | `#fbfbfc` | | `--rose` / fg | `#9e4a56` / `#fbf3ee` |
+| `--surface` | `#f2f4f6` | | `--gold` | `#8a6a24` |
+| `--card` / fg | `#ffffff` / `#2a353f` | | `--clay` | `#a05f45` |
+| `--foreground` | `#2a353f` | | `--burgundy` | `#5d2e46` |
+| `--muted-foreground` | `#55636f` | | `--border` / strong | `rgba(42,53,63,.12)` / `.22` |
+| `--faint-foreground` | `#6e7c88` | | `--input` | `rgba(42,53,63,.16)` |
+| `--primary` / fg | `#2a353f` / `#ffffff` | | `--ring` | `#9e4a56` |
+| `--secondary` / fg | `#e9ecef` / `#2a353f` | | `--code` | `#120d10` (unchanged) |
 
-### 2.3 Gradients, texture, glow (sanctioned set — defined once in globals)
+Light sand chapter (`.light [data-band='sand']`): `--background #f2f4f6`, `--card #ffffff`
+— the chapter reads as a soft slate band. Light gradients re-declare in deep variants;
+`shadow-soft/lift` apply on the base light ground too (cards float on paper).
 
-- `--gradient-ember: linear-gradient(120deg, #E2A3A8, #E4B65A)` — the gilded tile, the
-  `.text-ember` word, one hairline seam per page. (The build-time OG/icon renderers
-  reproduce the gradient by value — the same design-lint exception class as hex, since
-  `ImageResponse` cannot consume CSS variables.)
-- `--gradient-dusk` — radial rose/burgundy atmosphere ≤18% alpha, hero + CTA backdrops only.
-- `.text-ember` — display-only gradient text (background-clip); counts as the band's gold
-  moment; never on body text.
-- `.grain` — SVG turbulence overlay, ~2.8% opacity, dark grounds only.
-- Shadows: `--shadow-soft`, `--shadow-lift` (see @theme) — sand-band cards only.
+### 2.3 Sanctioned decoration & chrome
 
-### 2.4 Typography (closed scale — same seven names as v1, new voices)
+- Gradients: `--gradient-ember` (rose→gold; deep variants in light), `--gradient-dusk`
+  (atmosphere ≤18% alpha), `.text-ember`, `.hero-scrim` (text-legibility veil over the
+  live graph). Declared once per theme in globals; OG/icon renderers reproduce by value.
+- `.grain` texture ≤3%; **branded scrollbar** (clay/rose thumb, WebKit +
+  `scrollbar-color`) — part of the brand surface.
+- Shadows `soft/lift`: light-ground cards (sand chapter in dark; base + chapter in light).
 
-Families: `--font-serif` **Instrument Serif** (400 + italic) · `--font-sans`
-**Instrument Sans** (variable) · `--font-mono` **Geist Mono**. All next/font self-hosted.
+### 2.4 Typography (closed scale — same seven names)
 
-| Token | Face | Size | LH | Tracking | Weight | Role |
-|-------|------|------|----|----------|--------|------|
-| `display` | serif | `clamp(3.25rem, 6vw + 1.5rem, 6.75rem)` | 1.02 | −0.01em | 400 | hero h1 only |
-| `title` | serif | `clamp(2.375rem, 3vw + 1.25rem, 3.875rem)` | 1.08 | −0.005em | 400 | section h2 |
-| `heading` | sans | `1.5rem` | 1.3 | −0.01em | 500 | h3 |
-| `lead` | sans | `1.25rem` | 1.55 | 0 | 400 | subheads, intros |
-| `body` | sans | `1.0625rem` | 1.65 | 0 | 400 | prose |
-| `small` | sans | `0.9375rem` | 1.5 | 0 | 400 | secondary UI |
-| `label` | mono | `0.8125rem` | 1.4 | +0.08em | 500 | eyebrow, wordmarks, annotations |
-
-`h1/h2` get the serif family in the base layer; *italic* (often rose) is the only emphasis
-inside display/title. Headings `text-wrap: balance`, prose `pretty`; lead ≤56ch, body
-60–72ch; headlines ≤8 words; sentence case.
+Families: `--font-serif` **Instrument Serif** (400 + italic) · `--font-sans` **Manrope**
+(variable — the distinctive working face) · `--font-mono` **JetBrains Mono**. All
+next/font self-hosted. Scale values unchanged from v2 (display/title serif via base
+layer; heading/lead/body/small sans; label mono). Serif emphasis = *italic*, never bold.
 
 ### 2.5 Layout & rhythm
 
-Container `max-w-6xl px-6 md:px-8`. Bands: full-bleed ground + hairline seams; section
-padding `py-24 md:py-32` (hero `pt-28 md:pt-36`); ≥50% quiet ground per band. 12-col grid
-for asymmetric rows (5/7); spacing steps {1,2,3,4,5,6,8,10,12,16,20,24,32,36,44}.
+Container `max-w-6xl px-6 md:px-8`; section `py-24 md:py-32`; hero `min-h-svh` with the
+graph full-bleed; ≥45% quiet ground per band; 12-col asymmetric rows; spacing steps
+{1,2,3,4,5,6,8,10,12,16,20,24,32,36,44}. Whitespace is compositional — no double-gapped
+seams, no cramped stacks (screenshot checklist enforces).
 
-## 3. Section archetypes (v2 — the only allowed shapes)
+## 3. Section archetypes (v3)
 
-1. **`nav`** — sticky, dusk at 88% + blur (only blur allowed), hairline on scroll. Links
-   with **draw-in underlines**; primary CTA sm. Mobile: focus-managed disclosure.
-2. **`hero`** — eyebrow (mono, the page's only eyebrow) → serif `display` h1 (one *italic
-   rose* word; optionally one `.text-ember` word = the band's gold) → lead → CTA row →
-   **the living mosaic**: an ambient SVG tessellation field with the gilded tile arriving
-   once, `--gradient-dusk` atmosphere behind. Art is `aria-hidden` with a text
-   alternative.
-3. **`marquee-strip`** — MCP-client wordmarks, slow linear loop (~40s), **pauses on
-   hover/focus**, static row under reduced motion. Honest names only.
-4. **`steps`** — ordered 01–03 (mono numerals allowed here only), connector line draws in
-   on view; may embed one `code-block`.
-5. **`feature-row`** — 12-col asymmetric text(5)/visual(7), alternating; the visual is a
-   **living product panel** (compile trace filling, effect graph drawing its edges, audit
-   rows settling) triggered once in view.
-6. **`sand-band`** — a light chapter wrapping steps/features: `data-band="sand"`,
-   `shadow-soft` cards permitted, serif `title` intro.
-7. **`code-block`** — real content only; dusk `--code` panel on every ground; scrollable
-   ⇒ `tabIndex=0 role="region"` + label.
-8. **`pricing-table`** — from PLANS (F-030); recommended plan = `border-strong` + mono
-   badge, never a rose fill.
-9. **`faq`** — native disclosure, hairline dividers.
-10. **`cta-band`** — dusk, `--gradient-dusk` + a quiet mosaic field behind a serif `title`
-    statement + primary CTA (magnetic hover ≤4px).
-11. **`footer`** — dusk; link columns (mono column titles), lockup + one-line positioning,
-    legal in faint.
+1. **`nav`** — **transparent at top** (no bg, no hairline); after ~8px scroll gains
+   dusk-glass (`bg-background/85` + blur, the only blur) + hairline. Draw-in underline
+   links; primary CTA sm. **Mobile: full-screen overlay menu** — serif links staggering
+   in, body scroll-locked, Escape + close button, focus moved in.
+2. **`hero`** — full-bleed **live knowledge graph** (`@xyflow/react`): token-themed
+   draggable nodes (sources → tessera hub → agents), animated bezier edges with rotating
+   rose pulses, **simulated telemetry** ticking (requests/min, tokens served, agents —
+   labeled `demo`). `zoomOnScroll` off; keyboard-inert + `aria-hidden` with text
+   alternative; reduced-motion = static. Over it: `.hero-scrim`, then eyebrow → serif
+   `display` h1 (left-aligned; one rose *italic*) → lead → CTA row.
+3. **`marquee-strip`** — as v2 (hover-paused wordmarks, honest names).
+4. **`problem-band`** — the "why" (sand chapter): serif statement + three pain
+   illustrations (fading tiles / the context dump / the severed link), Reveal-staggered.
+5. **`steps`** — three cards + the **pipeline illustration** (sources → mark → agents,
+   flowing dashes) replacing any code block.
+6. **`feature-row`** — text(5)/art(7) alternating; visuals are **brand-language
+   illustrations** (assembly scene + token meter; mini effect-web on the graph engine;
+   governance gate) — never UI chrome.
+7. **`pricing-table`** / **`faq`** — as v2.
+8. **`cta-band`** — dusk atmosphere + quiet MosaicField + serif statement + primary CTA.
+9. **`footer`** — columns, lockup, philosophy line, legal — **and the theme toggle**
+   (labelled control, aria-pressed states).
+
+**Banned archetypes:** terminal windows, code-block panels, file trees, fake dashboards,
+browser-chrome screenshots.
 
 ## 4. Components (closed set)
 
-`Container` · `Button` (primary ivory→rose hover sheen | secondary | ghost; sm/md/lg;
-lifts 1px on hover, settles on press) · `TextLink` (underline draws) · `Badge` · `Panel` ·
-`CodeBlock` · `SectionHeading` (serif h2 + lead) · `Wordmark` · `Logo/LogoIcon` (the v2
-mark) · **`MosaicField`** (seeded, deterministic tessellation; ambient drift; the one
-gilded tile) · **`Reveal`** (in-view rise, stagger ≤700ms total) · **`Marquee`** ·
-**motion seam `lib/motion.tsx`** (LazyMotion + `m` + `MotionConfig reducedMotion="user"`
-— the only file importing framer-motion).
+`Container` · `Button` · `TextLink` · `Badge` · `Panel` · `SectionHeading` · `Wordmark` ·
+`Logo/LogoIcon` · `MosaicField` · **`LiveGraph`** (hero; React Flow) · **`EffectWeb`**
+(mini React Flow) · **`PipelineFlow`** · **`CompilerAssembly`** · **`GovernanceGate`** ·
+**`ProblemBand` illustrations** · **`ThemeToggle`** (footer) · `Reveal` / `Marquee` /
+motion seam `lib/motion.tsx` (the only framer-motion import). React Flow imports live
+only in `components/art/*`.
 
-## 5. Motion — the thermal system
+## 5. Motion — thermal system + the living graph
 
-Warm air, not machinery: things **settle, drift, glow once**. Never bounce, spin, flash,
-or scroll-jack.
+v2 rules stand (micro 150–250ms; reveals settle once; ≤1 ambient system per viewport;
+gilded tile arrives once; reduced-motion = stillness). Additions:
 
 | Layer | Spec |
 |-------|------|
-| Micro | 150–250ms ease-out: underline draw, button lift 1–2px + sheen sweep (once), icon nudge, copy-button morph |
-| Reveal | opacity + 16–24px rise, 500–700ms, cubic ease-out, stagger 60–90ms, `once: true`, triggered ~20% in view |
-| Living panels | in-view once: budget bar fills (~800ms), SVG edges draw (stroke-dashoffset), rows cascade |
-| Ambient | ≤1 system/viewport: mosaic tiles drift ≤8px over 9–14s alternating loops; marquee ~40s linear, hover/focus-paused |
-| Signature | the gilded tile arrives once per page load (≤1.2s), then stillness |
-| Rules | LCP visible immediately · reduced-motion ⇒ final layout, zero movement (global kill-switch + MotionConfig) · transform/opacity only · no `transition-all` · framer-motion imported only by `lib/motion.tsx` |
+| Live graph | edges `animated` (marching dash); one rose pulse rotates every ~1.6s; telemetry ticks every 1.2–2s with small deltas; drag = spring settle |
+| Canvas rules | `zoomOnScroll:false`, `preventScrolling:false` (page scroll always wins), `nodesFocusable:false` + keyboard-a11y disabled (decorative-interactive) |
+| Illustration loops | flowing dashes are that band's ambient system; assembly/gate scenes play once in view |
+| Reduced motion | graph renders final layout, no dash animation, telemetry frozen at seed values |
 
-## 6. Voice & content — unchanged from v1
+## 6. Voice & content — unchanged
 
-Concrete mechanisms (*compiles, cites, budgets, effect-links, audit*), sentence case, no
-hype vocabulary (gate list), no fabricated anything, numbers only from code/docs, CTAs are
-verbs, URLs from `NEXT_PUBLIC_*`. The serif voice earns one poetic line per page (the
-hero); everything else stays plainspoken.
+Concrete mechanisms, sentence case, no hype (gate list), nothing fabricated, simulated
+data labeled `demo`, CTAs are verbs, URLs from `NEXT_PUBLIC_*`.
 
 ## 7. Accessibility, SEO, performance
 
-- **WCAG 2.1 AA (axe, zero violations) on both grounds**; §2 pairs are pre-verified —
-  don't invent new ones. Landmarks, one `h1`, visible `--ring` focus, keyboard paths incl.
-  mobile nav + paused-marquee focus, no 375px overflow. Ambient/live panels `aria-hidden`
-  with text equivalents.
-- **SEO:** per-page metadata, canonical, OG (brand plate), `sitemap.ts`, `robots.ts`,
-  `llms.txt` (ADR-0036).
-- **Performance:** static rendering; client islands = nav, motion seam consumers,
-  marquee, copy buttons; **first-load JS ≤240KB gz** (Next 16 app-router baseline is
-  ~185KB — the budget caps app code + motion at ~55KB on top; Lighthouse-based CWV
-  enforcement lands with F-049); LCP <2.0s, CLS <0.05, INP <200ms;
-  fonts `display: swap`; record `next build` route output as evidence until `web-perf`
-  activates (F-049).
+- **WCAG 2.1 AA on both themes** (axe e2e toggles `.light` and re-scans). All §2 pairs
+  pre-verified. Landmarks, one h1, visible `--ring`, full keyboard paths (incl. the
+  full-screen menu), no 375px overflow. Interactive art: `aria-hidden`, zero focusables
+  inside, sibling text alternative.
+- **SEO:** unchanged baseline (metadata, OG from brand fonts, sitemap/robots/llms.txt).
+- **Performance:** first-load JS ≤240KB gz (graph chunk is lazy `ssr:false`); LCP <2.0s
+  (H1 text, not the canvas); CLS <0.05 (graph container has reserved height); INP <200ms.
+  Lighthouse CWV gate lands with F-049.
 
-## 8. Review protocol (before any marketing UI is "done")
+## 8. Review protocol
 
-1. design-lint green (manifest-compiled; **fix code, never patterns** — pattern/allowIn
-   edits are reviewed design decisions).
-2. Gates + axe AA green.
-3. **Screenshots** at 1440×900, 1280×800, 375×812 — full-page, reduced-motion pass, and
-   both grounds — against:
-   - [ ] One primary action per viewport; hierarchy at arm's length.
-   - [ ] Accent budgets (count rose; find the single gold moment per band).
-   - [ ] The dusk→sand→dusk arc reads; seams are hairlines, not mud.
-   - [ ] Serif voice present (hero + section titles); *italic* emphasis, no bold serif.
-   - [ ] Motion: ambient ≤1 per viewport; nothing loops garishly; reduced-motion = still.
-   - [ ] Honest content; §6 voice.
-   - [ ] Mobile: no overflow, nav + marquee usable, tap targets ≥44px.
-   - [ ] **Brand-swap test:** cover the logo — tessellation + dusk/rose/gold + serif must
-         still say Tessera.
-4. [`design-review`](../../.harness/skills/design-review/SKILL.md) audit on top (its
-   generic detectors defer to this document's sanctioned set).
+design-lint green → gates + axe **(dark + light)** → screenshots (1440/1280/375 ×
+dark/light × reduced-motion) against: one primary action per viewport · accent budgets ·
+the arc reads in both themes · serif voice present · **no UI-chrome mockups anywhere** ·
+graph aligned/contained (zero overflow) · whitespace rhythm consistent · honest labels
+(`demo`) · mobile menu + toggle usable · brand-swap test. Then the
+[`design-review`](../../.harness/skills/design-review/SKILL.md) audit.
 
 ## 9. References
 
-BRAND.md (palette lineage: theme-factory Desert Rose × Modern Minimalist) ·
-terra-mosaic-philosophy.md · unabyss.com (positioning reference to exceed) · Awwwards
-scoring (40/30/20/10) · machine projection: marketing-design.manifest.json (v2).
+BRAND.md · terra-mosaic-philosophy.md · ADR-0042/0043/0044 · theme-factory (Desert Rose,
+Modern Minimalist) · @xyflow/react (dashboard precedent F-043) · Awwwards evaluation
+research · manifest: marketing-design.manifest.json (v3).

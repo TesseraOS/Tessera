@@ -59,6 +59,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0041](0041-code-symbol-extraction-tree-sitter.md) | Code-symbol extraction with tree-sitter (WASM) → live knowledge-graph population (resolves OQ5) | Accepted |
 | [0042](0042-marketing-site-design-direction.md) | Marketing site design direction — dark-only, monochrome + emerald, gate-enforced design system | Amended by 0043 |
 | [0043](0043-terra-mosaic-brand-and-marketing-overhaul.md) | Terra Mosaic brand + marketing design v2 — warm palette, serif voice, living motion | Accepted |
+| [0044](0044-marketing-v3-dual-themes-illustration-first-live-graph.md) | Marketing v3 — dual themes (Desert Rose/Modern Minimalist), illustration-first, live-graph hero | Accepted |
 
 ## Conventions
 

@@ -3,6 +3,52 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-07 (later) — F-051 IN PROGRESS — Terra Mosaic overhaul: brand, logo, living homepage (ADR-0043)
+
+**Stakeholder review of the first increment: rejected** — "lifeless, only text, where is art?"
+Direction reversed in one session while the enforcement mechanism survived intact (the lesson:
+[[design-contract-mechanism-outlives-parameters]]). 3 committed increments.
+
+- **(1) Brand + harness v2** — [`BRAND.md`](../../docs/design/BRAND.md) (brand discovery; palette =
+  theme-factory **Desert Rose × Modern Minimalist** fusion on warm espresso `#161013`: ivory /
+  dusty-rose `#E2A3A8` / ember-gold `#E4B65A` / clay / burgundy + a **sand light band** `#F1E8DF`;
+  type = **Instrument Serif** (display, italic emphasis) + **Instrument Sans** + Geist Mono;
+  "thermal" motion personality; measurable brand metrics; image-gen prompt appendix), the
+  [Terra Mosaic philosophy](../../docs/design/brand/terra-mosaic-philosophy.md) (canvas-design),
+  and a **real logo system**: 3×3 mosaic mark with a gilded arriving tile (SVG masters +
+  [deterministic Playwright renderer](../../apps/marketing/scripts/render-brand-assets.mjs) →
+  PNG exports + a museum-plate brand canvas). [`MARKETING-DESIGN.md`](../../docs/design/MARKETING-DESIGN.md)
+  v2 + manifest v2 (two grounds via `data-band`, sanctioned gradients/shadows/grain, framer-motion
+  **only through `lib/motion.tsx`** — the import boundary is a design-lint pattern; ambient-motion
+  budgets), [ADR-0043](../../docs/adr/0043-terra-mosaic-brand-and-marketing-overhaul.md).
+- **(2) Homepage overhaul** — serif hero ("Your agents forget. / Tessera *remembers*.", rose
+  italic; LCP never animated) over a **living MosaicField** (seeded SVG tessellation: ambient
+  drift, the gilded tile arriving once) + `--gradient-dusk` atmosphere + grain; marquee wordmark
+  strip (hover-paused, RM-static); **sand chapter** (soft-shadow step cards + the dusk code
+  artifact via `data-band="dusk"` reset); living product panels (compile trace stagger + rose
+  budget-bar fill, effect-graph edges drawing via `pathLength`, audit rows settling);
+  microinteractions everywhere (draw-in underlines, ivory→rose CTA with one sheen sweep, card
+  lifts); new OG image (serif from the committed brand TTF) + favicon.
+- **Gate catches this round:** design-lint flagged the ember gradient in the OG/icon renderers
+  (resolved as a documented allowIn — renderers can't consume CSS vars) and the literal words
+  "transition-all" in a comment; typecheck caught framer `Variants`/easing-tuple typing (fixed via
+  seam-exported `thermalEase`/`Variants`); a stale e2e heading assertion updated.
+
+**Evidence/verification** — all workspace gates green (state / typecheck / lint / format / test
+incl. design-lint 34 checks / build / e2e 17 tasks; marketing 6/6 with axe AA on both grounds,
+mobile nav, 375px no-overflow, reduced-motion stillness). Screenshots reviewed per §8 at 1440 +
+375: hero, sand chapter, differentiators, CTA, footer — brand-swap test passes (tessellation +
+dusk/rose/gold + serif voice are unmistakably Tessera). First-load JS measured **223.7KB gz**;
+budget reset honestly to 240KB (Next 16 baseline ~185KB; Lighthouse CWV enforcement lands with
+F-049) across manifest/doc/BRAND/rule.
+
+**Decisions** — ADR-0043 (Terra Mosaic parameters over the ADR-0042 mechanism); E-022 updated
+(v2 contract + motion seam + brand-asset pipeline as dependents).
+
+**Next step** — F-051 remaining: features page, **pricing from `@tessera/billing` PLANS**,
+enterprise/trust, `/skills` placeholder — each through `marketing-ui` → gates → §8 screenshots;
+then Awwwards submission readiness review.
+
 ## 2026-07-07 — F-051 IN PROGRESS — marketing design harness + apps/marketing scaffold + homepage
 
 The marketing site's first increment, built **harness-first** by explicit direction: encode the

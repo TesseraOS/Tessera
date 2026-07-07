@@ -339,12 +339,15 @@
     },
     {
       "id": "E-022",
-      "from": { "kind": "contract", "ref": "docs/design/MARKETING-DESIGN.md + marketing-design.manifest.json — the public-surface design contract (tokens, closed type scale, section archetypes, banned/required patterns; ADR-0042, F-051)" },
+      "from": { "kind": "contract", "ref": "docs/design/MARKETING-DESIGN.md v2 + marketing-design.manifest.json v2 — the public-surface design contract (Terra Mosaic: two-ground tokens, closed serif/sans/mono type scale, section archetypes, thermal-motion rules, banned/required patterns; ADR-0043 parameters over the ADR-0042 mechanism; brand foundation docs/design/BRAND.md; F-051)" },
       "to": [
         { "kind": "file", "ref": "apps/marketing/app/globals.css — token values (:root, dark-only) + Tailwind v4 @theme mapping incl. the CLOSED type scale (--text-*: initial → display/title/heading/lead/body/small/label) + the reduced-motion kill-switch. requiredPatterns drift-guard pins key values (--background, --accent, prefers-reduced-motion)" },
         { "kind": "test", "ref": "apps/marketing/tests/design-lint.test.ts — COMPILES enforcement.bannedPatterns/requiredPatterns from the manifest into standard `test`-gate failures; editing a manifest pattern or allowIn changes what builds pass, so manifest edits are design decisions (doc + manifest together, reviewed)" },
         { "kind": "module", "ref": "@tessera/marketing components (closed ui/* set + section components) — tokens-only. lib/utils.ts EXTENDS tailwind-merge with the custom font-size classGroup (display/title/heading/lead/body/small/label): a text token added to globals.css but not to that list makes twMerge treat it as a color and silently drop real color classes (the F-051 axe 1.04:1 button incident)" },
         { "kind": "file", "ref": "docs/design/DESIGN-SYSTEM.md scope note — declares the two-document precedence (dashboard vs public surfaces); principles are shared, values are not" },
+        { "kind": "module", "ref": "apps/marketing/lib/motion.tsx — the ONLY framer-motion import (LazyMotion + MotionConfig reducedMotion; design-lint enforces the boundary); every animated component consumes m/Reveal/thermalEase from this seam" },
+        { "kind": "artifact", "ref": "brand asset pipeline: docs/design/brand/* (SVG masters, philosophy, fonts) + apps/marketing/scripts/render-brand-assets.mjs (deterministic Playwright PNG renderer) + apps/marketing/public/brand/* — logo/OG/icon renderers reproduce token VALUES by hand (the sanctioned allowIn class), so a palette change means re-rendering assets" },
+        { "kind": "decision", "ref": "docs/adr/0043-terra-mosaic-brand-and-marketing-overhaul.md" },
         { "kind": "decision", "ref": "docs/adr/0042-marketing-site-design-direction.md" }
       ],
       "kind": "EFFECT_LINK",

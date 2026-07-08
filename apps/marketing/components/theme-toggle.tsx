@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTheme } from '@/lib/theme';
+import { useThemeTransition } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
 /**
- * Footer theme toggle (ADR-0044): Desert Rose dusk ↔ Modern Minimalist noon. A labelled
- * segmented control with aria-pressed states; renders after mount to avoid hydration
- * mismatch (next-themes reads localStorage).
+ * Footer theme toggle (ADR-0044/0045): Desert Rose dusk ↔ Modern Minimalist noon. A
+ * labelled segmented control with aria-pressed states; renders after mount to avoid
+ * hydration mismatch. Active state follows the RESOLVED theme (initial = system), and
+ * switching ripples across the page from the pressed control (view transition).
  */
 const OPTIONS = [
   { value: 'dark', label: 'Dusk' },
@@ -15,7 +16,7 @@ const OPTIONS = [
 ] as const;
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setThemeWithTransition } = useThemeTransition();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -27,15 +28,21 @@ export function ThemeToggle() {
       className="inline-flex items-center gap-1 rounded-md border p-1"
     >
       {OPTIONS.map((option) => {
-        const active = mounted && theme === option.value;
+        const active = mounted && resolvedTheme === option.value;
         return (
           <button
             key={option.value}
             type="button"
             aria-pressed={active}
-            onClick={() => setTheme(option.value)}
+            onClick={(event) => {
+              const rect = event.currentTarget.getBoundingClientRect();
+              setThemeWithTransition(option.value, {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2,
+              });
+            }}
             className={cn(
-              'text-label rounded-sm px-3 py-1.5 font-mono transition-colors duration-200',
+              'text-label rounded-sm px-3 py-1.5 transition-colors duration-200',
               active
                 ? 'bg-secondary text-foreground'
                 : 'text-faint-foreground hover:text-foreground',

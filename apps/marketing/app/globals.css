@@ -82,30 +82,34 @@
   );
 }
 
-/* sand ground — the chapter band (§2.2); re-tokenizes per theme */
-[data-band='sand'] {
-  --background: #f1e8df;
-  --surface: #eadfd3;
-  --card: #faf4ee;
-  --card-foreground: #2b1e25;
-  --foreground: #2b1e25;
-  --muted-foreground: #63525a;
-  --faint-foreground: #7e6b73;
-  --primary: #2b1e25;
-  --primary-foreground: #f4ede7;
-  --secondary: #e3d6c9;
-  --secondary-foreground: #2b1e25;
-  --rose: #9e4a56;
-  --rose-foreground: #fbf3ee;
-  --gold: #7a5a1e;
-  --border: rgba(43, 30, 37, 0.14);
-  --border-strong: rgba(43, 30, 37, 0.26);
-  --input: rgba(43, 30, 37, 0.18);
-  --ring: #9e4a56;
+/*
+ * Chapter band (§2.2, ADR-0045) — theme-true: in the dark theme the chapter is an
+ * ELEVATED warm-dark interlude (dark mode stays dark end-to-end); in the light theme it
+ * reads as a soft slate band. The v2 light-sand chapter is retired.
+ */
+[data-band='chapter'] {
+  --background: #1d1418;
+  --surface: #241a1f;
+  --card: #2b1f26;
+  --card-foreground: #f4ede7;
+  --foreground: #f4ede7;
+  --muted-foreground: #b7a8a8;
+  --faint-foreground: #9a8a94;
+  --primary: #f4ede7;
+  --primary-foreground: #261720;
+  --secondary: #332430;
+  --secondary-foreground: #f4ede7;
+  --rose: #e2a3a8;
+  --rose-foreground: #2b1218;
+  --gold: #e4b65a;
+  --border: rgba(244, 237, 231, 0.1);
+  --border-strong: rgba(244, 237, 231, 0.2);
+  --input: rgba(244, 237, 231, 0.14);
+  --ring: #e2a3a8;
 }
 
 /* the chapter band under the light theme: a soft slate interlude */
-.light [data-band='sand'] {
+.light [data-band='chapter'] {
   --background: #f2f4f6;
   --surface: #e9ecef;
   --card: #ffffff;
@@ -153,20 +157,21 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  /* soft elevation — sand-band cards only (§2.3) */
+  /* soft elevation — light-ground cards only (§2.3): light base + light chapter */
   --shadow-soft: 0 1px 2px rgba(43, 30, 37, 0.05), 0 8px 32px rgba(43, 30, 37, 0.08);
   --shadow-lift: 0 2px 6px rgba(43, 30, 37, 0.08), 0 16px 48px rgba(43, 30, 37, 0.14);
 
+  /* v4.1 (ADR-0045): two brand faces only — the mono voice is retired site-wide */
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-instrument-serif), Georgia, 'Times New Roman', serif;
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
   /*
    * Closed type scale v2 (§2.4) — the ONLY text sizes on this site. Tailwind defaults are
    * removed on purpose. display/title are serif (base layer applies the family to h1/h2).
    */
   --text-*: initial;
-  --text-display: clamp(3.25rem, 6vw + 1.5rem, 6.75rem);
+  /* v4: tuned so the two-line hero statement holds one line each, 375→1440 (ADR-0045) */
+  --text-display: clamp(2.625rem, 1.25rem + 6.5vw, 5.75rem);
   --text-display--line-height: 1.02;
   --text-display--letter-spacing: -0.01em;
   --text-display--font-weight: 400;
@@ -300,16 +305,45 @@
   transform-origin: center;
 }
 
-/* Text-legibility veil over the live-graph hero (§2.3) — theme-aware via tokens. */
-.hero-scrim {
-  background:
-    linear-gradient(
-      90deg,
-      var(--background) 0%,
-      color-mix(in oklab, var(--background) 84%, transparent) 36%,
-      transparent 64%
-    ),
-    linear-gradient(0deg, var(--background) 0%, transparent 24%);
+/*
+ * Hero legibility veil (§2.3, ADR-0045 v4.1) — a quiet theme-aware scrim, no blur: the
+ * shader field must stay visible (stakeholder directive). It fades out rightward and
+ * downward so the hero flows into the constellation band with no visible seam.
+ */
+.hero-veil {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--background) 55%, transparent) 0%,
+    color-mix(in oklab, var(--background) 28%, transparent) 45%,
+    transparent 74%
+  );
+  mask-image: linear-gradient(180deg, black 0%, black 58%, transparent 100%);
+}
+
+/*
+ * Constellation wash (§2.3, ADR-0045 v4.1) — a translucent gradient ground the graph
+ * hangs on: present enough to seat the canvas, transparent enough that the shader
+ * field breathes through. Fades open at the top so hero → graph reads as one space.
+ */
+.graph-wash {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in oklab, var(--background) 34%, transparent) 22%,
+    color-mix(in oklab, var(--background) 52%, transparent) 58%,
+    color-mix(in oklab, var(--background) 26%, transparent) 100%
+  );
+}
+
+/*
+ * Pointer-lit mosaic (§2.3, ADR-0045 v4.1) — tiles warm gently under the cursor and
+ * settle back. Pure CSS; compositor-friendly (fill-opacity only).
+ */
+.tile-hover rect {
+  transition: fill-opacity 350ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.tile-hover rect:hover {
+  fill-opacity: 0.6;
 }
 
 /* Soft horizontal fade for full-bleed art strips (mask, defined once — §2.3). */
@@ -445,6 +479,17 @@
       transform: translateX(-50%);
     }
   }
+}
+
+/*
+ * Theme-change propagation (§5, ADR-0045 v4.1) — the new theme sweeps out radially
+ * from the toggle via the View Transitions API; the JS animates the circle clip on
+ * ::view-transition-new(root), so the default crossfade is disabled here.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }
 
 /* Reduced motion: the still, final layout — plus a global kill-switch. */

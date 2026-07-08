@@ -1,162 +1,193 @@
 'use client';
 
-import { m, thermalEase } from '@/lib/motion';
+import { m, useReducedMotion } from '@/lib/motion';
 
 /**
- * GovernanceGate (MARKETING-DESIGN §3.6): context requests approach the policy gate —
- * two pass and take the gilded edge, one is turned away, everything is written down.
- * Plays once in view; brand art, not UI chrome.
+ * GovernanceGate (MARKETING-DESIGN §3.7, ADR-0045 v4.1): requests approach the policy
+ * gate on one lane — two pass and take the gilded edge to the served slot, one is
+ * turned away into the denied tray (the cross lives inside the tray, never floating).
+ * Geometry is constant-derived, so alignment holds by construction; the sequence loops
+ * forever on one shared clock. Captions are HTML below the scene.
  */
+
+/* ---- constant-derived geometry: one lane, one gate, one slot, one tray ---- */
+const LANE_Y = 110;
+const TILE = 30;
+const START_X = 36;
+const GATE_X = 260;
+const PASS_END_X = 448;
+const TRAY = { x: 292, y: 184, w: 64, h: 56 };
+
+const TILE_Y = LANE_Y - TILE / 2;
+const PASS_DELTA = PASS_END_X - START_X;
+const STOP_DELTA = GATE_X - START_X - TILE - 6;
+const TRAY_DX = TRAY.x + (TRAY.w - TILE) / 2 - START_X - STOP_DELTA;
+const TRAY_DY = TRAY.y + (TRAY.h - TILE) / 2 - TILE_Y;
+
+/** One shared cycle so every actor stays in sync. */
+const CYCLE = 7;
+
+const loop = { duration: CYCLE, repeat: Infinity, ease: 'linear' as const };
+
 export function GovernanceGate() {
+  const reduced = useReducedMotion();
+
   return (
-    <m.div
+    <div
       role="img"
-      aria-label="Three requests approach a policy gate: two pass and continue gilded, one is denied and set aside — all of it audited"
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, amount: 0.4 }}
+      aria-label="Requests approach a policy gate: two pass and continue gilded to the served slot, one is denied and set into the audit tray — all of it logged"
       className="w-full"
     >
-      <svg viewBox="0 0 520 240" className="h-auto w-full" aria-hidden="true" focusable="false">
-        {/* the path */}
-        <path d="M20 130 H 500" stroke="var(--border)" strokeWidth="1.5" fill="none" />
+      <svg viewBox="0 0 520 260" className="h-auto w-full" aria-hidden="true" focusable="false">
+        {/* the lane */}
+        <path d={`M20 ${LANE_Y} H 500`} stroke="var(--border)" strokeWidth="1.5" fill="none" />
 
         {/* the gate */}
-        <g>
-          <rect
-            x="248"
-            y="78"
-            width="10"
-            height="74"
-            rx="4"
-            fill="var(--foreground)"
-            fillOpacity="0.55"
-          />
-          <rect
-            x="284"
-            y="78"
-            width="10"
-            height="74"
-            rx="4"
-            fill="var(--foreground)"
-            fillOpacity="0.55"
-          />
-          <rect
-            x="240"
-            y="66"
-            width="62"
-            height="10"
-            rx="4"
-            fill="var(--foreground)"
-            fillOpacity="0.75"
-          />
-          <text
-            x="271"
-            y="52"
-            fill="var(--faint-foreground)"
-            fontSize="11"
-            textAnchor="middle"
-            className="font-mono"
-          >
-            policy · rbac + quotas
-          </text>
+        <g fill="var(--foreground)">
+          <rect x={GATE_X - 16} y={LANE_Y - 36} width={9} height={72} rx={4} fillOpacity={0.55} />
+          <rect x={GATE_X + 7} y={LANE_Y - 36} width={9} height={72} rx={4} fillOpacity={0.55} />
+          <rect x={GATE_X - 24} y={LANE_Y - 48} width={48} height={9} rx={4} fillOpacity={0.75} />
         </g>
 
-        {/* passing tiles — gilded on the far side */}
-        <m.rect
-          className="tf-box"
-          variants={{
-            hidden: { x: 0, opacity: 0.85, strokeOpacity: 0 },
-            show: {
-              x: [0, 180, 400],
-              strokeOpacity: [0, 0, 1],
-              opacity: 0.95,
-              transition: { duration: 2.1, times: [0, 0.5, 1], ease: 'easeInOut' },
-            },
-          }}
-          x={36}
-          y={106}
-          width={30}
-          height={30}
-          rx={7}
-          fill="var(--foreground)"
-          fillOpacity={0.8}
-          stroke="var(--gold)"
-          strokeWidth={2}
-        />
-        <m.rect
-          className="tf-box"
-          variants={{
-            hidden: { x: 0, opacity: 0.85, strokeOpacity: 0 },
-            show: {
-              x: [0, 150, 330],
-              strokeOpacity: [0, 0, 1],
-              opacity: 0.95,
-              transition: { duration: 2.1, delay: 0.55, times: [0, 0.5, 1], ease: 'easeInOut' },
-            },
-          }}
-          x={36}
-          y={106}
-          width={30}
-          height={30}
-          rx={7}
-          fill="var(--foreground)"
-          fillOpacity={0.65}
-          stroke="var(--gold)"
-          strokeWidth={2}
-        />
-
-        {/* the denied tile — stopped, set aside */}
-        <m.rect
-          className="tf-box"
-          variants={{
-            hidden: { x: 0, y: 0, opacity: 0.85 },
-            show: {
-              x: [0, 168, 168],
-              y: [0, 0, 52],
-              opacity: [0.85, 0.85, 0.4],
-              transition: { duration: 2.4, delay: 1.1, times: [0, 0.55, 1], ease: 'easeInOut' },
-            },
-          }}
-          x={36}
-          y={106}
-          width={30}
-          height={30}
-          rx={7}
-          fill="var(--rose)"
-        />
-        <m.path
-          variants={{
-            hidden: { pathLength: 0, opacity: 0 },
-            show: {
-              pathLength: 1,
-              opacity: 1,
-              transition: { duration: 0.45, delay: 3.3, ease: thermalEase },
-            },
-          }}
-          d="M244 196 l 14 14 M258 196 l -14 14"
-          stroke="var(--rose)"
-          strokeWidth="2"
-          strokeLinecap="round"
+        {/* the served slot — where allowed context lands */}
+        <rect
+          x={PASS_END_X}
+          y={TILE_Y - 3}
+          width={TILE + 6}
+          height={TILE + 6}
+          rx={9}
           fill="none"
+          stroke="var(--gold)"
+          strokeOpacity={0.5}
+          strokeWidth={1.5}
         />
 
-        {/* the record */}
-        <m.text
-          variants={{
-            hidden: { opacity: 0 },
-            show: { opacity: 1, transition: { duration: 0.6, delay: 3.5 } },
-          }}
-          x={500}
-          y={218}
-          fill="var(--faint-foreground)"
-          fontSize="11"
-          textAnchor="end"
-          className="font-mono"
-        >
-          2 allowed · 1 denied · all of it logged
-        </m.text>
+        {/* the denied tray — the cross belongs inside it */}
+        <rect
+          x={TRAY.x}
+          y={TRAY.y}
+          width={TRAY.w}
+          height={TRAY.h}
+          rx={10}
+          fill="var(--foreground)"
+          fillOpacity={0.05}
+          stroke="var(--border-strong)"
+          strokeWidth={1.5}
+          strokeDasharray="4 5"
+        />
+        {reduced ? (
+          <path
+            d={`M${TRAY.x + TRAY.w / 2 - 7} ${TRAY.y + TRAY.h / 2 - 7} l 14 14 M${TRAY.x + TRAY.w / 2 + 7} ${TRAY.y + TRAY.h / 2 - 7} l -14 14`}
+            stroke="var(--rose)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            fill="none"
+          />
+        ) : (
+          <m.path
+            d={`M${TRAY.x + TRAY.w / 2 - 7} ${TRAY.y + TRAY.h / 2 - 7} l 14 14 M${TRAY.x + TRAY.w / 2 + 7} ${TRAY.y + TRAY.h / 2 - 7} l -14 14`}
+            stroke="var(--rose)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            fill="none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0, 1, 1, 0] }}
+            transition={{ ...loop, times: [0, 0.66, 0.7, 0.94, 1] }}
+          />
+        )}
+
+        {reduced ? (
+          <>
+            {/* still frame: both allowed tiles landed, the denied one in the tray */}
+            <rect
+              className="tf-box"
+              x={PASS_END_X + 3}
+              y={TILE_Y + 3}
+              width={TILE}
+              height={TILE}
+              rx={7}
+              fill="var(--foreground)"
+              fillOpacity={0.8}
+              stroke="var(--gold)"
+              strokeWidth={2}
+            />
+            <rect
+              x={TRAY.x + (TRAY.w - TILE) / 2}
+              y={TRAY.y + (TRAY.h - TILE) / 2}
+              width={TILE}
+              height={TILE}
+              rx={7}
+              fill="var(--rose)"
+              fillOpacity={0.4}
+            />
+          </>
+        ) : (
+          <>
+            {/* allowed tile one */}
+            <m.rect
+              className="tf-box"
+              x={START_X}
+              y={TILE_Y}
+              width={TILE}
+              height={TILE}
+              rx={7}
+              fill="var(--foreground)"
+              fillOpacity={0.8}
+              stroke="var(--gold)"
+              strokeWidth={2}
+              initial={{ x: 0, opacity: 0, strokeOpacity: 0 }}
+              animate={{
+                x: [0, 0, PASS_DELTA * 0.52, PASS_DELTA, PASS_DELTA],
+                opacity: [0, 1, 1, 1, 0],
+                strokeOpacity: [0, 0, 0, 1, 1],
+              }}
+              transition={{ ...loop, times: [0, 0.04, 0.17, 0.3, 0.36] }}
+            />
+            {/* allowed tile two */}
+            <m.rect
+              className="tf-box"
+              x={START_X}
+              y={TILE_Y}
+              width={TILE}
+              height={TILE}
+              rx={7}
+              fill="var(--foreground)"
+              fillOpacity={0.65}
+              stroke="var(--gold)"
+              strokeWidth={2}
+              initial={{ x: 0, opacity: 0, strokeOpacity: 0 }}
+              animate={{
+                x: [0, 0, PASS_DELTA * 0.52, PASS_DELTA, PASS_DELTA],
+                opacity: [0, 1, 1, 1, 0],
+                strokeOpacity: [0, 0, 0, 1, 1],
+              }}
+              transition={{ ...loop, times: [0.16, 0.2, 0.33, 0.46, 0.52] }}
+            />
+            {/* the denied tile — stopped at the gate, set into the tray */}
+            <m.rect
+              className="tf-box"
+              x={START_X}
+              y={TILE_Y}
+              width={TILE}
+              height={TILE}
+              rx={7}
+              fill="var(--rose)"
+              initial={{ x: 0, y: 0, opacity: 0 }}
+              animate={{
+                x: [0, 0, STOP_DELTA, STOP_DELTA, STOP_DELTA + TRAY_DX, STOP_DELTA + TRAY_DX],
+                y: [0, 0, 0, 0, TRAY_DY, TRAY_DY],
+                opacity: [0, 0.9, 0.9, 0.9, 0.55, 0],
+              }}
+              transition={{ ...loop, times: [0.3, 0.34, 0.52, 0.56, 0.68, 1] }}
+            />
+          </>
+        )}
       </svg>
-    </m.div>
+
+      {/* the record — pushed well below the scene, in HTML type */}
+      <p className="text-label text-faint-foreground mt-6 text-right">
+        2 allowed · 1 denied · all of it logged
+      </p>
+    </div>
   );
 }

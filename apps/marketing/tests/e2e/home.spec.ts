@@ -3,10 +3,11 @@ import { expect, test } from '@playwright/test';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
-test('homepage renders the hero and passes axe WCAG AA', async ({ page }) => {
+test('homepage renders the hero and passes axe WCAG AA (dusk)', async ({ page }) => {
   // Steady-state scan: entrance animations are one-shot; scanning mid-fade would measure
   // blended colors. The kill-switch path IS the final layout (verified separately below).
-  await page.emulateMedia({ reducedMotion: 'reduce' });
+  // The initial theme follows the system (ADR-0045 v4.1) — pin dark for the dusk scan.
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' });
   await page.goto('/');
 
   // Exactly one h1 (MARKETING-DESIGN §1.7), and it carries the positioning.
@@ -59,7 +60,7 @@ test('full-screen mobile menu opens, is keyboard-dismissable, and passes axe whi
 });
 
 test('footer toggle switches to the light theme, which passes axe', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' });
   await page.goto('/');
 
   await page.getByRole('button', { name: 'Noon' }).click();
@@ -67,6 +68,12 @@ test('footer toggle switches to the light theme, which passes axe', async ({ pag
 
   const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
   expect(results.violations).toEqual([]);
+});
+
+test('initial theme follows the system preference (light → noon)', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' });
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveClass(/light/);
 });
 
 test('SEO + agent-readable endpoints respond', async ({ request }) => {

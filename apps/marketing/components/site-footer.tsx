@@ -25,7 +25,7 @@ const COLUMNS = [
     title: 'get started',
     links: [
       { href: siteConfig.appUrl, label: 'Open the dashboard' },
-      { href: siteConfig.docsUrl, label: 'Deploy self-hosted' },
+      { href: siteConfig.docsUrl, label: 'Self-host' },
     ],
   },
 ] as const;
@@ -44,7 +44,7 @@ export function SiteFooter() {
         </div>
         {COLUMNS.map((column) => (
           <nav key={column.title} aria-label={column.title} className="md:col-span-2">
-            <h2 className="text-label text-faint-foreground font-mono">{column.title}</h2>
+            <h2 className="text-label text-faint-foreground">{column.title}</h2>
             <ul className="mt-4 flex flex-col gap-3">
               {column.links.map((link) => (
                 <li key={link.label}>
@@ -64,7 +64,7 @@ export function SiteFooter() {
         <Container className="flex flex-wrap items-center justify-between gap-4 py-6">
           <p className="text-small text-faint-foreground">© 2026 Tessera. All rights reserved.</p>
           <ThemeToggle />
-          <p className="text-label text-faint-foreground font-mono">agent-readable: /llms.txt</p>
+          <p className="text-label text-faint-foreground">agent-readable: /llms.txt</p>
         </Container>
       </div>
     </footer>

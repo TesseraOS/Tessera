@@ -3,23 +3,24 @@ import { SectionHeading } from '@/components/ui/section-heading';
 import { Reveal } from '@/lib/motion';
 
 /**
- * Problem band (MARKETING-DESIGN §3.4) — the "why", opening the daylight chapter. Three
- * pains told in the tile language: memory fading, the dump burying signal, the blind edit.
+ * Problem band (MARKETING-DESIGN §3.4) — the "why", opening the chapter. Three pains
+ * told in the tile language: memory fading, the dump burying signal, the blind edit.
+ * Captions are HTML on the type scale (never SVG text — ADR-0045 v4.1).
  */
 
 function AmnesiaArt() {
   return (
-    <svg
-      viewBox="0 0 200 96"
-      role="img"
-      aria-label="A row of memory tiles fading away session by session"
-      className="w-full"
-    >
-      <g>
-        <rect x="8" y="30" width="34" height="34" rx="8" fill="var(--rose)" fillOpacity="0.9" />
+    <div>
+      <svg
+        viewBox="0 0 226 68"
+        role="img"
+        aria-label="A row of memory tiles fading away session by session"
+        className="w-full"
+      >
+        <rect x="8" y="17" width="34" height="34" rx="8" fill="var(--rose)" fillOpacity="0.9" />
         <rect
           x="52"
-          y="30"
+          y="17"
           width="34"
           height="34"
           rx="8"
@@ -28,7 +29,7 @@ function AmnesiaArt() {
         />
         <rect
           x="96"
-          y="30"
+          y="17"
           width="34"
           height="34"
           rx="8"
@@ -37,7 +38,7 @@ function AmnesiaArt() {
         />
         <rect
           x="140"
-          y="30"
+          y="17"
           width="34"
           height="34"
           rx="8"
@@ -46,7 +47,7 @@ function AmnesiaArt() {
         />
         <rect
           x="184"
-          y="30"
+          y="17"
           width="34"
           height="34"
           rx="8"
@@ -56,143 +57,135 @@ function AmnesiaArt() {
           strokeWidth="1.5"
           strokeDasharray="4 5"
         />
-      </g>
-      <text x="8" y="86" fill="var(--faint-foreground)" fontSize="10" className="font-mono">
-        session 1 → session n
-      </text>
-    </svg>
+      </svg>
+      <p className="text-label text-faint-foreground mt-3">session 1 → session n</p>
+    </div>
   );
 }
 
 function DumpArt() {
   return (
-    <svg
-      viewBox="0 0 200 96"
-      role="img"
-      aria-label="A container overflowing with disordered context tiles, the signal buried"
-      className="w-full"
-    >
-      <rect
-        x="30"
-        y="34"
-        width="84"
-        height="52"
-        rx="10"
-        fill="none"
-        stroke="var(--foreground)"
-        strokeOpacity="0.3"
-        strokeWidth="1.5"
-      />
-      {/* disordered spill */}
-      <g fill="var(--foreground)">
+    <div>
+      <svg
+        viewBox="0 0 226 68"
+        role="img"
+        aria-label="A container overflowing with disordered context tiles, the signal buried"
+        className="w-full"
+      >
         <rect
-          x="40"
-          y="44"
-          width="16"
-          height="16"
-          rx="4"
-          fillOpacity="0.35"
-          transform="rotate(-8 48 52)"
+          x="71"
+          y="14"
+          width="84"
+          height="50"
+          rx="10"
+          fill="none"
+          stroke="var(--foreground)"
+          strokeOpacity="0.3"
+          strokeWidth="1.5"
         />
-        <rect
-          x="62"
-          y="40"
-          width="16"
-          height="16"
-          rx="4"
-          fillOpacity="0.5"
-          transform="rotate(12 70 48)"
-        />
-        <rect
-          x="84"
-          y="46"
-          width="16"
-          height="16"
-          rx="4"
-          fillOpacity="0.3"
-          transform="rotate(-14 92 54)"
-        />
-        <rect
-          x="50"
-          y="62"
-          width="16"
-          height="16"
-          rx="4"
-          fillOpacity="0.45"
-          transform="rotate(6 58 70)"
-        />
-        <rect
-          x="76"
-          y="64"
-          width="16"
-          height="16"
-          rx="4"
-          fillOpacity="0.4"
-          transform="rotate(-5 84 72)"
-        />
-        <rect
-          x="58"
-          y="18"
-          width="16"
-          height="16"
-          rx="4"
-          fillOpacity="0.5"
-          transform="rotate(18 66 26)"
-        />
-        <rect
-          x="82"
-          y="12"
-          width="16"
-          height="16"
-          rx="4"
-          fillOpacity="0.35"
-          transform="rotate(-20 90 20)"
-        />
-      </g>
-      {/* the one signal tile, buried */}
-      <rect x="66" y="52" width="14" height="14" rx="4" fill="var(--rose)" fillOpacity="0.95" />
-      <text x="126" y="52" fill="var(--faint-foreground)" fontSize="10" className="font-mono">
-        38k tokens,
-      </text>
-      <text x="126" y="66" fill="var(--faint-foreground)" fontSize="10" className="font-mono">
-        one answer
-      </text>
-    </svg>
+        {/* disordered spill */}
+        <g fill="var(--foreground)">
+          <rect
+            x="81"
+            y="24"
+            width="15"
+            height="15"
+            rx="4"
+            fillOpacity="0.35"
+            transform="rotate(-8 88 31)"
+          />
+          <rect
+            x="103"
+            y="20"
+            width="15"
+            height="15"
+            rx="4"
+            fillOpacity="0.5"
+            transform="rotate(12 110 27)"
+          />
+          <rect
+            x="125"
+            y="26"
+            width="15"
+            height="15"
+            rx="4"
+            fillOpacity="0.3"
+            transform="rotate(-14 132 33)"
+          />
+          <rect
+            x="91"
+            y="42"
+            width="15"
+            height="15"
+            rx="4"
+            fillOpacity="0.45"
+            transform="rotate(6 98 49)"
+          />
+          <rect
+            x="117"
+            y="44"
+            width="15"
+            height="15"
+            rx="4"
+            fillOpacity="0.4"
+            transform="rotate(-5 124 51)"
+          />
+          <rect
+            x="99"
+            y="2"
+            width="15"
+            height="15"
+            rx="4"
+            fillOpacity="0.5"
+            transform="rotate(18 106 9)"
+          />
+          <rect
+            x="121"
+            y="0"
+            width="15"
+            height="15"
+            rx="4"
+            fillOpacity="0.35"
+            transform="rotate(-20 128 7)"
+          />
+        </g>
+        {/* the one signal tile, buried */}
+        <rect x="106" y="32" width="13" height="13" rx="4" fill="var(--rose)" fillOpacity="0.95" />
+      </svg>
+      <p className="text-label text-faint-foreground mt-3">38k tokens, one answer</p>
+    </div>
   );
 }
 
 function BlastArt() {
   return (
-    <svg
-      viewBox="0 0 200 96"
-      role="img"
-      aria-label="An edited tile with cracks reaching three dependent tiles nobody saw"
-      className="w-full"
-    >
-      <g
-        stroke="var(--rose)"
-        strokeOpacity="0.7"
-        strokeWidth="1.4"
-        fill="none"
-        strokeDasharray="3 4"
+    <div>
+      <svg
+        viewBox="0 0 226 68"
+        role="img"
+        aria-label="An edited tile with cracks reaching three dependent tiles nobody saw"
+        className="w-full"
       >
-        <path d="M52 48 L 108 22" />
-        <path d="M52 48 L 116 50" />
-        <path d="M52 48 L 104 78" />
-      </g>
-      <rect x="20" y="32" width="32" height="32" rx="8" fill="var(--rose)" fillOpacity="0.9" />
-      <g fill="var(--foreground)">
-        <rect x="108" y="8" width="26" height="26" rx="6" fillOpacity="0.4" />
-        <rect x="116" y="38" width="26" height="26" rx="6" fillOpacity="0.5" />
-        <rect x="104" y="66" width="26" height="26" rx="6" fillOpacity="0.35" />
-      </g>
-      <text x="148" y="52" fill="var(--faint-foreground)" fontSize="10" className="font-mono">
-        unseen
-      </text>
-      <text x="148" y="66" fill="var(--faint-foreground)" fontSize="10" className="font-mono">
-        dependents
-      </text>
-    </svg>
+        <g
+          stroke="var(--rose)"
+          strokeOpacity="0.7"
+          strokeWidth="1.4"
+          fill="none"
+          strokeDasharray="3 4"
+        >
+          <path d="M74 34 L 134 10" />
+          <path d="M74 34 L 142 36" />
+          <path d="M74 34 L 130 58" />
+        </g>
+        <rect x="42" y="18" width="32" height="32" rx="8" fill="var(--rose)" fillOpacity="0.9" />
+        <g fill="var(--foreground)">
+          <rect x="134" y="0" width="22" height="22" rx="6" fillOpacity="0.4" />
+          <rect x="142" y="26" width="22" height="22" rx="6" fillOpacity="0.5" />
+          <rect x="130" y="50" width="22" height="22" rx="6" fillOpacity="0.35" />
+        </g>
+      </svg>
+      <p className="text-label text-faint-foreground mt-3">unseen dependents</p>
+    </div>
   );
 }
 
@@ -218,7 +211,7 @@ export function ProblemBand() {
   return (
     <section
       id="problem"
-      data-band="sand"
+      data-band="chapter"
       aria-labelledby="problem-title"
       className="bg-background text-foreground scroll-mt-16 border-t"
     >

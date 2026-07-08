@@ -4,6 +4,7 @@ import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
+import { MosaicField } from '@/components/art/mosaic-field';
 import { ButtonLink } from '@/components/ui/button';
 import { Container } from '@/components/ui/container';
 import { siteConfig } from '@/lib/site';
@@ -76,10 +77,7 @@ export function SiteNav() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 md:flex">
-          <ButtonLink href={siteConfig.appUrl} variant="ghost" size="sm">
-            Sign in
-          </ButtonLink>
+        <div className="hidden items-center md:flex">
           <ButtonLink href={siteConfig.appUrl} size="sm">
             Start free
           </ButtonLink>
@@ -154,25 +152,26 @@ export function SiteNav() {
               </Link>
             ))}
           </nav>
-          <Container className="relative flex shrink-0 items-center gap-3 pb-10">
-            <ButtonLink
-              href={siteConfig.appUrl}
-              variant="secondary"
-              size="lg"
-              className="flex-1"
-              onClick={() => setOpen(false)}
-            >
-              Sign in
-            </ButtonLink>
+          <Container className="relative shrink-0 pb-8">
             <ButtonLink
               href={siteConfig.appUrl}
               size="lg"
-              className="flex-1"
+              className="w-full"
               onClick={() => setOpen(false)}
             >
               Start free
             </ButtonLink>
           </Container>
+          {/* the menu's quiet ground — the mosaic drifting under the links (ADR-0045 v4.1) */}
+          <MosaicField
+            emberId="ember-menu-field"
+            cols={12}
+            rows={2}
+            seed={41522}
+            seamAt={0.62}
+            className="fade-x rise-in relative shrink-0 px-4 pb-6"
+            label="A quiet strip of mosaic tiles beneath the menu, one gilded tile arriving"
+          />
         </div>
       ) : null}
     </header>

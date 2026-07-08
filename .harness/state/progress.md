@@ -3,6 +3,64 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-08 (v4/v4.1) — F-051 IN PROGRESS — shader-field hero, canvas constellation, 31-point polish (ADR-0045)
+
+**Fourth review (11 directives) + fifth review (31 directives) delivered in one arc.**
+
+- **Hero recomposed** — statement over a hand-written **WebGL shader field**
+  (`components/art/shader-field.tsx`: domain-warped brand flow + ember sparks, theme
+  re-resolved per frame, alpha:true, init-once, always-painting loop — three dead-canvas
+  bugs fixed en route, captured in [[decorative-interactive-canvas-pattern]] items 7–9);
+  h1 locked to exactly two nowrap lines (`--text-display` retuned); `.hero-veil` is a
+  scrim-only gradient fading right+down so hero → graph has **no seam**; the graph band
+  sits on a translucent `.graph-wash`.
+- **Constellation band** (`components/art/constellation.tsx`, Canvas-2D, no deps) — deep
+  nested knowledge graph under a **fixed three-quarter camera** (x/z ground plane +
+  height jitter, constant pitch, no pointer tilt), **randomized per visit** (cluster
+  fan-out, up-to-4-level nesting, 1–3 live **session sub-nodes per agent**), 20–40
+  concurrent packet dots on multi-hop routes ending in sessions, smooth glow arrivals
+  (no ring flicker), hover subtree highlight + clamped tooltip, click-to-toggle nodes
+  with reroute/fizzle + reactive telemetry (right-aligned; legends and the visible demo
+  chip removed — simulation disclosed in the sr-only alternative). React Flow hero graph
+  deleted.
+- **Typography** — the mono voice retired site-wide (JetBrains Mono unloaded; labels are
+  tracked Manrope; zero SVG `<text>` anywhere).
+- **Illustrations rebuilt** — CompilerAssembly (contained, breathing ping-pong loop; the
+  "cut off" root cause was framer SVG x/y overriding the transform attribute —
+  [[framer-svg-transform-attribute-conflict]]); GovernanceGate (constant-derived lanes,
+  X inside the denied tray, caption pushed down, shared-clock cycle); EffectWeb rebuilt
+  as **pure SVG + HTML chips** (9 nodes, 2 dependency levels, tokens-only) — and
+  **`@xyflow/react` removed from the app entirely**; PipelineFlow → HTML chips (no
+  strokes, ellipsis-safe, stacks on mobile) + connector SVGs; CTA mosaic drifts and is
+  pointer-lit (`.tile-hover`).
+- **Chrome** — redundant nav Sign-in removed; mobile menu gets the mosaic ground;
+  "Deploy self-hosted" → "Self-host"; **initial theme = system** (dark→dusk, light→noon,
+  classless fallback dusk); footer toggle propagates via **startViewTransition radial
+  ripple** from the control; marquee carries **agent brand marks** (simple-icons CC0,
+  currentColor: Claude Code, Cursor, Codex, Gemini CLI, Windsurf, Cline, Zed; Antigravity
+  as wordmark) — list verified against 2026 MCP-client roundups; scrollbar already
+  theme-aware (tokens). Light-theme canvas bug fixed: minified 3-digit hex tokens now
+  parse (`css-color.ts`).
+- **Docs/manifest v4→v4.1** — ADR-0045 (+ amendment), MARKETING-DESIGN v4, manifest
+  4.0.0 (chapter band required patterns, blur sanction → nav-only, no-3d-engine +
+  no-react-flow bans, retuned display clamp); plan v4 addendum; E-022 refreshed.
+
+**Evidence/verification** — design-lint 39/39; typecheck/eslint/prettier clean;
+`next build` green; **first-load JS 228.5KB gz** (budget 240) measured from the
+prerendered route; **e2e 8/8** (axe AA dusk + noon, system-light initial, mobile menu
+focus/Escape, 375px no-overflow after the pipeline mobile-stack fix, CTAs, SEO
+endpoints, reduced-motion). Preview-verified on both themes at 1440 + 375: hero/graph
+seam, constellation toggle cycle (agents 4→3→4 with tooltip state), theme ripple,
+compiler assembly contained, gate alignment, marquee marks, menu art, tooltip clamp.
+
+**Decisions** — ADR-0045 + v4.1 amendment (fixed camera over tilt; randomized scenes;
+mono retired; React Flow retired; system-initial theme; view-transition propagation;
+visible demo label traded for sr-only disclosure at stakeholder direction).
+
+**Next step** — F-051 remaining: features page, pricing from `@tessera/billing` PLANS,
+enterprise/trust, `/skills` placeholder; Lighthouse CWV gate with F-049; then the
+Awwwards-readiness review across the site.
+
 ## 2026-07-07 (v3) — F-051 IN PROGRESS — dual themes, illustration-first, live-graph hero (ADR-0044)
 
 **Third stakeholder review demanded:** no terminal mockups anywhere ("this is a marketing

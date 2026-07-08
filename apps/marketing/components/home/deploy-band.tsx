@@ -36,7 +36,7 @@ export function DeployBand() {
         <div className="mt-12 grid gap-10 md:mt-16 md:grid-cols-3 md:gap-8">
           {MODES.map((mode, index) => (
             <Reveal key={mode.name} delay={index * 90} className="border-t pt-5">
-              <h3 className="text-label text-foreground font-mono">{mode.name}</h3>
+              <h3 className="text-label text-foreground">{mode.name}</h3>
               <p className="text-body text-muted-foreground mt-3">{mode.body}</p>
             </Reveal>
           ))}

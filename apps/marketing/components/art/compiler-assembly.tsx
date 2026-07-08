@@ -4,36 +4,58 @@ import { useRef, useState } from 'react';
 import { m, thermalEase, useReducedMotion } from '@/lib/motion';
 
 /**
- * CompilerAssembly (MARKETING-DESIGN §3.6): scattered fragments settle into the mosaic —
- * retrieve, rank, compress — and the gilded tile completes it while the token meter
- * counts what survived the budget. Brand art, not UI chrome. Plays once in view.
+ * CompilerAssembly (MARKETING-DESIGN §3.7, ADR-0045 v4.1): scattered fragments gather
+ * into the mosaic and drift apart again — an endless breath (assemble → hold →
+ * disperse → hold), every position inside the viewBox so nothing ever clips. The token
+ * meter counts once in view; captions are HTML on the type scale.
  */
 
+const CELL = 46;
+const GAP = 10;
+const ORIGIN_X = 150;
+const ORIGIN_Y = 51;
+
+/** Final grid seats (3 columns; the top-right seat stays empty for the gilded tile). */
 const GRID = [
-  { x: 0, y: 0, o: 0.55 },
-  { x: 66, y: 0, o: 0.8 },
-  { x: 0, y: 66, o: 0.8 },
-  { x: 66, y: 66, o: 1 },
-  { x: 132, y: 66, o: 0.9 },
-  { x: 0, y: 132, o: 0.45 },
-  { x: 66, y: 132, o: 0.9 },
-  { x: 132, y: 132, o: 0.7 },
+  { col: 0, row: 0, o: 0.55 },
+  { col: 1, row: 0, o: 0.8 },
+  { col: 0, row: 1, o: 0.8 },
+  { col: 1, row: 1, o: 1 },
+  { col: 2, row: 1, o: 0.9 },
+  { col: 0, row: 2, o: 0.45 },
+  { col: 1, row: 2, o: 0.9 },
+  { col: 2, row: 2, o: 0.7 },
 ] as const;
 
-/* Where each tile starts: scattered, tilted — the unretrieved pile. */
+/** Where each tile rests while dispersed — all inside the canvas, left of the grid. */
 const SCATTER = [
-  { dx: -90, dy: -40, r: -14 },
-  { dx: 60, dy: -70, r: 10 },
-  { dx: -110, dy: 40, r: 8 },
-  { dx: 90, dy: 90, r: -6 },
-  { dx: 120, dy: -30, r: 16 },
-  { dx: -60, dy: 120, r: -12 },
-  { dx: 40, dy: 140, r: 6 },
-  { dx: 140, dy: 60, r: -10 },
+  { x: 18, y: 28, r: -12 },
+  { x: 84, y: 14, r: 9 },
+  { x: 26, y: 96, r: -7 },
+  { x: 12, y: 168, r: 10 },
+  { x: 90, y: 148, r: -14 },
+  { x: 46, y: 208, r: 7 },
+  { x: 102, y: 62, r: 12 },
+  { x: 64, y: 118, r: -9 },
 ] as const;
 
 const BUDGET = 8000;
 const COMPILED = 6148;
+
+const seat = (col: number, row: number) => ({
+  x: ORIGIN_X + col * (CELL + GAP),
+  y: ORIGIN_Y + row * (CELL + GAP),
+});
+
+/** assemble → hold → disperse → hold, forever (reverse ping-pong). */
+const breathe = (index: number) => ({
+  duration: 3,
+  ease: thermalEase,
+  delay: index * 0.1,
+  repeat: Infinity,
+  repeatType: 'reverse' as const,
+  repeatDelay: 1.6,
+});
 
 export function CompilerAssembly() {
   const reduced = useReducedMotion();
@@ -49,75 +71,106 @@ export function CompilerAssembly() {
     }
     const t0 = performance.now();
     const duration = 1100;
-    const step = (now: number) => {
+    const stepFrame = (now: number) => {
       const p = Math.min(1, (now - t0) / duration);
       const eased = 1 - (1 - p) ** 3;
       setCount(Math.round(COMPILED * eased));
-      if (p < 1) requestAnimationFrame(step);
+      if (p < 1) requestAnimationFrame(stepFrame);
     };
-    requestAnimationFrame(step);
+    requestAnimationFrame(stepFrame);
   };
+
+  const gildedSeat = seat(2, 0);
 
   return (
     <m.div
       role="img"
-      aria-label="Scattered context fragments assemble into a compact mosaic; the token meter shows 6,148 of an 8,000-token budget used, every fragment cited"
+      aria-label="Scattered context fragments assemble into a compact mosaic and drift apart again; the token meter shows 6,148 of an 8,000-token budget used, every fragment cited"
       className="grid items-center gap-10 sm:grid-cols-2"
       onViewportEnter={startCount}
       viewport={{ once: true, amount: 0.4 }}
     >
-      <svg viewBox="-40 -40 280 280" className="mx-auto w-full max-w-xs" aria-hidden="true">
-        {GRID.map((tile, index) => (
-          <m.rect
-            key={index}
-            className="tf-box"
-            initial={{
-              x: SCATTER[index]?.dx ?? 0,
-              y: SCATTER[index]?.dy ?? 0,
-              rotate: SCATTER[index]?.r ?? 0,
-              opacity: 0.25,
-            }}
-            whileInView={{ x: 0, y: 0, rotate: 0, opacity: tile.o }}
-            viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 0.9, delay: 0.08 * index, ease: thermalEase }}
-            width={54}
-            height={54}
-            rx={12}
-            fill="var(--foreground)"
-            transform={`translate(${tile.x}, ${tile.y})`}
-          />
-        ))}
-        {/* the empty seat, then the gilded arrival */}
+      <svg viewBox="0 0 320 262" className="mx-auto w-full max-w-sm" aria-hidden="true">
+        {GRID.map((tile, index) => {
+          const rest = seat(tile.col, tile.row);
+          const from = SCATTER[index] ?? { x: 20, y: 20, r: 0 };
+          if (reduced) {
+            return (
+              <rect
+                key={index}
+                x={rest.x}
+                y={rest.y}
+                opacity={tile.o}
+                width={CELL}
+                height={CELL}
+                rx={11}
+                fill="var(--foreground)"
+              />
+            );
+          }
+          /*
+           * Geometry attrs carry the seat; framer's x/y are CSS-translate DELTAS on
+           * top (framer overrides the transform attribute on SVG — never combine them).
+           */
+          return (
+            <m.rect
+              key={index}
+              className="tf-box"
+              x={rest.x}
+              y={rest.y}
+              initial={{ x: from.x - rest.x, y: from.y - rest.y, rotate: from.r, opacity: 0.4 }}
+              animate={{ x: 0, y: 0, rotate: 0, opacity: tile.o }}
+              transition={breathe(index)}
+              width={CELL}
+              height={CELL}
+              rx={11}
+              fill="var(--foreground)"
+            />
+          );
+        })}
+
+        {/* the empty seat, and the gilded tile that keeps arriving */}
         <rect
-          x={135}
-          y={3}
-          width={48}
-          height={48}
-          rx={10}
+          x={gildedSeat.x + 3}
+          y={gildedSeat.y + 3}
+          width={CELL - 6}
+          height={CELL - 6}
+          rx={9}
           fill="none"
           stroke="var(--foreground)"
           strokeOpacity={0.3}
           strokeWidth={1.5}
         />
-        <m.rect
-          className="tf-box"
-          initial={{ x: 46, y: -46, opacity: 0 }}
-          whileInView={{ x: 0, y: 0, opacity: 1 }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 0.8, delay: 0.85, ease: thermalEase }}
-          width={54}
-          height={54}
-          rx={12}
-          fill="var(--gold)"
-          transform="translate(132, 0)"
-        />
+        {reduced ? (
+          <rect
+            x={gildedSeat.x}
+            y={gildedSeat.y}
+            width={CELL}
+            height={CELL}
+            rx={11}
+            fill="var(--gold)"
+          />
+        ) : (
+          <m.rect
+            className="tf-box"
+            x={gildedSeat.x}
+            y={gildedSeat.y}
+            initial={{ x: 40, y: -44, opacity: 0 }}
+            animate={{ x: 0, y: 0, opacity: 1 }}
+            transition={breathe(8)}
+            width={CELL}
+            height={CELL}
+            rx={11}
+            fill="var(--gold)"
+          />
+        )}
       </svg>
 
       <div aria-hidden="true">
-        <p className="font-serif text-title text-foreground tabular-nums">
+        <p className="text-title text-foreground font-serif tabular-nums">
           {count.toLocaleString('en-US')}
         </p>
-        <p className="text-label text-faint-foreground mt-1 font-mono">
+        <p className="text-label text-faint-foreground mt-1">
           of {BUDGET.toLocaleString('en-US')} tokens · every fragment cited
         </p>
         <div className="bg-secondary mt-5 h-1 w-full max-w-56 overflow-hidden rounded-full">
@@ -132,15 +185,15 @@ export function CompilerAssembly() {
         </div>
         <dl className="mt-6 grid max-w-64 grid-cols-3 gap-3">
           <div>
-            <dt className="text-label text-faint-foreground font-mono">found</dt>
+            <dt className="text-label text-faint-foreground">found</dt>
             <dd className="text-body text-muted-foreground mt-0.5 tabular-nums">214</dd>
           </div>
           <div>
-            <dt className="text-label text-faint-foreground font-mono">ranked</dt>
+            <dt className="text-label text-faint-foreground">ranked</dt>
             <dd className="text-body text-muted-foreground mt-0.5 tabular-nums">47</dd>
           </div>
           <div>
-            <dt className="text-label text-faint-foreground font-mono">kept</dt>
+            <dt className="text-label text-foreground">kept</dt>
             <dd className="text-body text-foreground mt-0.5 tabular-nums">12</dd>
           </div>
         </dl>

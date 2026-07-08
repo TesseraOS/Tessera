@@ -1,10 +1,11 @@
 {
-  "$comment": "Machine-readable projection of docs/design/MARKETING-DESIGN.md v2 (Terra Mosaic — ADR-0043; BRAND.md carries the brand). The design-lint gate in apps/marketing COMPILES enforcement.bannedPatterns/requiredPatterns from this file — editing a pattern changes what the gate fails. Keep doc and manifest in lockstep.",
+  "$comment": "Machine-readable projection of docs/design/MARKETING-DESIGN.md v4 (Terra Mosaic — ADR-0043/0044/0045; BRAND.md carries the brand). The design-lint gate in apps/marketing COMPILES enforcement.bannedPatterns/requiredPatterns from this file — editing a pattern changes what the gate fails. Keep doc and manifest in lockstep.",
   "name": "tessera-marketing-design",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "status": "accepted",
   "source": "docs/design/MARKETING-DESIGN.md",
   "authority": [
+    "docs/adr/0045-marketing-v4-constellation-shader-hero-theme-true-chapters.md",
     "docs/adr/0044-marketing-v3-dual-themes-illustration-first-live-graph.md",
     "docs/adr/0043-terra-mosaic-brand-and-marketing-overhaul.md",
     "docs/adr/0042-marketing-site-design-direction.md",
@@ -12,17 +13,18 @@
   ],
   "brand": "docs/design/BRAND.md",
   "scope": ["apps/marketing"],
-  "updated": "2026-07-07",
+  "updated": "2026-07-08",
   "direction": {
-    "summary": "Terra Mosaic, alive — dual themes (Desert Rose dark / Modern Minimalist light), illustration-first (product truths as animated brand art, never UI chrome), a live interactive knowledge-graph hero on @xyflow/react, Instrument Serif voice over Manrope + JetBrains Mono, thermal motion, honest and accessible on both themes.",
+    "summary": "Terra Mosaic, alive in depth — dual themes (Desert Rose dark / Modern Minimalist light), illustration-first (product truths as animated brand art, never UI chrome), a serif statement over a WebGL shader field, a Canvas-2D constellation band (deep nested knowledge graph, heavy randomized packet traffic, click-to-toggle nodes, pseudo-3D drawn not simulated), theme-true chapter bands (dark stays dark), Instrument Serif voice over Manrope + JetBrains Mono, thermal motion, honest and accessible on both themes.",
     "themeLineage": ["theme-factory: Desert Rose (dark)", "theme-factory: Modern Minimalist (light)"],
-    "explicitlyNot": ["indigo/neon AI gradients", "glassmorphism", "particle storms", "3D blobs", "carousels", "fabricated social proof", "hype vocabulary", "cold pure-black monochrome", "terminal/code-block/file-tree/dashboard-chrome mockups as marketing visuals"]
+    "explicitlyNot": ["indigo/neon AI gradients", "glassmorphism", "particle storms", "3D blobs", "3D engine dependencies (three/@react-three)", "carousels", "fabricated social proof", "hype vocabulary", "cold pure-black monochrome", "terminal/code-block/file-tree/dashboard-chrome mockups as marketing visuals", "light chapter bands inside the dark theme"]
   },
   "theme": {
     "mode": "dual themes, one token architecture (next-themes, class attribute)",
-    "themes": { "dark": ":root — Desert Rose dusk (default)", "light": ".light — Modern Minimalist noon" },
-    "bands": "[data-band='sand'] chapter re-tokenizes per theme",
-    "toggle": "footer (ThemeToggle, aria-pressed states); dark: variants remain banned — tokens only"
+    "themes": { "dark": ":root — Desert Rose dusk", "light": ".light — Modern Minimalist noon" },
+    "initial": "system preference (v4.1, ADR-0045): dark → dusk, light → noon; unresolvable → classless :root = dusk by construction",
+    "bands": "[data-band='chapter'] re-tokenizes per theme: dark = elevated warm-dark interlude (never a light ground), light = soft slate band",
+    "toggle": "footer (ThemeToggle, aria-pressed on resolvedTheme); switching ripples out radially from the control via startViewTransition (instant under reduced motion / without the API); dark: variants remain banned — tokens only"
   },
   "tokens": {
     "rule": "Components reference semantic CSS variables only; every pairing below is pre-verified AA — do not invent new pairs.",
@@ -49,29 +51,49 @@
       "ring": "#E2A3A8",
       "code": "#120D10"
     },
-    "sand": {
-      "background": "#F1E8DF",
-      "surface": "#EADFD3",
-      "card": "#FAF4EE",
-      "foreground": "#2B1E25",
-      "muted-foreground": "#63525A",
-      "faint-foreground": "#7E6B73",
-      "primary": "#2B1E25",
-      "primary-foreground": "#F4EDE7",
-      "secondary": "#E3D6C9",
-      "secondary-foreground": "#2B1E25",
+    "chapterDark": {
+      "$comment": "The dark theme's elevated warm-dark interlude (ADR-0045) — replaces the retired light-sand chapter in dark mode.",
+      "background": "#1D1418",
+      "surface": "#241A1F",
+      "card": "#2B1F26",
+      "foreground": "#F4EDE7",
+      "muted-foreground": "#B7A8A8",
+      "faint-foreground": "#9A8A94",
+      "primary": "#F4EDE7",
+      "primary-foreground": "#261720",
+      "secondary": "#332430",
+      "secondary-foreground": "#F4EDE7",
+      "rose": "#E2A3A8",
+      "rose-foreground": "#2B1218",
+      "gold": "#E4B65A",
+      "border": "rgba(244,237,231,0.10)",
+      "border-strong": "rgba(244,237,231,0.20)",
+      "ring": "#E2A3A8"
+    },
+    "chapterLight": {
+      "$comment": "The light theme's soft slate chapter (unchanged from v3's .light sand band).",
+      "background": "#F2F4F6",
+      "surface": "#E9ECEF",
+      "card": "#FFFFFF",
+      "foreground": "#2A353F",
+      "muted-foreground": "#55636F",
+      "faint-foreground": "#61707C",
       "rose": "#9E4A56",
-      "rose-foreground": "#FBF3EE",
-      "gold": "#7A5A1E",
-      "border": "rgba(43,30,37,0.14)",
-      "border-strong": "rgba(43,30,37,0.26)",
+      "gold": "#8A6A24",
+      "border": "rgba(42,53,63,0.12)",
+      "border-strong": "rgba(42,53,63,0.22)",
       "ring": "#9E4A56"
     },
     "sanctionedDecoration": {
-      "gradients": ["--gradient-ember (linear 120deg rose→gold)", "--gradient-dusk (radial atmosphere <=18% alpha)", ".text-ember (display-only gradient text; counts as the band's gold moment)"],
-      "shadows": ["--shadow-soft", "--shadow-lift — sand-band cards only; dusk stays flat + hairlines"],
+      "gradients": ["--gradient-ember (linear 120deg rose→gold)", "--gradient-dusk (radial atmosphere <=18% alpha; also the shader field's fallback)", ".text-ember (display-only gradient text; counts as the band's gold moment)"],
+      "blur": "the nav dusk-glass — the ONLY blur device (v4.1: the hero veil is a scrim-only gradient so the shader stays visible)",
+      "heroVeil": ".hero-veil — quiet theme-aware scrim over the hero text region, fading rightward and downward so hero → constellation reads as one seamless space (no blur)",
+      "graphWash": ".graph-wash — translucent gradient ground under the constellation, open at the top (the shader breathes through; no hard band boundary)",
+      "tileHover": ".tile-hover — mosaic tiles warm under the pointer (fill-opacity transition only)",
+      "shaderField": "components/art/shader-field.tsx — one WebGL fragment shader (domain-warped brand flow + <=12 ember sparks), theme re-resolved from tokens in the render loop, ssr:false, downscaled DPR, paint-every-visible-frame loop (alpha:true so failure degrades to .atmosphere), frozen time under reduced motion",
+      "shadows": ["--shadow-soft", "--shadow-lift — light-ground cards only (light base + light chapter); dark grounds stay flat + hairlines"],
       "texture": ".grain — SVG turbulence overlay ~2.8% opacity, dark grounds only",
-      "rule": "All defined ONCE in app/globals.css; components consume classes/tokens, never re-declare."
+      "rule": "All defined ONCE in app/globals.css (or the named art component); components consume classes/tokens, never re-declare."
     },
     "accentBudget": {
       "rosePerViewport": 3,
@@ -86,16 +108,16 @@
     "families": {
       "serif": "Instrument Serif (400 + italic; NEVER bold — emphasis is italic/scale)",
       "sans": "Manrope (variable — the distinctive working face)",
-      "mono": "JetBrains Mono"
+      "mono": "RETIRED (v4.1, ADR-0045) — no mono face loads; labels are tracked Manrope"
     },
     "closedScale": {
-      "display": { "face": "serif", "size": "clamp(3.25rem, 6vw + 1.5rem, 6.75rem)", "lineHeight": 1.02, "tracking": "-0.01em", "weight": 400, "role": "hero h1 only" },
+      "display": { "face": "serif", "size": "clamp(2.625rem, 1.25rem + 6.5vw, 5.75rem)", "lineHeight": 1.02, "tracking": "-0.01em", "weight": 400, "role": "hero h1 only — tuned so the two-line statement holds 375→1440 (ADR-0045)" },
       "title": { "face": "serif", "size": "clamp(2.375rem, 3vw + 1.25rem, 3.875rem)", "lineHeight": 1.08, "tracking": "-0.005em", "weight": 400, "role": "section h2" },
       "heading": { "face": "sans", "size": "1.5rem", "lineHeight": 1.3, "tracking": "-0.01em", "weight": 500, "role": "h3" },
       "lead": { "face": "sans", "size": "1.25rem", "lineHeight": 1.55, "tracking": "0", "weight": 400, "role": "subheads/intros" },
       "body": { "face": "sans", "size": "1.0625rem", "lineHeight": 1.65, "tracking": "0", "weight": 400, "role": "prose" },
       "small": { "face": "sans", "size": "0.9375rem", "lineHeight": 1.5, "tracking": "0", "weight": 400, "role": "secondary UI" },
-      "label": { "face": "mono", "size": "0.8125rem", "lineHeight": 1.4, "tracking": "0.08em", "weight": 500, "role": "eyebrow, wordmarks, annotations" }
+      "label": { "face": "sans", "size": "0.8125rem", "lineHeight": 1.4, "tracking": "0.08em", "weight": 500, "role": "eyebrow, wordmarks, annotations (tracked Manrope — the mono voice is retired, v4.1)" }
     },
     "rules": ["h1/h2 serif via base layer", "italic (often rose) is the only display emphasis", "balance headings / pretty prose", "lead <=56ch, body 60-72ch", "headlines <=8 words", "sentence case"]
   },
@@ -106,18 +128,20 @@
     "spacingSteps": [1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 32, 36, 44],
     "grid": "grid-cols-12 asymmetric rows (5/7); 2/3/4-col simple grids; flex 1-D only"
   },
-  "sections": ["nav (transparent at top; full-screen mobile menu)", "hero (full-bleed live knowledge graph)", "marquee-strip", "problem-band", "steps (+ pipeline illustration)", "feature-row (brand-language art only)", "sand-band", "pricing-table", "faq", "cta-band", "footer (+ theme toggle)"],
+  "sections": ["nav (transparent at top; single Start free CTA; full-screen mobile menu with mosaic ground)", "hero (serif statement over the shader field; two-line h1; scrim-only veil; no graph)", "constellation-band (deep nested canvas knowledge graph over the .graph-wash — no legends, telemetry right-aligned; seamless with the hero: one ground, one shader)", "marquee-strip (agent brand marks + names, currentColor)", "problem-band (chapter)", "steps (+ pipeline illustration, HTML chip labels)", "feature-row (brand-language art only, HTML captions)", "pricing-table", "faq", "cta-band (drifting pointer-lit mosaic; Self-host secondary CTA)", "footer (+ theme toggle)"],
   "bannedArchetypes": ["terminal windows", "code-block panels", "file trees", "fake dashboards", "browser-chrome screenshots"],
-  "components": ["Container", "Button(primary|secondary|ghost; sm|md|lg; hover lift+sheen)", "TextLink(draw-in underline)", "Badge", "Panel", "SectionHeading", "Wordmark", "Logo/LogoIcon(v2 mark)", "MosaicField(seeded ambient tessellation)", "LiveGraph(hero; @xyflow/react)", "EffectWeb(mini React Flow)", "PipelineFlow", "CompilerAssembly", "GovernanceGate", "ProblemBand illustrations", "ThemeToggle(footer)", "Reveal(in-view rise)", "Marquee(hover-paused)", "lib/motion.tsx (the ONLY framer-motion import)", "lib/theme.tsx (the ONLY next-themes import)"],
+  "components": ["Container", "Button(primary|secondary|ghost; sm|md|lg; hover lift+sheen)", "TextLink(draw-in underline)", "Badge", "Panel", "SectionHeading", "Wordmark", "Logo/LogoIcon(v2 mark)", "MosaicField(seeded ambient tessellation; .tile-hover pointer-lit)", "ShaderField(WebGL fragment shader; hero+band ground)", "Constellation(Canvas-2D knowledge-graph engine; fixed 3/4 camera)", "ConstellationBand(lazy boundary + graph-wash + right-aligned telemetry + sr-only alternative)", "AgentMarks(simple-icons paths, CC0; wordmark fallback)", "EffectWeb(pure SVG edges + HTML chips)", "PipelineFlow(HTML chips + connector SVGs)", "CompilerAssembly", "GovernanceGate", "ProblemBand illustrations", "ThemeToggle(footer; view-transition ripple)", "Reveal(in-view rise)", "Marquee(hover-paused)", "lib/motion.tsx (the ONLY framer-motion import)", "lib/theme.tsx (the ONLY next-themes import; system-initial + useThemeTransition)"],
   "motion": {
     "system": "thermal — settle, drift, glow once; stillness is the default state",
     "library": "framer-motion via LazyMotion(domAnimation) + m, imported ONLY by lib/motion.tsx; MotionConfig reducedMotion='user'",
     "micro": "150-250ms ease-out (underline draw, button lift 1-2px + one sheen sweep, icon nudge)",
     "reveal": "opacity + 16-24px rise, 500-700ms, stagger 60-90ms, once, ~20% in view",
-    "livingPanels": "in-view once: budget fills (~800ms), SVG edges draw (dashoffset), rows cascade",
+    "livingPanels": "budget fills once in view (~800ms); illustration scenes may LOOP gently (v4.1): assembly breathes (assemble-hold-disperse ping-pong), the gate cycles on one shared clock — always eased, never jumping",
     "ambient": "<=1 system per viewport: tile drift <=8px over 9-14s alternate loops; marquee ~40s linear with hover/focus pause",
     "signature": "the gilded tile arrives once per page load (<=1.2s) then stillness",
-    "liveGraph": "hero canvas: edges animated (marching dash), one rose pulse rotates ~1.6s, telemetry ticks 1.2-2s labeled 'demo'; zoomOnScroll:false, preventScrolling:false (page scroll wins), nodesFocusable:false + keyboard a11y disabled, aria-hidden + text alternative; reduced motion = static layout, frozen values",
+    "shaderField": "slow domain-warped flow (~0.02 uv/s) + <=12 procedural ember sparks; downscaled DPR; paints every visible frame (skips offscreen/hidden); reduced motion = frozen time",
+    "constellation": "fixed three-quarter camera (constant pitch, x/z ground plane + height jitter — NO pointer tilt, v4.1); randomized branching + agent-session sub-nodes per visit; Poisson packet spawns, 20-40 concurrently alive, eased multi-hop travel; arrivals swell the node glow smoothly (never a ring flash); hover subtree highlight + clamped tooltip 150ms; click toggles node off (dims to outline, traffic reroutes/fizzles); page scroll always wins (no wheel/touch capture); keyboard-inert + aria-hidden + sr-only alternative (which discloses the simulated numbers); telemetry right-aligned, no visual legends; reduced motion = frozen layout, zero packets",
+    "themePropagation": "theme switch = radial view transition from the toggle (clip-path circle, 550ms house ease); skipped without the API or under reduced motion",
     "banned": ["animating h1/LCP from invisible", "scroll-jacking/parallax", "transition-all", "layout-property animation", "bounce/spin/flash", "typing effects"],
     "reducedMotion": "complete, still, final layout — global CSS kill-switch + MotionConfig"
   },
@@ -209,12 +233,20 @@
         "reason": "Shadow values are defined once as tokens in globals (§2.3)."
       },
       {
-        "id": "blur-outside-nav",
-        "pattern": "backdrop-blur|\\bblur-",
+        "id": "blur-outside-sanctioned",
+        "pattern": "backdrop-blur|\\bblur-|backdrop-filter",
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts", "**/*.css"],
         "allowIn": ["components/site-nav.tsx"],
-        "reason": "Blur is the sticky nav's device only (§3.1); glassmorphism stays banned."
+        "reason": "One blur device: the nav dusk-glass. The hero veil is a scrim-only gradient (v4.1 — the shader must stay visible); glassmorphism stays banned."
+      },
+      {
+        "id": "no-3d-engine",
+        "pattern": "from\\s+['\"](?:three|@react-three)",
+        "flags": "",
+        "files": ["**/*.tsx", "**/*.ts"],
+        "allowIn": [],
+        "reason": "Pseudo-3D is drawn (projection/fog/parallax on Canvas-2D), never simulated — no 3D engine dependencies (§0, ADR-0045)."
       },
       {
         "id": "infinite-animation-utilities",
@@ -273,12 +305,12 @@
         "reason": "framer-motion enters only through the lib/motion.tsx seam (LazyMotion + MotionConfig reducedMotion, ADR-0043) so reduced-motion and bundle discipline hold everywhere."
       },
       {
-        "id": "react-flow-outside-art",
+        "id": "no-react-flow",
         "pattern": "from\\s+['\"]@xyflow/",
         "flags": "",
         "files": ["app/**/*.tsx", "app/**/*.ts", "components/**/*.tsx", "lib/**/*.tsx", "lib/**/*.ts"],
-        "allowIn": ["components/art/live-graph.tsx", "components/art/effect-web.tsx"],
-        "reason": "The graph engine is confined to the art components (ADR-0044) — canvases stay decorative-interactive, lazy-loaded, and consistently configured."
+        "allowIn": [],
+        "reason": "React Flow is fully retired (ADR-0045 v4.1) — the constellation and effect web are hand-drawn (Canvas-2D / SVG+HTML); the dependency is gone from package.json."
       },
       {
         "id": "next-themes-outside-seam",
@@ -371,10 +403,16 @@
         "reason": "The sanctioned gradient set must exist as tokens (§2.3)."
       },
       {
-        "id": "sand-band-scope-defined",
+        "id": "chapter-band-scope-defined",
         "files": ["app/globals.css"],
-        "pattern": "\\[data-band='sand'\\]",
-        "reason": "The two-ground system is implemented as band-scoped custom properties (§2.2)."
+        "pattern": "\\[data-band='chapter'\\]",
+        "reason": "The theme-true chapter band is implemented as band-scoped custom properties (§2.2, ADR-0045)."
+      },
+      {
+        "id": "hero-veil-defined",
+        "files": ["app/globals.css"],
+        "pattern": "\\.hero-veil",
+        "reason": "The hero legibility veil must exist as the single sanctioned definition (§2.3, ADR-0045)."
       },
       {
         "id": "reduced-motion-kill-switch",
@@ -397,8 +435,8 @@
       {
         "id": "brand-fonts-loaded",
         "files": ["app/layout.tsx"],
-        "pattern": "Manrope[\\s\\S]*JetBrains_Mono|JetBrains_Mono[\\s\\S]*Manrope",
-        "reason": "The v3 text faces (Manrope + JetBrains Mono) must be the loaded fonts (§2.4, ADR-0044)."
+        "pattern": "Manrope[\\s\\S]*Instrument_Serif|Instrument_Serif[\\s\\S]*Manrope",
+        "reason": "The v4.1 faces (Manrope + Instrument Serif) must be the loaded fonts — the mono voice is retired site-wide (§2.4, ADR-0045)."
       },
       {
         "id": "motion-seam-exists",

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { CtaBand } from '@/components/home/cta-band';
 import { DeployBand } from '@/components/home/deploy-band';
 import { Differentiators } from '@/components/home/differentiators';
-import { Hero } from '@/components/home/hero';
+import { HeroStage } from '@/components/home/hero-stage';
 import { HowItWorks } from '@/components/home/how-it-works';
 import { ProblemBand } from '@/components/home/problem-band';
 import { ProofStrip } from '@/components/home/proof-strip';
@@ -21,7 +21,7 @@ export default function HomePage() {
     <>
       <SiteNav />
       <main>
-        <Hero />
+        <HeroStage />
         <ProofStrip />
         <ProblemBand />
         <HowItWorks />

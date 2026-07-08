@@ -6,25 +6,52 @@
   "links": [
     {
       "id": "E-001",
-      "from": { "kind": "contract", "ref": "@tessera/storage:ports (RelationalStore|VectorStore|BlobStore|Queue)" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/storage:ports (RelationalStore|VectorStore|BlobStore|Queue)"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/storage:adapters/* (sqlite, sqlite-vec, filesystem, in-proc; postgres + pgvector REALIZED F-023/ADR-0026; later s3, bullmq)" },
-        { "kind": "test", "ref": "@tessera/storage:conformance-suite" },
-        { "kind": "decision", "ref": "docs/adr/0003-local-first-cloud-ready-ports-and-adapters.md" }
+        {
+          "kind": "module",
+          "ref": "@tessera/storage:adapters/* (sqlite, sqlite-vec, filesystem, in-proc; postgres + pgvector REALIZED F-023/ADR-0026; later s3, bullmq)"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/storage:conformance-suite"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0003-local-first-cloud-ready-ports-and-adapters.md"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "A storage port is implemented by every adapter and validated by one shared conformance suite; changing the interface breaks all adapters and the suite, and a semantic change needs an ADR. F-037 (ADR-0033) added VectorStore.forTenant (per-tenant row isolation): sqlite-vec uses a per-tenant vec0 table, pgvector a tenant column + composite PK; both satisfy the shared vector conformance's isolation case (pgvector verified live).",
-      "confidence": 1.0,
+      "confidence": 1,
       "origin": "manual"
     },
     {
       "id": "E-002",
-      "from": { "kind": "contract", "ref": "@tessera/knowledge-graph:effect-link & node/edge model" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/knowledge-graph:effect-link & node/edge model"
+      },
       "to": [
-        { "kind": "symbol", "ref": "@tessera/knowledge-graph:get_effects" },
-        { "kind": "module", "ref": "@tessera/retrieval:graph-retriever" },
-        { "kind": "module", "ref": "@tessera/web graph & effects views — REALIZED F-043: /graph (GraphView) is an explorable React Flow view of GET /v1/graph with a mode toggle (Explore | Effects), node-kind filters, search-to-focus, and a side panel; Effects mode highlights get_effects paths (FR-19) + lists ranked dependents (distance/score/path). A pure toFlow() maps domain nodes/edges → Flow (kind-clustered grid, effect-link styling, path highlight; 5k-node LOD budget). React Flow is lazy/ssr:false/code-split; the side panel is the keyboard-accessible alternative. Consumes /v1/graph + /v1/effects via lib/api (E-003)" },
-        { "kind": "schema", "ref": ".harness/state/schemas/effects.schema.json" }
+        {
+          "kind": "symbol",
+          "ref": "@tessera/knowledge-graph:get_effects"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/retrieval:graph-retriever"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web graph & effects views — REALIZED F-043: /graph (GraphView) is an explorable React Flow view of GET /v1/graph with a mode toggle (Explore | Effects), node-kind filters, search-to-focus, and a side panel; Effects mode highlights get_effects paths (FR-19) + lists ranked dependents (distance/score/path). A pure toFlow() maps domain nodes/edges → Flow (kind-clustered grid, effect-link styling, path highlight; 5k-node LOD budget). React Flow is lazy/ssr:false/code-split; the side panel is the keyboard-accessible alternative. Consumes /v1/graph + /v1/effects via lib/api (E-003)"
+        },
+        {
+          "kind": "schema",
+          "ref": ".harness/state/schemas/effects.schema.json"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "The KG/effect-link model feeds graph retrieval, get_effects, and the dashboard; the harness effects schema mirrors the product model, so changing one should be reflected in the others. F-043 realized the web graph & effects views (React Flow) over a new read-only GET /v1/graph query surface (E-011) — so changing the node/edge/effect model or the graph query ripples to the visualization.",
@@ -33,37 +60,100 @@
     },
     {
       "id": "E-003",
-      "from": { "kind": "contract", "ref": "REST /v1 + MCP tool contracts (@tessera/api, @tessera/mcp)" },
+      "from": {
+        "kind": "contract",
+        "ref": "REST /v1 + MCP tool contracts (@tessera/api, @tessera/mcp)"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/api route Zod schemas (apps/api/src/schemas/*) — the single source for validation + serialization + OpenAPI" },
-        { "kind": "artifact", "ref": "generated OpenAPI document (GET /v1/openapi.json via @fastify/swagger)" },
-        { "kind": "module", "ref": "@tessera/mcp tools (apps/mcp/src/server.ts: search/compile_context/get_effects/capture_memory/explain) — wrap the SAME domain services as REST via a type-only ApiServices import (F-012, one engine/two surfaces); now optionally gated by an injected McpGateway (F-026) that authenticates + authorizes (RBAC) + meters quotas per call before the service runs (ADDITIVE — default off, tool input/output unchanged)" },
-        { "kind": "module", "ref": "the shared error envelope now includes RATE_LIMITED (F-026, @tessera/core) — the REST statusForCode/codeForStatus map it to 429 and errorCodeSchema lists it; MCP's toEnvelope surfaces it as a 4xx-safe code" },
-        { "kind": "package", "ref": "@tessera/sdk (generated TS client, F-022 REALIZED, ADR-0025): types GENERATED from GET /v1/openapi.json via openapi-typescript (committed src/generated/schema.ts + a reproducible generate script) + a thin openapi-fetch client (createTesseraClient) mapping the {error} envelope to TesseraApiError. A route/schema change ⇒ regenerate the SDK types (tsc catches drift). Supersedes apps/web/lib/api once the web app adopts it (ADR-0022, deferred)" },
-        { "kind": "module", "ref": "@tessera/web dashboard (F-014, realized): search + Context Package Inspector consume POST /v1/search & /v1/compile via the interim typed client apps/web/lib/api (ADR-0022)" },
-        { "kind": "module", "ref": "@tessera/api GET /v1/events SSE stream (F-021, FR-38) over an injected ApiEventBus (buildServer option, default in-process) — ADDITIVE, REST-only (MCP unaffected); the memory-capture route emits memory.captured; document.ingested/removed types are provided, the ingestion-worker producer is wired via the composition root later. OpenAPI regenerates to include /v1/events" },
-        { "kind": "module", "ref": "@tessera/api /v1 auth guard (F-025): registerAuth (onRequest → request.authContext via the injected AuthProvider) + requirePermission per-route preHandlers add 401/403 paths to the existing routes — ADDITIVE (response schemas + OpenAPI unchanged; auth defaults to the zero-auth Local provider so existing routes/e2e are untouched). The full auth/tenancy/RBAC contract is E-018" },
-        { "kind": "module", "ref": "@tessera/api /v1/billing routes (F-030): plans (public) / subscription + checkout (admin:manage) / webhook (public, signature-verified via a raw-body scope) over the @tessera/billing BillingProvider — ADDITIVE; new billing schemas → the OpenAPI doc + generated @tessera/sdk were regenerated. See E-019" },
-        { "kind": "decision", "ref": "docs/adr/0016-rest-api-fastify-zod-bridge.md" },
-        { "kind": "decision", "ref": "docs/adr/0017-mcp-server-surface.md" }
+        {
+          "kind": "module",
+          "ref": "@tessera/api route Zod schemas (apps/api/src/schemas/*) — the single source for validation + serialization + OpenAPI"
+        },
+        {
+          "kind": "artifact",
+          "ref": "generated OpenAPI document (GET /v1/openapi.json via @fastify/swagger)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/mcp tools (apps/mcp/src/server.ts: search/compile_context/get_effects/capture_memory/explain) — wrap the SAME domain services as REST via a type-only ApiServices import (F-012, one engine/two surfaces); now optionally gated by an injected McpGateway (F-026) that authenticates + authorizes (RBAC) + meters quotas per call before the service runs (ADDITIVE — default off, tool input/output unchanged)"
+        },
+        {
+          "kind": "module",
+          "ref": "the shared error envelope now includes RATE_LIMITED (F-026, @tessera/core) — the REST statusForCode/codeForStatus map it to 429 and errorCodeSchema lists it; MCP's toEnvelope surfaces it as a 4xx-safe code"
+        },
+        {
+          "kind": "package",
+          "ref": "@tessera/sdk (generated TS client, F-022 REALIZED, ADR-0025): types GENERATED from GET /v1/openapi.json via openapi-typescript (committed src/generated/schema.ts + a reproducible generate script) + a thin openapi-fetch client (createTesseraClient) mapping the {error} envelope to TesseraApiError. A route/schema change ⇒ regenerate the SDK types (tsc catches drift). Supersedes apps/web/lib/api once the web app adopts it (ADR-0022, deferred)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web dashboard (F-014, realized): search + Context Package Inspector consume POST /v1/search & /v1/compile via the interim typed client apps/web/lib/api (ADR-0022)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api GET /v1/events SSE stream (F-021, FR-38) over an injected ApiEventBus (buildServer option, default in-process) — ADDITIVE, REST-only (MCP unaffected); the memory-capture route emits memory.captured; document.ingested/removed types are provided, the ingestion-worker producer is wired via the composition root later. OpenAPI regenerates to include /v1/events"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api /v1 auth guard (F-025): registerAuth (onRequest → request.authContext via the injected AuthProvider) + requirePermission per-route preHandlers add 401/403 paths to the existing routes — ADDITIVE (response schemas + OpenAPI unchanged; auth defaults to the zero-auth Local provider so existing routes/e2e are untouched). The full auth/tenancy/RBAC contract is E-018"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api /v1/billing routes (F-030): plans (public) / subscription + checkout (admin:manage) / webhook (public, signature-verified via a raw-body scope) over the @tessera/billing BillingProvider — ADDITIVE; new billing schemas → the OpenAPI doc + generated @tessera/sdk were regenerated. See E-019"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0016-rest-api-fastify-zod-bridge.md"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0017-mcp-server-surface.md"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "BOTH surfaces now realized. REST (F-011): @tessera/api route Zod schemas (zod/v4, fastify-type-provider-zod) are the single source for validation + serialization + OpenAPI (GET /v1/openapi.json). MCP (F-012): @tessera/mcp tools wrap the SAME domain services (type-only ApiServices import, so no Fastify in the MCP runtime) with the same masked error-envelope policy. Changing a shared domain service, the error-envelope shape, or a route/tool contract must be reflected across REST + MCP + the regenerated OpenAPI + the SDK + the dashboard — additive/versioned (NFR-11). Both surfaces take injected services; deployment-profile wiring + the bootable processes are F-015.",
-      "confidence": 1.0,
+      "confidence": 1,
       "origin": "manual"
     },
     {
       "id": "E-004",
-      "from": { "kind": "contract", "ref": "docs/design/DESIGN-SYSTEM.md design tokens (semantic CSS variables / theme)" },
+      "from": {
+        "kind": "contract",
+        "ref": "docs/design/DESIGN-SYSTEM.md design tokens (semantic CSS variables / theme)"
+      },
       "to": [
-        { "kind": "file", "ref": "apps/web/app/globals.css — token definitions (:root + .dark) + @theme mapping + reduced-motion (F-028)" },
-        { "kind": "module", "ref": "@tessera/web components/ui/* + app shell (sidebar/topbar/command palette) — consume tokens only, never hardcode" },
-        { "kind": "module", "ref": "@tessera/web app/providers.tsx — next-themes light/dark/system + Framer MotionConfig" },
-        { "kind": "module", "ref": "@tessera/web charts (Recharts/Tremor using the --chart-* palette, F-014+)" },
-        { "kind": "module", "ref": "@tessera/web Sources & Settings views (F-041): /sources (SourcesView + RegisterSourceDialog) + /settings (SettingsView) consume tokens only (Card/Table/Badge/Select/Dialog/Skeleton, EmptyState/ErrorState) — WCAG AA (axe e2e clean; a /70 muted-foreground contrast miss was caught by axe and fixed to full muted-foreground)" },
-        { "kind": "module", "ref": "@tessera/web Memory & Timeline views (F-042): /memory (browser + detail Sheet + authoring dialog) + /timeline consume tokens only; NEW deps — a lazy/code-split Monaco editor (@monaco-editor/react + bundled monaco-editor, offline via loader.config; markdown; vs/vs-dark themed from next-themes) for authoring, and @tanstack/react-virtual for the virtualized memory list. Monaco is ssr:false + dynamic so it never enters the initial bundle; the memory-kind accents use the --chart-* palette" },
-        { "kind": "module", "ref": "@tessera/web Knowledge-graph view (F-043): /graph (GraphView + GraphCanvas + GraphSidePanel) consumes tokens only; NEW dep — @xyflow/react (React Flow), lazy/ssr:false/code-split so it + its CSS stay out of the initial bundle; a token-themed custom node (kind dot from --chart-*, colorMode from next-themes), reduced-motion-aware fitView" },
-        { "kind": "artifact", "ref": "docs/design/design-system.manifest.json — machine-readable token/component contract (human source is DESIGN-SYSTEM.md; ADR-0021)" }
+        {
+          "kind": "file",
+          "ref": "apps/web/app/globals.css — token definitions (:root + .dark) + @theme mapping + reduced-motion (F-028)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web components/ui/* + app shell (sidebar/topbar/command palette) — consume tokens only, never hardcode"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web app/providers.tsx — next-themes light/dark/system + Framer MotionConfig"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web charts (Recharts/Tremor using the --chart-* palette, F-014+)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web Sources & Settings views (F-041): /sources (SourcesView + RegisterSourceDialog) + /settings (SettingsView) consume tokens only (Card/Table/Badge/Select/Dialog/Skeleton, EmptyState/ErrorState) — WCAG AA (axe e2e clean; a /70 muted-foreground contrast miss was caught by axe and fixed to full muted-foreground)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web Memory & Timeline views (F-042): /memory (browser + detail Sheet + authoring dialog) + /timeline consume tokens only; NEW deps — a lazy/code-split Monaco editor (@monaco-editor/react + bundled monaco-editor, offline via loader.config; markdown; vs/vs-dark themed from next-themes) for authoring, and @tanstack/react-virtual for the virtualized memory list. Monaco is ssr:false + dynamic so it never enters the initial bundle; the memory-kind accents use the --chart-* palette"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web Knowledge-graph view (F-043): /graph (GraphView + GraphCanvas + GraphSidePanel) consumes tokens only; NEW dep — @xyflow/react (React Flow), lazy/ssr:false/code-split so it + its CSS stay out of the initial bundle; a token-themed custom node (kind dot from --chart-*, colorMode from next-themes), reduced-motion-aware fitView"
+        },
+        {
+          "kind": "artifact",
+          "ref": "docs/design/design-system.manifest.json — machine-readable token/component contract (human source is DESIGN-SYSTEM.md; ADR-0021)"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "Realized by F-028: components consume design tokens only (semantic CSS vars mapped via Tailwind v4 @theme), so changing a token or the theme contract affects every component, the app shell, the chart palette, and both light/dark themes — token changes must be reviewed across the UI. The manifest is the agent-facing projection of the same contract and must stay in sync.",
@@ -72,162 +162,357 @@
     },
     {
       "id": "E-005",
-      "from": { "kind": "file", "ref": ".harness/verification/gates.json" },
+      "from": {
+        "kind": "file",
+        "ref": ".harness/verification/gates.json"
+      },
       "to": [
-        { "kind": "file", "ref": ".github/workflows/ci.yml" },
-        { "kind": "file", "ref": ".harness/protocols/verification.md" }
+        {
+          "kind": "file",
+          "ref": ".github/workflows/ci.yml"
+        },
+        {
+          "kind": "file",
+          "ref": ".harness/protocols/verification.md"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "CI runs the verification gates; the workflow steps and the verification protocol table must mirror gates.json. Adding/removing/renaming a gate requires updating the CI workflow and the protocol.",
-      "confidence": 1.0,
+      "confidence": 1,
       "origin": "manual"
     },
     {
       "id": "E-006",
-      "from": { "kind": "package", "ref": "@tessera/core public API (packages/core/src/index.ts exports)" },
+      "from": {
+        "kind": "package",
+        "ref": "@tessera/core public API (packages/core/src/index.ts exports)"
+      },
       "to": [
-        { "kind": "package", "ref": "every @tessera/* package and app (all depend on @tessera/core)" }
+        {
+          "kind": "package",
+          "ref": "every @tessera/* package and app (all depend on @tessera/core)"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "@tessera/core is the dependency-free base every package imports; changing/removing an exported member (Id, errors, Result, config types, EventBus, TenantId) can break any consumer. Change additively and review dependents. Example: F-026 added the RATE_LIMITED ErrorCode + RateLimitedError additively — dependents reviewed and updated: the REST envelope (statusForCode→429, codeForStatus, errorCodeSchema) and the web ErrorCode mirror; MCP's toEnvelope passes it through. Example: F-037 added TenantId + DEFAULT_TENANT_ID (ADR-0033) so the domain stores scope rows by tenant without depending on @tessera/api; @tessera/api/auth/model re-exports them (its public TenantId API unchanged).",
-      "confidence": 1.0,
+      "confidence": 1,
       "origin": "manual"
     },
     {
       "id": "E-007",
-      "from": { "kind": "contract", "ref": "@tessera/storage ports (RelationalStore | BlobStore | Queue | VectorStore)" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/storage ports (RelationalStore | BlobStore | Queue | VectorStore)"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/storage adapters (sqlite-relational, filesystem-blob, in-process-queue, sqlite-vec; postgres-relational + pgvector REALIZED F-023, pg + drizzle node-postgres; later s3, bullmq)" },
-        { "kind": "test", "ref": "@tessera/storage tests/conformance suites (relational, blob, queue, vector) — the Postgres/pgvector adapters pass the SAME suites (env-guarded TESSERA_TEST_POSTGRES; verified against the docker-compose pgvector service)" },
-        { "kind": "module", "ref": "@tessera/storage migrations/runner (runMigrations + MigrationDb sqlite/postgres) + backup/backup (backupSqlite/restoreSqlite, backupDirectory/restoreDirectory) — ADDITIVE utilities over the stores (F-024/ADR-0027; no port change). Postgres physical backup = ops concern (deferred)" }
+        {
+          "kind": "module",
+          "ref": "@tessera/storage adapters (sqlite-relational, filesystem-blob, in-process-queue, sqlite-vec; postgres-relational + pgvector REALIZED F-023, pg + drizzle node-postgres; later s3, bullmq)"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/storage tests/conformance suites (relational, blob, queue, vector) — the Postgres/pgvector adapters pass the SAME suites (env-guarded TESSERA_TEST_POSTGRES; verified against the docker-compose pgvector service)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/storage migrations/runner (runMigrations + MigrationDb sqlite/postgres) + backup/backup (backupSqlite/restoreSqlite, backupDirectory/restoreDirectory) — ADDITIVE utilities over the stores (F-024/ADR-0027; no port change). Postgres physical backup = ops concern (deferred)"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "Each storage port is implemented by every adapter and validated by a shared conformance suite; changing a port interface breaks all adapters and their suites (concrete instance of E-001 for @tessera/storage). VectorStore gained forTenant (F-037/ADR-0033) — the isolation case is part of the shared vector conformance both sqlite-vec and pgvector pass.",
-      "confidence": 1.0,
+      "confidence": 1,
       "origin": "manual"
     },
     {
       "id": "E-008",
-      "from": { "kind": "contract", "ref": "@tessera/ai Embeddings port" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/ai Embeddings port"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/ai adapters (transformers, ollama, fake; later hosted providers)" },
-        { "kind": "test", "ref": "@tessera/ai tests/conformance (embeddings)" },
-        { "kind": "package", "ref": "consumers that embed/query: @tessera/ingestion (F-006), @tessera/retrieval (F-009)" }
+        {
+          "kind": "module",
+          "ref": "@tessera/ai adapters (transformers, ollama, fake; later hosted providers)"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/ai tests/conformance (embeddings)"
+        },
+        {
+          "kind": "package",
+          "ref": "consumers that embed/query: @tessera/ingestion (F-006), @tessera/retrieval (F-009)"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "Changing the Embeddings port affects every adapter, its conformance suite, and consumers; changing the embedding model/dimension also requires re-embedding stored vectors (ADR-0006).",
-      "confidence": 1.0,
+      "confidence": 1,
       "origin": "manual"
     },
     {
       "id": "E-009",
-      "from": { "kind": "contract", "ref": "@tessera/ingestion ports (Connector | Processor | DocumentSink | IngestionManifest)" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/ingestion ports (Connector | Processor | DocumentSink | IngestionManifest)"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/ingestion connectors (filesystem, git; later github, etc.) + processors (normalize, redact; later chunk/extract/embed)" },
-        { "kind": "test", "ref": "@tessera/ingestion tests/conformance (connector) + the pipeline integration test" },
-        { "kind": "module", "ref": "@tessera/ingestion pipeline (coordinator + worker) — enqueue/consume via the @tessera/storage Queue port" },
-        { "kind": "package", "ref": "downstream DocumentSink implementers: @tessera/memory (F-007), @tessera/knowledge-graph (F-008), @tessera/retrieval (F-009)" },
-        { "kind": "decision", "ref": "docs/adr/0015-ingestion-connector-contracts-and-git-cli.md" }
+        {
+          "kind": "module",
+          "ref": "@tessera/ingestion connectors (filesystem, git; later github, etc.) + processors (normalize, redact; later chunk/extract/embed)"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/ingestion tests/conformance (connector) + the pipeline integration test"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/ingestion pipeline (coordinator + worker) — enqueue/consume via the @tessera/storage Queue port"
+        },
+        {
+          "kind": "package",
+          "ref": "downstream DocumentSink implementers: @tessera/memory (F-007), @tessera/knowledge-graph (F-008), @tessera/retrieval (F-009)"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0015-ingestion-connector-contracts-and-git-cli.md"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "The ingestion contracts are the plugin SDK for sources/stages and the seam to persistence: changing Connector/Processor breaks the first-party connectors/processors + the conformance suite; changing DocumentSink/IngestionManifest breaks the worker and every downstream sink that persists documents. Redaction (FR-9) is an enforced terminal stage — never relax it.",
-      "confidence": 1.0,
+      "confidence": 1,
       "origin": "manual"
     },
     {
       "id": "E-010",
-      "from": { "kind": "contract", "ref": "@tessera/memory MemoryStore port + Memory version model" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/memory MemoryStore port + Memory version model"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/memory adapters (in-memory, sqlite via storage Drizzle handle)" },
-        { "kind": "test", "ref": "@tessera/memory tests/conformance (memory-store) + service unit tests" },
-        { "kind": "module", "ref": "@tessera/memory service (capture/edit/supersede) — validates with Zod (validation.ts)" },
-        { "kind": "package", "ref": "consumers exposing/using memory: @tessera/api (F-011), @tessera/mcp (F-012), @tessera/knowledge-graph (F-008), @tessera/retrieval (F-009)" },
-        { "kind": "module", "ref": "@tessera/ingestion memory-extraction-sink (F-017) — a NEW consumer of capture/edit/list via a structural MemoryCaptureService seam (no hard dep; see E-017)" },
-        { "kind": "module", "ref": "@tessera/web Memory UI (F-042, FR-45/FR-43/FR-13): /memory (MemoryView — kind/scope filters, VIRTUALIZED list via @tanstack/react-virtual; MemoryDetail Sheet renders the IMMUTABLE version history / supersede chain — current = head where supersededBy===null, FR-12) + MemoryAuthoringDialog (capture POST + edit PATCH-appends-a-version; body edited in a lazy/offline Monaco editor + a metadata form) + /timeline (buildTimeline merges memory lineages + audit + live SSE, FR-43). Consumes GET/POST/PATCH /v1/memory(/:id[/history]) via the interim lib/api client (ADR-0022; @tessera/sdk adoption is F-045). Advances E-003 (consumer) + E-004 (token views + Monaco/virtualization deps)" },
-        { "kind": "schema", "ref": "sqlite `memories` table DDL in the sqlite adapter (kept in lockstep with the Drizzle schema; migration tooling F-024)" }
+        {
+          "kind": "module",
+          "ref": "@tessera/memory adapters (in-memory, sqlite via storage Drizzle handle)"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/memory tests/conformance (memory-store) + service unit tests"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/memory service (capture/edit/supersede) — validates with Zod (validation.ts)"
+        },
+        {
+          "kind": "package",
+          "ref": "consumers exposing/using memory: @tessera/api (F-011), @tessera/mcp (F-012), @tessera/knowledge-graph (F-008), @tessera/retrieval (F-009)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/ingestion memory-extraction-sink (F-017) — a NEW consumer of capture/edit/list via a structural MemoryCaptureService seam (no hard dep; see E-017)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web Memory UI (F-042, FR-45/FR-43/FR-13): /memory (MemoryView — kind/scope filters, VIRTUALIZED list via @tanstack/react-virtual; MemoryDetail Sheet renders the IMMUTABLE version history / supersede chain — current = head where supersededBy===null, FR-12) + MemoryAuthoringDialog (capture POST + edit PATCH-appends-a-version; body edited in a lazy/offline Monaco editor + a metadata form) + /timeline (buildTimeline merges memory lineages + audit + live SSE, FR-43). Consumes GET/POST/PATCH /v1/memory(/:id[/history]) via the interim lib/api client (ADR-0022; @tessera/sdk adoption is F-045). Advances E-003 (consumer) + E-004 (token views + Monaco/virtualization deps)"
+        },
+        {
+          "kind": "schema",
+          "ref": "sqlite `memories` table DDL in the sqlite adapter (kept in lockstep with the Drizzle schema; migration tooling F-024)"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "MemoryStore is implemented by every adapter and validated by one conformance suite (E-001 instance); the Memory version model (immutable versions + supersede pointers, FR-12) is the contract the service and all consumers rely on. F-042 realizes the memory UI consumer — the version lineage (supersede chain) is rendered in the dashboard, so a change to the Memory version shape ripples to the web memory browser/detail/authoring + the timeline. Changing the port/model breaks adapters + suite + service; changing the sqlite DDL must track the Drizzle schema. The never-silently-mutated invariant must hold across adapters. F-037 (ADR-0033) added MemoryStore.forTenant + MemoryService.forTenant (a tenant_id column, additive migration, per-tenant filtering); the shared memory-store conformance gained a cross-tenant isolation case. Memory keeps no tenant field on the wire — tenancy is a storage concern.",
-      "confidence": 1.0,
+      "confidence": 1,
       "origin": "manual"
     },
     {
       "id": "E-011",
-      "from": { "kind": "contract", "ref": "@tessera/knowledge-graph GraphStore port + node/edge/effect-link model + get_effects" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/knowledge-graph GraphStore port + node/edge/effect-link model + get_effects"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/knowledge-graph adapters (in-memory BFS, sqlite recursive-CTE)" },
-        { "kind": "test", "ref": "@tessera/knowledge-graph tests/conformance (graph-store, incl. get_effects) + unit tests" },
-        { "kind": "module", "ref": "@tessera/knowledge-graph effects (static-derivation, ranking — shared by both adapters for parity) + service" },
-        { "kind": "package", "ref": "consumers: @tessera/retrieval graph-retriever (F-009), @tessera/api/mcp get_effects (F-011/F-012), @tessera/web graph/effects views (F-014)" },
-        { "kind": "module", "ref": "GraphStore.removeNode + removeEdges (F-040, additive on port + in-memory + sqlite + conformance + service) — the mutation primitives for incremental subgraph replacement; changing them affects both adapters + the conformance suite" },
-        { "kind": "module", "ref": "@tessera/ingestion graph-extraction sink (F-040, NEW WRITER): a tree-sitter (WASM) SymbolExtractor (@tessera/config, ADR-0041) → file/symbol nodes + imports/defines edges through a structural GraphWriteService (the real KnowledgeGraphService is assignable; no ingestion→knowledge-graph runtime dep). deriveStaticEffectLinks inverts imports → EFFECT_LINK so get_effects returns REAL dependents on the scanned repo. File keys are extensionless (so './b' matches file b.ts). Incremental via removeEdges (replace a changed file's outgoing edges + clear stale incoming effect-links) — E-021/E-009" },
-        { "kind": "module", "ref": "@tessera/api POST /v1/effects (assert a manual effect-link, effects:write, audited effects.write) + @tessera/mcp assert_effect tool (gateway TOOL_PERMISSIONS) → assertEffectLink; OpenAPI + regenerated @tessera/sdk (assertEffect). Advances E-003/E-018/E-020" },
-        { "kind": "module", "ref": "KnowledgeGraphService.queryGraph(filter?) → { nodes, edges } (F-043, additive — the store already had listNodes/listEdges): up to `limit` nodes (default 500 LOD cap), optionally kind-filtered, edges confined to the returned nodes (a coherent subgraph). Surfaced as GET /v1/graph (effects:read, tenant-scoped, audited) + the query_graph MCP tool (ADR-0036 parity) → OpenAPI + regenerated @tessera/sdk (queryGraph). Consumed by the @tessera/web graph explorer (E-002) via lib/api. Advances E-003" }
+        {
+          "kind": "module",
+          "ref": "@tessera/knowledge-graph adapters (in-memory BFS, sqlite recursive-CTE)"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/knowledge-graph tests/conformance (graph-store, incl. get_effects) + unit tests"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/knowledge-graph effects (static-derivation, ranking — shared by both adapters for parity) + service"
+        },
+        {
+          "kind": "package",
+          "ref": "consumers: @tessera/retrieval graph-retriever (F-009), @tessera/api/mcp get_effects (F-011/F-012), @tessera/web graph/effects views (F-014)"
+        },
+        {
+          "kind": "module",
+          "ref": "GraphStore.removeNode + removeEdges (F-040, additive on port + in-memory + sqlite + conformance + service) — the mutation primitives for incremental subgraph replacement; changing them affects both adapters + the conformance suite"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/ingestion graph-extraction sink (F-040, NEW WRITER): a tree-sitter (WASM) SymbolExtractor (@tessera/config, ADR-0041) → file/symbol nodes + imports/defines edges through a structural GraphWriteService (the real KnowledgeGraphService is assignable; no ingestion→knowledge-graph runtime dep). deriveStaticEffectLinks inverts imports → EFFECT_LINK so get_effects returns REAL dependents on the scanned repo. File keys are extensionless (so './b' matches file b.ts). Incremental via removeEdges (replace a changed file's outgoing edges + clear stale incoming effect-links) — E-021/E-009"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api POST /v1/effects (assert a manual effect-link, effects:write, audited effects.write) + @tessera/mcp assert_effect tool (gateway TOOL_PERMISSIONS) → assertEffectLink; OpenAPI + regenerated @tessera/sdk (assertEffect). Advances E-003/E-018/E-020"
+        },
+        {
+          "kind": "module",
+          "ref": "KnowledgeGraphService.queryGraph(filter?) → { nodes, edges } (F-043, additive — the store already had listNodes/listEdges): up to `limit` nodes (default 500 LOD cap), optionally kind-filtered, edges confined to the returned nodes (a coherent subgraph). Surfaced as GET /v1/graph (effects:read, tenant-scoped, audited) + the query_graph MCP tool (ADR-0036 parity) → OpenAPI + regenerated @tessera/sdk (queryGraph). Consumed by the @tessera/web graph explorer (E-002) via lib/api. Advances E-003"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "Concrete instance of E-002: GraphStore is implemented by every adapter and validated by one conformance suite; the shared ranking/static-derivation make the two adapters' get_effects identical (change one → re-verify both). The effect-link model mirrors the harness effects.schema (E-002). F-040 (ADR-0041) realizes node-population from code: a tree-sitter symbol extractor + a graph-extraction DocumentSink write file/symbol/import subgraphs on scan (incrementally, via the new removeNode/removeEdges primitives), and deriveStaticEffectLinks inverts imports → effect-links, so get_effects returns real dependents in production (no longer empty). A manual assertion surface (POST /v1/effects + assert_effect) lets agents add rationale-backed links (origin=manual). F-037 (ADR-0033) added GraphStore.forTenant + KnowledgeGraphService.forTenant: node ids are deterministic from (kind,key) so the PK is composite (tenant_id,id); the tenant predicate is applied in every query AND both arms of the getEffects recursive CTE; the shared graph-store conformance gained a cross-tenant isolation case (nodes/edges/effects never leak). Ingestion populates the default-tenant graph (ADR-0040 boundary).",
-      "confidence": 1.0,
+      "confidence": 1,
       "origin": "manual"
     },
     {
       "id": "E-012",
-      "from": { "kind": "contract", "ref": "@tessera/retrieval Retriever interface + Candidate model + fusion ranker (fuse)" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/retrieval Retriever interface + Candidate model + fusion ranker (fuse)"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/retrieval retrievers (semantic→VectorStore, keyword→FTS5, graph→GraphStore, symbolic→GraphStore, temporal→SQLite recency index F-018) + hybrid service" },
-        { "kind": "module", "ref": "consumers of RETRIEVER_KINDS (the single source of truth): apps/api retrieverKindSchema = z.enum(RETRIEVER_KINDS) (DERIVED → auto), @tessera/context-compiler RetrieverKind signal tag (opaque, no switch), @tessera/web SignalBadge — so adding a signal (temporal, F-018) is purely additive" },
-        { "kind": "test", "ref": "@tessera/retrieval tests/conformance (retriever, incl. temporal) + fusion unit tests" },
-        { "kind": "package", "ref": "consumers: @tessera/context-compiler retrieve stage (F-010), @tessera/api/mcp search (F-011/F-012)" },
-        { "kind": "package", "ref": "depends on: @tessera/storage VectorStore (E-007), @tessera/ai Embeddings (E-008), @tessera/knowledge-graph GraphStore (E-011)" }
+        {
+          "kind": "module",
+          "ref": "@tessera/retrieval retrievers (semantic→VectorStore, keyword→FTS5, graph→GraphStore, symbolic→GraphStore, temporal→SQLite recency index F-018) + hybrid service"
+        },
+        {
+          "kind": "module",
+          "ref": "consumers of RETRIEVER_KINDS (the single source of truth): apps/api retrieverKindSchema = z.enum(RETRIEVER_KINDS) (DERIVED → auto), @tessera/context-compiler RetrieverKind signal tag (opaque, no switch), @tessera/web SignalBadge — so adding a signal (temporal, F-018) is purely additive"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/retrieval tests/conformance (retriever, incl. temporal) + fusion unit tests"
+        },
+        {
+          "kind": "package",
+          "ref": "consumers: @tessera/context-compiler retrieve stage (F-010), @tessera/api/mcp search (F-011/F-012)"
+        },
+        {
+          "kind": "package",
+          "ref": "depends on: @tessera/storage VectorStore (E-007), @tessera/ai Embeddings (E-008), @tessera/knowledge-graph GraphStore (E-011)"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "The Retriever interface + Candidate shape + fusion contract are what the compiler's retrieve stage and the API/MCP search build on; changing them breaks every retriever, the conformance suite, and consumers. Adding the temporal retriever (FR-24, F-018) must fit this same interface. Meaningful fusion needs a consistent `ref` space across backends — established by ingestion/config, not retrieval. F-037 (ADR-0033) added Retriever.forTenant to the port + all five retrievers + HybridRetriever.forTenant: keyword (FTS5 tenant column) + temporal (composite PK) filter their owned indices; semantic/graph/symbolic delegate to the already-scoped vector/graph stores; the shared retriever conformance holds and keyword/temporal have adapter-level isolation tests. F-039: KeywordRetriever gained remove(ref) (additive) so document removal clears the FTS index; the @tessera/config createCorpusIndexer is now the production WRITER of the keyword/temporal indices (+ the VectorStore via embeddings) — ingested documents + captured memories become findable (E-021).",
-      "confidence": 1.0,
+      "confidence": 1,
       "origin": "manual"
     },
     {
       "id": "E-013",
-      "from": { "kind": "contract", "ref": "@tessera/context-compiler pipeline + ContextPackage/CompilationTrace + CompileRequest + FragmentSource port" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/context-compiler pipeline + ContextPackage/CompilationTrace + CompileRequest + FragmentSource port"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/context-compiler stages (plan/expand/rank/resolve/dedup/compress/assemble) + quality (CQS, naive baseline). compress now does citation-preserving extractive compression on overflow (FR-31, F-019): an over-budget fragment yields a query-relevant excerpt keeping its ref/provenance instead of being dropped — surfaced via the existing ContextFragment.whyIncluded + the compress trace note, so NO ContextPackage/API shape change" },
-        { "kind": "module", "ref": "@tessera/context-compiler pluggable strategies (CompressionStrategy/RankStrategy) + CompilationCache (in-memory LRU) + computeCompilationKey (F-020, FR-33/34) — injected compiler OPTIONS + a deterministic reproducibility key (normalized request + config fingerprint incl. strategy ids); defaults preserve behavior and the ContextPackage/REST/MCP shape is unchanged ('swap ranker/compressor without API change'). Key completeness: the fingerprint MUST include every output-affecting knob/strategy id or the cache returns stale packages" },
-        { "kind": "test", "ref": "@tessera/context-compiler stage unit tests + compiler/beats-naive integration tests" },
-        { "kind": "package", "ref": "consumers: @tessera/api + @tessera/mcp compile_context (F-011/F-012), @tessera/web Package Inspector (F-014) renders the trace/provenance" },
-        { "kind": "package", "ref": "depends on: @tessera/retrieval (E-012), @tessera/knowledge-graph get_effects (E-011); corpus via the FragmentSource seam (ingestion)" }
+        {
+          "kind": "module",
+          "ref": "@tessera/context-compiler stages (plan/expand/rank/resolve/dedup/compress/assemble) + quality (CQS, naive baseline). compress now does citation-preserving extractive compression on overflow (FR-31, F-019): an over-budget fragment yields a query-relevant excerpt keeping its ref/provenance instead of being dropped — surfaced via the existing ContextFragment.whyIncluded + the compress trace note, so NO ContextPackage/API shape change"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/context-compiler pluggable strategies (CompressionStrategy/RankStrategy) + CompilationCache (in-memory LRU) + computeCompilationKey (F-020, FR-33/34) — injected compiler OPTIONS + a deterministic reproducibility key (normalized request + config fingerprint incl. strategy ids); defaults preserve behavior and the ContextPackage/REST/MCP shape is unchanged ('swap ranker/compressor without API change'). Key completeness: the fingerprint MUST include every output-affecting knob/strategy id or the cache returns stale packages"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/context-compiler stage unit tests + compiler/beats-naive integration tests"
+        },
+        {
+          "kind": "package",
+          "ref": "consumers: @tessera/api + @tessera/mcp compile_context (F-011/F-012), @tessera/web Package Inspector (F-014) renders the trace/provenance"
+        },
+        {
+          "kind": "package",
+          "ref": "depends on: @tessera/retrieval (E-012), @tessera/knowledge-graph get_effects (E-011); corpus via the FragmentSource seam (ingestion)"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "The ContextPackage shape (sections/provenance/whyIncluded), the CompilationTrace, and the CompileRequest are the contract REST/MCP `compile_context` returns and the web Package Inspector renders (concretely advances E-003); changing them ripples to API/MCP/web. The compiler consumes the retrieval + graph contracts. CQS (PRD §9) is the regression guard that compilation beats naive top-k. FragmentSource is the corpus seam ingestion fills. F-037 (ADR-0033) added ContextCompiler.forTenant (scopes the retriever + graph store) and folded a non-default tenantId into the CompilationKey fingerprint so a shared cache stays tenant-isolated — no ContextPackage/CompileRequest/API shape change (tenancy stays off the wire).",
-      "confidence": 1.0,
+      "confidence": 1,
       "origin": "manual"
     },
     {
       "id": "E-014",
-      "from": { "kind": "contract", "ref": "@tessera/config config schema (TesseraConfig) + Local profile composition (createLocalRuntime) + SecretsProvider port" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/config config schema (TesseraConfig) + Local profile composition (createLocalRuntime) + SecretsProvider port"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/config Local profile wiring (profiles/local.ts) — constructs every storage/ai/domain adapter and composes ApiServices; includes the temporal retriever in the hybrid set + exposes Runtime.temporal for ingestion to populate (F-018)" },
-        { "kind": "module", "ref": "@tessera/config blob-backed FragmentSource (fragment-source.ts) — the compiler's corpus seam over the filesystem BlobStore; ingestion's persistent DocumentSink must write the same {kind,text,metadata} convention" },
-        { "kind": "module", "ref": "@tessera/config secrets adapters (env, file) implementing the SecretsProvider port (KMS/vault for cloud)" },
-        { "kind": "package", "ref": "consumers: the runnable REST/MCP process bins that boot from a Runtime; type-only on @tessera/api ApiServices (E-003)" },
-        { "kind": "package", "ref": "@tessera/storage Postgres+pgvector adapters (F-023) add a self-hosted/cloud profile branch behind the same Runtime/config — no domain change" },
-        { "kind": "module", "ref": "@tessera/config auth wiring (F-034/F-036): a config.auth section (mode none|token|oidc, tenant, quota, oidc {issuer,audience,jwksUri,rolesClaim,tenantClaim}) + createSqliteTokenStore (persistent TokenStore over the Drizzle handle, api_tokens table) + Runtime.auth {provider, tokenStore?} selected by config.auth.mode — built via the Fastify-free @tessera/api/auth subpath so the composition root (and the MCP process booting through it) never pulls Fastify. Adds a drizzle-orm dep to @tessera/config" },
-        { "kind": "module", "ref": "@tessera/config billing wiring (F-030): config.billing (provider none|dodo) → Runtime.billing + ApiServices.billing selected by config; the local/free default keeps zero external deps. See E-019" },
-        { "kind": "module", "ref": "@tessera/config audit wiring (F-027): config.audit (enabled, retention) + TESSERA_AUDIT_* → createSqliteAuditLog over the Drizzle handle → Runtime.audit (optional) → apps/server passes it to buildServer. Fastify-free via a type-only @tessera/api import (like the token store). See E-020" },
-        { "kind": "decision", "ref": "docs/adr/0018-config-loader-and-local-profile.md" },
-        { "kind": "decision", "ref": "docs/adr/0030-auth-composition-root-wiring.md" }
+        {
+          "kind": "module",
+          "ref": "@tessera/config Local profile wiring (profiles/local.ts) — constructs every storage/ai/domain adapter and composes ApiServices; includes the temporal retriever in the hybrid set + exposes Runtime.temporal for ingestion to populate (F-018)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/config blob-backed FragmentSource (fragment-source.ts) — the compiler's corpus seam over the filesystem BlobStore; ingestion's persistent DocumentSink must write the same {kind,text,metadata} convention"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/config secrets adapters (env, file) implementing the SecretsProvider port (KMS/vault for cloud)"
+        },
+        {
+          "kind": "package",
+          "ref": "consumers: the runnable REST/MCP process bins that boot from a Runtime; type-only on @tessera/api ApiServices (E-003)"
+        },
+        {
+          "kind": "package",
+          "ref": "@tessera/storage Postgres+pgvector adapters (F-023) add a self-hosted/cloud profile branch behind the same Runtime/config — no domain change"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/config auth wiring (F-034/F-036): a config.auth section (mode none|token|oidc, tenant, quota, oidc {issuer,audience,jwksUri,rolesClaim,tenantClaim}) + createSqliteTokenStore (persistent TokenStore over the Drizzle handle, api_tokens table) + Runtime.auth {provider, tokenStore?} selected by config.auth.mode — built via the Fastify-free @tessera/api/auth subpath so the composition root (and the MCP process booting through it) never pulls Fastify. Adds a drizzle-orm dep to @tessera/config"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/config billing wiring (F-030): config.billing (provider none|dodo) → Runtime.billing + ApiServices.billing selected by config; the local/free default keeps zero external deps. See E-019"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/config audit wiring (F-027): config.audit (enabled, retention) + TESSERA_AUDIT_* → createSqliteAuditLog over the Drizzle handle → Runtime.audit (optional) → apps/server passes it to buildServer. Fastify-free via a type-only @tessera/api import (like the token store). See E-020"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0018-config-loader-and-local-profile.md"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0030-auth-composition-root-wiring.md"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "@tessera/config is the composition root: the config schema + Local profile select and wire every adapter (sqlite/sqlite-vec/filesystem/in-process/transformers) into the ApiServices both surfaces consume. Changing the config schema, the profile wiring, the SecretsProvider port, or the blob FragmentSource convention ripples to whoever boots a runtime and to the future Postgres/cloud profile (F-023). The embedding dimension flows from the provider to the vector store (ADR-0006). ApiServices is imported type-only so api never depends on config (no cycle).",
-      "confidence": 1.0,
+      "confidence": 1,
       "origin": "manual"
     },
     {
       "id": "E-015",
-      "from": { "kind": "contract", "ref": "@tessera/observability toolkit (createLogger+redaction, withSpan/currentTraceId, Instruments, startTelemetry, instrumentServices)" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/observability toolkit (createLogger+redaction, withSpan/currentTraceId, Instruments, startTelemetry, instrumentServices)"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/server bins/startApiServer/startMcpServer — wire the logger, instrumentServices, the http-latency hook, and env-gated startTelemetry" },
-        { "kind": "module", "ref": "@tessera/api buildServer loggerInstance option (additive) — the redacting Pino logger backs per-request logging + correlation (additive on E-003)" },
-        { "kind": "module", "ref": "@tessera/context-compiler TraceStage.durationMs (additive on E-013) — feeds recordCompileStageDurations (compile latency per stage)" },
-        { "kind": "module", "ref": "CRITICAL (F-041 fix): instrumentServices REBUILDS the ApiServices object, so EVERY member must be forwarded — a member it omits is silently dropped from the shipped (instrumented) server, 500ing that member's routes. F-038's `sources` + F-030's `billing` were added to ApiServices but NOT to instrumentServices, so `/v1/sources*` (REST) AND `add_source`/`list_sources`/`scan_source` (MCP — apps/server/src/mcp.ts also instruments) 500'd in production even though createLocalRuntime wired them. Fixed: `sources` is now traced (traceObject) and `billing` is passed through UNTRACED (its methods are synchronous, e.g. `[...listPlans()]`, so the tracing Proxy must not Promise-wrap them). Rule: adding an ApiServices member ⇒ forward it here; a member with synchronous methods must be passed through, not traceObject'd." },
-        { "kind": "package", "ref": "seams (instrument provided, not yet fed): per-adapter spans; registerQueueDepthGauge needs a Queue depth source; OTLP exporters via config" }
+        {
+          "kind": "module",
+          "ref": "@tessera/server bins/startApiServer/startMcpServer — wire the logger, instrumentServices, the http-latency hook, and env-gated startTelemetry"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api buildServer loggerInstance option (additive) — the redacting Pino logger backs per-request logging + correlation (additive on E-003)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/context-compiler TraceStage.durationMs (additive on E-013) — feeds recordCompileStageDurations (compile latency per stage)"
+        },
+        {
+          "kind": "module",
+          "ref": "CRITICAL (F-041 fix): instrumentServices REBUILDS the ApiServices object, so EVERY member must be forwarded — a member it omits is silently dropped from the shipped (instrumented) server, 500ing that member's routes. F-038's `sources` + F-030's `billing` were added to ApiServices but NOT to instrumentServices, so `/v1/sources*` (REST) AND `add_source`/`list_sources`/`scan_source` (MCP — apps/server/src/mcp.ts also instruments) 500'd in production even though createLocalRuntime wired them. Fixed: `sources` is now traced (traceObject) and `billing` is passed through UNTRACED (its methods are synchronous, e.g. `[...listPlans()]`, so the tracing Proxy must not Promise-wrap them). Rule: adding an ApiServices member ⇒ forward it here; a member with synchronous methods must be passed through, not traceObject'd."
+        },
+        {
+          "kind": "package",
+          "ref": "seams (instrument provided, not yet fed): per-adapter spans; registerQueueDepthGauge needs a Queue depth source; OTLP exporters via config"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "Observability is cross-cutting but kept additive: libraries use the OTel API only (no-op until startTelemetry registers the SDK at the process), instrumentServices wraps ApiServices without touching domain packages, and redaction keeps secrets/content out of logs (NFR-7). Changing the instruments, the span/log contract, or the redaction policy affects the server wiring and any future surface that boots a runtime. The compiler's durationMs and buildServer's loggerInstance are additive — the surfaces' response schemas ignore the new optional trace field. Deepening to per-adapter spans / a fed queue-depth gauge must preserve these seams. F-037 (ADR-0033) note: instrumentServices' tracing Proxy special-cases `forTenant` — it returns the scoped service re-wrapped (still traced) rather than treating it as an async call, so a service gaining a synchronous scoping method must be handled here (else it would return a Promise and break the caller). F-041 note: instrumentServices REBUILDS ApiServices, so it must forward EVERY (optional) member or the shipped REST+MCP server 500s that member's routes — `sources`/`billing` were being dropped (latent since F-038/F-030), caught by F-041's live verification and fixed (sources traced, billing passed through untraced because its methods are synchronous). A regression test now asserts both are forwarded.",
@@ -236,28 +521,64 @@
     },
     {
       "id": "E-016",
-      "from": { "kind": "contract", "ref": "@tessera/plugin-host Plugin SDK (Plugin/PluginManifest/PluginInstance/PluginKind) + PluginHost" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/plugin-host Plugin SDK (Plugin/PluginManifest/PluginInstance/PluginKind) + PluginHost"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/plugin-host first-party plugins (filesystem connector, fake/transformers embeddings) — wrap the existing factories on the same contract" },
-        { "kind": "contract", "ref": "the existing extension-point ports the PluginKinds map to: Connector/Processor (@tessera/ingestion E-009), Embeddings (@tessera/ai E-008), storage ports (@tessera/storage E-007), Retriever (@tessera/retrieval E-012)" },
-        { "kind": "test", "ref": "@tessera/plugin-host host.test (config validation/lifecycle/isolation) + first-party-plugins integration test" },
-        { "kind": "package", "ref": "third-party plugins import the SDK; the deployment profile (F-015) may later wire adapters via the host" }
+        {
+          "kind": "module",
+          "ref": "@tessera/plugin-host first-party plugins (filesystem connector, fake/transformers embeddings) — wrap the existing factories on the same contract"
+        },
+        {
+          "kind": "contract",
+          "ref": "the existing extension-point ports the PluginKinds map to: Connector/Processor (@tessera/ingestion E-009), Embeddings (@tessera/ai E-008), storage ports (@tessera/storage E-007), Retriever (@tessera/retrieval E-012)"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/plugin-host host.test (config validation/lifecycle/isolation) + first-party-plugins integration test"
+        },
+        {
+          "kind": "package",
+          "ref": "third-party plugins import the SDK; the deployment profile (F-015) may later wire adapters via the host"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "The Plugin SDK is a uniform ENVELOPE over the existing ports — it does not re-define them. Changing the Plugin/Manifest/Instance contract or the host (load/lifecycle/isolation semantics) breaks every first-party + third-party plugin and the conformance tests; the PluginKinds must stay aligned with the underlying ports (E-007/8/9/12). First-party wrappers live in plugin-host so it depends on ingestion/ai one-way (no cycle); domain packages are untouched. Failure isolation (config-invalid + setup/lifecycle errors → failed, never crash the host) is the FR-58 invariant.",
-      "confidence": 1.0,
+      "confidence": 1,
       "origin": "manual"
     },
     {
       "id": "E-017",
-      "from": { "kind": "contract", "ref": "@tessera/ingestion auto-memory extraction seam: MemoryExtractor + CandidateMemory (extraction/*) + createMemoryExtractionSink's structural MemoryCaptureService" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/ingestion auto-memory extraction seam: MemoryExtractor + CandidateMemory (extraction/*) + createMemoryExtractionSink's structural MemoryCaptureService"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/ingestion extractors (adr-extractor → decision, github-extractor → decision/lesson) + runExtractors + defaultMemoryExtractors" },
-        { "kind": "module", "ref": "@tessera/ingestion adapters (memory-extraction-sink = a DocumentSink decorator capturing idempotently by metadata.source; tee-sink fans out to persistence + extraction)" },
-        { "kind": "package", "ref": "@tessera/memory MemoryService (capture/edit/list) — the structural target the extraction sink writes to (E-010 consumer); the real service is assignable to MemoryCaptureService, wired at composition (config/server, F-015). No hard dep / no cycle." },
-        { "kind": "module", "ref": "@tessera/ingestion github connector provenance (metadata.github) — the github-extractor reads it; changing the connector's provenance shape breaks the extractor" },
-        { "kind": "test", "ref": "@tessera/ingestion extractor unit tests (adr/github) + memory-extraction-sink test + the auto-memory-extraction integration test" },
-        { "kind": "decision", "ref": "docs/adr/0024-github-connector-and-auto-memory-extraction.md" }
+        {
+          "kind": "module",
+          "ref": "@tessera/ingestion extractors (adr-extractor → decision, github-extractor → decision/lesson) + runExtractors + defaultMemoryExtractors"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/ingestion adapters (memory-extraction-sink = a DocumentSink decorator capturing idempotently by metadata.source; tee-sink fans out to persistence + extraction)"
+        },
+        {
+          "kind": "package",
+          "ref": "@tessera/memory MemoryService (capture/edit/list) — the structural target the extraction sink writes to (E-010 consumer); the real service is assignable to MemoryCaptureService, wired at composition (config/server, F-015). No hard dep / no cycle."
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/ingestion github connector provenance (metadata.github) — the github-extractor reads it; changing the connector's provenance shape breaks the extractor"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/ingestion extractor unit tests (adr/github) + memory-extraction-sink test + the auto-memory-extraction integration test"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0024-github-connector-and-auto-memory-extraction.md"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "FR-14 auto-extraction turns ingested ADRs and settled GitHub items into captured memories via deterministic, rule-based extractors and a DocumentSink decorator. The seam is STRUCTURAL: `@tessera/ingestion` declares a minimal MemoryCaptureService interface instead of importing `@tessera/memory`, so no package dependency or cycle forms (the type-only/structural-seam pattern). Idempotency is keyed on `metadata.source` (adr:NNNN / github:owner/repo#n): re-ingest supersedes-on-change or skips-if-identical, never duplicating. Changing the extractor contract, the CandidateMemory shape, the idempotency key, or the github provenance shape ripples across the extractors, the sink, and the composition wiring; the memory service's versioning invariant (FR-12) is what makes supersede safe. Extraction runs on the redacted ProcessedDocument, so memories never carry secrets.",
@@ -266,19 +587,55 @@
     },
     {
       "id": "E-018",
-      "from": { "kind": "contract", "ref": "@tessera/api auth control plane: AuthProvider + TokenStore ports + tenancy/RBAC model (roles→permissions, AuthContext{principal, tenantId, permissions})" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/api auth control plane: AuthProvider + TokenStore ports + tenancy/RBAC model (roles→permissions, AuthContext{principal, tenantId, permissions})"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/api auth adapters — createLocalAuthProvider (none/full-access, default tenant), createTokenAuthProvider (Bearer over a TokenStore), createInMemoryTokenStore (hashed-at-rest, revocable), createOidcAuthProvider (F-036 REALIZED — IdP-agnostic OIDC JWT/JWKS verification via jose; roles/tenant claim mapping; Fastify-free). A persistent TokenStore adapter remains a seam (ADR-0028/0032)" },
-        { "kind": "module", "ref": "@tessera/api enforcement — registerAuth (onRequest authenticate → request.authContext) + requirePermission per-route guards (search:read / compile:read / effects:read / memory:read / memory:write); buildServer gains auth? (default local none); /v1/openapi.json stays public via route config" },
-        { "kind": "module", "ref": "@tessera/api RBAC catalog (ROLES owner/admin/member/viewer, PERMISSIONS, ROLE_PERMISSIONS) — the single source of truth; effectivePermissions intersects roles with a token's scopes (least privilege). Adding a route/permission or a role changes the catalog + its guards" },
-        { "kind": "test", "ref": "@tessera/api auth unit tests (model / token-store / provider) + auth e2e (401 / 403 / 200 / revoked / public-openapi + zero-auth back-compat over app.inject)" },
-        { "kind": "package", "ref": "the composition root REALIZED (F-034): @tessera/config selects the AuthProvider + a persistent SQLite TokenStore by config.auth (exposed as Runtime.auth), imported via the NEW Fastify-free `@tessera/api/auth` subpath export (auth model + providers + token store, excludes the Fastify plugin); apps/server wires it end-to-end — startApiServer passes runtime.auth.provider to buildServer, startMcpServer builds the MCP gateway (+ optional in-memory quota) for startMcpStdio, and a `tessera-token` bin issues tokens. OIDC provider selection is now REALIZED too (F-036: `auth.mode=oidc` → createOidcAuthProvider via the same subpath; jose is Fastify-free so the MCP process stays clean)" },
-        { "kind": "package", "ref": "@tessera/mcp gateway (F-026, REALIZED): reuses this auth model TYPE-ONLY (AuthProvider/AuthContext/Permission — no Fastify in the MCP runtime) to authorize each tool by its required permission (TOOL_PERMISSIONS), plus an MCP-owned QuotaLimiter port + in-memory fixed-window adapter for per-principal quotas; buildMcpServer gains an optional gateway (default off = unchanged). Changing the AuthContext/permission catalog ripples here too" },
-        { "kind": "module", "ref": "data-plane per-tenant row isolation REALIZED (F-037, ADR-0033): AuthContext.tenantId now scopes every domain store via a `forTenant(tenantId)` view (default = DEFAULT_TENANT_ID). The tenant primitive moved to @tessera/core (E-006); MemoryStore/GraphStore/VectorStore/Retriever/HybridRetriever/ContextCompiler + the three domain services gained forTenant; adapters enforce it with a tenant column / composite PK / vec0 per-tenant table, and each shared conformance suite gained a cross-tenant isolation case (pgvector verified live). REST routes call services.X.forTenant(tenantOf(request)) and MCP tools use guard()'s AuthContext.tenantId — response schemas + OpenAPI unchanged (E-003). Changing the tenant column/scoping contract ripples across every store + its conformance suite (E-001/E-007/E-010/E-011/E-012/E-013) and the surfaces' threading" },
-        { "kind": "decision", "ref": "docs/adr/0028-api-auth-tenancy-rbac.md" },
-        { "kind": "decision", "ref": "docs/adr/0029-mcp-gateway-auth-quotas.md" },
-        { "kind": "decision", "ref": "docs/adr/0032-oidc-auth-provider.md" },
-        { "kind": "decision", "ref": "docs/adr/0033-data-plane-tenant-isolation.md" }
+        {
+          "kind": "module",
+          "ref": "@tessera/api auth adapters — createLocalAuthProvider (none/full-access, default tenant), createTokenAuthProvider (Bearer over a TokenStore), createInMemoryTokenStore (hashed-at-rest, revocable), createOidcAuthProvider (F-036 REALIZED — IdP-agnostic OIDC JWT/JWKS verification via jose; roles/tenant claim mapping; Fastify-free). A persistent TokenStore adapter remains a seam (ADR-0028/0032)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api enforcement — registerAuth (onRequest authenticate → request.authContext) + requirePermission per-route guards (search:read / compile:read / effects:read / memory:read / memory:write); buildServer gains auth? (default local none); /v1/openapi.json stays public via route config"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api RBAC catalog (ROLES owner/admin/member/viewer, PERMISSIONS, ROLE_PERMISSIONS) — the single source of truth; effectivePermissions intersects roles with a token's scopes (least privilege). Adding a route/permission or a role changes the catalog + its guards"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/api auth unit tests (model / token-store / provider) + auth e2e (401 / 403 / 200 / revoked / public-openapi + zero-auth back-compat over app.inject)"
+        },
+        {
+          "kind": "package",
+          "ref": "the composition root REALIZED (F-034): @tessera/config selects the AuthProvider + a persistent SQLite TokenStore by config.auth (exposed as Runtime.auth), imported via the NEW Fastify-free `@tessera/api/auth` subpath export (auth model + providers + token store, excludes the Fastify plugin); apps/server wires it end-to-end — startApiServer passes runtime.auth.provider to buildServer, startMcpServer builds the MCP gateway (+ optional in-memory quota) for startMcpStdio, and a `tessera-token` bin issues tokens. OIDC provider selection is now REALIZED too (F-036: `auth.mode=oidc` → createOidcAuthProvider via the same subpath; jose is Fastify-free so the MCP process stays clean)"
+        },
+        {
+          "kind": "package",
+          "ref": "@tessera/mcp gateway (F-026, REALIZED): reuses this auth model TYPE-ONLY (AuthProvider/AuthContext/Permission — no Fastify in the MCP runtime) to authorize each tool by its required permission (TOOL_PERMISSIONS), plus an MCP-owned QuotaLimiter port + in-memory fixed-window adapter for per-principal quotas; buildMcpServer gains an optional gateway (default off = unchanged). Changing the AuthContext/permission catalog ripples here too"
+        },
+        {
+          "kind": "module",
+          "ref": "data-plane per-tenant row isolation REALIZED (F-037, ADR-0033): AuthContext.tenantId now scopes every domain store via a `forTenant(tenantId)` view (default = DEFAULT_TENANT_ID). The tenant primitive moved to @tessera/core (E-006); MemoryStore/GraphStore/VectorStore/Retriever/HybridRetriever/ContextCompiler + the three domain services gained forTenant; adapters enforce it with a tenant column / composite PK / vec0 per-tenant table, and each shared conformance suite gained a cross-tenant isolation case (pgvector verified live). REST routes call services.X.forTenant(tenantOf(request)) and MCP tools use guard()'s AuthContext.tenantId — response schemas + OpenAPI unchanged (E-003). Changing the tenant column/scoping contract ripples across every store + its conformance suite (E-001/E-007/E-010/E-011/E-012/E-013) and the surfaces' threading"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0028-api-auth-tenancy-rbac.md"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0029-mcp-gateway-auth-quotas.md"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0032-oidc-auth-provider.md"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0033-data-plane-tenant-isolation.md"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "F-025 adds an authentication + authorization control plane at the /v1 boundary; F-026 extends the same model to the MCP surface as a gateway (auth + per-principal quotas); F-036 adds an IdP-agnostic OIDC AuthProvider (jose JWT/JWKS verification) as a third mode; F-037 realizes the data plane — AuthContext.tenantId now scopes every domain store via `forTenant` (ADR-0033), so org/workspace row isolation (FR-52) is enforced end-to-end, not just carried. AuthProvider + TokenStore are ports (local adapters now; persistent token store as a cloud seam); RBAC is a pure roles→permissions mapping intersected with token scopes. Changing the permission catalog, the role mapping, the AuthContext shape, or the port interfaces ripples to the REST per-route guards, the MCP gateway's TOOL_PERMISSIONS, the composition root that injects a provider, and the tenant-scoping of the domain stores. The MCP gateway consumes the auth model TYPE-ONLY so the MCP runtime stays Fastify-free (F-012 invariant); quota-exceeded surfaces the new @tessera/core RATE_LIMITED code (→429 REST). Both surfaces default to zero-auth/ungated and every store's base view is the default tenant, so existing routes/tools/e2e are unchanged — tenancy engages only when a non-default tenantId is threaded. Advances E-003 additively (new 401/403/429 paths + tenant threading; response schemas + OpenAPI unchanged).",
@@ -287,15 +644,39 @@
     },
     {
       "id": "E-019",
-      "from": { "kind": "contract", "ref": "@tessera/billing BillingProvider + SubscriptionStore ports + Plan/PLANS catalog + Subscription/Entitlements model" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/billing BillingProvider + SubscriptionStore ports + Plan/PLANS catalog + Subscription/Entitlements model"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/billing adapters: createLocalBilling (open-core free default, no external deps) + createDodoBilling (fetch-based, env-guarded; HMAC webhook verify + payload mapping offline-tested; live Dodo API = seam) + createInMemorySubscriptionStore (a persistent store = seam)" },
-        { "kind": "test", "ref": "@tessera/billing tests (domain/entitlements, local adapter, dodo signature+parse+webhook+checkout) + @tessera/api billing e2e (plans/subscription/checkout + signed webhook)" },
-        { "kind": "module", "ref": "@tessera/api /v1/billing routes (plans public, subscription+checkout admin:manage, webhook public + signature-verified via a raw-body child scope) + schemas — the PLANS catalog + Subscription shape drive validation/OpenAPI (advances E-003; the SDK was regenerated to include /v1/billing)" },
-        { "kind": "module", "ref": "@tessera/config billing wiring: config.billing (provider none|dodo) → createRuntimeBilling (dodo secrets via the SecretsProvider) → Runtime.billing + ApiServices.billing (E-014)" },
-        { "kind": "module", "ref": "@tessera/api /v1/compile entitlement enforcement (F-035): clampBudgetToPlan caps the requested token budget to the caller's plan (effectiveEntitlements via services.billing, tenant from the AuthContext, local/free fallback) — REALIZED. Monthly-usage metering (needs a persistent usage store), seat limits, and MCP-surface enforcement remain seams" },
-        { "kind": "decision", "ref": "docs/adr/0011-billing-dodo-payments.md" },
-        { "kind": "decision", "ref": "docs/adr/0031-billing-port-and-open-core.md" }
+        {
+          "kind": "module",
+          "ref": "@tessera/billing adapters: createLocalBilling (open-core free default, no external deps) + createDodoBilling (fetch-based, env-guarded; HMAC webhook verify + payload mapping offline-tested; live Dodo API = seam) + createInMemorySubscriptionStore (a persistent store = seam)"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/billing tests (domain/entitlements, local adapter, dodo signature+parse+webhook+checkout) + @tessera/api billing e2e (plans/subscription/checkout + signed webhook)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api /v1/billing routes (plans public, subscription+checkout admin:manage, webhook public + signature-verified via a raw-body child scope) + schemas — the PLANS catalog + Subscription shape drive validation/OpenAPI (advances E-003; the SDK was regenerated to include /v1/billing)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/config billing wiring: config.billing (provider none|dodo) → createRuntimeBilling (dodo secrets via the SecretsProvider) → Runtime.billing + ApiServices.billing (E-014)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api /v1/compile entitlement enforcement (F-035): clampBudgetToPlan caps the requested token budget to the caller's plan (effectiveEntitlements via services.billing, tenant from the AuthContext, local/free fallback) — REALIZED. Monthly-usage metering (needs a persistent usage store), seat limits, and MCP-surface enforcement remain seams"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0011-billing-dodo-payments.md"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0031-billing-port-and-open-core.md"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "F-030 billing (FR-61, NFR-12) behind a BillingProvider port (ADR-0003 ports & adapters): open-core — the domain + local/free adapter are OSS (zero external deps), Dodo serves the paid Managed Cloud tier (merchant of record, ADR-0011). Changing the Plan catalog/entitlements, the Subscription model, the port, or the webhook mapping ripples to the adapters, the REST billing routes + schemas (and the regenerated OpenAPI/SDK, E-003), and the config wiring (E-014). Default is local/free so existing surfaces are unaffected. Live Dodo API verification, a persistent SubscriptionStore, entitlement enforcement in the compiler/quotas, and the dashboard billing UI are documented seams. OQ4 resolved 2026-07-03 (open-core).",
@@ -304,15 +685,39 @@
     },
     {
       "id": "E-020",
-      "from": { "kind": "contract", "ref": "@tessera/api audit trail: AuditLog port + AuditEvent model + recording hook (apps/api/src/audit; F-027, ADR-0034)" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/api audit trail: AuditLog port + AuditEvent model + recording hook (apps/api/src/audit; F-027, ADR-0034)"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/api audit adapters: createInMemoryAuditLog (reference, drives the shared conformance) + createSqliteAuditLog (persistent, wired in @tessera/config — increment 1b) — both pass the shared AuditLog conformance incl. cross-tenant isolation (forTenant, E-018/ADR-0033)" },
-        { "kind": "module", "ref": "@tessera/api recordAudit onResponse hook (routes/v1/index.ts) — records an AuditEvent for routes flagged config.audit (search/compile/effects.read/memory.read|write/audit.read); actor+tenant from AuthContext, outcome from status (>=400 → denied); failure-isolated (never breaks a request); NON-SENSITIVE only (NFR-7 — no bodies/secrets/query content)" },
-        { "kind": "test", "ref": "@tessera/api audit-log conformance (in-memory) + audit e2e (default-build record+query; token-build success/denied outcomes, admin:manage-only query, cross-tenant isolation)" },
-        { "kind": "module", "ref": "@tessera/api GET /v1/audit route (admin:manage, tenant-scoped via forTenant, filter/paginate by action/actor/outcome/time + cursor) + schemas → OpenAPI + regenerated @tessera/sdk (getAudit). Advances E-003" },
-        { "kind": "module", "ref": "@tessera/config audit wiring (F-027, REALIZED): config.audit (enabled, retention {maxAgeDays,maxEntries}) + TESSERA_AUDIT_* env + createSqliteAuditLog (persistent audit_events table, tenant column, seq-cursor, prune) + Runtime.audit; apps/server passes runtime.audit to buildServer. Type-only @tessera/api import keeps config Fastify-free (ADR-0030). See E-014" },
-        { "kind": "module", "ref": "@tessera/web governance & audit UI (F-027, FR-48, REALIZED): /audit (AuditView — filter by action/outcome, a provenance-first events table, empty/error/loading states) + /governance (GovernanceView — the RBAC roles→permissions matrix + retention posture) consume GET /v1/audit via lib/api (getAudit/useAudit); nav 'Govern' group; WCAG AA (axe e2e clean). The RBAC/action catalogs are a hand-maintained mirror in lib/governance.ts (ADR-0022)" },
-        { "kind": "decision", "ref": "docs/adr/0034-audit-trail-and-governance.md" }
+        {
+          "kind": "module",
+          "ref": "@tessera/api audit adapters: createInMemoryAuditLog (reference, drives the shared conformance) + createSqliteAuditLog (persistent, wired in @tessera/config — increment 1b) — both pass the shared AuditLog conformance incl. cross-tenant isolation (forTenant, E-018/ADR-0033)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api recordAudit onResponse hook (routes/v1/index.ts) — records an AuditEvent for routes flagged config.audit (search/compile/effects.read/memory.read|write/audit.read); actor+tenant from AuthContext, outcome from status (>=400 → denied); failure-isolated (never breaks a request); NON-SENSITIVE only (NFR-7 — no bodies/secrets/query content)"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/api audit-log conformance (in-memory) + audit e2e (default-build record+query; token-build success/denied outcomes, admin:manage-only query, cross-tenant isolation)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api GET /v1/audit route (admin:manage, tenant-scoped via forTenant, filter/paginate by action/actor/outcome/time + cursor) + schemas → OpenAPI + regenerated @tessera/sdk (getAudit). Advances E-003"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/config audit wiring (F-027, REALIZED): config.audit (enabled, retention {maxAgeDays,maxEntries}) + TESSERA_AUDIT_* env + createSqliteAuditLog (persistent audit_events table, tenant column, seq-cursor, prune) + Runtime.audit; apps/server passes runtime.audit to buildServer. Type-only @tessera/api import keeps config Fastify-free (ADR-0030). See E-014"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web governance & audit UI (F-027, FR-48, REALIZED): /audit (AuditView — filter by action/outcome, a provenance-first events table, empty/error/loading states) + /governance (GovernanceView — the RBAC roles→permissions matrix + retention posture) consume GET /v1/audit via lib/api (getAudit/useAudit); nav 'Govern' group; WCAG AA (axe e2e clean). The RBAC/action catalogs are a hand-maintained mirror in lib/governance.ts (ADR-0022)"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0034-audit-trail-and-governance.md"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "F-027 audit trail (FR-55/NFR-13): sensitive actions are recorded at the /v1 boundary into an append-only, tenant-scoped AuditLog and queried by admins (admin:manage). Changing the AuditEvent model, the AuditLog port, the recording hook's action catalog (config.audit), or the /v1/audit route/schema ripples to the adapters + shared conformance, the OpenAPI/regenerated SDK (E-003), the config wiring (E-014), and the governance UI (FR-48). Events are NON-SENSITIVE (NFR-7 — ids/actions/outcomes only); recording is failure-isolated; tenancy reuses forTenant (ADR-0033) with the actor/tenant from the AuthContext (E-018). Default is an in-memory sink so existing surfaces are unaffected. Increment 1a = in-memory end-to-end; 1b = persistent SQLite + config wiring; increment 2 = the web UI.",
@@ -321,16 +726,43 @@
     },
     {
       "id": "E-021",
-      "from": { "kind": "contract", "ref": "@tessera/ingestion runtime source management: SourceRegistry port + SourceService (list/register/get/remove/scan/scanStatus + forTenant) + the runtime ingestion composition (F-038, ADR-0040)" },
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/ingestion runtime source management: SourceRegistry port + SourceService (list/register/get/remove/scan/scanStatus + forTenant) + the runtime ingestion composition (F-038, ADR-0040)"
+      },
       "to": [
-        { "kind": "module", "ref": "@tessera/ingestion adapters: createInMemorySourceRegistry (reference, drives the conformance) + createSqliteSourceRegistry (@tessera/config, persistent sources table, tenant-scoped) + createSqliteManifest (@tessera/config, durable content-hash index); createSourceService caches a connector per source, tracks scan status, emits scan-lifecycle events, and (Local) awaits Queue.drain so scan() is synchronous-complete" },
-        { "kind": "test", "ref": "@tessera/ingestion SourceRegistry conformance + SourceService unit (register/scan/idempotent-rescan/modified/removed/invalid-kind/NOT_FOUND/tenant/auto-scan) + @tessera/config runtime-sources integration (register→scan→corpus+ADR-memory+SSE, persistence) + api/mcp sources e2e" },
-        { "kind": "module", "ref": "@tessera/config composition (createLocalRuntime, E-014): builds registry + manifest + one createIngestionWorker (connectorFor from the service) + runtime sink = tee(blob-corpus, memory-extraction F-017) + a bridge from IngestionEvents → the shared ApiEventBus; exposes Runtime.{sources,events}; connectorForRecord maps filesystem/git; config.sources.autoScanOnRegister" },
-        { "kind": "module", "ref": "REST /v1/sources (list/register/get/remove + POST/GET :id/scan) + MCP add_source/list_sources/scan_source wrap the SAME service (ADR-0036 parity); guarded by sources:read/sources:manage (E-018) and audited via source.read/source.manage (E-020); OpenAPI + regenerated @tessera/sdk (E-003)" },
-        { "kind": "module", "ref": "@tessera/web Sources UI (F-041, FR-46/FR-62): /sources (SourcesView + RegisterSourceDialog) lists/register/removes/scans sources and renders LIVE scan progress from GET /v1/events (SSE) — the dashboard's FIRST SSE consumer (useScanEvents + a pure scanEventsReducer). Consumes /v1/sources* + /v1/events via the interim lib/api client (ADR-0022). Honest boundary: the registerable kinds are filesystem+git (SUPPORTED_SOURCE_KINDS in the Local profile); GitHub is shown as an explicitly disabled option (a github SOURCE is not wired into the runtime — connectorForRecord maps only filesystem/git, and the wire config is { root }). F-041 caught two latent breaks in shipped source management: instrumentServices dropped services.sources (E-015) and lib/api sent content-type:application/json on bodyless POST/DELETE (scan/remove) which Fastify rejects — both fixed" },
-        { "kind": "module", "ref": "@tessera/ingestion worker connectorFor(source) resolver (per-source, additive) + @tessera/storage Queue.drain() (optional, additive on E-007): the two seams that let one worker serve many sources and a fire-and-forget queue back a synchronous scan" },
-        { "kind": "module", "ref": "@tessera/config createCorpusIndexer (F-039): the runtime sink evolved from corpus-only to corpus+INDICES — one tenant-aware path lands (ref, text) in the blob corpus AND the keyword (FTS5)/temporal/semantic (embed→VectorStore) indices, content-hash-cached (NFR-12). createIndexingDocumentSink (ingestion) + createIndexingMemoryService (a MemoryService decorator: API/MCP captures + auto-extracted memories index under memory/<lineageId>) write through the SAME indexer → one ref space. So search/compile now answer from the real repo (E-008/E-012/E-013 writers realized). Memory refs are '/'-delimited (a ':' becomes an NTFS ADS on Windows)" },
-        { "kind": "decision", "ref": "docs/adr/0040-runtime-source-management.md" }
+        {
+          "kind": "module",
+          "ref": "@tessera/ingestion adapters: createInMemorySourceRegistry (reference, drives the conformance) + createSqliteSourceRegistry (@tessera/config, persistent sources table, tenant-scoped) + createSqliteManifest (@tessera/config, durable content-hash index); createSourceService caches a connector per source, tracks scan status, emits scan-lifecycle events, and (Local) awaits Queue.drain so scan() is synchronous-complete"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/ingestion SourceRegistry conformance + SourceService unit (register/scan/idempotent-rescan/modified/removed/invalid-kind/NOT_FOUND/tenant/auto-scan) + @tessera/config runtime-sources integration (register→scan→corpus+ADR-memory+SSE, persistence) + api/mcp sources e2e"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/config composition (createLocalRuntime, E-014): builds registry + manifest + one createIngestionWorker (connectorFor from the service) + runtime sink = tee(blob-corpus, memory-extraction F-017) + a bridge from IngestionEvents → the shared ApiEventBus; exposes Runtime.{sources,events}; connectorForRecord maps filesystem/git; config.sources.autoScanOnRegister"
+        },
+        {
+          "kind": "module",
+          "ref": "REST /v1/sources (list/register/get/remove + POST/GET :id/scan) + MCP add_source/list_sources/scan_source wrap the SAME service (ADR-0036 parity); guarded by sources:read/sources:manage (E-018) and audited via source.read/source.manage (E-020); OpenAPI + regenerated @tessera/sdk (E-003)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web Sources UI (F-041, FR-46/FR-62): /sources (SourcesView + RegisterSourceDialog) lists/register/removes/scans sources and renders LIVE scan progress from GET /v1/events (SSE) — the dashboard's FIRST SSE consumer (useScanEvents + a pure scanEventsReducer). Consumes /v1/sources* + /v1/events via the interim lib/api client (ADR-0022). Honest boundary: the registerable kinds are filesystem+git (SUPPORTED_SOURCE_KINDS in the Local profile); GitHub is shown as an explicitly disabled option (a github SOURCE is not wired into the runtime — connectorForRecord maps only filesystem/git, and the wire config is { root }). F-041 caught two latent breaks in shipped source management: instrumentServices dropped services.sources (E-015) and lib/api sent content-type:application/json on bodyless POST/DELETE (scan/remove) which Fastify rejects — both fixed"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/ingestion worker connectorFor(source) resolver (per-source, additive) + @tessera/storage Queue.drain() (optional, additive on E-007): the two seams that let one worker serve many sources and a fire-and-forget queue back a synchronous scan"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/config createCorpusIndexer (F-039): the runtime sink evolved from corpus-only to corpus+INDICES — one tenant-aware path lands (ref, text) in the blob corpus AND the keyword (FTS5)/temporal/semantic (embed→VectorStore) indices, content-hash-cached (NFR-12). createIndexingDocumentSink (ingestion) + createIndexingMemoryService (a MemoryService decorator: API/MCP captures + auto-extracted memories index under memory/<lineageId>) write through the SAME indexer → one ref space. So search/compile now answer from the real repo (E-008/E-012/E-013 writers realized). Memory refs are '/'-delimited (a ':' becomes an NTFS ADS on Windows)"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0040-runtime-source-management.md"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "F-038 composes the F-006/F-017 ingestion engine into the shipped runtime and exposes it through REST + MCP parity; F-039 makes its output RETRIEVABLE by writing every ingested document + captured memory into the keyword/temporal/semantic indices + the blob corpus via one shared createCorpusIndexer (the seam E-008/E-012/E-013 left for ingestion). Changing the SourceRegistry/SourceService contract, the connector factory, the runtime sink/indexer composition, or the scan/event model ripples to the SQLite adapters + conformance, the composition root (E-014), the REST/MCP surfaces + regenerated SDK (E-003), the RBAC catalog (E-018), the audit actions (E-020), and now the retrieval indices (E-008/E-012/E-013). The registry is tenant-isolated (ADR-0033); ingestion indexes in the default tenant (memory indexes in its capture tenant via the decorator's forTenant) — per-tenant ingestion pipelines are a documented seam. NFR-12: the indexer's content-hash cache + the F-006 manifest keep unchanged content from being re-embedded. Chunking is whole-document for F-039 (sub-document chunking is a documented refinement keeping this sink seam); the Local runtime enables no compilation cache so index writes are immediately reflected.",
@@ -339,18 +771,51 @@
     },
     {
       "id": "E-022",
-      "from": { "kind": "contract", "ref": "docs/design/MARKETING-DESIGN.md v2 + marketing-design.manifest.json v2 — the public-surface design contract (Terra Mosaic: two-ground tokens, closed serif/sans/mono type scale, section archetypes, thermal-motion rules, banned/required patterns; ADR-0043 parameters over the ADR-0042 mechanism; brand foundation docs/design/BRAND.md; F-051)" },
+      "from": {
+        "kind": "contract",
+        "ref": "docs/design/MARKETING-DESIGN.md v4 + marketing-design.manifest.json v4 — the public-surface design contract (Terra Mosaic: theme-true chapter tokens, closed serif/sans type scale — mono retired, section archetypes incl. shader-field hero + constellation band, thermal-motion rules, banned/required patterns; ADR-0045 over ADR-0043/0042; brand foundation docs/design/BRAND.md; F-051)"
+      },
       "to": [
-        { "kind": "file", "ref": "apps/marketing/app/globals.css — token values (:root, dark-only) + Tailwind v4 @theme mapping incl. the CLOSED type scale (--text-*: initial → display/title/heading/lead/body/small/label) + the reduced-motion kill-switch. requiredPatterns drift-guard pins key values (--background, --accent, prefers-reduced-motion)" },
-        { "kind": "test", "ref": "apps/marketing/tests/design-lint.test.ts — COMPILES enforcement.bannedPatterns/requiredPatterns from the manifest into standard `test`-gate failures; editing a manifest pattern or allowIn changes what builds pass, so manifest edits are design decisions (doc + manifest together, reviewed)" },
-        { "kind": "module", "ref": "@tessera/marketing components (closed ui/* set + section components) — tokens-only. lib/utils.ts EXTENDS tailwind-merge with the custom font-size classGroup (display/title/heading/lead/body/small/label): a text token added to globals.css but not to that list makes twMerge treat it as a color and silently drop real color classes (the F-051 axe 1.04:1 button incident)" },
-        { "kind": "file", "ref": "docs/design/DESIGN-SYSTEM.md scope note — declares the two-document precedence (dashboard vs public surfaces); principles are shared, values are not" },
-        { "kind": "module", "ref": "apps/marketing/lib/motion.tsx — the ONLY framer-motion import (LazyMotion + MotionConfig reducedMotion; design-lint enforces the boundary); every animated component consumes m/Reveal/thermalEase/useReducedMotion from this seam" },
-        { "kind": "module", "ref": "apps/marketing/lib/theme.tsx — the ONLY next-themes import (ADR-0044): dual themes (Desert Rose dark :root / Modern Minimalist light .light) toggled from the footer ThemeToggle; adding/changing a theme = a globals.css token block + this seam" },
-        { "kind": "module", "ref": "apps/marketing/components/art/* — the illustration suite (MosaicField, LiveGraph + EffectWeb on @xyflow/react — engine imports confined here by design-lint, both lazy ssr:false, decorative-interactive per the canvas lesson; PipelineFlow, CompilerAssembly, GovernanceGate). Terminal/code-block/file-UI mockups are BANNED archetypes (ADR-0044) — product truths render as brand art" },
-        { "kind": "artifact", "ref": "brand asset pipeline: docs/design/brand/* (SVG masters, philosophy, fonts) + apps/marketing/scripts/render-brand-assets.mjs (deterministic Playwright PNG renderer) + apps/marketing/public/brand/* — logo/OG/icon renderers reproduce token VALUES by hand (the sanctioned allowIn class), so a palette change means re-rendering assets" },
-        { "kind": "decision", "ref": "docs/adr/0043-terra-mosaic-brand-and-marketing-overhaul.md" },
-        { "kind": "decision", "ref": "docs/adr/0042-marketing-site-design-direction.md" }
+        {
+          "kind": "file",
+          "ref": "apps/marketing/app/globals.css — token values (:root, dark-only) + Tailwind v4 @theme mapping incl. the CLOSED type scale (--text-*: initial → display/title/heading/lead/body/small/label) + the reduced-motion kill-switch. requiredPatterns drift-guard pins key values (--background, --accent, prefers-reduced-motion)"
+        },
+        {
+          "kind": "test",
+          "ref": "apps/marketing/tests/design-lint.test.ts — COMPILES enforcement.bannedPatterns/requiredPatterns from the manifest into standard `test`-gate failures; editing a manifest pattern or allowIn changes what builds pass, so manifest edits are design decisions (doc + manifest together, reviewed)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/marketing components (closed ui/* set + section components) — tokens-only. lib/utils.ts EXTENDS tailwind-merge with the custom font-size classGroup (display/title/heading/lead/body/small/label): a text token added to globals.css but not to that list makes twMerge treat it as a color and silently drop real color classes (the F-051 axe 1.04:1 button incident)"
+        },
+        {
+          "kind": "file",
+          "ref": "docs/design/DESIGN-SYSTEM.md scope note — declares the two-document precedence (dashboard vs public surfaces); principles are shared, values are not"
+        },
+        {
+          "kind": "module",
+          "ref": "apps/marketing/lib/motion.tsx — the ONLY framer-motion import (LazyMotion + MotionConfig reducedMotion; design-lint enforces the boundary); every animated component consumes m/Reveal/thermalEase/useReducedMotion from this seam"
+        },
+        {
+          "kind": "module",
+          "ref": "apps/marketing/lib/theme.tsx — the ONLY next-themes import (ADR-0044/0045): dual themes, INITIAL = system preference (dark→dusk, light→noon, classless fallback dusk); useThemeTransition ripples switches from the footer ThemeToggle via startViewTransition; adding/changing a theme = a globals.css token block + this seam"
+        },
+        {
+          "kind": "module",
+          "ref": "apps/marketing/components/art/* — the illustration suite (MosaicField+tile-hover, ShaderField (hand-written WebGL, tokens via css-color.ts runtime resolution — parse 3-digit hex!), Constellation (Canvas-2D fixed 3/4 camera, randomized scene, decorative-interactive per the canvas lesson, lazy ssr:false), EffectWeb (pure SVG+HTML chips), PipelineFlow (HTML chips + connectors), CompilerAssembly, GovernanceGate — framer SVG x/y are CSS transforms that OVERRIDE the transform attribute (see lesson). React Flow/three are BANNED imports; terminal/code-block/file-UI mockups are BANNED archetypes — product truths render as brand art"
+        },
+        {
+          "kind": "artifact",
+          "ref": "brand asset pipeline: docs/design/brand/* (SVG masters, philosophy, fonts) + apps/marketing/scripts/render-brand-assets.mjs (deterministic Playwright PNG renderer) + apps/marketing/public/brand/* — logo/OG/icon renderers reproduce token VALUES by hand (the sanctioned allowIn class), so a palette change means re-rendering assets"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0043-terra-mosaic-brand-and-marketing-overhaul.md"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0042-marketing-site-design-direction.md"
+        }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "The marketing design contract is executable: the manifest's patterns ARE the design-lint gate, the type scale exists in three places that must agree (globals.css @theme, the tailwind-merge font-size group, the manifest), and key token values are pinned by requiredPatterns. Changing any of tokens/scale/patterns therefore ripples across globals.css, lib/utils.ts, the design-lint suite, and the doc+manifest pair — and a silent mismatch degrades to WCAG failures caught only by axe e2e.",

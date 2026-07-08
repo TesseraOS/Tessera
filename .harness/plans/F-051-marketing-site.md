@@ -113,6 +113,36 @@ gates), evidence captured per [verification protocol](../protocols/verification.
 `web-perf` is planned (activates F-049) — we still keep the initial JS payload lean
 (static-first, no client data fetching, CSS-only motion) and record bundle output as evidence.
 
+## v4 addendum — 2026-07-08 (ADR-0045, fourth stakeholder review)
+
+The v3 homepage was reviewed with 11 directives (hero legibility/blur, heavy parallel
+traffic, two-line h1, weak/misaligned differentiator art, stray tiny mono, layered hero,
+deep nested graph, graph south of the hero, pseudo-3D masterpiece, dark mode dark
+end-to-end). Direction locked in ADR-0045; MARKETING-DESIGN v4 + manifest 4.0.0.
+
+**v4 increments (each verified before commit):**
+
+1. **Governance + groundwork** — ADR-0045; doc/manifest v4 (blur sanction → nav glass +
+   `.hero-veil`; `three`/`@react-three` ban; React Flow confined to effect-web; chapter
+   required patterns); globals: `[data-band='sand']` → theme-true `[data-band='chapter']`
+   (dark = elevated warm-dark `#1d1418` interlude — the dark-mode fix), `.hero-veil`
+   defined; band attrs swapped in problem-band/how-it-works.
+2. **Hero recomposition** — `components/art/shader-field.tsx` (hand-written WebGL
+   fragment shader: domain-warped brand flow + ember sparks, theme uniforms, ssr:false,
+   DPR≤2, offscreen pause, reduced-motion static frame, `.atmosphere` fallback); hero =
+   ground → shader → veil → statement; h1 exactly two nowrap lines; `--text-display`
+   retuned `clamp(2.625rem, 1.25rem + 6.5vw, 5.75rem)`.
+3. **Constellation** — `components/art/constellation.tsx` (Canvas-2D engine: ~80-node
+   nested model, 2.5D projection + fog + parallax, Poisson packet traffic 20–40 alive,
+   hover subtree highlight, click-to-toggle with reroute, tokens resolved at runtime,
+   decorative-interactive bundle) + `components/home/constellation-band.tsx` sharing the
+   hero's wrapper/shader; delete `live-graph.tsx` (+ hero-graph boundary).
+4. **Differentiator art v2 + type sweep** — CompilerAssembly/GovernanceGate rebuilt with
+   constant-derived geometry and HTML captions; pipeline-flow labels → HTML chips; zero
+   SVG `<text>`; mono = label roles only; stats = Manrope tabular-nums.
+5. **Verification** — full gates + axe (both themes) + screenshots (1440/1280/375 ×
+   themes × reduced-motion) + bundle budget; effect-trace; progress + memory records.
+
 ## Risks / open questions
 
 - **TLD not final** (`tessera.<tld>`): all cross-surface URLs env-driven

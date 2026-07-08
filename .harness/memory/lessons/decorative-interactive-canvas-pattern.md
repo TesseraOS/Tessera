@@ -33,3 +33,16 @@ scroll UX (zoom hijack), CWV (eager engine chunk), and honesty (unlabeled fake n
    `useReducedMotion`).
 6. Engine imports confined by design-lint to `components/art/*` so future canvases inherit
    the same discipline.
+
+**v4.1 additions (hand-written WebGL/Canvas engines — learned debugging dead canvases):**
+7. **Initialize the effect ONCE** (`[]` deps; reduced-motion and callbacks arrive via live
+   refs). framer's `useReducedMotion` settles after hydration — as an effect dependency it
+   re-runs init, and a re-acquired WebGL context that a previous cleanup `loseContext()`d
+   is permanently dead. Never lose the context in cleanup; free programs/buffers instead.
+8. **The render loop always reschedules and checks state in-loop** (resize, theme-class
+   string compare, visibility) — never an observer-driven wake state machine; a missed
+   wake event strands the canvas as a stale bitmap. Create WebGL contexts `alpha:true` so
+   a non-painting canvas degrades to the layer behind it, not composited black.
+9. **Resolve tokens defensively:** the build minifies six-digit hex to three-digit
+   shorthand (parse both), and honesty labeling may live in the `sr-only` alternative
+   when the stakeholder removes visible legends.

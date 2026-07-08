@@ -1,19 +1,12 @@
+import { AGENT_MARKS, AgentMarkIcon } from '@/components/agent-marks';
 import { Container } from '@/components/ui/container';
 
 /**
- * Marquee strip (MARKETING-DESIGN §3.3): real MCP clients as typographic wordmarks on a
- * slow linear loop — pauses on hover/focus, renders static under reduced motion. The
- * second copy is aria-hidden; honesty rule: names only, no scraped logos.
+ * Marquee strip (MARKETING-DESIGN §3.5, ADR-0045 v4.1): the agents Tessera serves, as
+ * monochrome brand marks + names on a slow linear loop — pauses on hover/focus,
+ * renders static under reduced motion. The second copy is aria-hidden. Marks re-ink
+ * with the theme (currentColor); agents without a published mark stay typographic.
  */
-const MCP_CLIENTS = [
-  'Claude Code',
-  'Cursor',
-  'Cline',
-  'Codex CLI',
-  'Continue',
-  'Windsurf',
-] as const;
-
 export function ProofStrip() {
   return (
     <section aria-label="Compatible agents" className="bg-surface/60 border-y">
@@ -22,14 +15,17 @@ export function ProofStrip() {
           Works with any MCP-capable agent
         </p>
         <div className="marquee fade-x relative w-full flex-1 overflow-hidden">
-          <ul className="marquee-track flex w-max items-center gap-14 pr-14">
-            {[...MCP_CLIENTS, ...MCP_CLIENTS].map((client, index) => (
+          <ul className="marquee-track flex w-max items-center gap-12 pr-12">
+            {[...AGENT_MARKS, ...AGENT_MARKS].map((agent, index) => (
               <li
-                key={`${client}-${index}`}
-                aria-hidden={index >= MCP_CLIENTS.length || undefined}
-                className="text-label text-muted-foreground font-mono whitespace-nowrap"
+                key={`${agent.name}-${index}`}
+                aria-hidden={index >= AGENT_MARKS.length || undefined}
+                className="text-muted-foreground flex items-center gap-2.5 whitespace-nowrap"
               >
-                {client}
+                {agent.path ? (
+                  <AgentMarkIcon path={agent.path} className="size-4 shrink-0" />
+                ) : null}
+                <span className="text-small">{agent.name}</span>
               </li>
             ))}
           </ul>

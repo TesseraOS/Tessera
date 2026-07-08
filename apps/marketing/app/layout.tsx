@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import type React from 'react';
-import { Instrument_Serif, JetBrains_Mono, Manrope } from 'next/font/google';
+import { Instrument_Serif, Manrope } from 'next/font/google';
 import { MotionProvider } from '@/lib/motion';
 import { siteConfig } from '@/lib/site';
 import { ThemeProvider } from '@/lib/theme';
@@ -10,12 +10,6 @@ import './globals.css';
 const manrope = Manrope({
   subsets: ['latin'],
   variable: '--font-manrope',
-  display: 'swap',
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-jetbrains-mono',
   display: 'swap',
 });
 
@@ -57,7 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${manrope.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable}`}
+      className={`${manrope.variable} ${instrumentSerif.variable}`}
     >
       <body>
         <ThemeProvider>

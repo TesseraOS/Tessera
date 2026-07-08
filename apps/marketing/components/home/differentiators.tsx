@@ -1,6 +1,6 @@
 import type React from 'react';
 import { CompilerAssembly } from '@/components/art/compiler-assembly';
-import { EffectWebLazy } from '@/components/home/effect-web-lazy';
+import { EffectWeb } from '@/components/art/effect-web';
 import { GovernanceGate } from '@/components/art/governance-gate';
 import { Container } from '@/components/ui/container';
 import { SectionHeading } from '@/components/ui/section-heading';
@@ -28,7 +28,7 @@ const ROWS: Array<{
     title: 'Change here. Know what breaks there.',
     body: 'Effect-links record which contracts depend on which code. Before an agent edits a symbol, get_effects answers what else this touches — before CI finds out the hard way.',
     caption: 'effect-links · get_effects',
-    visual: <EffectWebLazy />,
+    visual: <EffectWeb />,
   },
   {
     title: 'Every byte of context, accounted for',
@@ -62,7 +62,7 @@ export function Differentiators() {
               <Reveal className={cn('md:col-span-5', index % 2 === 1 && 'md:order-2')} delay={0}>
                 <h3 className="text-heading text-foreground">{row.title}</h3>
                 <p className="text-body text-muted-foreground mt-3">{row.body}</p>
-                <p className="text-label text-faint-foreground mt-5 font-mono">{row.caption}</p>
+                <p className="text-label text-faint-foreground mt-5">{row.caption}</p>
               </Reveal>
               <Reveal className={cn('md:col-span-7', index % 2 === 1 && 'md:order-1')} delay={90}>
                 {row.visual}

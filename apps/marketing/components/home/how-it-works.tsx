@@ -29,7 +29,7 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      data-band="sand"
+      data-band="chapter"
       aria-labelledby="how-it-works-title"
       className="bg-background text-foreground scroll-mt-16 border-b"
     >
@@ -48,7 +48,7 @@ export function HowItWorks() {
                 delay={index * 90}
                 className="bg-card shadow-soft hover:shadow-lift h-full rounded-lg border p-6 transition duration-200 hover:-translate-y-0.5 md:p-7"
               >
-                <p className="text-label text-rose font-mono">{step.number}</p>
+                <p className="text-label text-rose">{step.number}</p>
                 <h3 className="text-heading text-foreground mt-4">{step.title}</h3>
                 <p className="text-body text-muted-foreground mt-3">{step.body}</p>
               </Reveal>

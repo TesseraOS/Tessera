@@ -26,7 +26,7 @@ export function CtaBand() {
               Start free
             </ButtonLink>
             <ButtonLink href={siteConfig.docsUrl} variant="ghost" size="lg">
-              Deploy self-hosted
+              Self-host
             </ButtonLink>
           </div>
         </Reveal>
@@ -37,9 +37,8 @@ export function CtaBand() {
         rows={3}
         seed={70726}
         seamAt={0.5}
-        drift={false}
-        className="fade-x relative mx-auto mt-10 max-w-6xl px-2 pb-14"
-        label="A quiet strip of mosaic tiles with one gilded tile arriving"
+        className="fade-x tile-hover relative mx-auto mt-10 max-w-6xl px-2 pb-14"
+        label="A quiet strip of mosaic tiles, drifting, with one gilded tile arriving; tiles light up under the pointer"
       />
     </section>
   );

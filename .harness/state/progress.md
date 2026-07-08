@@ -3,6 +3,43 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-08 (v4.2) — F-051 IN PROGRESS — isometric constellation, micro-physics, 18-point round (ADR-0045 v4.2)
+
+**Sixth review (18 directives), all delivered.** Root causes over patches:
+
+- **Mobile menu under the page (1):** the overlay was a CHILD of the header; the scrolled
+  header gains backdrop-filter, which makes it the containing block for fixed
+  descendants — the full-screen menu was trapped in the 64px header box. Now a sibling.
+- **Constellation v4.2 (3, 12–18):** fixed isometric camera (yaw+pitch) rendering every
+  node as a three-face cube (lit top / mid front / shaded side / ground shadow; hub
+  mosaic set into the top face; noon = ink-outlined boxes). Portrait quarter-turns the
+  plane (sources above, agents below). gemini agent added; sessions nest tool calls →
+  nested tool calls, randomized per visit; scaled up. Micro-physics: weighted packets
+  (size+speed from weight) sag their edge (rope pull) and identify on hover
+  (kind · KB · from → to); arrivals/toggles are damped-spring lift/sink impulses; the
+  flickering pulse ring is gone.
+- **Illustrations (5–8):** pipeline rebuilt on one %-coordinate system (chips +
+  connectors aligned by construction, tessera in a bordered unit); compiler meter
+  breathes on the tiles' exact cycle; effect web spread so api/session.ts egress edges
+  show (+ scaled down); governance ledger tallies the cycle LIVE.
+- **Chrome (2, 4, 9, 10):** veil weakened + shader gained presence; marquee says Gemini
+  and carries the official Antigravity silhouette (svgl, monochrome); MosaicField wave
+  mode (infinite diagonal crest + pointer-lit tiles) on the CTA band and mobile menu.
+- **Ops:** Turbopack's persistent dev cache served stale CSS across restarts —
+  [[turbo-cache-stale-uncommitted]] extended with the .next/dev case.
+
+**Evidence** — design-lint 39/39; typecheck/eslint/prettier clean; build green;
+first-load 228.8KB gz (budget 240); e2e 8/8 (axe AA both themes); preview-verified:
+menu full-viewport while scrolled+blurred, cubes both themes (desktop + portrait
+mobile), live ledger 0→1→2→denied, wave animating, packet hover identity
+('context packet · 1.6KB · repo · web → claude code').
+
+**Decisions** — ADR-0045 v4.2 amendment. Mascot idea (stakeholder point 11) parked as a
+future increment: geometric tessera-based mascot recommended, needs BRAND.md addendum +
+its own ADR before any code.
+
+**Next step** — F-051 remaining pages; Awwwards-readiness review.
+
 ## 2026-07-08 (v4/v4.1) — F-051 IN PROGRESS — shader-field hero, canvas constellation, 31-point polish (ADR-0045)
 
 **Fourth review (11 directives) + fifth review (31 directives) delivered in one arc.**

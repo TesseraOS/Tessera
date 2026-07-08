@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { m, thermalEase, useReducedMotion } from '@/lib/motion';
 
 /**
@@ -57,11 +57,23 @@ const breathe = (index: number) => ({
   repeatDelay: 1.6,
 });
 
+/* The shared breath: travel + hold, mirrored — must match breathe()'s parameters. */
+const TRAVEL = 3;
+const HOLD = 1.6;
+const BREATH_CYCLE = (TRAVEL + HOLD) * 2;
+
+const easeInOutCubic = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2);
+
 export function CompilerAssembly() {
   const reduced = useReducedMotion();
   const [count, setCount] = useState(reduced ? COMPILED : 0);
   const started = useRef(false);
+  const rafRef = useRef(0);
 
+  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
+
+  /* The meter breathes on the SAME clock as the tiles: fill while they assemble,
+     hold, drain while they disperse. One rAF; state only changes when the digit does. */
   const startCount = () => {
     if (started.current) return;
     started.current = true;
@@ -70,14 +82,19 @@ export function CompilerAssembly() {
       return;
     }
     const t0 = performance.now();
-    const duration = 1100;
     const stepFrame = (now: number) => {
-      const p = Math.min(1, (now - t0) / duration);
-      const eased = 1 - (1 - p) ** 3;
-      setCount(Math.round(COMPILED * eased));
-      if (p < 1) requestAnimationFrame(stepFrame);
+      const t = ((now - t0) / 1000) % BREATH_CYCLE;
+      let fraction: number;
+      if (t < TRAVEL) fraction = easeInOutCubic(t / TRAVEL);
+      else if (t < TRAVEL + HOLD) fraction = 1;
+      else if (t < TRAVEL + HOLD + TRAVEL)
+        fraction = 1 - easeInOutCubic((t - TRAVEL - HOLD) / TRAVEL);
+      else fraction = 0;
+      const next = Math.round(COMPILED * fraction);
+      setCount((prev) => (prev === next ? prev : next));
+      rafRef.current = requestAnimationFrame(stepFrame);
     };
-    requestAnimationFrame(stepFrame);
+    rafRef.current = requestAnimationFrame(stepFrame);
   };
 
   const gildedSeat = seat(2, 0);
@@ -174,13 +191,10 @@ export function CompilerAssembly() {
           of {BUDGET.toLocaleString('en-US')} tokens · every fragment cited
         </p>
         <div className="bg-secondary mt-5 h-1 w-full max-w-56 overflow-hidden rounded-full">
-          <m.div
+          {/* the budget bar rides the same breath as the digits and the tiles */}
+          <div
             className="bg-rose h-full origin-left rounded-full"
-            style={{ width: `${(COMPILED / BUDGET) * 100}%` }}
-            initial={{ scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 1, delay: 0.5, ease: thermalEase }}
+            style={{ transform: `scaleX(${count / BUDGET})` }}
           />
         </div>
         <dl className="mt-6 grid max-w-64 grid-cols-3 gap-3">

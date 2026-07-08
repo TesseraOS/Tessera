@@ -300,6 +300,7 @@
 /* SVG tiles animate their own box, not the canvas. */
 .tile-drift,
 .tile-arrive,
+.tile-wave,
 .tf-box {
   transform-box: fill-box;
   transform-origin: center;
@@ -313,11 +314,11 @@
 .hero-veil {
   background: linear-gradient(
     90deg,
-    color-mix(in oklab, var(--background) 55%, transparent) 0%,
-    color-mix(in oklab, var(--background) 28%, transparent) 45%,
-    transparent 74%
+    color-mix(in oklab, var(--background) 36%, transparent) 0%,
+    color-mix(in oklab, var(--background) 16%, transparent) 42%,
+    transparent 68%
   );
-  mask-image: linear-gradient(180deg, black 0%, black 58%, transparent 100%);
+  mask-image: linear-gradient(180deg, black 0%, black 52%, transparent 96%);
 }
 
 /*
@@ -426,6 +427,27 @@
     }
     to {
       transform: translateY(var(--drift-y, -6px));
+    }
+  }
+
+  /*
+   * Mosaic wave (§5, ADR-0045 v4.1) — a crest of lift + light sweeping the field
+   * diagonally forever (per-tile negative delays derived from grid position). Replaces
+   * drift as that band's one ambient system; pairs with .tile-hover for interactivity.
+   */
+  .tile-wave {
+    animation: tile-wave var(--wave-dur, 5.5s) ease-in-out var(--wave-delay, 0s) infinite;
+  }
+
+  @keyframes tile-wave {
+    0%,
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    50% {
+      transform: translateY(-6px);
+      opacity: 0.62;
     }
   }
 

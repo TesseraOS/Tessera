@@ -23,7 +23,11 @@ export function ProofStrip() {
                 className="text-muted-foreground flex items-center gap-2.5 whitespace-nowrap"
               >
                 {agent.path ? (
-                  <AgentMarkIcon path={agent.path} className="size-4 shrink-0" />
+                  <AgentMarkIcon
+                    path={agent.path}
+                    {...(agent.viewBox ? { viewBox: agent.viewBox } : {})}
+                    className="size-4 shrink-0"
+                  />
                 ) : null}
                 <span className="text-small">{agent.name}</span>
               </li>

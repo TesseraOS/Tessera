@@ -30,6 +30,8 @@ interface MosaicFieldProps {
   seamAt?: number;
   /** Ambient drift on seam tiles (<=1 ambient system per viewport). */
   drift?: boolean;
+  /** The traveling crest (ADR-0045 v4.1) — replaces drift as the band's ambient system. */
+  wave?: boolean;
   className?: string;
   label?: string;
 }
@@ -41,6 +43,7 @@ export function MosaicField({
   emberId,
   seamAt = 0.64,
   drift = true,
+  wave = false,
   className,
   label = 'A mosaic of warm tiles with a diagonal seam of light; one gilded tile arrives to complete the picture',
 }: MosaicFieldProps) {
@@ -109,20 +112,25 @@ export function MosaicField({
         opacity = 0.45;
       }
 
-      const drifts = drift && near && driftRoll > 0.55;
+      const drifts = !wave && drift && near && driftRoll > 0.55;
+      const animClass = wave ? 'tile-wave' : drifts ? 'tile-drift' : undefined;
+      const animStyle = wave
+        ? vars({
+            '--wave-delay': `${(-(c * 0.18 + r * 0.35)).toFixed(2)}s`,
+            '--wave-dur': `${(4.8 + driftRoll * 1.8).toFixed(1)}s`,
+          })
+        : drifts
+          ? vars({
+              '--drift-dur': `${(9 + driftRoll * 5).toFixed(1)}s`,
+              '--drift-delay': `${(-driftRoll * 8).toFixed(1)}s`,
+              '--drift-y': `${-(3 + driftRoll * 4).toFixed(1)}px`,
+            })
+          : undefined;
       tiles.push(
         <rect
           key={`${c}-${r}`}
-          className={drifts ? 'tile-drift' : undefined}
-          style={
-            drifts
-              ? vars({
-                  '--drift-dur': `${(9 + driftRoll * 5).toFixed(1)}s`,
-                  '--drift-delay': `${(-driftRoll * 8).toFixed(1)}s`,
-                  '--drift-y': `${-(3 + driftRoll * 4).toFixed(1)}px`,
-                })
-              : undefined
-          }
+          className={animClass}
+          style={animStyle}
           x={x}
           y={y}
           width={TILE}

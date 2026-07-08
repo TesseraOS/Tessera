@@ -52,60 +52,68 @@ export function SiteNav() {
   }, [open]);
 
   return (
-    <header
-      className={cn(
-        'fixed inset-x-0 top-0 z-40 border-b transition-colors duration-300',
-        scrolled
-          ? 'bg-background/85 border-border backdrop-blur'
-          : 'border-transparent bg-transparent',
-      )}
-    >
-      <Container className="flex h-16 items-center justify-between">
-        <Link href="/" aria-label="Tessera home" className="rounded-md">
-          <Logo emberId="ember-nav" />
-        </Link>
+    /*
+     * The menu overlay must live OUTSIDE the header: the scrolled header gains
+     * backdrop-filter, which makes it the containing block for fixed descendants —
+     * a child overlay would be trapped inside the 64px header box (the "menu renders
+     * under the page" bug).
+     */
+    <>
+      <header
+        className={cn(
+          'fixed inset-x-0 top-0 z-40 border-b transition-colors duration-300',
+          scrolled
+            ? 'bg-background/85 border-border backdrop-blur'
+            : 'border-transparent bg-transparent',
+        )}
+      >
+        <Container className="flex h-16 items-center justify-between">
+          <Link href="/" aria-label="Tessera home" className="rounded-md">
+            <Logo emberId="ember-nav" />
+          </Link>
 
-        <nav aria-label="Main" className="hidden items-center gap-8 md:flex">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="link-underline text-small text-muted-foreground hover:text-foreground transition-colors duration-200"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+          <nav aria-label="Main" className="hidden items-center gap-8 md:flex">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="link-underline text-small text-muted-foreground hover:text-foreground transition-colors duration-200"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
 
-        <div className="hidden items-center md:flex">
-          <ButtonLink href={siteConfig.appUrl} size="sm">
-            Start free
-          </ButtonLink>
-        </div>
+          <div className="hidden items-center md:flex">
+            <ButtonLink href={siteConfig.appUrl} size="sm">
+              Start free
+            </ButtonLink>
+          </div>
 
-        <button
-          ref={toggleRef}
-          type="button"
-          className="text-foreground -mr-2 inline-flex size-11 items-center justify-center rounded-md md:hidden"
-          aria-expanded={open}
-          aria-controls="mobile-menu"
-          onClick={() => setOpen(true)}
-        >
-          <span className="sr-only">Open menu</span>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            className="size-5"
-            aria-hidden="true"
+          <button
+            ref={toggleRef}
+            type="button"
+            className="text-foreground -mr-2 inline-flex size-11 items-center justify-center rounded-md md:hidden"
+            aria-expanded={open}
+            aria-controls="mobile-menu"
+            onClick={() => setOpen(true)}
           >
-            <path d="M4 8h16M4 16h16" strokeLinecap="round" />
-          </svg>
-        </button>
-      </Container>
+            <span className="sr-only">Open menu</span>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              className="size-5"
+              aria-hidden="true"
+            >
+              <path d="M4 8h16M4 16h16" strokeLinecap="round" />
+            </svg>
+          </button>
+        </Container>
+      </header>
 
-      {/* Full-screen mobile menu (ADR-0044) */}
+      {/* Full-screen mobile menu (ADR-0044) — sibling of the header, never its child */}
       {open ? (
         <div
           id="mobile-menu"
@@ -169,11 +177,12 @@ export function SiteNav() {
             rows={2}
             seed={41522}
             seamAt={0.62}
-            className="fade-x rise-in relative shrink-0 px-4 pb-6"
-            label="A quiet strip of mosaic tiles beneath the menu, one gilded tile arriving"
+            wave
+            className="fade-x tile-hover rise-in relative shrink-0 px-4 pb-6"
+            label="A strip of mosaic tiles beneath the menu with a crest of light sweeping across it; one gilded tile arriving"
           />
         </div>
       ) : null}
-    </header>
+    </>
   );
 }

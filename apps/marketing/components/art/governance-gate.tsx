@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { m, useReducedMotion } from '@/lib/motion';
 
 /**
@@ -29,8 +30,37 @@ const CYCLE = 7;
 
 const loop = { duration: CYCLE, repeat: Infinity, ease: 'linear' as const };
 
+/* Cycle moments (fractions of CYCLE) when the ledger learns something. */
+const LANDS_A = 0.3;
+const LANDS_B = 0.46;
+const DENIED_AT = 0.68;
+
 export function GovernanceGate() {
   const reduced = useReducedMotion();
+  const [tally, setTally] = useState({ allowed: 2, denied: 1 });
+
+  /* The ledger is LIVE: it tallies what the scene has actually shown this cycle. */
+  useEffect(() => {
+    if (reduced) {
+      setTally({ allowed: 2, denied: 1 });
+      return;
+    }
+    const t0 = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      const p = (((now - t0) / 1000) % CYCLE) / CYCLE;
+      const next = {
+        allowed: (p >= LANDS_A ? 1 : 0) + (p >= LANDS_B ? 1 : 0),
+        denied: p >= DENIED_AT ? 1 : 0,
+      };
+      setTally((prev) =>
+        prev.allowed === next.allowed && prev.denied === next.denied ? prev : next,
+      );
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [reduced]);
 
   return (
     <div
@@ -184,9 +214,9 @@ export function GovernanceGate() {
         )}
       </svg>
 
-      {/* the record — pushed well below the scene, in HTML type */}
-      <p className="text-label text-faint-foreground mt-6 text-right">
-        2 allowed · 1 denied · all of it logged
+      {/* the record — pushed well below the scene, tallying the cycle as it happens */}
+      <p className="text-label text-faint-foreground mt-6 text-right tabular-nums">
+        {tally.allowed} allowed · {tally.denied} denied · all of it logged
       </p>
     </div>
   );

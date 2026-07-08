@@ -80,15 +80,15 @@ void main() {
   );
   float f = fbm(p + 2.0 * r);
 
-  /* The statement sits left — keep that side calm, let the field bloom rightward. */
-  float bloom = smoothstep(0.08, 0.72, uv.x) * 0.75 + 0.25;
-  float vig = smoothstep(1.28, 0.3, distance(uv, vec2(0.56, 0.44)));
+  /* The statement sits left — keep that side calmer, let the field bloom rightward. */
+  float bloom = smoothstep(0.04, 0.62, uv.x) * 0.62 + 0.38;
+  float vig = smoothstep(1.34, 0.26, distance(uv, vec2(0.56, 0.44)));
   float k = u_intensity * bloom * vig;
 
   vec3 col = u_base;
-  col = mix(col, u_deep, smoothstep(0.28, 0.86, f) * 0.6 * k);
-  col = mix(col, u_rose, smoothstep(0.52, 0.97, f * length(q) * 1.7) * 0.3 * k);
-  col = mix(col, u_gold, smoothstep(0.8, 0.99, length(r) * f * 1.25) * 0.12 * k);
+  col = mix(col, u_deep, smoothstep(0.26, 0.84, f) * 0.78 * k);
+  col = mix(col, u_rose, smoothstep(0.5, 0.96, f * length(q) * 1.7) * 0.42 * k);
+  col = mix(col, u_gold, smoothstep(0.78, 0.99, length(r) * f * 1.25) * 0.18 * k);
 
   /* Ember sparks — a dozen slow drifters, twinkling; the hero's hint of the traffic below. */
   for (int i = 0; i < 12; i++) {

@@ -9,29 +9,31 @@ import { luminance, readToken, readTokenRgb, rgba, type Rgb } from '@/components
 import { useReducedMotion } from '@/lib/motion';
 
 /**
- * Constellation (MARKETING-DESIGN §3.3, ADR-0045 v4.1) — the product's knowledge graph
- * as a living constellation on Canvas-2D, viewed by a fixed three-quarter camera: the
- * graph lies on an x/z ground plane with per-node height jitter, projected with a
- * constant pitch so depth reads as true perspective (no pointer tilt — the camera never
- * moves). Branching is randomized per visit within composed bounds: cluster fan-out,
- * nesting depth (up to symbols-of-files), and per-agent session sub-nodes all differ
- * between loads. Heavy randomized parallel traffic moves through the graph as glowing
- * packet dots on multi-hop routes; arrivals ease a node's glow up and back down —
- * never a flashing ring.
+ * Constellation (MARKETING-DESIGN §3.3, ADR-0045 v4.2) — the product's knowledge graph
+ * drawn as an isometric constellation on Canvas-2D: a fixed yaw+pitch camera projects
+ * every node as a three-face cube (top lit, front mid, side shaded, ground shadow), so
+ * the scene reads as 3D without a 3D engine. Portrait viewports rotate the ground plane
+ * a quarter turn: sources above, agents below.
+ *
+ * The scene is randomized per visit within composed bounds — source clusters fan into
+ * items → files → symbols, and each agent carries live sessions whose tool calls nest
+ * further. Traffic is weighted: heavier packets are larger, slower, sag the edge they
+ * ride (rope physics), and carry an identity shown on hover. Arrivals are spring
+ * impulses — the receiving cube lifts and settles (damped spring), its glow swelling
+ * smoothly. No rings, no flicker.
  *
  * Decorative-interactive (memory: decorative-interactive-canvas-pattern): aria-hidden +
- * keyboard-inert with a sibling text alternative; page scroll always wins (touch-pan-y,
- * no wheel handling); hover highlights a subtree, click toggles a node offline and the
+ * keyboard-inert with a sibling text alternative; page scroll always wins; hover
+ * highlights a subtree (or identifies a packet), click toggles a node offline and the
  * traffic reroutes or fizzles; reduced motion renders the frozen layout with zero
- * packets. Colors resolve from CSS tokens at runtime and re-resolve on theme change
- * inside the paint path. The effect initializes once — reduced-motion arrives via a
- * live ref, never as an effect dependency.
+ * packets. Colors resolve from CSS tokens in the paint path (theme-safe); the effect
+ * initializes once (reduced-motion arrives via a live ref).
  */
 
 /* ------------------------------------------------------------------ model */
 
 type Tone = 'ivory' | 'rose' | 'gold' | 'clay';
-type NodeKind = 'hub' | 'cluster' | 'item' | 'leaf' | 'session' | 'agent';
+type NodeKind = 'hub' | 'cluster' | 'item' | 'leaf' | 'agent' | 'session' | 'tool';
 
 interface GraphNode {
   id: number;
@@ -47,8 +49,11 @@ interface GraphNode {
   phase: number;
   enabled: boolean;
   active: boolean;
-  /** arrival glow 0..1, eased down smoothly in step() */
+  /** arrival glow 0..1 (eased down) */
   flash: number;
+  /** vertical spring state — arrivals lift the cube, toggles sink it */
+  yOff: number;
+  yVel: number;
 }
 
 interface GraphEdge {
@@ -64,10 +69,15 @@ interface Packet {
   path: number[];
   seg: number;
   t: number;
+  /** physical weight — size, speed, and rope sag all derive from it */
+  weight: number;
   speed: number;
   size: number;
   tone: PacketTone;
   fade: number;
+  kindLabel: string;
+  fromLabel: string;
+  toLabel: string;
 }
 
 /* ---------------------------------------------------------------- scene */
@@ -93,19 +103,20 @@ interface ClusterSpec {
 
 /* Sources fan across the left hemisphere; agents ring the right. Product-honest. */
 const CLUSTER_SPECS: ClusterSpec[] = [
-  { label: 'docs · architecture', tone: 'clay', angle: 96, leafChance: 0.5 },
-  { label: 'git history', tone: 'gold', angle: 132, leafChance: 0.25 },
-  { label: 'repo · api', tone: 'clay', angle: 166, leafChance: 0.8 },
-  { label: 'repo · web', tone: 'clay', angle: 198, leafChance: 0.8 },
-  { label: 'decisions · ADRs', tone: 'rose', angle: 230, leafChance: 0.35 },
-  { label: 'memory · lessons', tone: 'rose', angle: 264, leafChance: 0.45 },
+  { label: 'docs · architecture', tone: 'clay', angle: 96, leafChance: 0.6 },
+  { label: 'git history', tone: 'gold', angle: 132, leafChance: 0.35 },
+  { label: 'repo · api', tone: 'clay', angle: 166, leafChance: 0.9 },
+  { label: 'repo · web', tone: 'clay', angle: 198, leafChance: 0.9 },
+  { label: 'decisions · ADRs', tone: 'rose', angle: 230, leafChance: 0.45 },
+  { label: 'memory · lessons', tone: 'rose', angle: 264, leafChance: 0.55 },
 ];
 
 const AGENT_SPECS = [
-  { label: 'claude code', angle: -36 },
-  { label: 'cursor', angle: -13 },
-  { label: 'cline', angle: 13 },
-  { label: 'codex', angle: 36 },
+  { label: 'claude code', angle: -40 },
+  { label: 'cursor', angle: -20 },
+  { label: 'gemini', angle: 0 },
+  { label: 'cline', angle: 20 },
+  { label: 'codex', angle: 40 },
 ];
 
 const RAD = Math.PI / 180;
@@ -115,9 +126,20 @@ function buildScene(seed: number): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
 
-  const push = (node: Omit<GraphNode, 'id' | 'enabled' | 'active' | 'flash' | 'phase'>) => {
+  const push = (
+    node: Omit<GraphNode, 'id' | 'enabled' | 'active' | 'flash' | 'phase' | 'yOff' | 'yVel'>,
+  ) => {
     const id = nodes.length;
-    nodes.push({ ...node, id, enabled: true, active: true, flash: 0, phase: rand() * Math.PI * 2 });
+    nodes.push({
+      ...node,
+      id,
+      enabled: true,
+      active: true,
+      flash: 0,
+      phase: rand() * Math.PI * 2,
+      yOff: 0,
+      yVel: 0,
+    });
     return id;
   };
 
@@ -129,11 +151,11 @@ function buildScene(seed: number): { nodes: GraphNode[]; edges: GraphEdge[] } {
     x: 0,
     y: 0,
     z: 0,
-    size: 30,
+    size: 26,
   });
 
   for (const spec of CLUSTER_SPECS) {
-    const cr = 235 + rand() * 60;
+    const cr = 250 + rand() * 70;
     const ca = spec.angle * RAD;
     const cx = Math.cos(ca) * cr;
     const cz = Math.sin(ca) * cr;
@@ -146,16 +168,16 @@ function buildScene(seed: number): { nodes: GraphNode[]; edges: GraphEdge[] } {
       x: cx,
       y: cy,
       z: cz,
-      size: 12.5,
+      size: 11.5,
     });
     edges.push({ a: hub, b: cluster, kind: 'tree', bend: (rand() - 0.5) * 44 });
 
-    /* randomized fan-out per visit: 3–6 items, leaves 0–2, occasional 4th level */
-    const itemCount = 3 + Math.floor(rand() * 4);
+    /* randomized fan-out per visit: 4–7 items, leaves, and 4th-level symbols */
+    const itemCount = 4 + Math.floor(rand() * 4);
     for (let i = 0; i < itemCount; i += 1) {
-      const spread = ((i - (itemCount - 1) / 2) / Math.max(1, itemCount - 1)) * 110 * RAD;
+      const spread = ((i - (itemCount - 1) / 2) / Math.max(1, itemCount - 1)) * 112 * RAD;
       const ia = ca + spread + (rand() - 0.5) * 0.3;
-      const ir = 70 + rand() * 50;
+      const ir = 74 + rand() * 54;
       const item = push({
         label: null,
         kind: 'item',
@@ -164,14 +186,14 @@ function buildScene(seed: number): { nodes: GraphNode[]; edges: GraphEdge[] } {
         x: cx + Math.cos(ia) * ir,
         y: cy + (rand() - 0.5) * 60,
         z: cz + Math.sin(ia) * ir,
-        size: 7,
+        size: 6.5,
       });
       edges.push({ a: cluster, b: item, kind: 'tree', bend: (rand() - 0.5) * 26 });
 
       const leafCount = rand() < spec.leafChance ? 1 + Math.round(rand()) : 0;
       for (let l = 0; l < leafCount; l += 1) {
         const la = ia + (rand() - 0.5) * 1.6;
-        const lr = 32 + rand() * 22;
+        const lr = 34 + rand() * 24;
         const parentItem = nodes[item];
         if (!parentItem) continue;
         const leaf = push({
@@ -182,12 +204,11 @@ function buildScene(seed: number): { nodes: GraphNode[]; edges: GraphEdge[] } {
           x: parentItem.x + Math.cos(la) * lr,
           y: parentItem.y + (rand() - 0.5) * 44,
           z: parentItem.z + Math.sin(la) * lr,
-          size: 4.4,
+          size: 4.2,
         });
         edges.push({ a: item, b: leaf, kind: 'tree', bend: (rand() - 0.5) * 14 });
 
-        /* the occasional 4th level — a symbol hanging off a file */
-        if (rand() < 0.25) {
+        if (rand() < 0.32) {
           const parentLeaf = nodes[leaf];
           if (!parentLeaf) continue;
           const sa = la + (rand() - 0.5) * 1.8;
@@ -196,10 +217,10 @@ function buildScene(seed: number): { nodes: GraphNode[]; edges: GraphEdge[] } {
             kind: 'leaf',
             parent: leaf,
             tone: spec.tone,
-            x: parentLeaf.x + Math.cos(sa) * (20 + rand() * 14),
+            x: parentLeaf.x + Math.cos(sa) * (22 + rand() * 16),
             y: parentLeaf.y + (rand() - 0.5) * 30,
-            z: parentLeaf.z + Math.sin(sa) * (20 + rand() * 14),
-            size: 3.2,
+            z: parentLeaf.z + Math.sin(sa) * (22 + rand() * 16),
+            size: 3,
           });
           edges.push({ a: leaf, b: sub, kind: 'tree', bend: (rand() - 0.5) * 10 });
         }
@@ -208,27 +229,25 @@ function buildScene(seed: number): { nodes: GraphNode[]; edges: GraphEdge[] } {
   }
 
   for (const spec of AGENT_SPECS) {
-    const ar = 280 + rand() * 45;
+    const ar = 300 + rand() * 50;
     const aa = spec.angle * RAD;
-    const ax = Math.cos(aa) * ar;
-    const az = Math.sin(aa) * ar;
     const agent = push({
       label: spec.label,
       kind: 'agent',
       parent: -1,
       tone: 'rose',
-      x: ax,
+      x: Math.cos(aa) * ar,
       y: (rand() - 0.5) * 50,
-      z: az,
-      size: 11,
+      z: Math.sin(aa) * ar,
+      size: 10,
     });
     edges.push({ a: hub, b: agent, kind: 'serve', bend: (rand() - 0.5) * 36 });
 
-    /* live sessions per agent — 1–3, randomized: the same agent, many conversations */
+    /* live sessions per agent, and the tool calls nesting inside them — randomized */
     const sessionCount = 1 + Math.floor(rand() * 3);
     for (let s = 0; s < sessionCount; s += 1) {
       const sa = aa + (rand() - 0.5) * 0.9;
-      const sr = 46 + rand() * 34;
+      const sr = 52 + rand() * 36;
       const agentNode = nodes[agent];
       if (!agentNode) continue;
       const session = push({
@@ -239,15 +258,50 @@ function buildScene(seed: number): { nodes: GraphNode[]; edges: GraphEdge[] } {
         x: agentNode.x + Math.cos(sa) * sr,
         y: agentNode.y + (rand() - 0.5) * 36,
         z: agentNode.z + Math.sin(sa) * sr,
-        size: 4.2,
+        size: 4,
       });
       edges.push({ a: agent, b: session, kind: 'serve', bend: (rand() - 0.5) * 14 });
+
+      const toolCount = rand() < 0.6 ? 1 + Math.floor(rand() * 2) : 0;
+      for (let t = 0; t < toolCount; t += 1) {
+        const ta = sa + (rand() - 0.5) * 1.4;
+        const sessionNode = nodes[session];
+        if (!sessionNode) continue;
+        const tool = push({
+          label: null,
+          kind: 'tool',
+          parent: session,
+          tone: 'rose',
+          x: sessionNode.x + Math.cos(ta) * (26 + rand() * 18),
+          y: sessionNode.y + (rand() - 0.5) * 26,
+          z: sessionNode.z + Math.sin(ta) * (26 + rand() * 18),
+          size: 3.1,
+        });
+        edges.push({ a: session, b: tool, kind: 'serve', bend: (rand() - 0.5) * 10 });
+
+        if (rand() < 0.35) {
+          const toolNode = nodes[tool];
+          if (!toolNode) continue;
+          const na = ta + (rand() - 0.5) * 1.6;
+          const nested = push({
+            label: null,
+            kind: 'tool',
+            parent: tool,
+            tone: 'rose',
+            x: toolNode.x + Math.cos(na) * (18 + rand() * 12),
+            y: toolNode.y + (rand() - 0.5) * 20,
+            z: toolNode.z + Math.sin(na) * (18 + rand() * 12),
+            size: 2.5,
+          });
+          edges.push({ a: tool, b: nested, kind: 'serve', bend: (rand() - 0.5) * 8 });
+        }
+      }
     }
   }
 
   /* Cross-links — the knowledge-graph tell: an ADR knows a symbol, a lesson knows a file. */
   const items = nodes.filter((n) => n.kind === 'item');
-  for (let i = 0; i < 8; i += 1) {
+  for (let i = 0; i < 9; i += 1) {
     const a = items[Math.floor(rand() * items.length)];
     const b = items[Math.floor(rand() * items.length)];
     if (!a || !b || a.id === b.id || a.parent === b.parent) continue;
@@ -315,16 +369,34 @@ function resolveInks(): Inks {
   };
 }
 
+/** Per-face lightness — multiply toward black (f<1) or mix toward white (f>1). */
+function shade(color: Rgb, f: number): Rgb {
+  if (f <= 1) return [color[0] * f, color[1] * f, color[2] * f];
+  const k = f - 1;
+  return [
+    color[0] + (1 - color[0]) * k,
+    color[1] + (1 - color[1]) * k,
+    color[2] + (1 - color[2]) * k,
+  ];
+}
+
 /* -------------------------------------------------------------- engine */
 
-/** Fixed three-quarter camera: constant pitch, long lens — depth without vertigo. */
+/** Fixed isometric-style camera: yaw turns the plane, pitch looks down onto it. */
+const YAW = 0.6;
+const SIN_Y = Math.sin(YAW);
+const COS_Y = Math.cos(YAW);
 const PITCH = 0.62;
 const SIN_P = Math.sin(PITCH);
 const COS_P = Math.cos(PITCH);
 const FOV = 1400;
-const SPAWN_RATE = 13;
-const MAX_PACKETS = 40;
+const SPAWN_RATE = 15;
+const MAX_PACKETS = 44;
 const CLICK_SLOP_PX = 6;
+
+/* Node spring (arrival lift / toggle sink) — critically-damped feel. */
+const SPRING_K = 90;
+const SPRING_D = 9;
 
 interface Projected {
   x: number;
@@ -422,6 +494,18 @@ export function Constellation({
       return seen;
     };
 
+    /** Nearest labeled ancestor — packet identities name real places. */
+    const placeName = (id: number): string => {
+      let cursor = id;
+      while (cursor >= 0) {
+        const node: GraphNode | undefined = nodes[cursor];
+        if (!node) break;
+        if (node.label) return node.label;
+        cursor = node.parent;
+      }
+      return 'source';
+    };
+
     /* ------------------------------------------------------ traffic */
 
     const rand = mulberry32((Date.now() ^ 0x9e3779b9) >>> 0);
@@ -436,62 +520,67 @@ export function Constellation({
       return active[Math.floor(rand() * active.length)] ?? null;
     };
 
+    /** Walk down from an agent into a random live session / tool-call chain. */
+    const descend = (from: number, firstChance: number): number[] => {
+      const tail: number[] = [];
+      let cursor = from;
+      let chance = firstChance;
+      for (;;) {
+        const kids = (children.get(cursor) ?? [])
+          .map((id) => nodes[id])
+          .filter((n): n is GraphNode => Boolean(n && n.active));
+        if (kids.length === 0 || rand() > chance) break;
+        const next = kids[Math.floor(rand() * kids.length)];
+        if (!next) break;
+        tail.push(next.id);
+        cursor = next.id;
+        chance *= 0.72;
+      }
+      return tail;
+    };
+
+    const makePacket = (path: number[], tone: PacketTone, kindLabel: string, baseSpeed: number) => {
+      const weight = 0.7 + rand() ** 1.5 * 1.8;
+      const first = path[0];
+      const last = path[path.length - 1];
+      packets.push({
+        path,
+        seg: 0,
+        t: 0,
+        weight,
+        speed: baseSpeed / (0.7 + weight * 0.45),
+        size: 1.2 + weight * 0.9,
+        tone,
+        fade: 0,
+        kindLabel,
+        fromLabel: first === undefined ? 'source' : placeName(first),
+        toLabel: last === undefined ? 'agent' : placeName(last),
+      });
+    };
+
     const spawnPacket = () => {
       const roll = rand();
       if (roll < 0.6) {
-        /* serve: source → … → hub → agent (→ often one of its live sessions) */
+        /* serve: source → … → hub → agent → (session → tool …) */
         const source = pickActive(sources);
         const agent = pickActive(agents);
         if (!source || !agent) return;
-        const path = [...chainToHub(source.id), agent.id];
-        const sessions = (children.get(agent.id) ?? [])
-          .map((id) => nodes[id])
-          .filter((n): n is GraphNode => Boolean(n && n.kind === 'session' && n.active));
-        if (sessions.length > 0 && rand() < 0.65) {
-          const session = sessions[Math.floor(rand() * sessions.length)];
-          if (session) path.push(session.id);
-        }
-        packets.push({
-          path,
-          seg: 0,
-          t: 0,
-          speed: 130 + rand() * 80,
-          size: 1.7 + rand() * 0.9,
-          tone: rand() < 0.02 ? 'gold' : 'rose',
-          fade: 0,
-        });
+        const path = [...chainToHub(source.id), agent.id, ...descend(agent.id, 0.65)];
+        makePacket(path, rand() < 0.02 ? 'gold' : 'rose', 'context packet', 190);
       } else if (roll < 0.88) {
         /* index: leaf/item → parent (short local hop) */
         const source = pickActive(sources);
         if (!source || source.parent < 0) return;
-        packets.push({
-          path: [source.id, source.parent],
-          seg: 0,
-          t: 0,
-          speed: 90 + rand() * 60,
-          size: 1.4 + rand() * 0.6,
-          tone: 'clay',
-          fade: 0,
-        });
+        makePacket([source.id, source.parent], 'clay', 'index delta', 130);
       } else {
-        /* query: a session asks, through its agent, up to the hub */
+        /* query: a session (or deeper tool call) asks, up through its agent, to the hub */
         const agent = pickActive(agents);
         if (!agent) return;
-        const sessions = (children.get(agent.id) ?? [])
-          .map((id) => nodes[id])
-          .filter((n): n is GraphNode => Boolean(n && n.kind === 'session' && n.active));
-        const start = sessions.length > 0 && rand() < 0.5 ? sessions[0] : agent;
-        if (!start) return;
-        const path = start.kind === 'session' ? [start.id, agent.id, hub.id] : [agent.id, hub.id];
-        packets.push({
-          path,
-          seg: 0,
-          t: 0,
-          speed: 150 + rand() * 70,
-          size: 1.5 + rand() * 0.6,
-          tone: 'rose',
-          fade: 0,
-        });
+        const down = descend(agent.id, 0.7);
+        const start = down.length > 0 ? down[down.length - 1] : agent.id;
+        if (start === undefined) return;
+        const up = [...down].reverse();
+        makePacket([...up, agent.id, hub.id].slice(up.length > 0 ? 0 : 1), 'rose', 'query', 210);
       }
     };
 
@@ -514,23 +603,31 @@ export function Constellation({
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     let width = 0;
     let height = 0;
+    let portrait = false;
     const projected: Projected[] = nodes.map(() => ({ x: 0, y: 0, scale: 1, fog: 1 }));
     const drawOrder = nodes.map((n) => n.id);
 
     let pointerX: number | null = null;
     let pointerY: number | null = null;
     let hovered = -1;
+    let hoveredPacket: Packet | null = null;
 
-    const worldScale = () => Math.min(width / 980, height / 600);
+    const worldScale = () =>
+      portrait ? Math.min(width / 1000, height / 900) : Math.min(width / 1080, height / 560);
 
-    const projectPoint = (x: number, y: number, z: number) => {
+    const projectPoint = (wx: number, wy: number, wz: number) => {
+      /* portrait: quarter-turn the ground plane — sources above, agents below */
+      const px = portrait ? wz : wx;
+      const pz = portrait ? -wx : wz;
       const ws = worldScale();
-      const yc = y * COS_P - z * SIN_P;
-      const zc = y * SIN_P + z * COS_P;
+      const x1 = px * COS_Y + pz * SIN_Y;
+      const z1 = -px * SIN_Y + pz * COS_Y;
+      const yc = wy * COS_P - z1 * SIN_P;
+      const zc = wy * SIN_P + z1 * COS_P;
       const scale = FOV / (FOV + zc);
       return {
-        x: width * 0.5 + x * ws * scale,
-        y: height * 0.45 + yc * ws * scale,
+        x: width * 0.5 + x1 * ws * scale,
+        y: height * (portrait ? 0.5 : 0.46) + yc * ws * scale,
         scale: scale * ws,
         raw: scale,
       };
@@ -538,7 +635,7 @@ export function Constellation({
 
     const project = (time: number) => {
       for (const node of nodes) {
-        const floatY = node.y + Math.sin(time * 0.4 + node.phase) * 3;
+        const floatY = node.y + Math.sin(time * 0.4 + node.phase) * 3 + node.yOff;
         const p = projectPoint(node.x, floatY, node.z);
         const target = projected[node.id];
         if (!target) continue;
@@ -548,6 +645,64 @@ export function Constellation({
         target.fog = Math.min(1, Math.max(0.35, (p.raw - 0.8) * 1.9 + 0.45));
       }
       drawOrder.sort((a, b) => (projected[a]?.scale ?? 0) - (projected[b]?.scale ?? 0));
+    };
+
+    /*
+     * Cube geometry: which of the six faces the fixed camera sees is computed from a
+     * probe cube (a face is visible when its center projects nearer than the cube
+     * center) — recomputed on resize because portrait swaps the plane.
+     */
+    type FaceAxis = 'top' | 'x-' | 'x+' | 'z-' | 'z+';
+    const FACE_CORNERS: Record<FaceAxis, Array<[number, number, number]>> = {
+      top: [
+        [-1, -1, -1],
+        [1, -1, -1],
+        [1, -1, 1],
+        [-1, -1, 1],
+      ],
+      'x-': [
+        [-1, -1, -1],
+        [-1, -1, 1],
+        [-1, 1, 1],
+        [-1, 1, -1],
+      ],
+      'x+': [
+        [1, -1, -1],
+        [1, -1, 1],
+        [1, 1, 1],
+        [1, 1, -1],
+      ],
+      'z-': [
+        [-1, -1, -1],
+        [1, -1, -1],
+        [1, 1, -1],
+        [-1, 1, -1],
+      ],
+      'z+': [
+        [-1, -1, 1],
+        [1, -1, 1],
+        [1, 1, 1],
+        [-1, 1, 1],
+      ],
+    };
+    const FACE_CENTER: Record<FaceAxis, [number, number, number]> = {
+      top: [0, -1, 0],
+      'x-': [-1, 0, 0],
+      'x+': [1, 0, 0],
+      'z-': [0, 0, -1],
+      'z+': [0, 0, 1],
+    };
+    /** visible side faces in draw order (top always visible under a downward pitch) */
+    let visibleSides: FaceAxis[] = ['z-', 'x+'];
+
+    const computeVisibleFaces = () => {
+      const sides: FaceAxis[] = [];
+      const centerScale = projectPoint(0, 0, 0).raw;
+      for (const axis of ['x-', 'x+', 'z-', 'z+'] as FaceAxis[]) {
+        const c = FACE_CENTER[axis];
+        if (projectPoint(c[0] * 10, c[1] * 10, c[2] * 10).raw > centerScale) sides.push(axis);
+      }
+      visibleSides = sides;
     };
 
     /** World-space quadratic bezier per edge — packets and strokes share it. */
@@ -568,6 +723,22 @@ export function Constellation({
     const curveFor = (a: number, b: number) =>
       edgeCurve.get(`${a}:${b}`) ?? edgeCurve.get(`${b}:${a}`) ?? null;
 
+    /* Rope physics: packets in flight pull their edge downward this frame. */
+    const edgeSag = new Map<string, number>();
+    const sagKey = (a: number, b: number) => (a < b ? `${a}:${b}` : `${b}:${a}`);
+    const collectSag = () => {
+      edgeSag.clear();
+      for (const packet of packets) {
+        if (packet.fade > 0) continue;
+        const a = packet.path[packet.seg];
+        const b = packet.path[packet.seg + 1];
+        if (a === undefined || b === undefined) continue;
+        const key = sagKey(a, b);
+        const pull = packet.weight * 5 * Math.sin(Math.PI * packet.t);
+        edgeSag.set(key, Math.min(10, (edgeSag.get(key) ?? 0) + pull));
+      }
+    };
+
     const packetWorldPos = (packet: Packet): { x: number; y: number; z: number } | null => {
       const fromId = packet.path[packet.seg];
       const toId = packet.path[packet.seg + 1];
@@ -578,26 +749,194 @@ export function Constellation({
       const control = curveFor(fromId, toId);
       const t = packet.t;
       const u = 1 - t;
+      /* the packet rides the rope it is sagging */
+      const ownSag = packet.weight * 5 * Math.sin(Math.PI * t) * 0.55;
       if (!control) {
-        return { x: from.x * u + to.x * t, y: from.y * u + to.y * t, z: from.z * u + to.z * t };
+        return {
+          x: from.x * u + to.x * t,
+          y: from.y * u + to.y * t + ownSag,
+          z: from.z * u + to.z * t,
+        };
       }
       return {
         x: u * u * from.x + 2 * u * t * control.mx + t * t * to.x,
-        y: u * u * from.y + 2 * u * t * control.my + t * t * to.y,
+        y: u * u * from.y + 2 * u * t * control.my + t * t * to.y + ownSag,
         z: u * u * from.z + 2 * u * t * control.mz + t * t * to.z,
       };
     };
 
     /* -------------------------------------------------------- drawing */
 
-    const roundRect = (x: number, y: number, w: number, h: number, r: number) => {
+    const quad = (pts: Array<{ x: number; y: number }>) => {
+      const [p0, p1, p2, p3] = pts;
+      if (!p0 || !p1 || !p2 || !p3) return;
       ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r);
-      ctx.arcTo(x, y + h, x, y, r);
-      ctx.arcTo(x, y, x + w, y, r);
+      ctx.moveTo(p0.x, p0.y);
+      ctx.lineTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
       ctx.closePath();
+    };
+
+    /** bilinear point inside a projected quad — used to draw the hub's mosaic. */
+    const lerpQuad = (
+      corners: Array<{ x: number; y: number }>,
+      u: number,
+      v: number,
+    ): { x: number; y: number } => {
+      const [c0, c1, c2, c3] = corners;
+      if (!c0 || !c1 || !c2 || !c3) return { x: 0, y: 0 };
+      const topX = c0.x + (c1.x - c0.x) * u;
+      const topY = c0.y + (c1.y - c0.y) * u;
+      const botX = c3.x + (c2.x - c3.x) * u;
+      const botY = c3.y + (c2.y - c3.y) * u;
+      return { x: topX + (botX - topX) * v, y: topY + (botY - topY) * v };
+    };
+
+    const drawCube = (node: GraphNode, p: Projected, emphasis: number, time: number) => {
+      const s = node.size * 1.15;
+      const floatY = node.y + Math.sin(time * 0.4 + node.phase) * 3 + node.yOff;
+      const cornersOf = (axis: FaceAxis) =>
+        FACE_CORNERS[axis].map((c) =>
+          projectPoint(node.x + c[0] * s, floatY + c[1] * s, node.z + c[2] * s),
+        );
+
+      /* ground shadow — anchored to the plane, so lifts read as real height */
+      const ground = projectPoint(node.x, node.y + s + 3, node.z);
+      const lift = Math.max(0, -node.yOff);
+      const shadowW = s * 2.6 * p.scale * (1 - Math.min(0.4, lift / 26));
+      ctx.globalAlpha =
+        (inks.darkGround ? 0.34 : 0.13) * p.fog * emphasis * (1 - Math.min(0.6, lift / 20));
+      ctx.fillStyle = inks.darkGround ? 'rgba(0, 0, 0, 1)' : rgba(inks.foreground, 1);
+      ctx.beginPath();
+      ctx.ellipse(
+        ground.x,
+        ground.y,
+        Math.max(1, shadowW / 2),
+        Math.max(1, shadowW / 5.6),
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+
+      if (!node.active) {
+        /* offline: a dashed wire cube, no faces */
+        ctx.globalAlpha = p.fog * emphasis * 0.5;
+        ctx.strokeStyle = rgba(inks.foreground, 0.5);
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 4]);
+        quad(cornersOf('top'));
+        ctx.stroke();
+        for (const axis of visibleSides) {
+          quad(cornersOf(axis));
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        return;
+      }
+
+      /* glow beneath the cube — arrivals swell it smoothly */
+      const swell = node.flash * node.flash * (3 - 2 * node.flash);
+      const glowSize = s * 2.1 * p.scale * (3 + swell * 1.1);
+      ctx.globalAlpha = (0.38 + swell * 0.5) * p.fog * emphasis;
+      ctx.drawImage(
+        inks.glow[node.tone],
+        p.x - glowSize / 2,
+        p.y - glowSize / 2,
+        glowSize,
+        glowSize,
+      );
+
+      const isCard = node.kind === 'hub' || node.kind === 'agent';
+      const base = isCard ? inks.card : inks.foreground;
+      ctx.lineJoin = 'round';
+
+      const paintFace = (axis: FaceAxis | 'top', factor: number, alphaLight: number) => {
+        const corners = cornersOf(axis as FaceAxis);
+        quad(corners);
+        if (inks.darkGround) {
+          ctx.globalAlpha = p.fog * emphasis * (isCard ? 0.97 : 0.9);
+          ctx.fillStyle = rgba(shade(base, factor), 1);
+          ctx.fill();
+        } else {
+          /* noon: ink-shaded faces + hairlines — line-art 3D on paper */
+          ctx.globalAlpha = p.fog * emphasis;
+          ctx.fillStyle = isCard ? rgba(shade(base, factor), 1) : rgba(inks.foreground, alphaLight);
+          ctx.fill();
+          ctx.globalAlpha = p.fog * emphasis * 0.85;
+          ctx.strokeStyle = rgba(inks.foreground, 0.5);
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+        return corners;
+      };
+
+      for (const axis of visibleSides) {
+        paintFace(axis, axis.startsWith('x') ? 0.68 : 0.86, axis.startsWith('x') ? 0.26 : 0.17);
+      }
+      const topCorners = paintFace('top', inks.darkGround ? 1.08 : 1.12, 0.09);
+
+      /* the light edge along the top rim */
+      if (inks.darkGround) {
+        ctx.globalAlpha = p.fog * emphasis * 0.55;
+        ctx.strokeStyle = rgba(inks.foreground, isCard ? 0.5 : 0.9);
+        ctx.lineWidth = 0.8;
+        quad(topCorners);
+        ctx.stroke();
+      }
+
+      /* tone accent — a small inlay on the top face */
+      if (node.kind === 'cluster' || node.kind === 'agent') {
+        const c = lerpQuad(topCorners, 0.5, 0.5);
+        ctx.globalAlpha = p.fog * emphasis;
+        ctx.fillStyle = rgba(toneRgb(inks, node.tone), 1);
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, Math.max(1.4, s * 0.34 * p.scale), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      /* the hub carries the mark — a 3×3 mosaic set into its top face */
+      if (node.kind === 'hub') {
+        const alphas = [0.55, 0.8, 0, 0.8, 1, 0.9, 0.45, 0.9, 0.7];
+        for (let i = 0; i < 9; i += 1) {
+          const col = i % 3;
+          const row = Math.floor(i / 3);
+          const u0 = 0.14 + col * 0.26;
+          const v0 = 0.14 + row * 0.26;
+          const cellCorners = [
+            lerpQuad(topCorners, u0, v0),
+            lerpQuad(topCorners, u0 + 0.2, v0),
+            lerpQuad(topCorners, u0 + 0.2, v0 + 0.2),
+            lerpQuad(topCorners, u0, v0 + 0.2),
+          ];
+          quad(cellCorners);
+          if (i === 2) {
+            ctx.globalAlpha = p.fog * emphasis;
+            ctx.fillStyle = rgba(inks.gold, 1);
+          } else {
+            ctx.globalAlpha = p.fog * emphasis * (alphas[i] ?? 0.8) * (inks.darkGround ? 1 : 0.85);
+            ctx.fillStyle = inks.darkGround ? rgba(inks.foreground, 1) : rgba(inks.card, 1);
+            if (!inks.darkGround) {
+              ctx.fillStyle = rgba(shade(inks.foreground, 1), (alphas[i] ?? 0.8) * 0.8);
+            }
+          }
+          ctx.fill();
+        }
+      }
+
+      /* hover: the silhouette takes the rose edge */
+      if (node.id === hovered) {
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = rgba(inks.rose, 1);
+        ctx.lineWidth = 1.4;
+        quad(topCorners);
+        ctx.stroke();
+        for (const axis of visibleSides) {
+          quad(cornersOf(axis));
+          ctx.stroke();
+        }
+      }
     };
 
     let themeClass = '';
@@ -610,11 +949,12 @@ export function Constellation({
       }
       ctx.clearRect(0, 0, width, height);
       project(time);
+      collectSag();
 
       const highlight = hovered >= 0 ? subtreeOf(hovered) : null;
       const dimmed = (id: number) => (highlight !== null && !highlight.has(id) ? 0.3 : 1);
 
-      /* edges */
+      /* edges — sagging under the packets that ride them */
       for (const edge of edges) {
         const a = projected[edge.a];
         const b = projected[edge.b];
@@ -635,8 +975,16 @@ export function Constellation({
         ctx.setLineDash(broken || edge.kind === 'cross' ? [3, 5] : []);
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
+        const sag = edgeSag.get(sagKey(edge.a, edge.b)) ?? 0;
         if (control) {
-          const c = projectPoint(control.mx, control.my, control.mz);
+          const c = projectPoint(control.mx, control.my + sag, control.mz);
+          ctx.quadraticCurveTo(c.x, c.y, b.x, b.y);
+        } else if (sag > 0) {
+          const c = projectPoint(
+            (nodeA.x + nodeB.x) / 2,
+            (nodeA.y + nodeB.y) / 2 + sag,
+            (nodeA.z + nodeB.z) / 2,
+          );
           ctx.quadraticCurveTo(c.x, c.y, b.x, b.y);
         } else {
           ctx.lineTo(b.x, b.y);
@@ -645,16 +993,17 @@ export function Constellation({
       }
       ctx.setLineDash([]);
 
-      /* packets under nodes, so dots slide beneath tiles at junctions */
+      /* packets under nodes, so dots slide beneath cubes at junctions */
       for (const packet of packets) {
         const world = packetWorldPos(packet);
         if (!world) continue;
         const p = projectPoint(world.x, world.y, world.z);
         const alive = packet.fade > 0 ? Math.max(0, 1 - packet.fade * 5) : 1;
         if (alive <= 0) continue;
+        const emphasis = packet === hoveredPacket ? 1 : highlight !== null ? 0.45 : 1;
         const color = toneRgb(inks, packet.tone);
         const glowSize = packet.size * 11 * p.scale;
-        ctx.globalAlpha = 0.85 * alive;
+        ctx.globalAlpha = 0.85 * alive * emphasis;
         ctx.drawImage(
           inks.glow[packet.tone],
           p.x - glowSize / 2,
@@ -662,135 +1011,41 @@ export function Constellation({
           glowSize,
           glowSize,
         );
-        ctx.globalAlpha = 0.95 * alive;
+        ctx.globalAlpha = 0.95 * alive * emphasis;
         ctx.fillStyle = rgba(color, 1);
         ctx.beginPath();
         ctx.arc(p.x, p.y, Math.max(1, packet.size * p.scale), 0, Math.PI * 2);
         ctx.fill();
-        ctx.globalAlpha = 0.9 * alive;
+        ctx.globalAlpha = 0.9 * alive * emphasis;
         ctx.fillStyle = rgba(inks.foreground, 0.95);
         ctx.beginPath();
         ctx.arc(p.x, p.y, Math.max(0.5, packet.size * 0.4 * p.scale), 0, Math.PI * 2);
         ctx.fill();
       }
 
-      /* nodes far → near */
+      /* cubes far → near */
       for (const id of drawOrder) {
         const node = nodes[id];
         const p = projected[id];
         if (!node || !p) continue;
-        const emphasis = dimmed(id);
-        const side = node.size * 2.1 * p.scale;
-        const x = p.x - side / 2;
-        const y = p.y - side / 2;
-        const radius = Math.max(2, side * 0.28);
-
-        if (node.active) {
-          /* arrival = the glow swells and settles — smooth, never a ring */
-          const swell = node.flash * node.flash * (3 - 2 * node.flash); /* smoothstep */
-          const glowSize = side * (3 + swell * 1.1);
-          ctx.globalAlpha = (0.4 + swell * 0.5) * p.fog * emphasis;
-          ctx.drawImage(
-            inks.glow[node.tone],
-            p.x - glowSize / 2,
-            p.y - glowSize / 2,
-            glowSize,
-            glowSize,
-          );
-        }
-
-        roundRect(x, y, side, side, radius);
-        if (node.active) {
-          ctx.globalAlpha = p.fog * emphasis;
-          ctx.fillStyle =
-            node.kind === 'hub'
-              ? rgba(inks.card, 0.98)
-              : node.kind === 'agent'
-                ? rgba(inks.card, 0.94)
-                : rgba(inks.foreground, inks.darkGround ? 0.88 : 0.08);
-          ctx.fill();
-          if (!inks.darkGround) {
-            /* noon: every tile takes an inked hairline so white cards hold on paper */
-            ctx.globalAlpha = p.fog * emphasis * 0.9;
-            ctx.strokeStyle = rgba(inks.foreground, node.kind === 'hub' ? 0.4 : 0.5);
-            ctx.lineWidth = 1;
-            ctx.stroke();
-          }
-          /* top-light bevel */
-          ctx.globalAlpha = p.fog * emphasis * 0.5;
-          ctx.strokeStyle = rgba(inks.foreground, node.kind === 'hub' ? 0.4 : 0.25);
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(x + radius, y + 0.5);
-          ctx.lineTo(x + side - radius, y + 0.5);
-          ctx.stroke();
-        } else {
-          ctx.globalAlpha = p.fog * emphasis * 0.5;
-          ctx.strokeStyle = rgba(inks.foreground, 0.5);
-          ctx.lineWidth = 1;
-          ctx.setLineDash([3, 4]);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
-
-        /* tone accents */
-        if (node.active && (node.kind === 'cluster' || node.kind === 'agent')) {
-          ctx.globalAlpha = p.fog * emphasis;
-          ctx.fillStyle = rgba(toneRgb(inks, node.tone), 1);
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, Math.max(1.4, side * 0.1), 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        if (node.kind === 'hub' && node.active) {
-          /* the mark echoed: a 3×3 mini-mosaic with the gilded arrival */
-          const cell = side * 0.2;
-          const gap = side * 0.06;
-          const originX = p.x - (cell * 3 + gap * 2) / 2;
-          const originY = p.y - (cell * 3 + gap * 2) / 2;
-          const alphas = [0.55, 0.8, 0, 0.8, 1, 0.9, 0.45, 0.9, 0.7];
-          for (let i = 0; i < 9; i += 1) {
-            const col = i % 3;
-            const row = Math.floor(i / 3);
-            const gx = originX + col * (cell + gap);
-            const gy = originY + row * (cell + gap);
-            roundRect(gx, gy, cell, cell, cell * 0.3);
-            if (i === 2) {
-              ctx.globalAlpha = p.fog * emphasis;
-              ctx.fillStyle = rgba(inks.gold, 1);
-              ctx.fill();
-            } else {
-              ctx.globalAlpha = p.fog * emphasis * (alphas[i] ?? 0.8);
-              ctx.fillStyle = rgba(inks.foreground, 1);
-              ctx.fill();
-            }
-          }
-        }
-
-        /* hover ring */
-        if (id === hovered) {
-          ctx.globalAlpha = 0.9;
-          ctx.strokeStyle = rgba(inks.rose, 1);
-          ctx.lineWidth = 1.4;
-          roundRect(x - 4, y - 4, side + 8, side + 8, radius + 3);
-          ctx.stroke();
-        }
+        drawCube(node, p, dimmed(id), time);
 
         /* labels: hub serif, clusters/agents sans — never below legible scale */
         if (node.label) {
-          const labelAlpha = p.fog * emphasis * (node.active ? 1 : 0.55);
+          const labelAlpha = p.fog * dimmed(id) * (node.active ? 1 : 0.55);
+          const bottom = projectPoint(node.x, node.y + node.size * 1.15 + 6, node.z);
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
           if (node.kind === 'hub') {
             ctx.globalAlpha = labelAlpha;
             ctx.fillStyle = rgba(inks.foreground, 0.95);
-            ctx.font = `400 ${Math.max(14, 15 * p.scale)}px ${inks.serif}`;
-            ctx.fillText(node.label, p.x, y + side + 8);
+            ctx.font = `400 ${Math.max(14, 15 * Math.min(1.2, p.scale))}px ${inks.serif}`;
+            ctx.fillText(node.label, bottom.x, bottom.y + 6);
           } else {
             ctx.globalAlpha = labelAlpha * 0.95;
             ctx.fillStyle = inks.mutedText;
             ctx.font = `500 ${Math.max(10.5, 11.5 * Math.min(1, p.scale))}px ${inks.sans}`;
-            ctx.fillText(node.label, p.x, y + side + 7);
+            ctx.fillText(node.label, bottom.x, bottom.y + 4);
           }
         }
       }
@@ -802,6 +1057,9 @@ export function Constellation({
     const step = (dt: number, time: number) => {
       for (const node of nodes) {
         if (node.flash > 0) node.flash = Math.max(0, node.flash - dt * 2.4);
+        /* damped spring — arrivals lift, toggles sink, everything settles */
+        node.yVel += (-SPRING_K * node.yOff - SPRING_D * node.yVel) * dt;
+        node.yOff += node.yVel * dt;
       }
 
       spawnBank += dt * SPAWN_RATE;
@@ -832,9 +1090,11 @@ export function Constellation({
         if (packet.t >= 1) {
           packet.t = 0;
           packet.seg += 1;
-          to.flash = 1;
+          to.flash = Math.min(1, to.flash + 0.85);
+          /* the arrival impulse — heavier packets rock the cube harder */
+          to.yVel -= 18 + packet.weight * 9;
           if (packet.seg >= packet.path.length - 1) {
-            if (to.kind === 'agent' || to.kind === 'session') {
+            if (to.kind === 'agent' || to.kind === 'session' || to.kind === 'tool') {
               tokens += 380 + Math.floor(rand() * 2400);
               arrivals.push(now);
             }
@@ -853,9 +1113,11 @@ export function Constellation({
       if (w === width && h === height && canvas.width > 1) return;
       width = w;
       height = h;
+      portrait = height > width * 1.15;
       canvas.width = Math.max(1, Math.round(width * dpr));
       canvas.height = Math.max(1, Math.round(height * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      computeVisibleFaces();
     };
 
     const hitTest = (px: number, py: number): number => {
@@ -865,16 +1127,57 @@ export function Constellation({
         const node = nodes[id];
         const p = projected[id];
         if (!node || !p) continue;
-        const reach = Math.max(10, node.size * 1.3 * p.scale + 6);
+        const reach = Math.max(10, node.size * 1.5 * p.scale + 6);
         if (Math.hypot(px - p.x, py - p.y) <= reach) return id;
       }
       return -1;
     };
 
+    const hitTestPacket = (px: number, py: number): Packet | null => {
+      let best: Packet | null = null;
+      let bestDist = 11;
+      for (const packet of packets) {
+        if (packet.fade > 0) continue;
+        const world = packetWorldPos(packet);
+        if (!world) continue;
+        const p = projectPoint(world.x, world.y, world.z);
+        const d = Math.hypot(px - p.x, py - p.y);
+        if (d < bestDist) {
+          bestDist = d;
+          best = packet;
+        }
+      }
+      return best;
+    };
+
+    const setTooltip = (label: string, hint: string, x: number, y: number) => {
+      const labelEl = tooltip.querySelector('[data-role="label"]');
+      const hintEl = tooltip.querySelector('[data-role="hint"]');
+      if (labelEl) labelEl.textContent = label;
+      if (hintEl) hintEl.textContent = hint;
+      const tw = tooltip.offsetWidth || 140;
+      const th = tooltip.offsetHeight || 44;
+      let tx = x + 14;
+      if (tx + tw > width - 8) tx = x - 14 - tw;
+      let ty = y - 10;
+      if (ty + th > height - 8) ty = height - 8 - th;
+      tx = Math.max(8, Math.min(tx, width - tw - 8));
+      ty = Math.max(8, ty);
+      tooltip.style.transform = `translate(${Math.round(tx)}px, ${Math.round(ty)}px)`;
+      tooltip.style.opacity = '1';
+    };
+
     const syncHover = () => {
       const next = pointerX === null || pointerY === null ? -1 : hitTest(pointerX, pointerY);
-      if (next === hovered) return;
+      const nextPacket =
+        next >= 0 || pointerX === null || pointerY === null
+          ? null
+          : hitTestPacket(pointerX, pointerY);
+      if (next === hovered && nextPacket === hoveredPacket) {
+        return;
+      }
       hovered = next;
+      hoveredPacket = nextPacket;
       const node = hovered >= 0 ? nodes[hovered] : undefined;
       if (node) {
         const label =
@@ -883,34 +1186,33 @@ export function Constellation({
             ? 'symbol · indexed'
             : node.kind === 'session'
               ? 'session · live'
-              : node.kind === 'item'
-                ? 'fragment · cited'
-                : 'node');
+              : node.kind === 'tool'
+                ? 'tool call · running'
+                : node.kind === 'item'
+                  ? 'fragment · cited'
+                  : 'node');
         const hint =
           node.kind === 'hub'
             ? 'the context hub'
             : node.enabled
               ? 'click to take offline'
               : 'offline · click to restore';
-        const labelEl = tooltip.querySelector('[data-role="label"]');
-        const hintEl = tooltip.querySelector('[data-role="hint"]');
-        if (labelEl) labelEl.textContent = label;
-        if (hintEl) hintEl.textContent = hint;
         const p = projected[hovered];
-        if (p) {
-          /* clamp inside the canvas region — flip to the left/top side near edges */
-          const tw = tooltip.offsetWidth || 140;
-          const th = tooltip.offsetHeight || 44;
-          let tx = p.x + 14;
-          if (tx + tw > width - 8) tx = p.x - 14 - tw;
-          let ty = p.y - 10;
-          if (ty + th > height - 8) ty = height - 8 - th;
-          tx = Math.max(8, Math.min(tx, width - tw - 8));
-          ty = Math.max(8, ty);
-          tooltip.style.transform = `translate(${Math.round(tx)}px, ${Math.round(ty)}px)`;
-        }
-        tooltip.style.opacity = '1';
+        if (p) setTooltip(label, hint, p.x, p.y);
         canvas.style.cursor = node.kind === 'hub' ? 'default' : 'pointer';
+      } else if (nextPacket) {
+        /* packet identity — weight as payload size, route as provenance */
+        const world = packetWorldPos(nextPacket);
+        if (world) {
+          const p = projectPoint(world.x, world.y, world.z);
+          setTooltip(
+            `${nextPacket.kindLabel} · ${(nextPacket.weight * 2.1).toFixed(1)}KB`,
+            `${nextPacket.fromLabel} → ${nextPacket.toLabel}`,
+            p.x,
+            p.y,
+          );
+        }
+        canvas.style.cursor = 'default';
       } else {
         tooltip.style.opacity = '0';
         canvas.style.cursor = 'default';
@@ -981,11 +1283,14 @@ export function Constellation({
       const node = id >= 0 ? nodes[id] : undefined;
       if (!node || node.kind === 'hub') return;
       node.enabled = !node.enabled;
+      /* the toggle lands with weight — the cube sinks and settles */
+      node.yVel += node.enabled ? -26 : 34;
       refreshActive();
       fizzleBrokenRoutes();
       pushTelemetry();
       /* the hovered node just changed state — rebuild the tooltip from scratch */
       hovered = -1;
+      hoveredPacket = null;
       syncHover();
     };
 

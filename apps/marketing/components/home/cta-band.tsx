@@ -37,8 +37,9 @@ export function CtaBand() {
         rows={3}
         seed={70726}
         seamAt={0.5}
+        wave
         className="fade-x tile-hover relative mx-auto mt-10 max-w-6xl px-2 pb-14"
-        label="A quiet strip of mosaic tiles, drifting, with one gilded tile arriving; tiles light up under the pointer"
+        label="A strip of mosaic tiles with a crest of light sweeping across it forever; tiles light up under the pointer; one gilded tile arrives"
       />
     </section>
   );

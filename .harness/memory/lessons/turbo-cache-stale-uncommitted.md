@@ -26,3 +26,9 @@ working tree.
 run fresh. Keep gates cache-free until turbo's hashing is understood; if re-enabling caching
 later, prove it invalidates on uncommitted changes, or restrict caching to CI (committed state).
 See [[harness-model]] and [[engineering-standards]].
+
+**2026-07-08 addendum — Turbopack DEV cache, same disease:** `next dev` (Turbopack) with its
+persistent cache (`apps/marketing/.next/dev`) served a STALE compiled `globals.css` across a
+full dev-server restart — new custom rules (`.tile-wave`, veil changes) existed on disk but
+never reached the browser, mimicking a "CSS not applying" bug. When served CSS and disk CSS
+disagree, delete `.next/dev` and restart before debugging anything else.

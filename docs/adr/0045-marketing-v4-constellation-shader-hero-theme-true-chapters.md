@@ -139,6 +139,32 @@ Same review cycle; the deltas that supersede parts of the decision above:
    wordmark fallback); illustration scenes may loop gently (breathing/cycling), always
    eased.
 
+## Amendment — v4.2 (2026-07-08, sixth stakeholder review, 18 directives)
+
+1. **The constellation goes truly isometric.** A fixed yaw joins the pitch, and every
+   node renders as a **three-face cube** (lit top, mid front, shaded side, ground
+   shadow; the hub's mosaic is set into its top face; noon = ink-outlined boxes on
+   paper). Portrait viewports quarter-turn the ground plane — sources above, agents
+   below. Scaled up; a **gemini** agent joins; sessions now nest **tool calls → nested
+   tool calls**, randomized per visit.
+2. **Enterprise-grade micro-physics, not a physics engine:** packets carry randomized
+   weight (size + speed derive from it), **sag the edge they ride** (rope pull at the
+   load point) and identify themselves on hover (kind · KB · from → to); arrivals and
+   toggles are **damped-spring impulses** — cubes lift/sink and settle; the pulse ring
+   is gone. Layout stays deterministic; no force simulation.
+3. **Illustrations synchronized:** the compiler's token meter breathes on the tiles'
+   exact cycle; the governance ledger tallies the cycle live; the pipeline moved onto
+   one shared %-coordinate system (chips + connectors aligned by construction) with the
+   tessera in a bordered unit; the effect web spread out so every egress edge shows.
+4. **Chrome root-causes:** the mobile menu was a child of the header — `backdrop-filter`
+   made the scrolled header the **containing block for fixed descendants**, trapping the
+   overlay; it is now the header's sibling. The hero veil weakened further and the
+   shader gained presence. The marquee uses **Gemini** (not "Gemini CLI") and carries
+   the official **Antigravity silhouette** (svgl) in monochrome. MosaicField gained a
+   `wave` mode (infinite diagonal crest + pointer-lit tiles) for the CTA band and menu.
+5. **Ops note:** Turbopack's persistent dev cache (`.next/dev`) served stale CSS across
+   server restarts — cleared as part of verification (see the cache lesson).
+
 ## Alternatives considered
 
 - **three.js / react-three-fiber scene** — rejected: bundle (~150KB+ gz) vs. 240KB budget,

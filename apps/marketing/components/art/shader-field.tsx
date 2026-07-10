@@ -99,9 +99,9 @@ void main() {
   float k = u_intensity * calm * vig;
 
   vec3 col = u_base;
-  col = mix(col, u_deep, smoothstep(0.26, 0.84, f) * 0.78 * k);
-  col = mix(col, u_rose, smoothstep(0.5, 0.96, f * length(q) * 1.7) * 0.42 * k);
-  col = mix(col, u_gold, smoothstep(0.78, 0.99, length(r) * f * 1.25) * 0.18 * k);
+  col = mix(col, u_deep, smoothstep(0.26, 0.84, f) * 0.85 * k);
+  col = mix(col, u_rose, smoothstep(0.48, 0.96, f * length(q) * 1.7) * 0.5 * k);
+  col = mix(col, u_gold, smoothstep(0.76, 0.99, length(r) * f * 1.25) * 0.22 * k);
 
   /* Ember sparks — a dozen slow drifters, twinkling; the hero's hint of the traffic below. */
   for (int i = 0; i < 12; i++) {
@@ -209,9 +209,13 @@ export function ShaderField() {
     };
     applyPalette();
 
-    /* The field is smooth — render below device resolution and let CSS upscale. */
-    const renderScale = Math.min(Math.max(window.devicePixelRatio * 0.6, 0.6), 1.25);
-    const resize = () => {
+    /*
+     * Render at native resolution (capped): the old 0.6× downscale + CSS upscale read
+     * as a blur over the whole field — the fragment shader is cheap enough to run
+     * full-size. (This is the knob if a low-end device ever needs relief.)
+     */
+    const renderScale = Math.min(window.devicePixelRatio || 1, 1.5);
+    const resize = (): boolean => {
       const w = Math.max(1, Math.round(canvas.clientWidth * renderScale));
       const h = Math.max(1, Math.round(canvas.clientHeight * renderScale));
       if (canvas.width !== w || canvas.height !== h) {
@@ -219,26 +223,37 @@ export function ShaderField() {
         canvas.height = h;
         gl.viewport(0, 0, w, h);
         gl.uniform2f(uRes, w, h);
+        return true;
       }
+      return false;
     };
 
     let raf = 0;
     let inView = true;
     let revealed = false;
+    let staticPainted = false;
     let themeClass = '';
     const started = performance.now();
 
-    /* Paints every visible frame — resize and theme are checked here, not in observers. */
+    /*
+     * Paints every visible frame — except under reduced motion, where the frozen frame
+     * paints ONCE and repaints only on resize/theme change (headless/software-GL
+     * environments must not burn CPU on identical frames).
+     */
     const frame = (now: number) => {
       raf = requestAnimationFrame(frame);
       if (document.hidden || !inView) return;
+      let dirty = false;
       if (document.documentElement.className !== themeClass) {
         themeClass = document.documentElement.className;
         applyPalette();
+        dirty = true;
       }
-      resize();
+      if (resize()) dirty = true;
+      if (reducedRef.current && staticPainted && !dirty) return;
       gl.uniform1f(uTime, reducedRef.current ? 40 : (now - started) / 1000 + 40);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
+      staticPainted = reducedRef.current === true;
       if (!revealed) {
         revealed = true;
         canvas.style.opacity = '1';

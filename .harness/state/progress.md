@@ -3,6 +3,33 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-09 (v4.3 round 8) — F-051 IN PROGRESS — gap-free cubes, frame fade, native-res shader
+
+**Eighth review (4 issues), root causes found and fixed.**
+
+- **KG bottom hard-cut:** the fade mask only covered the X axis — added `.fade-frame`
+  (intersected X+Y masks) so the canvas dissolves at EVERY edge; composition also
+  nudged up (center-y 0.44).
+- **Cube corner gaps:** rounding each face's PATH pulled shared edges apart. Faces are
+  now sharp quads that meet exactly; rounding comes from round-join strokes — a
+  fill-colored stroke (width 2·r) expands each face over its neighbor (no seam can
+  open), and keylines/rims/hover are WIDER under-strokes that hug the rounded
+  silhouette (no double edges). Fills are TRULY opaque: depth fog and hover-dim mix
+  the color toward the ground instead of lowering alpha — nothing shows through a face
+  (an edge was visibly bleeding through the hub in light mode).
+- **Telemetry island:** pill → rounded-lg block with generous padding (px-7 py-5).
+- **Hero 'blur':** no CSS blur existed — the shader rendered at 0.6× resolution and
+  CSS-upscaled, which reads as blur. Now renders at native DPR (≤1.5) with a slight
+  contrast lift; sparks are crisp.
+- **Regression caught by e2e:** native-res + paint-every-frame under reduced motion
+  starved axe scans in headless Chromium (30s timeouts). Both canvases now paint the
+  frozen frame ONCE under reduced motion and repaint only on resize/theme/hover/toggle
+  — e2e back to 8/8 in ~32s.
+
+**Evidence** — tsc/eslint/prettier clean; vitest 38/38; build green; e2e 8/8;
+first-load 228.7KB gz (budget 240). Preview-verified both themes incl. portrait
+close-up: rounded gap-free cubes, opaque faces, island block, edge dissolve.
+
 ## 2026-07-09 (v4.3) — F-051 IN PROGRESS — veil-less hero, object-lit cubes, telemetry island (ADR-0045 v4.3)
 
 **Seventh review (14 directives), all delivered.**

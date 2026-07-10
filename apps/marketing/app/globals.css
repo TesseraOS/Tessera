@@ -338,6 +338,21 @@
   -webkit-mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
 }
 
+/*
+ * Frame fade (§2.3, ADR-0045 v4.3) — full-bleed canvases dissolve at EVERY edge
+ * (intersected X and Y masks), so overflow reads as composition, never a cut.
+ */
+.fade-frame {
+  mask-image:
+    linear-gradient(90deg, transparent, black 6%, black 94%, transparent),
+    linear-gradient(180deg, transparent, black 6%, black 92%, transparent);
+  mask-composite: intersect;
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent, black 6%, black 94%, transparent),
+    linear-gradient(180deg, transparent, black 6%, black 92%, transparent);
+  -webkit-mask-composite: source-in;
+}
+
 /* Draw-in link underline (micro-interaction, §5). */
 .link-underline {
   position: relative;

@@ -627,7 +627,7 @@ export function Constellation({
       const scale = FOV / (FOV + zc);
       return {
         x: width * 0.5 + x1 * ws * scale,
-        y: height * (portrait ? 0.5 : 0.46) + yc * ws * scale,
+        y: height * (portrait ? 0.5 : 0.44) + yc * ws * scale,
         scale: scale * ws,
         raw: scale,
       };
@@ -822,7 +822,8 @@ export function Constellation({
     const drawCube = (node: GraphNode, p: Projected, emphasis: number, time: number) => {
       const s = node.size * 1.15;
       const floatY = node.y + Math.sin(time * 0.4 + node.phase) * 3;
-      const cornerR = Math.max(1.2, s * 0.24 * p.scale);
+      /* corner radius = half the self-colored stroke that rounds the silhouette */
+      const cornerR = Math.max(1.5, Math.min(4.5, s * 0.16 * p.scale));
       const cornersOf = (axis: FaceAxis) =>
         FACE_CORNERS[axis].map((c) =>
           projectPoint(node.x + c[0] * s, floatY + c[1] * s, node.z + c[2] * s),
@@ -850,11 +851,12 @@ export function Constellation({
         ctx.globalAlpha = p.fog * emphasis * 0.5;
         ctx.strokeStyle = rgba(inks.foreground, 0.5);
         ctx.lineWidth = 1;
+        ctx.lineJoin = 'round';
         ctx.setLineDash([3, 4]);
-        quad(cornersOf('top'), cornerR);
+        quad(cornersOf('top'));
         ctx.stroke();
         for (const axis of visibleSides) {
-          quad(cornersOf(axis), cornerR);
+          quad(cornersOf(axis));
           ctx.stroke();
         }
         ctx.setLineDash([]);
@@ -871,9 +873,37 @@ export function Constellation({
       const warm = toneRgb(inks, node.tone === 'ivory' ? 'rose' : node.tone);
       ctx.lineJoin = 'round';
 
-      const paintFace = (axis: FaceAxis | 'top', factor: number, lightT: number) => {
+      /*
+       * Gap-free rounded corners, by construction: every face is a SHARP quad (faces
+       * meet exactly — rounding the paths is what opened seams), and the rounding
+       * comes from strokes with round joins. Per face, three passes on the same path:
+       *   1. keyline stroke (width 2·r + 2) — a 1px line hugging the ROUNDED
+       *      silhouette (noon ink / dark top rim / arrival warm edge),
+       *   2. fill-colored stroke (width 2·r) — expands the face outward by r with
+       *      rounded corners, overlapping the neighbor so no seam can open,
+       *   3. the fill itself.
+       */
+      const hoveredNode = node.id === hovered;
+      if (hoveredNode) {
+        /* hover underlay: a rose rim around the whole silhouette, under the faces */
+        ctx.strokeStyle = rgba(inks.rose, 1);
+        ctx.lineWidth = cornerR * 2 + 3;
+        ctx.globalAlpha = 0.9 * p.fog;
+        quad(cornersOf('top'));
+        ctx.stroke();
+        for (const axis of visibleSides) {
+          quad(cornersOf(axis));
+          ctx.stroke();
+        }
+      }
+
+      const paintFace = (
+        axis: FaceAxis | 'top',
+        factor: number,
+        lightT: number,
+        keyline?: { color: Rgb; alpha: number; extra: number },
+      ) => {
         const corners = cornersOf(axis as FaceAxis);
-        quad(corners, cornerR);
         /* solid, opaque blocks on both grounds */
         let fill: Rgb;
         if (inks.darkGround) {
@@ -884,38 +914,50 @@ export function Constellation({
           fill = mixRgb(inks.background, inks.foreground, lightT);
         }
         if (swell > 0.01) fill = mixRgb(fill, warm, swell * (inks.darkGround ? 0.28 : 0.2));
-        ctx.globalAlpha = p.fog * emphasis;
-        ctx.fillStyle = rgba(fill, 1);
-        ctx.fill();
-        if (!inks.darkGround) {
-          /* noon: hairline inking keeps the volume crisp on paper */
-          ctx.globalAlpha = p.fog * emphasis * 0.85;
-          ctx.strokeStyle = rgba(inks.foreground, 0.5);
-          ctx.lineWidth = 1;
+        /*
+         * TRULY opaque: depth fog and hover-dim mix the color toward the ground
+         * instead of lowering alpha — nothing ever shows through a face.
+         */
+        const visibility = p.fog * emphasis;
+        const solid = mixRgb(inks.background, fill, visibility);
+        quad(corners);
+        if (keyline) {
+          ctx.globalAlpha = visibility * keyline.alpha;
+          ctx.strokeStyle = rgba(keyline.color, 1);
+          ctx.lineWidth = cornerR * 2 + keyline.extra;
           ctx.stroke();
         }
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = rgba(solid, 1);
+        ctx.lineWidth = cornerR * 2;
+        ctx.stroke();
+        ctx.fillStyle = rgba(solid, 1);
+        ctx.fill();
         return corners;
       };
 
+      /* noon keeps its ink keyline on every face; dark rims only the lit top */
+      const noonKey = inks.darkGround
+        ? undefined
+        : { color: shade(inks.foreground, 1), alpha: 0.5, extra: 2 };
       for (const axis of visibleSides) {
-        paintFace(axis, axis.startsWith('x') ? 0.68 : 0.86, axis.startsWith('x') ? 0.3 : 0.19);
+        paintFace(
+          axis,
+          axis.startsWith('x') ? 0.68 : 0.86,
+          axis.startsWith('x') ? 0.3 : 0.19,
+          noonKey,
+        );
       }
-      const topCorners = paintFace('top', inks.darkGround ? 1.08 : 1.12, 0.1);
-
-      /* the light edge along the top rim — brightens with the arrival */
-      if (inks.darkGround) {
-        ctx.globalAlpha = p.fog * emphasis * (0.55 + swell * 0.4);
-        ctx.strokeStyle = rgba(inks.foreground, isCard ? 0.5 + swell * 0.4 : 0.9);
-        ctx.lineWidth = 0.8 + swell * 0.5;
-        quad(topCorners, cornerR);
-        ctx.stroke();
-      } else if (swell > 0.01) {
-        ctx.globalAlpha = p.fog * emphasis * swell * 0.8;
-        ctx.strokeStyle = rgba(warm, 1);
-        ctx.lineWidth = 1.2;
-        quad(topCorners, cornerR);
-        ctx.stroke();
-      }
+      const topKey = inks.darkGround
+        ? {
+            color: inks.foreground,
+            alpha: (isCard ? 0.5 : 0.9) * (0.55 + swell * 0.4),
+            extra: 1.6 + swell,
+          }
+        : swell > 0.01
+          ? { color: warm, alpha: swell * 0.8, extra: 2.4 }
+          : noonKey;
+      const topCorners = paintFace('top', inks.darkGround ? 1.08 : 1.12, 0.1, topKey);
 
       /* tone accent — a small inlay on the top face */
       if (node.kind === 'cluster' || node.kind === 'agent') {
@@ -956,18 +998,7 @@ export function Constellation({
         }
       }
 
-      /* hover: the silhouette takes the rose edge */
-      if (node.id === hovered) {
-        ctx.globalAlpha = 0.9;
-        ctx.strokeStyle = rgba(inks.rose, 1);
-        ctx.lineWidth = 1.4;
-        quad(topCorners, cornerR);
-        ctx.stroke();
-        for (const axis of visibleSides) {
-          quad(cornersOf(axis), cornerR);
-          ctx.stroke();
-        }
-      }
+      /* (hover rim is the underlay drawn before the faces — see hoveredNode above) */
     };
 
     let themeClass = '';
@@ -1135,10 +1166,10 @@ export function Constellation({
 
     /* --------------------------------------------------------- wiring */
 
-    const resize = () => {
+    const resize = (): boolean => {
       const w = container.clientWidth;
       const h = container.clientHeight;
-      if (w === width && h === height && canvas.width > 1) return;
+      if (w === width && h === height && canvas.width > 1) return false;
       width = w;
       height = h;
       portrait = height > width * 1.15;
@@ -1146,6 +1177,7 @@ export function Constellation({
       canvas.height = Math.max(1, Math.round(height * dpr));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       computeVisibleFaces();
+      return true;
     };
 
     const hitTest = (px: number, py: number): number => {
@@ -1195,14 +1227,14 @@ export function Constellation({
       tooltip.style.opacity = '1';
     };
 
-    const syncHover = () => {
+    const syncHover = (): boolean => {
       const next = pointerX === null || pointerY === null ? -1 : hitTest(pointerX, pointerY);
       const nextPacket =
         next >= 0 || pointerX === null || pointerY === null
           ? null
           : hitTestPacket(pointerX, pointerY);
       if (next === hovered && nextPacket === hoveredPacket) {
-        return;
+        return false;
       }
       hovered = next;
       hoveredPacket = nextPacket;
@@ -1245,15 +1277,19 @@ export function Constellation({
         tooltip.style.opacity = '0';
         canvas.style.cursor = 'default';
       }
+      return true;
     };
 
     /*
      * One permanent rAF loop for every mode — resilient by construction. Reduced
-     * motion freezes simulated time and spawns nothing; the scene redraws identically.
+     * motion freezes simulated time and spawns nothing; the frozen frame paints once
+     * and repaints only on resize/theme/hover/toggle (idle cost must stay near zero —
+     * headless/software-GL environments run axe scans against this page).
      */
     let raf = 0;
     let inView = true;
     let last = performance.now();
+    let staticDirty = true;
 
     const frame = (nowMs: number) => {
       raf = requestAnimationFrame(frame);
@@ -1263,14 +1299,19 @@ export function Constellation({
       }
       const dt = Math.min(0.05, (nowMs - last) / 1000);
       last = nowMs;
-      resize();
+      if (resize()) staticDirty = true;
       if (reducedRef.current) {
-        drawScene(0);
-      } else {
-        const time = nowMs / 1000;
-        step(dt, time);
-        drawScene(time);
+        if (syncHover()) staticDirty = true;
+        if (document.documentElement.className !== themeClass) staticDirty = true;
+        if (staticDirty) {
+          drawScene(0);
+          staticDirty = false;
+        }
+        return;
       }
+      const time = nowMs / 1000;
+      step(dt, time);
+      drawScene(time);
       syncHover();
     };
     raf = requestAnimationFrame(frame);
@@ -1314,6 +1355,7 @@ export function Constellation({
       refreshActive();
       fizzleBrokenRoutes();
       pushTelemetry();
+      staticDirty = true;
       /* the hovered node just changed state — rebuild the tooltip from scratch */
       hovered = -1;
       hoveredPacket = null;
@@ -1361,8 +1403,8 @@ export function Constellation({
   return (
     /* absolute against the band's reserved region: immune to indefinite flex heights */
     <div ref={containerRef} className="absolute inset-0" aria-hidden="true">
-      {/* overflow fades out at the edges — never a hard cut, never a scrollbar */}
-      <canvas ref={canvasRef} className="fade-x absolute inset-0 size-full touch-pan-y" />
+      {/* overflow dissolves at every edge — never a hard cut, never a scrollbar */}
+      <canvas ref={canvasRef} className="fade-frame absolute inset-0 size-full touch-pan-y" />
       <div
         ref={tooltipRef}
         className="bg-card/90 pointer-events-none absolute top-0 left-0 rounded-md border px-2.5 py-1.5 opacity-0 transition-opacity duration-150"

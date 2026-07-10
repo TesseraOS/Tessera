@@ -40,7 +40,7 @@ export function ConstellationBand() {
         <Constellation onTelemetry={setTelemetry} />
 
         {/* telemetry island — floats over the graph, never blocks it */}
-        <dl className="bg-card/90 border-border-strong pointer-events-none absolute right-4 bottom-4 z-10 flex items-baseline gap-x-5 rounded-full border px-5 py-2.5 sm:right-6 sm:bottom-6 sm:gap-x-7">
+        <dl className="bg-card/90 border-border-strong pointer-events-none absolute right-4 bottom-4 z-10 flex items-baseline gap-x-8 rounded-lg border px-7 py-5 sm:right-6 sm:bottom-6 sm:gap-x-10">
           <div className="flex items-baseline gap-1.5">
             <dt className="text-label text-faint-foreground uppercase">tokens</dt>
             <dd className="text-small text-foreground tabular-nums">

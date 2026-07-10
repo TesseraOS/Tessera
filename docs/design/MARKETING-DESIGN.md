@@ -117,11 +117,11 @@ Light chapter (`.light [data-band='chapter']`): `--background #f2f4f6`, `--card 
 
 - Gradients: `--gradient-ember` (rose→gold; deep variants in light), `--gradient-dusk`
   (atmosphere ≤18% alpha — also the shader field's static fallback), `.text-ember`.
-- **One blur device**: the nav dusk-glass (`site-nav.tsx`). The `.hero-veil` is a
-  **scrim-only** gradient (v4.1 — the shader must stay visible) fading rightward and
-  downward so hero → constellation reads seamless; the `.graph-wash` seats the graph on
-  a translucent gradient the shader breathes through; `.tile-hover` lets mosaic tiles
-  warm under the pointer. Glassmorphism stays banned.
+- **One blur device**: the nav dusk-glass (`site-nav.tsx`). **No hero veil (v4.3):**
+  legibility is sculpted into the shader itself — an elliptical *calm pocket* under the
+  statement (knobs documented in `shader-field.tsx`); the `.graph-wash` seats the graph
+  on a translucent gradient the shader breathes through; `.tile-hover` lets mosaic
+  tiles warm under the pointer. Glassmorphism stays banned.
 - **Shader field**: one hand-written WebGL fragment shader (domain-warped brand-color
   flow + drifting ember sparks), theme via uniforms from resolved tokens, lazy
   `ssr:false`, DPR-capped, paused offscreen, static frame under reduced motion.
@@ -155,10 +155,11 @@ checklist enforces).
    dusk-glass (`bg-background/85` + blur) + hairline. Draw-in underline links; primary
    CTA sm. **Mobile: full-screen overlay menu** — serif links staggering in, body
    scroll-locked, Escape + close button, focus moved in.
-2. **`hero`** — the serif statement over the **shader field**. Layers bottom→top: ground
-   (+grain) → shader field (ssr:false; `.atmosphere` fallback) → `.hero-veil` (scrim
-   only) → eyebrow → serif `display` h1 (**exactly two nowrap lines**, one rose
-   *italic*) → lead → CTA row. No graph in the hero.
+2. **`hero`** — the serif statement over the **shader field**, no overlay: the field
+   keeps a calm pocket under the text (legibility by composition). Layers bottom→top:
+   ground (+grain) → shader field (ssr:false; `.atmosphere` fallback) → eyebrow → serif
+   `display` h1 (**exactly two nowrap lines**, one rose *italic*) → lead → CTA row. No
+   graph in the hero.
 3. **`constellation-band`** — directly south of the hero, same continuous ground/shader,
    **no visible boundary** (the veil and `.graph-wash` both fade open at the seam): the
    **canvas constellation** — deep nested knowledge graph (randomized per visit: hub /

@@ -24,7 +24,7 @@ const COLUMNS = [
   {
     title: 'get started',
     links: [
-      { href: siteConfig.appUrl, label: 'Open the dashboard' },
+      { href: siteConfig.appUrl, label: 'Dashboard' },
       { href: siteConfig.docsUrl, label: 'Self-host' },
     ],
   },

@@ -2152,6 +2152,67 @@
         "E-018",
         "E-004"
       ]
+    },
+    {
+      "id": "F-066",
+      "title": "Brand mascot: tessera-built character with moods, animation rig, and site integrations",
+      "requirements": [
+        "FR-67"
+      ],
+      "service": "web",
+      "package": "@tessera/marketing",
+      "release": "R4",
+      "priority": "could",
+      "status": "backlog",
+      "blockedBy": [
+        "F-051"
+      ],
+      "acceptance": [
+        "Brand foundation FIRST (complete harness setup): BRAND.md addendum defining the mascot (a small figure assembled from tesserae, the gilded tile as its heart; geometric, token-colored, no eyes-and-gloves cartoon) + an ADR locking name, personality, mood set (4-6: curious, working, alarmed, satisfied, idle, celebrating), usage budget (menu/empty/404/KG supervisor — NEVER hero or pricing) and the explicit non-goals; MARKETING-DESIGN.md + manifest updated (sanctioned component, accent budget interaction, design-lint patterns if any)",
+        "The rig: a single SVG master (docs/design/brand/ source of truth) + a Mascot component in components/art/* — moods as composable tile arrangements animated via the lib/motion.tsx seam (thermal rules: eased, interruptible, reduced-motion = still), tokens-only, aria-hidden with text alternative where decorative",
+        "Integrations behind the usage budget: mobile-menu ground, 404/empty states, and the constellation supervisor variant (perched at the band edge, reacting to simulated telemetry moods) — each screenshot-verified on both themes",
+        "Gates green (design-lint, axe both themes, budgets unchanged); progress + effects recorded (E-022 extended); brand-swap test still passes with the mascot covered"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-022"
+      ]
+    },
+    {
+      "id": "F-067",
+      "title": "Marketing legal pages: privacy, terms, imprint/contact, cookies + legal footer surface",
+      "requirements": [
+        "FR-67",
+        "NFR-17"
+      ],
+      "service": "web",
+      "package": "@tessera/marketing",
+      "release": "R3",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-051"
+      ],
+      "acceptance": [
+        "Legal routes on the marketing app (static-first, MARKETING-DESIGN v4 tokens/type; a shared legal-page layout with serif headings, prose measure, table support): /legal/privacy (GDPR/CCPA-aware structure: data categories, purposes, processors, retention, rights, contact), /legal/terms (SaaS + open-core split: service terms vs repository licenses), /legal/cookies (honest: first-party only today, no third-party requests - reflects the zero-third-party budget), /legal/imprint (operator identity + contact; jurisdiction placeholders clearly marked for counsel review)",
+        "Plumbing: footer legal column links resolve (replacing placeholders), per-page SEO metadata + sitemap entries, llms.txt updated, headings/landmarks pass axe AA on both themes, 375px no-overflow",
+        "Honesty rule: NO fabricated legal claims - unresolved entity/jurisdiction facts render as clearly-marked counsel-review placeholders and are tracked in the plan; content notes which sections require counsel sign-off before launch",
+        "Gates green incl. design-lint + e2e (routes 200, one h1 each, axe both themes); progress + effects recorded"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-022"
+      ]
     }
   ]
 }

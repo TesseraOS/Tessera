@@ -6,8 +6,8 @@ import { cn } from '@/lib/utils';
  * Wide screens: HTML chips and SVG connectors share ONE 1000×260 coordinate system
  * (percent-positioned chips over a stretched viewBox, hairline strokes via
  * non-scaling-stroke), so every line lands on a chip center by construction. The
- * tessera sits in a bordered card unit. Narrow screens: a vertical stack. The marching
- * dashes are this band's ambient system, silenced by the reduced-motion kill-switch.
+ * tessera mark stands unframed at the center. Narrow screens: a vertical stack. The
+ * marching dashes are this band's ambient system, silenced by reduced motion.
  */
 
 const W = 1000;
@@ -20,16 +20,20 @@ const SOURCES = [
 ] as const;
 
 const AGENTS = [
-  { label: 'claude code', tone: 'bg-rose', x: 884, y: 88 },
-  { label: 'any MCP agent', tone: 'bg-rose', x: 884, y: 172 },
+  { label: 'claude code', tone: 'bg-rose', x: 884, y: 40 },
+  { label: 'codex', tone: 'bg-rose', x: 884, y: 130 },
+  { label: 'any MCP agent', tone: 'bg-rose', x: 884, y: 220 },
 ] as const;
 
 const CENTER = { x: 500, y: 130 };
+/* connectors stop at the mark's edges — never through the mosaic's gaps */
+const MARK_IN_X = 446;
+const MARK_OUT_X = 554;
 
 const inCurve = (x: number, y: number) =>
-  `M${x} ${y} C ${(x + CENTER.x) / 2} ${y}, ${(x + CENTER.x) / 2} ${CENTER.y}, ${CENTER.x} ${CENTER.y}`;
+  `M${x} ${y} C ${(x + MARK_IN_X) / 2} ${y}, ${(x + MARK_IN_X) / 2} ${CENTER.y}, ${MARK_IN_X} ${CENTER.y}`;
 const outCurve = (x: number, y: number) =>
-  `M${CENTER.x} ${CENTER.y} C ${(CENTER.x + x) / 2} ${CENTER.y}, ${(CENTER.x + x) / 2} ${y}, ${x} ${y}`;
+  `M${MARK_OUT_X} ${CENTER.y} C ${(MARK_OUT_X + x) / 2} ${CENTER.y}, ${(MARK_OUT_X + x) / 2} ${y}, ${x} ${y}`;
 
 const at = (x: number, y: number): React.CSSProperties => ({
   left: `${(x / W) * 100}%`,
@@ -45,10 +49,13 @@ function Chip({ label, tone }: { label: string; tone: string }) {
   );
 }
 
-/** The tessera in its bordered unit — mini mosaic, gilded arrival, caption. */
+/**
+ * The tessera — the mark stands on its own (no box, no border: framing the logo would
+ * fight the tile language; the mosaic IS the frame).
+ */
 function TesseraUnit() {
   return (
-    <span className="bg-card/85 border-border-strong flex flex-col items-center gap-1.5 rounded-lg border px-3 pt-3 pb-2">
+    <span className="flex flex-col items-center gap-2 px-3">
       <svg viewBox="0 -6 104 108" className="size-20 md:size-24" aria-hidden="true">
         <g fill="var(--foreground)">
           <rect x="4" y="4" width="26" height="26" rx="6" fillOpacity="0.55" />

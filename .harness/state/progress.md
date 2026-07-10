@@ -3,6 +3,41 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-09 (v4.3) — F-051 IN PROGRESS — veil-less hero, object-lit cubes, telemetry island (ADR-0045 v4.3)
+
+**Seventh review (14 directives), all delivered.**
+
+- **Hero veil REMOVED** (chose removal over reduction): legibility is sculpted into the
+  shader — an elliptical calm pocket under the statement (intensity floor 0.18, sparks
+  dimmed inside it); the field runs at full strength everywhere else. Tuning knobs
+  documented in shader-field.tsx; the hero-veil design-lint required-pattern retired
+  (38 checks now).
+- **Constellation:** nodes never jump (spring impulses removed — only the ropes respond
+  to packet weight); arrivals illuminate the OBJECT (faces warm toward the packet tone,
+  rim brightens — under-halo gone); cubes are rounded-corner opaque solids with the
+  ground shadow now visible in dark mode (alpha 0.6); the hovered packet HOLDS STILL so
+  its identity reads; telemetry is a floating island pill docked over the canvas
+  (pointer-events-none); portrait stays large (ws = h/860) with horizontal overflow
+  edge-fading via the canvas mask — no clipping, no scrollbars, any viewport.
+- **Illustrations:** pipeline tessera unframed (no border on unit or mark — boxing the
+  logo fights the tile language; connectors stop at the mark's edges) + a codex agent
+  chip for a 3×3 composition; effect web scaled to max-w-lg with a decramped middle
+  column (all egress links read).
+- **Copy/backlog:** footer 'Open the dashboard' → 'Dashboard'; feature_list gains
+  F-066 (brand mascot — complete harness setup: BRAND addendum + ADR before code) and
+  F-067 (legal pages: privacy/terms/cookies/imprint with counsel-review placeholders).
+
+**Evidence** — design-lint 38/38; typecheck/eslint/prettier clean; build green; e2e 8/8
+(axe AA both themes); state valid (67 features). Preview-verified: veil-less hero
+(calm pocket + visible field at full 1440 width), rounded solid cubes + island over the
+graph, unframed pipeline mark with 3 agents, stable nodes with sagging ropes.
+
+**Decisions** — ADR-0045 v4.3 amendment (removal over reduction for the veil; no border
+on the mark; freeze-on-hover for packets; overflow-fade policy).
+
+**Next step** — F-051 remaining pages (features/pricing/enterprise + F-067 legal);
+Awwwards-readiness review; F-066 mascot when scheduled.
+
 ## 2026-07-08 (v4.2) — F-051 IN PROGRESS — isometric constellation, micro-physics, 18-point round (ADR-0045 v4.2)
 
 **Sixth review (18 directives), all delivered.** Root causes over patches:

@@ -165,6 +165,30 @@ Same review cycle; the deltas that supersede parts of the decision above:
 5. **Ops note:** Turbopack's persistent dev cache (`.next/dev`) served stale CSS across
    server restarts — cleared as part of verification (see the cache lesson).
 
+## Amendment — v4.3 (2026-07-09, seventh stakeholder review, 14 directives)
+
+1. **The hero veil is GONE** (chose "remove" over "reduce"): legibility is sculpted into
+   the shader itself — an elliptical **calm pocket** under the statement (intensity
+   floor 0.18), field at full strength everywhere else, sparks dimmed inside the
+   pocket. Knobs documented in `shader-field.tsx`; the `hero-veil` design-lint
+   required-pattern is removed.
+2. **Constellation refinements:** nodes never jump (the spring impulses moved out —
+   only the ropes/links respond to packet weight); arrivals **illuminate the object**
+   (faces warm toward the packet tone, rim brightens — the under-halo is gone);
+   cubes are **rounded-corner opaque solids** on both grounds, with the ground shadow
+   now visible in dark mode; the **hovered packet holds still** so its identity reads;
+   telemetry becomes a **floating island pill** docked over the canvas; portrait stays
+   large and horizontal overflow **edge-fades** (mask) instead of clipping — never a
+   scrollbar, on any viewport.
+3. **Illustrations:** the pipeline's tessera stands **unframed** (no border on the unit
+   and none on the mark — boxing the logo would fight the tile language; connectors now
+   stop at the mark's edges) and gains a **codex** agent for a 3×3 composition; the
+   effect web is smaller with a decramped middle column so every link reads.
+4. **Copy:** footer "Open the dashboard" → **"Dashboard"** (footer columns are noun
+   lists). Backlog: **F-066** (brand mascot, complete harness setup: BRAND addendum +
+   ADR before any code) and **F-067** (legal pages: privacy/terms/cookies/imprint with
+   counsel-review placeholders) added to `feature_list.json`.
+
 ## Alternatives considered
 
 - **three.js / react-three-fiber scene** — rejected: bundle (~150KB+ gz) vs. 240KB budget,

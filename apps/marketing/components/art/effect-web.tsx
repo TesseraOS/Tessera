@@ -20,15 +20,15 @@ interface Chip {
 }
 
 const CHIPS: Chip[] = [
-  { id: 'edit', label: 'edit', x: 46, y: 180, kind: 'edit' },
-  { id: 'contract', label: 'TokenStore · contract', x: 178, y: 180, kind: 'hub' },
-  { id: 'd1', label: 'refresh.ts', x: 344, y: 76, kind: 'direct' },
-  { id: 'd2', label: 'api/session.ts', x: 344, y: 180, kind: 'direct' },
-  { id: 'd3', label: 'sdk/client.ts', x: 344, y: 284, kind: 'direct' },
-  { id: 't1', label: 'worker/sync.ts', x: 552, y: 40, kind: 'transitive' },
-  { id: 't2', label: 'app/login.tsx', x: 552, y: 128, kind: 'transitive' },
-  { id: 't3', label: 'cli/auth.ts', x: 552, y: 216, kind: 'transitive' },
-  { id: 't4', label: 'session.spec.ts', x: 552, y: 304, kind: 'transitive' },
+  { id: 'edit', label: 'edit', x: 40, y: 180, kind: 'edit' },
+  { id: 'contract', label: 'TokenStore', x: 168, y: 180, kind: 'hub' },
+  { id: 'd1', label: 'refresh.ts', x: 342, y: 48, kind: 'direct' },
+  { id: 'd2', label: 'api/session.ts', x: 342, y: 180, kind: 'direct' },
+  { id: 'd3', label: 'sdk/client.ts', x: 342, y: 312, kind: 'direct' },
+  { id: 't1', label: 'worker/sync.ts', x: 566, y: 24, kind: 'transitive' },
+  { id: 't2', label: 'app/login.tsx', x: 566, y: 128, kind: 'transitive' },
+  { id: 't3', label: 'cli/auth.ts', x: 566, y: 232, kind: 'transitive' },
+  { id: 't4', label: 'session.spec.ts', x: 566, y: 336, kind: 'transitive' },
 ];
 
 const EDGES: Array<{ from: string; to: string; tone: 'quiet' | 'impact' }> = [
@@ -61,7 +61,7 @@ const chipStyle = (chip: Chip): React.CSSProperties => ({
 
 export function EffectWeb() {
   return (
-    <div className="mx-auto w-full max-w-xl">
+    <div className="mx-auto w-full max-w-lg">
       <div
         role="img"
         aria-label="An edit reaches the TokenStore contract; the impact web lights up three direct dependents and four transitive ones behind them"

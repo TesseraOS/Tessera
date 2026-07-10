@@ -80,10 +80,23 @@ void main() {
   );
   float f = fbm(p + 2.0 * r);
 
-  /* The statement sits left — keep that side calmer, let the field bloom rightward. */
-  float bloom = smoothstep(0.04, 0.62, uv.x) * 0.62 + 0.38;
-  float vig = smoothstep(1.34, 0.26, distance(uv, vec2(0.56, 0.44)));
-  float k = u_intensity * bloom * vig;
+  /*
+   * Legibility is sculpted into the field itself (no veil overlay, v4.3): a soft
+   * elliptical CALM POCKET sits under the hero statement, and the field blooms at
+   * full strength everywhere else.
+   *
+   * Tuning knobs (debug here):
+   *  - POCKET center/size: the vec2(0.24, 0.62) center and vec2(2.4, 1.7) squash —
+   *    grow the squash numbers to SHRINK the pocket.
+   *  - POCKET depth: the 0.18 floor — raise toward 1.0 to let the field show
+   *    through the pocket; lower toward 0.0 for a quieter text zone.
+   *  - Overall strength: u_intensity (set from theme luminance in resolvePalette).
+   */
+  vec2 pocketDelta = (uv - vec2(0.24, 0.52)) * vec2(2.4, 1.7);
+  float pocket = smoothstep(0.35, 1.0, length(pocketDelta));
+  float calm = mix(0.18, 1.0, pocket);
+  float vig = smoothstep(1.38, 0.28, distance(uv, vec2(0.56, 0.46)));
+  float k = u_intensity * calm * vig;
 
   vec3 col = u_base;
   col = mix(col, u_deep, smoothstep(0.26, 0.84, f) * 0.78 * k);
@@ -101,7 +114,8 @@ void main() {
     float glow = exp(-dot(d, d) * 5600.0);
     float twinkle = 0.55 + 0.45 * sin(u_time * (0.9 + hash11(fi * 4.4)) + fi * 2.1);
     vec3 ember = mix(u_rose, u_gold, step(0.78, hash11(fi * 2.9)));
-    col = mix(col, ember, clamp(glow, 0.0, 1.0) * 0.5 * twinkle * u_intensity * bloom);
+    /* sparks respect the calm pocket too — nothing twinkles under the statement */
+    col = mix(col, ember, clamp(glow, 0.0, 1.0) * 0.5 * twinkle * u_intensity * (0.3 + 0.7 * pocket));
   }
 
   gl_FragColor = vec4(col, 1.0);

@@ -307,21 +307,6 @@
 }
 
 /*
- * Hero legibility veil (§2.3, ADR-0045 v4.1) — a quiet theme-aware scrim, no blur: the
- * shader field must stay visible (stakeholder directive). It fades out rightward and
- * downward so the hero flows into the constellation band with no visible seam.
- */
-.hero-veil {
-  background: linear-gradient(
-    90deg,
-    color-mix(in oklab, var(--background) 36%, transparent) 0%,
-    color-mix(in oklab, var(--background) 16%, transparent) 42%,
-    transparent 68%
-  );
-  mask-image: linear-gradient(180deg, black 0%, black 52%, transparent 96%);
-}
-
-/*
  * Constellation wash (§2.3, ADR-0045 v4.1) — a translucent gradient ground the graph
  * hangs on: present enough to seat the canvas, transparent enough that the shader
  * field breathes through. Fades open at the top so hero → graph reads as one space.

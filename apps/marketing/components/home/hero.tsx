@@ -14,8 +14,7 @@ const delay = (ms: number) => ({ '--rise-delay': `${ms}ms` }) as React.CSSProper
 export function Hero() {
   return (
     <section aria-labelledby="hero-title" className="relative flex min-h-svh items-center">
-      <div className="hero-veil pointer-events-none absolute inset-0" aria-hidden="true" />
-
+      {/* no veil (v4.3): the shader itself keeps a calm pocket under the statement */}
       <Container className="relative z-10 py-28 md:py-32">
         <div className="max-w-3xl">
           <p className="rise-in text-label text-faint-foreground uppercase">

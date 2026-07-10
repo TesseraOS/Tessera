@@ -6,14 +6,14 @@ import {
   TELEMETRY_SEED,
   type ConstellationTelemetry,
 } from '@/components/art/constellation-contract';
-import { Container } from '@/components/ui/container';
 
 /**
- * ConstellationBand (MARKETING-DESIGN §3.3, ADR-0045 v4.1) — the living context graph,
- * one scroll south of the hero on the same continuous ground: no seam, no legends, just
- * the constellation over its translucent wash and a right-aligned telemetry row. The
- * Canvas engine loads ssr:false (the flex-1 region reserves its height — CLS 0);
- * numbers are client-side simulation (the sr-only alternative says so).
+ * ConstellationBand (MARKETING-DESIGN §3.3, ADR-0045 v4.3) — the living context graph,
+ * one scroll south of the hero on the same continuous ground: no seam, no legends; the
+ * constellation over its translucent wash with the telemetry island floating over the
+ * canvas corner (pointer-events-none — it never blocks the graph). The Canvas engine
+ * loads ssr:false (the flex-1 region reserves its height — CLS 0); numbers are
+ * client-side simulation (the sr-only alternative says so).
  */
 const Constellation = dynamic(
   () => import('@/components/art/constellation').then((m) => m.Constellation),
@@ -36,28 +36,27 @@ export function ConstellationBand() {
         The living context graph
       </h2>
 
-      <div className="relative mt-6 min-h-0 flex-1">
+      <div className="relative mt-6 min-h-0 flex-1 overflow-hidden">
         <Constellation onTelemetry={setTelemetry} />
-      </div>
 
-      <Container className="relative z-10 mt-4">
-        <dl className="flex flex-wrap items-end justify-end gap-x-12 gap-y-4 text-right">
-          <div>
-            <dt className="text-label text-faint-foreground uppercase">tokens served</dt>
-            <dd className="text-heading text-foreground mt-1 tabular-nums">
+        {/* telemetry island — floats over the graph, never blocks it */}
+        <dl className="bg-card/90 border-border-strong pointer-events-none absolute right-4 bottom-4 z-10 flex items-baseline gap-x-5 rounded-full border px-5 py-2.5 sm:right-6 sm:bottom-6 sm:gap-x-7">
+          <div className="flex items-baseline gap-1.5">
+            <dt className="text-label text-faint-foreground uppercase">tokens</dt>
+            <dd className="text-small text-foreground tabular-nums">
               {numberFormat.format(telemetry.tokens)}
             </dd>
           </div>
-          <div>
+          <div className="hidden items-baseline gap-1.5 sm:flex">
             <dt className="text-label text-faint-foreground uppercase">compiles/min</dt>
-            <dd className="text-heading text-foreground mt-1 tabular-nums">{telemetry.rpm}</dd>
+            <dd className="text-small text-foreground tabular-nums">{telemetry.rpm}</dd>
           </div>
-          <div>
-            <dt className="text-label text-faint-foreground uppercase">agents connected</dt>
-            <dd className="text-heading text-foreground mt-1 tabular-nums">{telemetry.agents}</dd>
+          <div className="flex items-baseline gap-1.5">
+            <dt className="text-label text-faint-foreground uppercase">agents</dt>
+            <dd className="text-small text-foreground tabular-nums">{telemetry.agents}</dd>
           </div>
         </dl>
-      </Container>
+      </div>
 
       <p className="sr-only">
         An illustrative knowledge graph: repositories, files and symbols, git history, decisions,

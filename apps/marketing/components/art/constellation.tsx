@@ -18,9 +18,10 @@ import { useReducedMotion } from '@/lib/motion';
  * The scene is randomized per visit within composed bounds — source clusters fan into
  * items → files → symbols, and each agent carries live sessions whose tool calls nest
  * further. Traffic is weighted: heavier packets are larger, slower, sag the edge they
- * ride (rope physics), and carry an identity shown on hover. Arrivals are spring
- * impulses — the receiving cube lifts and settles (damped spring), its glow swelling
- * smoothly. No rings, no flicker.
+ * ride (rope physics — the LINKS move, the nodes hold their ground), and carry an
+ * identity shown on hover (the hovered packet holds still to be read). Arrivals
+ * illuminate the receiving cube itself — faces warm toward the packet tone and the rim
+ * brightens, easing back down. No halos, no rings, no flicker.
  *
  * Decorative-interactive (memory: decorative-interactive-canvas-pattern): aria-hidden +
  * keyboard-inert with a sibling text alternative; page scroll always wins; hover
@@ -49,11 +50,8 @@ interface GraphNode {
   phase: number;
   enabled: boolean;
   active: boolean;
-  /** arrival glow 0..1 (eased down) */
+  /** arrival illumination 0..1 (eased down) */
   flash: number;
-  /** vertical spring state — arrivals lift the cube, toggles sink it */
-  yOff: number;
-  yVel: number;
 }
 
 interface GraphEdge {
@@ -126,9 +124,7 @@ function buildScene(seed: number): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
 
-  const push = (
-    node: Omit<GraphNode, 'id' | 'enabled' | 'active' | 'flash' | 'phase' | 'yOff' | 'yVel'>,
-  ) => {
+  const push = (node: Omit<GraphNode, 'id' | 'enabled' | 'active' | 'flash' | 'phase'>) => {
     const id = nodes.length;
     nodes.push({
       ...node,
@@ -137,8 +133,6 @@ function buildScene(seed: number): { nodes: GraphNode[]; edges: GraphEdge[] } {
       active: true,
       flash: 0,
       phase: rand() * Math.PI * 2,
-      yOff: 0,
-      yVel: 0,
     });
     return id;
   };
@@ -315,6 +309,7 @@ function buildScene(seed: number): { nodes: GraphNode[]; edges: GraphEdge[] } {
 
 interface Inks {
   darkGround: boolean;
+  background: Rgb;
   foreground: Rgb;
   card: Rgb;
   rose: Rgb;
@@ -352,6 +347,7 @@ function resolveInks(): Inks {
   const glowAlpha = dark ? 0.5 : 0.34;
   return {
     darkGround: dark,
+    background,
     foreground,
     card: readTokenRgb('--card', [0.145, 0.102, 0.125]),
     rose,
@@ -380,6 +376,11 @@ function shade(color: Rgb, f: number): Rgb {
   ];
 }
 
+/** Linear mix a→b — solid opaque face colors on light grounds. */
+function mixRgb(a: Rgb, b: Rgb, t: number): Rgb {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+}
+
 /* -------------------------------------------------------------- engine */
 
 /** Fixed isometric-style camera: yaw turns the plane, pitch looks down onto it. */
@@ -393,10 +394,6 @@ const FOV = 1400;
 const SPAWN_RATE = 15;
 const MAX_PACKETS = 44;
 const CLICK_SLOP_PX = 6;
-
-/* Node spring (arrival lift / toggle sink) — critically-damped feel. */
-const SPRING_K = 90;
-const SPRING_D = 9;
 
 interface Projected {
   x: number;
@@ -612,8 +609,11 @@ export function Constellation({
     let hovered = -1;
     let hoveredPacket: Packet | null = null;
 
-    const worldScale = () =>
-      portrait ? Math.min(width / 1000, height / 900) : Math.min(width / 1080, height / 560);
+    /*
+     * Portrait keeps the graph LARGE and lets it overflow horizontally — the canvas
+     * edge-fades instead of clipping (overflow is composition, never a scrollbar).
+     */
+    const worldScale = () => (portrait ? height / 860 : Math.min(width / 1080, height / 560));
 
     const projectPoint = (wx: number, wy: number, wz: number) => {
       /* portrait: quarter-turn the ground plane — sources above, agents below */
@@ -635,7 +635,7 @@ export function Constellation({
 
     const project = (time: number) => {
       for (const node of nodes) {
-        const floatY = node.y + Math.sin(time * 0.4 + node.phase) * 3 + node.yOff;
+        const floatY = node.y + Math.sin(time * 0.4 + node.phase) * 3;
         const p = projectPoint(node.x, floatY, node.z);
         const target = projected[node.id];
         if (!target) continue;
@@ -767,14 +767,40 @@ export function Constellation({
 
     /* -------------------------------------------------------- drawing */
 
-    const quad = (pts: Array<{ x: number; y: number }>) => {
+    /** A quad with rounded corners (the brand's tile language, kept in 3D). */
+    const quad = (pts: Array<{ x: number; y: number }>, radius = 0) => {
       const [p0, p1, p2, p3] = pts;
       if (!p0 || !p1 || !p2 || !p3) return;
       ctx.beginPath();
-      ctx.moveTo(p0.x, p0.y);
-      ctx.lineTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.lineTo(p3.x, p3.y);
+      if (radius <= 0.5) {
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.lineTo(p3.x, p3.y);
+        ctx.closePath();
+        return;
+      }
+      const corners = [p0, p1, p2, p3];
+      for (let i = 0; i < 4; i += 1) {
+        const prev = corners[(i + 3) % 4];
+        const cur = corners[i];
+        const next = corners[(i + 1) % 4];
+        if (!prev || !cur || !next) continue;
+        const inLen = Math.hypot(cur.x - prev.x, cur.y - prev.y) || 1;
+        const outLen = Math.hypot(next.x - cur.x, next.y - cur.y) || 1;
+        const r = Math.min(radius, inLen / 2.4, outLen / 2.4);
+        const entry = {
+          x: cur.x - ((cur.x - prev.x) / inLen) * r,
+          y: cur.y - ((cur.y - prev.y) / inLen) * r,
+        };
+        const exit = {
+          x: cur.x + ((next.x - cur.x) / outLen) * r,
+          y: cur.y + ((next.y - cur.y) / outLen) * r,
+        };
+        if (i === 0) ctx.moveTo(entry.x, entry.y);
+        else ctx.lineTo(entry.x, entry.y);
+        ctx.quadraticCurveTo(cur.x, cur.y, exit.x, exit.y);
+      }
       ctx.closePath();
     };
 
@@ -795,25 +821,24 @@ export function Constellation({
 
     const drawCube = (node: GraphNode, p: Projected, emphasis: number, time: number) => {
       const s = node.size * 1.15;
-      const floatY = node.y + Math.sin(time * 0.4 + node.phase) * 3 + node.yOff;
+      const floatY = node.y + Math.sin(time * 0.4 + node.phase) * 3;
+      const cornerR = Math.max(1.2, s * 0.24 * p.scale);
       const cornersOf = (axis: FaceAxis) =>
         FACE_CORNERS[axis].map((c) =>
           projectPoint(node.x + c[0] * s, floatY + c[1] * s, node.z + c[2] * s),
         );
 
-      /* ground shadow — anchored to the plane, so lifts read as real height */
+      /* ground shadow — anchored to the plane beneath the cube */
       const ground = projectPoint(node.x, node.y + s + 3, node.z);
-      const lift = Math.max(0, -node.yOff);
-      const shadowW = s * 2.6 * p.scale * (1 - Math.min(0.4, lift / 26));
-      ctx.globalAlpha =
-        (inks.darkGround ? 0.34 : 0.13) * p.fog * emphasis * (1 - Math.min(0.6, lift / 20));
+      const shadowW = s * 2.9 * p.scale;
+      ctx.globalAlpha = (inks.darkGround ? 0.6 : 0.14) * p.fog * emphasis;
       ctx.fillStyle = inks.darkGround ? 'rgba(0, 0, 0, 1)' : rgba(inks.foreground, 1);
       ctx.beginPath();
       ctx.ellipse(
         ground.x,
         ground.y,
         Math.max(1, shadowW / 2),
-        Math.max(1, shadowW / 5.6),
+        Math.max(1, shadowW / 5.2),
         0,
         0,
         Math.PI * 2,
@@ -826,44 +851,44 @@ export function Constellation({
         ctx.strokeStyle = rgba(inks.foreground, 0.5);
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 4]);
-        quad(cornersOf('top'));
+        quad(cornersOf('top'), cornerR);
         ctx.stroke();
         for (const axis of visibleSides) {
-          quad(cornersOf(axis));
+          quad(cornersOf(axis), cornerR);
           ctx.stroke();
         }
         ctx.setLineDash([]);
         return;
       }
 
-      /* glow beneath the cube — arrivals swell it smoothly */
+      /*
+       * Arrival illumination lives ON the object (no outer halo): the faces warm
+       * toward the packet tone and the rim brightens, then it all eases back down.
+       */
       const swell = node.flash * node.flash * (3 - 2 * node.flash);
-      const glowSize = s * 2.1 * p.scale * (3 + swell * 1.1);
-      ctx.globalAlpha = (0.38 + swell * 0.5) * p.fog * emphasis;
-      ctx.drawImage(
-        inks.glow[node.tone],
-        p.x - glowSize / 2,
-        p.y - glowSize / 2,
-        glowSize,
-        glowSize,
-      );
-
       const isCard = node.kind === 'hub' || node.kind === 'agent';
-      const base = isCard ? inks.card : inks.foreground;
+      const darkBase = isCard ? inks.card : inks.foreground;
+      const warm = toneRgb(inks, node.tone === 'ivory' ? 'rose' : node.tone);
       ctx.lineJoin = 'round';
 
-      const paintFace = (axis: FaceAxis | 'top', factor: number, alphaLight: number) => {
+      const paintFace = (axis: FaceAxis | 'top', factor: number, lightT: number) => {
         const corners = cornersOf(axis as FaceAxis);
-        quad(corners);
+        quad(corners, cornerR);
+        /* solid, opaque blocks on both grounds */
+        let fill: Rgb;
         if (inks.darkGround) {
-          ctx.globalAlpha = p.fog * emphasis * (isCard ? 0.97 : 0.9);
-          ctx.fillStyle = rgba(shade(base, factor), 1);
-          ctx.fill();
+          fill = shade(darkBase, factor + swell * 0.28);
+        } else if (isCard) {
+          fill = shade(inks.card, factor + swell * 0.1);
         } else {
-          /* noon: ink-shaded faces + hairlines — line-art 3D on paper */
-          ctx.globalAlpha = p.fog * emphasis;
-          ctx.fillStyle = isCard ? rgba(shade(base, factor), 1) : rgba(inks.foreground, alphaLight);
-          ctx.fill();
+          fill = mixRgb(inks.background, inks.foreground, lightT);
+        }
+        if (swell > 0.01) fill = mixRgb(fill, warm, swell * (inks.darkGround ? 0.28 : 0.2));
+        ctx.globalAlpha = p.fog * emphasis;
+        ctx.fillStyle = rgba(fill, 1);
+        ctx.fill();
+        if (!inks.darkGround) {
+          /* noon: hairline inking keeps the volume crisp on paper */
           ctx.globalAlpha = p.fog * emphasis * 0.85;
           ctx.strokeStyle = rgba(inks.foreground, 0.5);
           ctx.lineWidth = 1;
@@ -873,16 +898,22 @@ export function Constellation({
       };
 
       for (const axis of visibleSides) {
-        paintFace(axis, axis.startsWith('x') ? 0.68 : 0.86, axis.startsWith('x') ? 0.26 : 0.17);
+        paintFace(axis, axis.startsWith('x') ? 0.68 : 0.86, axis.startsWith('x') ? 0.3 : 0.19);
       }
-      const topCorners = paintFace('top', inks.darkGround ? 1.08 : 1.12, 0.09);
+      const topCorners = paintFace('top', inks.darkGround ? 1.08 : 1.12, 0.1);
 
-      /* the light edge along the top rim */
+      /* the light edge along the top rim — brightens with the arrival */
       if (inks.darkGround) {
-        ctx.globalAlpha = p.fog * emphasis * 0.55;
-        ctx.strokeStyle = rgba(inks.foreground, isCard ? 0.5 : 0.9);
-        ctx.lineWidth = 0.8;
-        quad(topCorners);
+        ctx.globalAlpha = p.fog * emphasis * (0.55 + swell * 0.4);
+        ctx.strokeStyle = rgba(inks.foreground, isCard ? 0.5 + swell * 0.4 : 0.9);
+        ctx.lineWidth = 0.8 + swell * 0.5;
+        quad(topCorners, cornerR);
+        ctx.stroke();
+      } else if (swell > 0.01) {
+        ctx.globalAlpha = p.fog * emphasis * swell * 0.8;
+        ctx.strokeStyle = rgba(warm, 1);
+        ctx.lineWidth = 1.2;
+        quad(topCorners, cornerR);
         ctx.stroke();
       }
 
@@ -910,7 +941,7 @@ export function Constellation({
             lerpQuad(topCorners, u0 + 0.2, v0 + 0.2),
             lerpQuad(topCorners, u0, v0 + 0.2),
           ];
-          quad(cellCorners);
+          quad(cellCorners, cornerR * 0.4);
           if (i === 2) {
             ctx.globalAlpha = p.fog * emphasis;
             ctx.fillStyle = rgba(inks.gold, 1);
@@ -930,10 +961,10 @@ export function Constellation({
         ctx.globalAlpha = 0.9;
         ctx.strokeStyle = rgba(inks.rose, 1);
         ctx.lineWidth = 1.4;
-        quad(topCorners);
+        quad(topCorners, cornerR);
         ctx.stroke();
         for (const axis of visibleSides) {
-          quad(cornersOf(axis));
+          quad(cornersOf(axis), cornerR);
           ctx.stroke();
         }
       }
@@ -1057,9 +1088,6 @@ export function Constellation({
     const step = (dt: number, time: number) => {
       for (const node of nodes) {
         if (node.flash > 0) node.flash = Math.max(0, node.flash - dt * 2.4);
-        /* damped spring — arrivals lift, toggles sink, everything settles */
-        node.yVel += (-SPRING_K * node.yOff - SPRING_D * node.yVel) * dt;
-        node.yOff += node.yVel * dt;
       }
 
       spawnBank += dt * SPAWN_RATE;
@@ -1072,6 +1100,8 @@ export function Constellation({
       for (let i = packets.length - 1; i >= 0; i -= 1) {
         const packet = packets[i];
         if (!packet) continue;
+        /* a hovered packet holds still so its identity can actually be read */
+        if (packet === hoveredPacket && packet.fade === 0) continue;
         if (packet.fade > 0) {
           packet.fade += dt;
           if (packet.fade > 0.25) packets.splice(i, 1);
@@ -1091,8 +1121,6 @@ export function Constellation({
           packet.t = 0;
           packet.seg += 1;
           to.flash = Math.min(1, to.flash + 0.85);
-          /* the arrival impulse — heavier packets rock the cube harder */
-          to.yVel -= 18 + packet.weight * 9;
           if (packet.seg >= packet.path.length - 1) {
             if (to.kind === 'agent' || to.kind === 'session' || to.kind === 'tool') {
               tokens += 380 + Math.floor(rand() * 2400);
@@ -1283,8 +1311,6 @@ export function Constellation({
       const node = id >= 0 ? nodes[id] : undefined;
       if (!node || node.kind === 'hub') return;
       node.enabled = !node.enabled;
-      /* the toggle lands with weight — the cube sinks and settles */
-      node.yVel += node.enabled ? -26 : 34;
       refreshActive();
       fizzleBrokenRoutes();
       pushTelemetry();
@@ -1335,7 +1361,8 @@ export function Constellation({
   return (
     /* absolute against the band's reserved region: immune to indefinite flex heights */
     <div ref={containerRef} className="absolute inset-0" aria-hidden="true">
-      <canvas ref={canvasRef} className="absolute inset-0 size-full touch-pan-y" />
+      {/* overflow fades out at the edges — never a hard cut, never a scrollbar */}
+      <canvas ref={canvasRef} className="fade-x absolute inset-0 size-full touch-pan-y" />
       <div
         ref={tooltipRef}
         className="bg-card/90 pointer-events-none absolute top-0 left-0 rounded-md border px-2.5 py-1.5 opacity-0 transition-opacity duration-150"

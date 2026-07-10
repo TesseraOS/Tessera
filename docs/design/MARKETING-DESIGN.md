@@ -2,8 +2,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | Accepted v4.0 — F-051 ("Terra Mosaic", shader-field hero + constellation graph) |
-| **Last updated** | 2026-07-08 |
+| **Status** | Accepted v4.4 — F-051 ("Terra Mosaic", shader-field hero + constellation graph + subpage system) |
+| **Last updated** | 2026-07-10 |
 | **Scope** | `apps/marketing` (apex domain). Later: the public chrome of `apps/docs`. |
 | **Brand** | [`BRAND.md`](./BRAND.md) + [Terra Mosaic philosophy](./brand/terra-mosaic-philosophy.md) — read both first |
 | **Authority** | [ADR-0045](../adr/0045-marketing-v4-constellation-shader-hero-theme-true-chapters.md) (v4 directives) · [ADR-0044](../adr/0044-marketing-v3-dual-themes-illustration-first-live-graph.md) (dual themes / illustration-first) · [ADR-0043](../adr/0043-terra-mosaic-brand-and-marketing-overhaul.md) (brand) · [ADR-0042](../adr/0042-marketing-site-design-direction.md) (enforcement mechanism) |
@@ -179,17 +179,27 @@ checklist enforces).
 7. **`feature-row`** — text(5)/art(7) alternating; visuals are **brand-language
    illustrations** (assembly scene + token meter; mini effect-web on the graph engine;
    governance gate with constant-derived lanes) — never UI chrome; captions are HTML.
-8. **`pricing-table`** / **`faq`** — as v2.
-9. **`cta-band`** — dusk atmosphere + quiet MosaicField + serif statement + primary CTA.
-10. **`footer`** — columns, lockup, philosophy line, legal — **and the theme toggle**
+8. **`pricing-table`** — renders **from the `@tessera/billing` PLANS catalog** (workspace
+   dependency; a unit test proves no number is hand-copied; `-1` entitlements render as
+   unlimited). Plan cards on `Panel`; the recommended plan = `border-strong` + a Badge,
+   **never a rose fill**; the contact-sales tier links to `/enterprise` (no dead ends).
+9. **`faq`** — native `details/summary` disclosure, hairline dividers, no JS accordion.
+10. **`cta-band`** — dusk atmosphere + quiet MosaicField + serif statement + primary CTA.
+11. **`footer`** — columns, lockup, philosophy line, legal — **and the theme toggle**
     (labelled control, aria-pressed states).
+12. **`page-header`** (v4.4, subpages only) — the subpage opening: label eyebrow · serif
+    h1 on the **`title` token** (`display` and its two-nowrap-line rule stay hero-only) ·
+    lead ≤56ch · optional CTA row, over atmosphere + grain. **The shader field and
+    constellation are homepage-only devices** — subpages open quiet. Subpage sections
+    compose the existing shapes (feature-row, steps-style card grids, hairline columns).
 
 **Banned archetypes:** terminal windows, code-block panels, file trees, fake dashboards,
 browser-chrome screenshots.
 
 ## 4. Components (closed set)
 
-`Container` · `Button` · `TextLink` · `Badge` · `Panel` · `SectionHeading` · `Wordmark` ·
+`Container` · `Button` · `TextLink` · `Badge` · `Panel` · `SectionHeading` ·
+**`PageHeader`** (subpage opening, v4.4) · `Wordmark` ·
 `Logo/LogoIcon` · `MosaicField` · **`ShaderField`** (WebGL fragment shader, hero + band
 ground) · **`Constellation`** (Canvas-2D knowledge-graph engine) ·
 **`ConstellationBand`** (the band: lazy boundary, heading, telemetry chips, sr-only

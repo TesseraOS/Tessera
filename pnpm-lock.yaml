@@ -84,6 +84,9 @@ importers:
 
   apps/marketing:
     dependencies:
+      '@tessera/billing':
+        specifier: workspace:*
+        version: link:../../packages/billing
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

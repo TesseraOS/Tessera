@@ -8,15 +8,17 @@ const COLUMNS = [
   {
     title: 'product',
     links: [
+      { href: '/features', label: 'Features' },
+      { href: '/pricing', label: 'Pricing' },
+      { href: '/enterprise', label: 'Enterprise' },
       { href: '/#how-it-works', label: 'How it works' },
-      { href: '/#product', label: 'Differentiators' },
-      { href: '/#deploy', label: 'Deployment' },
     ],
   },
   {
     title: 'resources',
     links: [
       { href: siteConfig.docsUrl, label: 'Documentation' },
+      { href: '/skills', label: 'Agent skills' },
       { href: '/llms.txt', label: 'llms.txt' },
       { href: '/brand/tessera-brand-canvas.png', label: 'Brand' },
     ],

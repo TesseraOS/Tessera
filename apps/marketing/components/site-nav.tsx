@@ -11,9 +11,9 @@ import { siteConfig } from '@/lib/site';
 import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
-  { href: '/#problem', label: 'Why' },
-  { href: '/#how-it-works', label: 'How it works' },
-  { href: '/#product', label: 'Product' },
+  { href: '/features', label: 'Features' },
+  { href: '/pricing', label: 'Pricing' },
+  { href: '/enterprise', label: 'Enterprise' },
   { href: siteConfig.docsUrl, label: 'Docs' },
 ] as const;
 

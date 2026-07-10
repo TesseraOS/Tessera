@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-07-07",
+  "updated": "2026-07-10",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -670,6 +670,10 @@
           "ref": "@tessera/api /v1/compile entitlement enforcement (F-035): clampBudgetToPlan caps the requested token budget to the caller's plan (effectiveEntitlements via services.billing, tenant from the AuthContext, local/free fallback) — REALIZED. Monthly-usage metering (needs a persistent usage store), seat limits, and MCP-surface enforcement remain seams"
         },
         {
+          "kind": "module",
+          "ref": "@tessera/marketing pricing page (F-051 v4.4, ADR-0045): apps/marketing/lib/pricing.ts derives the ENTIRE pricing-table display model (prices, cadence, entitlement lines; -1 → unlimited; enterprise priceCents 0 → contact-sales, never $0) from PLANS/PLAN_IDS — a workspace dependency; tests/pricing.test.ts derives its expectations from PLANS at test time AND scans the page source for hand-copied numbers; tests/e2e/pages.spec.ts asserts the RENDERED page against PLANS. Changing the catalog re-renders the public pricing page and these tests follow — but copy around the table (FAQ, CTAs) must be reviewed"
+        },
+        {
           "kind": "decision",
           "ref": "docs/adr/0011-billing-dodo-payments.md"
         },
@@ -807,6 +811,10 @@
         {
           "kind": "artifact",
           "ref": "brand asset pipeline: docs/design/brand/* (SVG masters, philosophy, fonts) + apps/marketing/scripts/render-brand-assets.mjs (deterministic Playwright PNG renderer) + apps/marketing/public/brand/* — logo/OG/icon renderers reproduce token VALUES by hand (the sanctioned allowIn class), so a palette change means re-rendering assets"
+        },
+        {
+          "kind": "module",
+          "ref": "subpage system (F-051 v4.4, ADR-0045 v4.4): §3.12 page-header archetype (components/page-header.tsx — eyebrow + serif TITLE-token h1 + lead over atmosphere+grain; shader/constellation stay homepage-only) + §3.8/§3.9 pricing-table/faq spelled out (components/faq-list.tsx = native details/summary + globals.css summary marker suppression) + pages app/{features,pricing,enterprise,skills}/page.tsx + nav/footer/sitemap/llms.txt route lists. Enterprise claims trace to shipped features (traceability rule); manifest 4.4.0 sections/components extended in lockstep"
         },
         {
           "kind": "decision",

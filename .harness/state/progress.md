@@ -3,6 +3,47 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-10 (v4.4) — F-051 IN PROGRESS — subpage arc: features / pricing / enterprise / skills
+
+**The four remaining acceptance pages, composed from a doc-extended archetype set.**
+
+- **Governance first:** §3 had no subpage opening shape, so ADR-0045 v4.4 + MARKETING-DESIGN
+  v4.4 + manifest 4.4.0 landed BEFORE code: `page-header` archetype (eyebrow · serif
+  TITLE-token h1 · lead over atmosphere+grain; shader/constellation stay homepage-only);
+  `pricing-table`/`faq` spelled out (were "as v2", orphaned by the v4 rewrite); enterprise
+  claims-traceability rule; /skills placeholder policy.
+- **Scaffolding:** `components/page-header.tsx` + `components/faq-list.tsx` (native
+  details/summary, hairline dividers, plus-glyph rotate; summary marker suppressed in
+  globals base); nav → Features/Pricing/Enterprise/Docs; footer + sitemap + llms.txt list
+  every page.
+- **/features** — pillars deep-dive (reusing the art suite with mechanism copy), 8-card
+  capability grid on the chapter band (all claims = shipped subsystems), MCP tool-name
+  chips (the real 10), CtaBand.
+- **/pricing** — `@tessera/billing` is now a marketing workspace dep; `lib/pricing.ts`
+  derives the ENTIRE display model from PLANS (`-1`→unlimited; enterprise→Custom/contact
+  sales, links /enterprise); Pro = border-strong + Badge. `tests/pricing.test.ts` derives
+  expectations from PLANS **and scans the page source for hand-copied numbers**; e2e
+  asserts the rendered page against PLANS.
+- **/enterprise** — six controls each traceable (F-025/026/027/034/036/037 + F-006/016),
+  residency columns, "Verification over promises" band, honest FAQ (no SOC 2 claims).
+- **/skills** — F-054 placeholder: four planned first-party skills, labeled `planned`,
+  registry "in development".
+- **Effects:** E-019 gains the marketing pricing consumer; E-022 gains the v4.4 subpage
+  system. New lesson [[whileinview-reveals-vs-fullpage-screenshot-capture]] (fullPage
+  screenshots don't fire IntersectionObserver; framer reduced-motion still animates
+  opacity — scroll-walk before capture).
+
+**Evidence** — design-lint 38/38 + pricing 5/5 (43 unit); typecheck/eslint/prettier clean;
+build green (12 static routes); e2e **19/19** (axe AA dusk+noon on ALL five pages, one-h1,
+375px no-overflow per page, PLANS-vs-DOM assertions, native FAQ toggle, sitemap/llms
+completeness); first-load 225.5–227.7KB gz per new route (budget 240); screenshot review
+4 pages × 2 themes × 2 widths (reduced-motion state) + design-review pass (one hit fixed:
+contact-sales cadence wrapped mid-phrase).
+
+**Next step** — stakeholder review round for the subpages; then F-067 legal pages +
+footer legal surface; web-perf/CWV gate wiring lands with F-049 (gates.json); F-066
+mascot when scheduled.
+
 ## 2026-07-09 (v4.3 round 8) — F-051 IN PROGRESS — gap-free cubes, frame fade, native-res shader
 
 **Eighth review (4 issues), root causes found and fixed.**

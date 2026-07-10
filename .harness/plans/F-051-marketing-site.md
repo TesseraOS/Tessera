@@ -143,6 +143,52 @@ end-to-end). Direction locked in ADR-0045; MARKETING-DESIGN v4 + manifest 4.0.0.
 5. **Verification** — full gates + axe (both themes) + screenshots (1440/1280/375 ×
    themes × reduced-motion) + bundle budget; effect-trace; progress + memory records.
 
+## v4.4 addendum — 2026-07-10 (remaining pages: features / pricing / enterprise / skills)
+
+The homepage arc is complete (v4.3 round 8, commit `22ec535`). This session delivers the
+remaining acceptance pages, composed strictly from MARKETING-DESIGN §3/§4.
+
+**Gap found:** §3 has no *subpage opening* shape (the `hero` archetype is the homepage's
+shader-field statement, and its rules — two nowrap lines, shader ground — are
+homepage-specific). Improvising a section shape is banned, so increment 1 extends the doc +
+manifest first (a reviewed design decision, recorded as an ADR-0045 amendment).
+
+**Increments (each verified before commit):**
+
+1. **Governance** — ADR-0045 amendment v4.4 (subpage system); MARKETING-DESIGN §3 gains
+   **`page-header`** (subpage opening: label eyebrow · serif `title`-token h1 — the
+   `display` token stays hero-only · lead ≤56ch · atmosphere + grain ground; no shader
+   field off the homepage) and §3.8 spells out `pricing-table`/`faq` (previously "as v2"):
+   pricing from `@tessera/billing` PLANS, recommended plan = `border-strong` + Badge
+   (never a rose fill), contact-sales tier links to `/enterprise`; faq = native
+   `details/summary`, hairline dividers. Manifest → 4.4.0 in lockstep (sections +
+   components + PageHeader).
+2. **Scaffolding** — `components/page-header.tsx`; nav links → Features / Pricing /
+   Enterprise / Docs; footer gains the new routes (+ /skills under resources);
+   `sitemap.ts` + `llms.txt` list every page.
+3. **/features** — page-header → three deep-dive pillar feature-rows (reusing the §4 art
+   suite — the arts are the pillars' brand language) with mechanism copy from the
+   PRD/architecture (pipeline stages, get_effects, audit boundary) → capability grid
+   (card grid, steps shape) covering memory/graph/retrieval/ingestion/surfaces/deploy/
+   observability/plugins → MCP tool-name chips (real tools only) → CtaBand.
+4. **/pricing** — marketing gains a `@tessera/billing` workspace dep; `lib/pricing.ts`
+   derives the display model **from PLANS** (price, interval, entitlement lines; `-1` →
+   unlimited; enterprise → contact-sales) with a unit test proving no hand-copied
+   numbers; pricing-table (Pro = recommended) + faq + CtaBand. New effect-link: PLANS →
+   marketing pricing (recorded in effects.json, as anticipated by this plan).
+5. **/enterprise** — page-header → trust grid whose every claim traces to a shipped
+   feature (F-025 RBAC · F-026 gateway quotas · F-027 audit trail · F-034 tokens ·
+   F-036 OIDC · F-037 row isolation · F-006 redaction · F-016 no-secrets logging) →
+   deployment-sovereignty columns (local/self-host/cloud, ADR-0003) → faq (honest:
+   retention/DSR tooling stated as in development, F-047) → CtaBand. **No invented
+   compliance badges** (no SOC 2/ISO claims).
+6. **/skills** — placeholder until F-054: page-header + the four planned first-party
+   skills as clearly-labeled planned cards + docs CTA.
+7. **e2e + verify** — `tests/e2e/pages.spec.ts`: per route axe AA on BOTH themes, one
+   h1, 375px no-overflow; pricing page text asserted against values imported from
+   `@tessera/billing` (the no-hand-copied-numbers proof); sitemap lists all routes.
+   Full gates + screenshots (1440/375 × dusk/noon) + design-review pass.
+
 ## Risks / open questions
 
 - **TLD not final** (`tessera.<tld>`): all cross-surface URLs env-driven

@@ -27,6 +27,13 @@ add_source, scan_source, list_sources, assert_effect
 ## Pages
 
 - [Home](${siteConfig.siteUrl}/): positioning, how it works, differentiators, deployment.
+- [Features](${siteConfig.siteUrl}/features): the capability inventory — compiler pipeline,
+  effect-links, governance, memory, hybrid retrieval, surfaces, deployment profiles.
+- [Pricing](${siteConfig.siteUrl}/pricing): plans rendered from the open-core catalog —
+  Free (local, forever), Pro, Enterprise (contact sales).
+- [Enterprise](${siteConfig.siteUrl}/enterprise): security posture — tenant isolation,
+  RBAC, OIDC SSO, quotas, audit trail, deployment sovereignty.
+- [Skills](${siteConfig.siteUrl}/skills): first-party agent skills registry (in development).
 
 ## Related surfaces
 

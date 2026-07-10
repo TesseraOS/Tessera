@@ -189,6 +189,31 @@ Same review cycle; the deltas that supersede parts of the decision above:
    ADR before any code) and **F-067** (legal pages: privacy/terms/cookies/imprint with
    counsel-review placeholders) added to `feature_list.json`.
 
+## Amendment — v4.4 (2026-07-10, remaining pages: the subpage system)
+
+The homepage arc is complete; F-051's remaining acceptance pages (features, pricing,
+enterprise, /skills placeholder) need shapes §3 did not define. Extensions, in lockstep
+with the manifest (4.4.0):
+
+1. **`page-header` archetype** — the subpage opening: label eyebrow · serif h1 on the
+   **`title` token** (the `display` token and its two-nowrap-line rule stay hero-only) ·
+   lead ≤56ch · optional CTA row, over the atmosphere gradient + grain. **The shader
+   field and constellation are homepage-only devices** — subpages open quiet, the
+   statement carries the register.
+2. **`pricing-table` / `faq` spelled out** (previously "as v2", which the v4 rewrite had
+   orphaned): pricing renders **from the `@tessera/billing` PLANS catalog** (a new
+   workspace dependency of `apps/marketing`; unit-tested so no number is hand-copied;
+   `-1` entitlements render as unlimited); the recommended plan is marked by
+   `border-strong` + a Badge, never a rose fill; the contact-sales tier links to
+   `/enterprise`, not a dead end. FAQ = native `details/summary` disclosure with
+   hairline dividers (no JS accordion).
+3. **Enterprise claims traceability** — every trust claim on `/enterprise` traces to a
+   shipped feature (F-025/026/027/034/036/037, F-006, F-016) or the PRD; roadmap items
+   (retention policies, DSR tooling — F-047) are labeled as in development; **no
+   compliance certifications are claimed** (none exist).
+4. **/skills placeholder** — the F-054 registry page ships later; until then the route
+   presents the four planned first-party skills clearly labeled as planned.
+
 ## Alternatives considered
 
 - **three.js / react-three-fiber scene** — rejected: bundle (~150KB+ gz) vs. 240KB budget,

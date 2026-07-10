@@ -234,6 +234,16 @@
     cursor: pointer;
   }
 
+  /* FAQ disclosure (§3.9, v4.4): native details/summary — the default marker yields to
+     the plus glyph the summary row renders. */
+  summary {
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;

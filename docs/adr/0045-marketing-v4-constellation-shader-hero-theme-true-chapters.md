@@ -214,6 +214,39 @@ with the manifest (4.4.0):
 4. **/skills placeholder** — the F-054 registry page ships later; until then the route
    presents the four planned first-party skills clearly labeled as planned.
 
+## Amendment — v4.5 (2026-07-11, ninth stakeholder review: subpages must live)
+
+The v4.4 subpages read flat next to the homepage ("dull, lifeless"). Eight directives,
+resolved as follows (manifest 4.5.0 in lockstep):
+
+1. **Subpage heroes are full-height statements over the shader ground.** `page-header`
+   becomes a `min-h-svh` hero: the SAME lazy WebGL field (calm pocket under the
+   statement) + atmosphere fallback + grain, statement left, an optional **signature
+   art** right. The v4.4 "shader is homepage-only" rule is REVERSED for the field (one
+   house ground everywhere); the **constellation stays homepage-only** (the masterpiece
+   is not wallpaper).
+2. **Signature art per page** (all §5 motion rules: constant-derived geometry, one
+   shared clock, freeze under reduced motion, `role="img"` + label, HTML captions):
+   **PlanMosaic** (pricing — one engine at three scales; plan names arrive as props FROM
+   the PLANS-derived display model, never hardcoded), **TenantPerimeter** (enterprise —
+   two tenant islands, packets circulate inside, a crossing attempt is refused at the
+   boundary and tallied by a live ledger), **SkillLoop** (skills — the compile → check
+   effects → edit → capture-memory discipline as a ring a context packet travels
+   forever). Features keeps its three pillar arts; its hero is the statement over the
+   field (the homepage language).
+3. **FAQ v2** — two-column archetype (sticky `SectionHeading` left, disclosure list
+   right); items become `bg-card` hairline cards; still **native `details/summary`**
+   (plus `name` for exclusive-open where supported — progressive, no JS accordion).
+4. **Seams dissolve, blur declined.** The stakeholder floated blurring section
+   boundaries; blur is REJECTED (glassmorphism ban, per-frame backdrop-filter cost, and
+   it erases the hairline language) — the luxurious transition is achieved the homepage
+   way: **gradient dissolves** (`.fade-bottom` mask on the hero field; wash grounds
+   instead of hard rules where adjacent bands share ground). Hairlines remain at
+   ELEVATION changes (chapter bands, footer). Blur stays nav-only; design-lint
+   unchanged.
+5. **/skills placeholder debt recorded** on F-054's feature entry (replace the
+   `planned` cards with the real catalog when the registry ships).
+
 ## Alternatives considered
 
 - **three.js / react-three-fiber scene** — rejected: bundle (~150KB+ gz) vs. 240KB budget,

@@ -2,7 +2,7 @@
   "$schemaRef": "./schemas/feature_list.schema.json",
   "version": 1,
   "project": "tessera",
-  "updated": "2026-07-06",
+  "updated": "2026-07-11",
   "policy": {
     "wip_limit": 1,
     "ordering": "by release, then id; respect blockedBy"
@@ -1667,7 +1667,7 @@
       "package": "@tessera/marketing",
       "release": "R4",
       "priority": "must",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-030"
       ],
@@ -1686,7 +1686,8 @@
       "effects": [
         "E-004",
         "E-019"
-      ]
+      ],
+      "notes": "Done 2026-07-11 after nine review rounds (ADR-0042/0043/0044/0045 v4.5): Terra Mosaic site — shader-field heroes on EVERY page (constellation homepage-only), home (hero/constellation/marquee/problem/steps/differentiators/deploy/CTA), /features (pillar deep-dives + capability grid + MCP chips), /pricing (rendered FROM @tessera/billing PLANS — unit test derives expectations from PLANS and scans the page source for hand-copied numbers; e2e asserts the DOM against the catalog; PlanMosaic hero art takes names via props), /enterprise (claims traceable to shipped features; TenantPerimeter art; no invented compliance), /skills placeholder (F-054 notes carry the replace-with-registry debt; SkillLoop art), FAQ v2 (native details cards, name exclusive-open). Design contract = MARKETING-DESIGN v4.5 + manifest 4.5.0 compiled by design-lint (38 checks). Evidence: e2e 19/19 incl. axe AA BOTH themes on all 5 pages; first-load 225–229KB gz (budget 240); screenshot review both themes/widths + live-motion captures; zero hydration errors (the useReducedMotion SSR-branch class was found and fixed suite-wide). SEAM: the CWV budget lives as data (manifest.budgets; measured every round) — the web-perf GATE activates with F-049 per gates.json's recorded drift-fix. Remaining marketing surface work is F-067 (legal), F-066 (mascot), F-054 (skills registry)."
     },
     {
       "id": "F-052",
@@ -1780,7 +1781,8 @@
       "effects": [
         "E-004",
         "E-003"
-      ]
+      ],
+      "notes": "PLACEHOLDER DEBT (F-051 v4.4/v4.5, 2026-07-11): apps/marketing/app/skills/page.tsx ships a designed placeholder — the four first-party skills are hard-listed with 'planned' badges and a SkillLoop hero art. When this feature lands, REPLACE the PLANNED_SKILLS list with the real registry-rendered catalog (acceptance: no hand-copied content) and drop the 'registry in development' badge; keep the hero + loop art."
     },
     {
       "id": "F-055",

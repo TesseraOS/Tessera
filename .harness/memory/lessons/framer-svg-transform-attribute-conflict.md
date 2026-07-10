@@ -30,3 +30,13 @@ doesn't know about. The failure is silent — no error, just wrong geometry.
    (the `.tf-box` utility).
 3. If a base transform is truly unavoidable, wrap the shape in a plain `<g transform=…>`
    and put the motion component inside it — separate elements, separate channels.
+
+**Corollary (F-051 v4.5, 2026-07-11) — never branch SSR'd markup on
+`useReducedMotion()`.** The server always renders the non-reduced branch; a
+reduced-motion client renders the other one → **hydration mismatch** (React discards
+and regenerates the tree; found via the PlanMosaic ember's `cx="8"` vs `cx={207}`
+dev-overlay diff — production e2e stayed green because React recovers silently).
+Render ONE element unconditionally and vary only `animate`/`transition` (they never
+touch server HTML): `animate={reduced ? staticPose : keyframes}` +
+`transition={reduced ? { duration: 0 } : loop}`. Branching inside `useEffect` (live
+tallies) stays safe — effects run after hydration.

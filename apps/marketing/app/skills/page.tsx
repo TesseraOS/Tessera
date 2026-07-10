@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { SkillLoop } from '@/components/art/skill-loop';
 import { CtaBand } from '@/components/home/cta-band';
 import { PageHeader } from '@/components/page-header';
 import { SiteFooter } from '@/components/site-footer';
@@ -51,6 +52,7 @@ export default function SkillsPage() {
             </>
           }
           lead="Skills are small, versioned instructions any agent can follow. The first-party set teaches the Tessera loop; the registry that serves them is in development."
+          art={<SkillLoop />}
         >
           <Badge>registry in development</Badge>
         </PageHeader>

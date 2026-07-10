@@ -66,7 +66,9 @@ const easeInOutCubic = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2
 
 export function CompilerAssembly() {
   const reduced = useReducedMotion();
-  const [count, setCount] = useState(reduced ? COMPILED : 0);
+  // Never branch initial STATE on `reduced` — the server always renders the
+  // non-reduced value and a reduced client would hydration-mismatch the meter text.
+  const [count, setCount] = useState(0);
   const started = useRef(false);
   const rafRef = useRef(0);
 
@@ -111,23 +113,11 @@ export function CompilerAssembly() {
         {GRID.map((tile, index) => {
           const rest = seat(tile.col, tile.row);
           const from = SCATTER[index] ?? { x: 20, y: 20, r: 0 };
-          if (reduced) {
-            return (
-              <rect
-                key={index}
-                x={rest.x}
-                y={rest.y}
-                opacity={tile.o}
-                width={CELL}
-                height={CELL}
-                rx={11}
-                fill="var(--foreground)"
-              />
-            );
-          }
           /*
            * Geometry attrs carry the seat; framer's x/y are CSS-translate DELTAS on
            * top (framer overrides the transform attribute on SVG — never combine them).
+           * ONE element for both motion modes (branching SSR'd markup on reduced
+           * hydration-mismatches); reduced applies the assembled pose instantly.
            */
           return (
             <m.rect
@@ -137,7 +127,7 @@ export function CompilerAssembly() {
               y={rest.y}
               initial={{ x: from.x - rest.x, y: from.y - rest.y, rotate: from.r, opacity: 0.4 }}
               animate={{ x: 0, y: 0, rotate: 0, opacity: tile.o }}
-              transition={breathe(index)}
+              transition={reduced ? { duration: 0 } : breathe(index)}
               width={CELL}
               height={CELL}
               rx={11}
@@ -158,29 +148,18 @@ export function CompilerAssembly() {
           strokeOpacity={0.3}
           strokeWidth={1.5}
         />
-        {reduced ? (
-          <rect
-            x={gildedSeat.x}
-            y={gildedSeat.y}
-            width={CELL}
-            height={CELL}
-            rx={11}
-            fill="var(--gold)"
-          />
-        ) : (
-          <m.rect
-            className="tf-box"
-            x={gildedSeat.x}
-            y={gildedSeat.y}
-            initial={{ x: 40, y: -44, opacity: 0 }}
-            animate={{ x: 0, y: 0, opacity: 1 }}
-            transition={breathe(8)}
-            width={CELL}
-            height={CELL}
-            rx={11}
-            fill="var(--gold)"
-          />
-        )}
+        <m.rect
+          className="tf-box"
+          x={gildedSeat.x}
+          y={gildedSeat.y}
+          initial={{ x: 40, y: -44, opacity: 0 }}
+          animate={{ x: 0, y: 0, opacity: 1 }}
+          transition={reduced ? { duration: 0 } : breathe(8)}
+          width={CELL}
+          height={CELL}
+          rx={11}
+          fill="var(--gold)"
+        />
       </svg>
 
       <div aria-hidden="true">

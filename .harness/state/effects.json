@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-07-10",
+  "updated": "2026-07-11",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -814,7 +814,7 @@
         },
         {
           "kind": "module",
-          "ref": "subpage system (F-051 v4.4, ADR-0045 v4.4): §3.12 page-header archetype (components/page-header.tsx — eyebrow + serif TITLE-token h1 + lead over atmosphere+grain; shader/constellation stay homepage-only) + §3.8/§3.9 pricing-table/faq spelled out (components/faq-list.tsx = native details/summary + globals.css summary marker suppression) + pages app/{features,pricing,enterprise,skills}/page.tsx + nav/footer/sitemap/llms.txt route lists. Enterprise claims trace to shipped features (traceability rule); manifest 4.4.0 sections/components extended in lockstep"
+          "ref": "subpage system (F-051 v4.4→v4.5, ADR-0045): §3.12 page-header = a FULL-HEIGHT subpage hero over the SAME lazy shader-field ground as home (components/page-header.tsx — .fade-bottom mask dissolves the field into the next band; calm pocket under the statement; optional signature-art right column) + signature arts components/art/{plan-mosaic,tenant-perimeter,skill-loop}.tsx (PlanMosaic takes plan names as PROPS from the PLANS display model — E-019) + §3.9 faq v2 (components/faq-list.tsx: bg-card disclosure cards, native details name= exclusive-open, two-column with sticky heading) + pages app/{features,pricing,enterprise,skills}/page.tsx + nav/footer/sitemap/llms.txt lists. Seam policy: same-ground seams dissolve via washes, hairlines mark elevation only, blur stays nav-only. HYDRATION RULE (the v4.5 lesson): never branch SSR'd markup or initial state on useReducedMotion() — one element, vary animate/transition only (fixed in the new arts AND latent instances in compiler-assembly + governance-gate). Manifest 4.5.0 in lockstep"
         },
         {
           "kind": "decision",

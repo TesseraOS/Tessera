@@ -105,113 +105,91 @@ export function GovernanceGate() {
           strokeWidth={1.5}
           strokeDasharray="4 5"
         />
-        {reduced ? (
-          <path
-            d={`M${TRAY.x + TRAY.w / 2 - 7} ${TRAY.y + TRAY.h / 2 - 7} l 14 14 M${TRAY.x + TRAY.w / 2 + 7} ${TRAY.y + TRAY.h / 2 - 7} l -14 14`}
-            stroke="var(--rose)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            fill="none"
-          />
-        ) : (
-          <m.path
-            d={`M${TRAY.x + TRAY.w / 2 - 7} ${TRAY.y + TRAY.h / 2 - 7} l 14 14 M${TRAY.x + TRAY.w / 2 + 7} ${TRAY.y + TRAY.h / 2 - 7} l -14 14`}
-            stroke="var(--rose)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            fill="none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0, 1, 1, 0] }}
-            transition={{ ...loop, times: [0, 0.66, 0.7, 0.94, 1] }}
-          />
-        )}
+        {/* ONE element per actor for BOTH motion modes — branching SSR'd markup on
+            useReducedMotion() hydration-mismatches (the server always renders the
+            animated branch); reduced applies each actor's still-frame pose instantly. */}
+        <m.path
+          d={`M${TRAY.x + TRAY.w / 2 - 7} ${TRAY.y + TRAY.h / 2 - 7} l 14 14 M${TRAY.x + TRAY.w / 2 + 7} ${TRAY.y + TRAY.h / 2 - 7} l -14 14`}
+          stroke="var(--rose)"
+          strokeWidth="2"
+          strokeLinecap="round"
+          fill="none"
+          initial={{ opacity: 0 }}
+          animate={reduced ? { opacity: 1 } : { opacity: [0, 0, 1, 1, 0] }}
+          transition={reduced ? { duration: 0 } : { ...loop, times: [0, 0.66, 0.7, 0.94, 1] }}
+        />
 
-        {reduced ? (
-          <>
-            {/* still frame: both allowed tiles landed, the denied one in the tray */}
-            <rect
-              className="tf-box"
-              x={PASS_END_X + 3}
-              y={TILE_Y + 3}
-              width={TILE}
-              height={TILE}
-              rx={7}
-              fill="var(--foreground)"
-              fillOpacity={0.8}
-              stroke="var(--gold)"
-              strokeWidth={2}
-            />
-            <rect
-              x={TRAY.x + (TRAY.w - TILE) / 2}
-              y={TRAY.y + (TRAY.h - TILE) / 2}
-              width={TILE}
-              height={TILE}
-              rx={7}
-              fill="var(--rose)"
-              fillOpacity={0.4}
-            />
-          </>
-        ) : (
-          <>
-            {/* allowed tile one */}
-            <m.rect
-              className="tf-box"
-              x={START_X}
-              y={TILE_Y}
-              width={TILE}
-              height={TILE}
-              rx={7}
-              fill="var(--foreground)"
-              fillOpacity={0.8}
-              stroke="var(--gold)"
-              strokeWidth={2}
-              initial={{ x: 0, opacity: 0, strokeOpacity: 0 }}
-              animate={{
-                x: [0, 0, PASS_DELTA * 0.52, PASS_DELTA, PASS_DELTA],
-                opacity: [0, 1, 1, 1, 0],
-                strokeOpacity: [0, 0, 0, 1, 1],
-              }}
-              transition={{ ...loop, times: [0, 0.04, 0.17, 0.3, 0.36] }}
-            />
-            {/* allowed tile two */}
-            <m.rect
-              className="tf-box"
-              x={START_X}
-              y={TILE_Y}
-              width={TILE}
-              height={TILE}
-              rx={7}
-              fill="var(--foreground)"
-              fillOpacity={0.65}
-              stroke="var(--gold)"
-              strokeWidth={2}
-              initial={{ x: 0, opacity: 0, strokeOpacity: 0 }}
-              animate={{
-                x: [0, 0, PASS_DELTA * 0.52, PASS_DELTA, PASS_DELTA],
-                opacity: [0, 1, 1, 1, 0],
-                strokeOpacity: [0, 0, 0, 1, 1],
-              }}
-              transition={{ ...loop, times: [0.16, 0.2, 0.33, 0.46, 0.52] }}
-            />
-            {/* the denied tile — stopped at the gate, set into the tray */}
-            <m.rect
-              className="tf-box"
-              x={START_X}
-              y={TILE_Y}
-              width={TILE}
-              height={TILE}
-              rx={7}
-              fill="var(--rose)"
-              initial={{ x: 0, y: 0, opacity: 0 }}
-              animate={{
-                x: [0, 0, STOP_DELTA, STOP_DELTA, STOP_DELTA + TRAY_DX, STOP_DELTA + TRAY_DX],
-                y: [0, 0, 0, 0, TRAY_DY, TRAY_DY],
-                opacity: [0, 0.9, 0.9, 0.9, 0.55, 0],
-              }}
-              transition={{ ...loop, times: [0.3, 0.34, 0.52, 0.56, 0.68, 1] }}
-            />
-          </>
-        )}
+        {/* allowed tile one — reduced still-frame: landed in the served slot */}
+        <m.rect
+          className="tf-box"
+          x={START_X}
+          y={TILE_Y}
+          width={TILE}
+          height={TILE}
+          rx={7}
+          fill="var(--foreground)"
+          fillOpacity={0.8}
+          stroke="var(--gold)"
+          strokeWidth={2}
+          initial={{ x: 0, opacity: 0, strokeOpacity: 0 }}
+          animate={
+            reduced
+              ? { x: PASS_DELTA, opacity: 1, strokeOpacity: 1 }
+              : {
+                  x: [0, 0, PASS_DELTA * 0.52, PASS_DELTA, PASS_DELTA],
+                  opacity: [0, 1, 1, 1, 0],
+                  strokeOpacity: [0, 0, 0, 1, 1],
+                }
+          }
+          transition={reduced ? { duration: 0 } : { ...loop, times: [0, 0.04, 0.17, 0.3, 0.36] }}
+        />
+        {/* allowed tile two — hidden in the reduced still-frame */}
+        <m.rect
+          className="tf-box"
+          x={START_X}
+          y={TILE_Y}
+          width={TILE}
+          height={TILE}
+          rx={7}
+          fill="var(--foreground)"
+          fillOpacity={0.65}
+          stroke="var(--gold)"
+          strokeWidth={2}
+          initial={{ x: 0, opacity: 0, strokeOpacity: 0 }}
+          animate={
+            reduced
+              ? { x: 0, opacity: 0, strokeOpacity: 0 }
+              : {
+                  x: [0, 0, PASS_DELTA * 0.52, PASS_DELTA, PASS_DELTA],
+                  opacity: [0, 1, 1, 1, 0],
+                  strokeOpacity: [0, 0, 0, 1, 1],
+                }
+          }
+          transition={reduced ? { duration: 0 } : { ...loop, times: [0.16, 0.2, 0.33, 0.46, 0.52] }}
+        />
+        {/* the denied tile — stopped at the gate, set into the tray */}
+        <m.rect
+          className="tf-box"
+          x={START_X}
+          y={TILE_Y}
+          width={TILE}
+          height={TILE}
+          rx={7}
+          fill="var(--rose)"
+          initial={{ x: 0, y: 0, opacity: 0 }}
+          animate={
+            reduced
+              ? { x: STOP_DELTA + TRAY_DX, y: TRAY_DY, opacity: 0.55 }
+              : {
+                  x: [0, 0, STOP_DELTA, STOP_DELTA, STOP_DELTA + TRAY_DX, STOP_DELTA + TRAY_DX],
+                  y: [0, 0, 0, 0, TRAY_DY, TRAY_DY],
+                  opacity: [0, 0.9, 0.9, 0.9, 0.55, 0],
+                }
+          }
+          transition={
+            reduced ? { duration: 0 } : { ...loop, times: [0.3, 0.34, 0.52, 0.56, 0.68, 1] }
+          }
+        />
       </svg>
 
       {/* the record — pushed well below the scene, tallying the cycle as it happens */}

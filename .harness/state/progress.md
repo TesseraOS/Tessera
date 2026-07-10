@@ -3,6 +3,47 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-11 (v4.5) — F-051 DONE — living subpages: shader heroes, signature arts, FAQ v2
+
+**Ninth review (8 directives): the v4.4 subpages read flat. Resolved (ADR-0045 v4.5):**
+
+- **Full-height heroes site-wide:** `page-header` is now a `min-h-svh` statement over the
+  SAME lazy shader-field ground as home (calm pocket under the text; `.fade-bottom` mask
+  dissolves the field into the next band — no hard seam). The constellation stays
+  homepage-only.
+- **Signature arts** (new, all §5-conformant: constant-derived geometry, shared clock,
+  transform/opacity only, frozen reduced, role=img + sr alternative, HTML captions):
+  **PlanMosaic** (pricing — one engine at three scales; names via props from the PLANS
+  model), **TenantPerimeter** (enterprise — isolation islands, a refused crossing, live
+  ledger), **SkillLoop** (skills — the compile→effects→edit→capture ring).
+- **FAQ v2:** two-column archetype (sticky heading left) + bg-card disclosure cards,
+  still native details/summary with `name` exclusive-open — no JS accordion.
+- **Blur declined, dissolve adopted:** stakeholder floated blurred section boundaries —
+  rejected with reasoning (glassmorphism ban, backdrop-filter cost, hairline language);
+  same-ground seams now dissolve via washes/ground changes instead; hairlines mark
+  elevation only. Blur stays nav-only; design-lint unchanged.
+- **BUG FOUND & FIXED (whole class):** branching SSR'd markup / initial state on
+  `useReducedMotion()` hydration-mismatches (server always renders the animated branch)
+  — found via the dev overlay on the new arts, then traced to LATENT instances in
+  compiler-assembly (meter state + tile branch) and governance-gate (X + tiles).
+  All now render ONE element and vary only animate/transition. Lesson appended to
+  [[framer-svg-transform-attribute-conflict]]. Proof: fresh dev server, 16 reduced-motion
+  page loads, zero hydration logs.
+- **/skills placeholder debt** recorded on F-054's notes (replace planned cards with the
+  registry catalog).
+
+**Evidence** — design-lint 38/38 + pricing 5/5; typecheck/eslint/prettier clean; build
+green; e2e 19/19 (axe AA both themes, all five pages); first-load 227.5–228.5KB gz
+(budget 240; shader chunk stays lazy); screenshots 4 pages × 2 themes × 2 widths
+(reduced) + live-motion hero captures reviewed; zero hydration errors on a fresh server.
+
+**F-051 → done.** All acceptance met: pages + PLANS-driven pricing + trust page + /skills
+placeholder; SEO baseline (metadata/OG/sitemap/robots/llms.txt); axe AA e2e; gates green.
+The CWV/web-perf item is wired as data (manifest `budgets` = the app's CWV budget;
+gates.json's web-perf gate covers marketing and ACTIVATES with F-049 per the recorded
+drift-fix) — activation is F-049's, by design. Remaining marketing work is its own
+features: F-067 legal pages, F-066 mascot, F-054 skills registry.
+
 ## 2026-07-10 (v4.4) — F-051 IN PROGRESS — subpage arc: features / pricing / enterprise / skills
 
 **The four remaining acceptance pages, composed from a doc-extended archetype set.**

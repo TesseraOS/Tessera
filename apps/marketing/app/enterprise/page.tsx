@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { TenantPerimeter } from '@/components/art/tenant-perimeter';
 import { FaqList } from '@/components/faq-list';
 import { CtaBand } from '@/components/home/cta-band';
 import { PageHeader } from '@/components/page-header';
@@ -99,6 +100,7 @@ export default function EnterprisePage() {
             </>
           }
           lead="Tenant isolation, role-based access, OIDC single sign-on, quotas, and a full audit trail — enforced at the API boundary, not promised in a deck."
+          art={<TenantPerimeter />}
         />
 
         <section
@@ -155,7 +157,8 @@ export default function EnterprisePage() {
           </Container>
         </section>
 
-        <section id="posture" aria-labelledby="posture-title" className="scroll-mt-16 border-t">
+        {/* seam policy (v4.5): ground changes separate these bands — no hairline needed */}
+        <section id="posture" aria-labelledby="posture-title" className="scroll-mt-16">
           <Container className="grid gap-10 py-24 md:grid-cols-12 md:gap-12 md:py-32">
             <Reveal className="md:col-span-5">
               <SectionHeading id="posture-title" title="Verification over promises" />
@@ -175,13 +178,19 @@ export default function EnterprisePage() {
           </Container>
         </section>
 
-        <section id="faq" aria-labelledby="faq-title" className="scroll-mt-16 border-t">
-          <Container className="py-24 md:py-32">
-            <Reveal>
-              <SectionHeading id="faq-title" title="The questions reviews ask" />
+        <section id="faq" aria-labelledby="faq-title" className="bg-surface/60 scroll-mt-16">
+          <Container className="grid gap-10 py-24 md:grid-cols-12 md:gap-12 md:py-32">
+            <Reveal className="md:col-span-4">
+              <div className="md:sticky md:top-24">
+                <SectionHeading
+                  id="faq-title"
+                  title="The questions reviews ask"
+                  lead="Straight answers your security team can verify against the code."
+                />
+              </div>
             </Reveal>
-            <Reveal delay={90}>
-              <FaqList items={FAQ} />
+            <Reveal delay={90} className="md:col-span-8">
+              <FaqList items={FAQ} name="enterprise-faq" />
             </Reveal>
           </Container>
         </section>

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import type { PlanId } from '@tessera/billing';
+import { PlanMosaic } from '@/components/art/plan-mosaic';
 import { FaqList } from '@/components/faq-list';
 import { CtaBand } from '@/components/home/cta-band';
 import { PageHeader } from '@/components/page-header';
@@ -69,6 +70,12 @@ export default function PricingPage() {
             </>
           }
           lead="The local profile is open source and free forever. Paid plans add the managed cloud — same engine, same MCP tools, none of the infrastructure."
+          art={
+            <PlanMosaic
+              labels={plans.map((plan) => plan.name)}
+              recommendedIndex={plans.findIndex((plan) => plan.id === RECOMMENDED)}
+            />
+          }
         />
 
         <section id="plans" aria-labelledby="plans-title" className="scroll-mt-16 py-24 md:py-32">
@@ -145,12 +152,18 @@ export default function PricingPage() {
           aria-labelledby="faq-title"
           className="bg-background text-foreground scroll-mt-16 border-t"
         >
-          <Container className="py-24 md:py-32">
-            <Reveal>
-              <SectionHeading id="faq-title" title="Questions, answered" />
+          <Container className="grid gap-10 py-24 md:grid-cols-12 md:gap-12 md:py-32">
+            <Reveal className="md:col-span-4">
+              <div className="md:sticky md:top-24">
+                <SectionHeading
+                  id="faq-title"
+                  title="Questions, answered"
+                  lead="The short version of what teams ask before they switch."
+                />
+              </div>
             </Reveal>
-            <Reveal delay={90}>
-              <FaqList items={FAQ} />
+            <Reveal delay={90} className="md:col-span-8">
+              <FaqList items={FAQ} name="pricing-faq" />
             </Reveal>
           </Container>
         </section>

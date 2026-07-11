@@ -27,8 +27,8 @@ the logo, the hero animation, the loading state, the 404, everything.
 **Personality in one line:** *an archivist with a jeweler's hands, working at dusk.*
 
 **Explicitly not:** neon/indigo AI gradients, glassmorphism, particle storms,
-eyes-and-gloves cartoon mascots (the geometric tessera figure Tess — §5 — is sanctioned
-within its usage budget), fake testimonials, hype vocabulary.
+gloves-and-limbs cartoon mascots (the geometric tessera creature Tess — §5, eyes only —
+is sanctioned within its usage budget), fake testimonials, hype vocabulary.
 
 ## 2. Color — the "Terra Mosaic" palette
 
@@ -106,18 +106,26 @@ the palette, or place on non-brand backgrounds.
 `tessera-brand-canvas.png` (the Terra Mosaic art piece). Regenerate PNGs with
 `node apps/marketing/scripts/render-brand-assets.mjs` (Playwright, deterministic).
 
-## 5. Mascot — Tess (ADR-0046)
+## 5. Mascot — Tess (ADR-0046 v2)
 
-**Tess is a living fragment of the mosaic:** a compact figure of **nine rounded-square
-tesserae** — the mark's own geometry — with the **gilded ember tile as its heart**,
-forever mid-assembly. Personality: *the archivist's apprentice* — curious, patient,
-precise. Tess has **no face** (the eyes-and-gloves cartoon stays banned); expression is
-pure brand language:
+**Tess is a living fragment of the mosaic:** a small, cute, big-headed creature built
+from rounded tesserae — the mark's own geometry — with the **gilded ember tile as its
+heart**, forever mid-assembly. Personality: *the archivist's apprentice* — a curious,
+attention-seeking pet that also acts as an assistant. Tess has a **minimal face: two ink
+eyes** that blink, glance around, and follow the pointer (v2 — eyes are what make a
+geometric mascot read as alive; gloves, limbs, and mouth-driven cartoon acting stay
+banned). Expression channels:
 
+- **The eyes** — blink, openness, and gaze carry attention (wide = alarmed, squint = joy,
+  scanning = lost/searching, pointer-following = curious about *you*).
 - **Posture** — tile arrangement: gathered = attentive, low = resting, scattered = alarmed.
 - **Alignment** — a *misplaced tile* is distress; a perfectly seated grid is satisfaction.
-- **Rhythm** — the heart-glow breathing rate and tile-drift cadence carry energy.
+- **Rhythm** — a visible breathing bob and heart-glow at **creature rate (3–6s)** — the
+  9–14s ambient spec (§7) applies to field art, not to the character.
 - **Light** — one ember sheen sweep is celebration: the arriving-tile gesture itself.
+- **Reaction** — hover perks Tess up (gaze lock, ember flare); a click plays the one-shot
+  *delight* hop. Reactions are keyboard-neutral easter eggs; Tess never carries
+  information that isn't also text.
 
 **Moods** (data-driven; the rig is the `@tessera/mascot` workspace package): core —
 `idle`, `curious`, `working`, `satisfied`, `alarmed`, `celebrating`; surface — `greeting`

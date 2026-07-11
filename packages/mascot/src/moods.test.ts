@@ -55,6 +55,20 @@ describe('the mood registry (ADR-0046)', () => {
     }
   });
 
+  it('gives every mood an in-budget face (ADR-0046 v2)', () => {
+    for (const name of ALL_NAMES) {
+      const { eyes } = MOODS[name];
+      expect(eyes.openness, `${name}.openness`).toBeGreaterThanOrEqual(THERMAL.minOpenness);
+      expect(eyes.openness, `${name}.openness`).toBeLessThanOrEqual(THERMAL.maxOpenness);
+      expect(Math.abs(eyes.gazeX), `${name}.gazeX`).toBeLessThanOrEqual(THERMAL.maxGaze);
+      expect(Math.abs(eyes.gazeY), `${name}.gazeY`).toBeLessThanOrEqual(THERMAL.maxGaze);
+    }
+    // The face expresses: alarm is wide-eyed, joy and contentment squint below neutral.
+    expect(MOODS.alarmed.eyes.openness).toBeGreaterThan(1.2);
+    expect(MOODS.celebrating.eyes.openness).toBeLessThan(0.7);
+    expect(MOODS.satisfied.eyes.openness).toBeLessThan(0.7);
+  });
+
   it('gives every mood a text alternative', () => {
     for (const name of ALL_NAMES) {
       expect(MOODS[name].description.trim().length).toBeGreaterThan(10);
@@ -83,7 +97,7 @@ describe('the mood registry (ADR-0046)', () => {
 });
 
 describe('defineMood validation', () => {
-  const rhythm = { breathPeriodMs: 10000, breathIntensity: 0.5, driftAmp: 2 };
+  const rhythm = { breathPeriodMs: 4000, breathIntensity: 0.5, driftAmp: 2 };
 
   it('accepts a sparse, in-budget custom mood and fills the seated defaults', () => {
     const mood = defineMood({
@@ -101,6 +115,8 @@ describe('defineMood validation', () => {
       opacity: 0.92,
       role: 'tile',
     });
+    // The face defaults to neutral open eyes looking ahead.
+    expect(mood.eyes).toEqual({ openness: 1, gazeX: 0, gazeY: 0 });
   });
 
   it('rejects non-kebab names', () => {
@@ -126,7 +142,7 @@ describe('defineMood validation', () => {
     ).toThrow(/unknown slot "tail"/);
   });
 
-  it('rejects out-of-budget offsets, rotation, scale, breath, and drift', () => {
+  it('rejects out-of-budget offsets, rotation, scale, breath, drift, and face', () => {
     const base = { name: 'quiet', description: 'over budget in one way or another' };
     expect(() => defineMood({ ...base, poses: { crown: { dx: 13 } }, rhythm })).toThrow(/offset/);
     expect(() => defineMood({ ...base, poses: { crown: { rotate: 21 } }, rhythm })).toThrow(
@@ -135,10 +151,15 @@ describe('defineMood validation', () => {
     expect(() => defineMood({ ...base, poses: { crown: { scale: 1.2 } }, rhythm })).toThrow(
       /scale/,
     );
-    expect(() => defineMood({ ...base, rhythm: { ...rhythm, breathPeriodMs: 4000 } })).toThrow(
+    expect(() => defineMood({ ...base, rhythm: { ...rhythm, breathPeriodMs: 2000 } })).toThrow(
+      /breath period/,
+    );
+    expect(() => defineMood({ ...base, rhythm: { ...rhythm, breathPeriodMs: 9000 } })).toThrow(
       /breath period/,
     );
     expect(() => defineMood({ ...base, rhythm: { ...rhythm, driftAmp: 7 } })).toThrow(/drift/);
+    expect(() => defineMood({ ...base, eyes: { openness: 1.6 }, rhythm })).toThrow(/openness/);
+    expect(() => defineMood({ ...base, eyes: { gazeX: 3.1 }, rhythm })).toThrow(/gaze/);
   });
 
   it('rejects a vanished heart', () => {

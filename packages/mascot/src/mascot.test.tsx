@@ -27,19 +27,25 @@ describe('SSR determinism (the v4.5 hydration rule, held structurally)', () => {
     }
   });
 
-  it('carries the mood as data + custom properties, never as branched markup', () => {
+  it('carries mood + face as data and custom properties, never as branched markup', () => {
     const markup = renderToStaticMarkup(<Mascot mood="alarmed" />);
     expect(markup).toContain('data-mood="alarmed"');
     expect(markup).toContain('--tess-tx');
-    expect(markup).toContain('--tess-breath-period:9000ms');
+    expect(markup).toContain('--tess-breath-period:3000ms');
+    expect(markup).toContain('--tess-eye-open:1.35');
+    expect((markup.match(/tess-eye"/g) ?? []).length).toBe(2);
+    expect(markup).toContain('tess-gaze');
   });
 });
 
 describe('accessibility semantics', () => {
-  it('is decorative without a title', () => {
+  it('is decorative without a title — and reactive adds NO tab stop', () => {
     const markup = renderToStaticMarkup(<Mascot />);
     expect(markup).toContain('aria-hidden="true"');
+    expect(markup).toContain('data-reactive="true"');
     expect(markup).not.toContain('role="img"');
+    expect(markup).not.toContain('<button');
+    expect(markup).not.toContain('tabindex');
   });
 
   it('is a named image with a title', () => {
@@ -80,7 +86,8 @@ describe('custom moods', () => {
       name: 'docs-waiting',
       description: 'Tess waits patiently beside the docs search.',
       poses: { crown: { rotate: 4 } },
-      rhythm: { breathPeriodMs: 11000, breathIntensity: 0.4, driftAmp: 1 },
+      eyes: { gazeY: 0.5 },
+      rhythm: { breathPeriodMs: 4400, breathIntensity: 0.4, driftAmp: 1 },
     });
     const markup = renderToStaticMarkup(<Mascot mood={mood} />);
     expect(markup).toContain('data-mood="docs-waiting"');
@@ -88,13 +95,38 @@ describe('custom moods', () => {
   });
 });
 
-describe('interaction (the one-shot re-seat)', () => {
+describe('reactions (ADR-0046 v2)', () => {
   let container: HTMLDivElement;
   afterEach(() => {
     container.remove();
   });
 
-  it('click sets data-reseat and calls onActivate; the state clears after the gesture', async () => {
+  it('a click on a decorative reactive Tess plays the delight one-shot, then settles', async () => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(<Mascot mood="greeting" />);
+    });
+    const svg = container.querySelector('svg');
+    expect(svg?.getAttribute('data-react')).toBeNull();
+
+    await act(async () => {
+      svg?.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    });
+    expect(svg?.getAttribute('data-react')).toBe('delight');
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1400));
+    });
+    expect(svg?.getAttribute('data-react')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+  }, 10000);
+
+  it('an interactive Tess plays delight and calls onActivate on click', async () => {
     container = document.createElement('div');
     document.body.appendChild(container);
     const root = createRoot(container);
@@ -112,24 +144,17 @@ describe('interaction (the one-shot re-seat)', () => {
     });
     const button = container.querySelector('button');
     const svg = container.querySelector('svg');
-    expect(button).not.toBeNull();
-    expect(svg?.getAttribute('data-reseat')).toBeNull();
 
     await act(async () => {
       button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     expect(activated).toBe(1);
-    expect(svg?.getAttribute('data-reseat')).toBe('true');
-
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 1300));
-    });
-    expect(svg?.getAttribute('data-reseat')).toBeNull();
+    expect(svg?.getAttribute('data-react')).toBe('delight');
 
     await act(async () => {
       root.unmount();
     });
-  }, 10000);
+  });
 
   it('exposes every mood description for consumer sr-text', () => {
     // Consumers pair the figure with text — the registry guarantees the words exist.

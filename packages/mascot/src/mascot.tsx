@@ -1,22 +1,25 @@
 'use client';
 
 /**
- * The Mascot rig (ADR-0046) — renders Tess as inline SVG.
+ * The Mascot rig (ADR-0046 v2) — renders Tess as inline SVG.
  *
  * Structural invariants (tested):
  * - The DOM shape is IDENTICAL for every mood and every client state; only attribute
  *   values (inline custom properties, data-*) vary. Server markup therefore never
  *   depends on client conditions — the hydration-mismatch class is impossible here.
- * - All motion lives in styles.css (transform/opacity, the house ease, budgets from
- *   THERMAL); `prefers-reduced-motion` freezes everything into the mood's designed
- *   still pose. This component holds no animation state beyond the one-shot re-seat.
+ * - Ambient motion (breath/bob, blink, per-mood gestures) lives in styles.css; the only
+ *   JS-driven motion is the pointer-following gaze (a rAF spring writing `--tess-look-*`
+ *   onto the gaze group — an element React renders WITHOUT a style prop, so re-renders
+ *   never wipe the JS-set vars) and the one-shot delight reaction (`data-react`).
+ * - Reduced motion disables gaze, wander, and reactions entirely (CSS freezes the rest);
+ *   the mood's pose is the designed still frame.
  * - Colors resolve through the closed `--mascot-*` contract; unbound consumers get a
  *   monochrome `currentColor` figure.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
-import { SLOTS, SLOT_SPECS, TILE, TILE_RADIUS, VIEWBOX } from './geometry.js';
+import { EYE, GAZE_MAX, HEAD_CENTER, SLOTS, SLOT_SPECS, VIEWBOX } from './geometry.js';
 import { MOODS, THERMAL, isMoodName } from './moods.js';
 import type { MoodDefinition, MoodName } from './moods.js';
 
@@ -35,7 +38,13 @@ export interface MascotProps {
    * `interactive` — a control must have a name.
    */
   title?: string;
-  /** Wrap Tess in a real button; click plays the one-shot re-seat gesture. */
+  /**
+   * Liveliness (default ON): eyes follow the pointer (wandering when idle) and a
+   * click/tap plays the one-shot delight reaction. Keyboard-neutral — decorative
+   * placements gain NO tab stop. Disabled automatically under reduced motion.
+   */
+  reactive?: boolean;
+  /** Wrap Tess in a real button (a genuine control with a tab stop). */
   interactive?: boolean;
   /** Called on activation (only meaningful with `interactive`). */
   onActivate?: () => void;
@@ -56,14 +65,17 @@ function resolveMood(mood: MoodName | MoodDefinition): MoodDefinition {
   return mood;
 }
 
-/* Breath intensity (0–1) → the ember glow's opacity swing. */
-const breathLo = (intensity: number): number => 0.08 + 0.06 * intensity;
-const breathHi = (intensity: number): number => 0.16 + 0.22 * intensity;
+/* Breath intensity (0–1) → the ember glow's opacity swing (visible, never a strobe). */
+const breathLo = (intensity: number): number => 0.1 + 0.08 * intensity;
+const breathHi = (intensity: number): number => 0.2 + 0.25 * intensity;
+
+const clamp = (value: number, limit: number): number => Math.max(-limit, Math.min(limit, value));
 
 export function Mascot({
   mood = 'idle',
   size = DEFAULT_SIZE,
   title,
+  reactive = true,
   interactive = false,
   onActivate,
   className,
@@ -74,21 +86,102 @@ export function Mascot({
   }
   const edge = Math.max(MIN_SIZE, Math.round(size));
 
-  const [reseat, setReseat] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const handleActivate = useCallback(() => {
-    // One-shot: absorbed while playing (CSS restarts only on attribute re-match).
-    setReseat(true);
-    if (timer.current !== undefined) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setReseat(false), THERMAL.oneShotMs + 100);
-    onActivate?.();
-  }, [onActivate]);
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const gazeRef = useRef<SVGGElement | null>(null);
+
+  /* Reduced motion gates every JS behavior (markup is identical either way). */
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined;
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReducedMotion(query.matches);
+    const onChange = (event: MediaQueryListEvent) => setReducedMotion(event.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
+
+  /* The one-shot delight reaction (click/tap; absorbed while playing). */
+  const [reacting, setReacting] = useState(false);
+  const reactTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const playDelight = useCallback(() => {
+    if (reducedMotion) return;
+    setReacting(true);
+    if (reactTimer.current !== undefined) clearTimeout(reactTimer.current);
+    reactTimer.current = setTimeout(() => setReacting(false), THERMAL.oneShotMs + 120);
+  }, [reducedMotion]);
   useEffect(
     () => () => {
-      if (timer.current !== undefined) clearTimeout(timer.current);
+      if (reactTimer.current !== undefined) clearTimeout(reactTimer.current);
     },
     [],
   );
+
+  /*
+   * The gaze: eyes spring toward the pointer; when the pointer has been quiet, Tess
+   * glances at random spots instead (the attention-seeker). Writes only CSS vars on the
+   * gaze group — no layout, no React state, transform-only.
+   */
+  useEffect(() => {
+    if (!reactive || reducedMotion) return undefined;
+    const svg = svgRef.current;
+    const gaze = gazeRef.current;
+    if (!svg || !gaze) return undefined;
+
+    const look = { x: 0, y: 0 };
+    const target = { x: 0, y: 0 };
+    let raf = 0;
+    let wander: ReturnType<typeof setTimeout> | undefined;
+    let lastPointer = 0;
+
+    const tick = () => {
+      look.x += (target.x - look.x) * 0.16;
+      look.y += (target.y - look.y) * 0.16;
+      gaze.style.setProperty('--tess-look-x', `${look.x.toFixed(2)}px`);
+      gaze.style.setProperty('--tess-look-y', `${look.y.toFixed(2)}px`);
+      if (Math.abs(target.x - look.x) + Math.abs(target.y - look.y) > 0.02) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        raf = 0;
+      }
+    };
+    const startLoop = () => {
+      if (raf === 0) raf = requestAnimationFrame(tick);
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      lastPointer = Date.now();
+      const rect = svg.getBoundingClientRect();
+      const dx = event.clientX - (rect.left + rect.width / 2);
+      const dy = event.clientY - (rect.top + rect.height / 2);
+      target.x = clamp(dx / 160, 1) * GAZE_MAX;
+      target.y = clamp(dy / 120, 1) * GAZE_MAX;
+      startLoop();
+    };
+
+    const scheduleWander = () => {
+      wander = setTimeout(
+        () => {
+          if (Date.now() - lastPointer > 2500) {
+            target.x = (Math.random() * 2 - 1) * GAZE_MAX * 0.75;
+            target.y = (Math.random() * 2 - 1) * GAZE_MAX * 0.55;
+            startLoop();
+          }
+          scheduleWander();
+        },
+        2600 + Math.random() * 2200,
+      );
+    };
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    scheduleWander();
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      if (wander !== undefined) clearTimeout(wander);
+      if (raf !== 0) cancelAnimationFrame(raf);
+      gaze.style.removeProperty('--tess-look-x');
+      gaze.style.removeProperty('--tess-look-y');
+    };
+  }, [reactive, reducedMotion]);
 
   const rootVars = {
     '--tess-breath-period': `${def.rhythm.breathPeriodMs}ms`,
@@ -97,8 +190,15 @@ export function Mascot({
     '--tess-drift-amp': `${-def.rhythm.driftAmp}px`,
   } as CSSProperties;
 
+  const faceVars = {
+    '--tess-eye-open': String(def.eyes.openness),
+    '--tess-gaze-x': `${def.eyes.gazeX}px`,
+    '--tess-gaze-y': `${def.eyes.gazeY}px`,
+  } as CSSProperties;
+
   const svg = (
     <svg
+      ref={svgRef}
       viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
       width={edge}
       height={edge}
@@ -106,61 +206,94 @@ export function Mascot({
       style={rootVars}
       data-tess=""
       data-mood={def.name}
-      data-reseat={reseat ? 'true' : undefined}
+      data-reactive={reactive ? 'true' : undefined}
+      data-react={reacting ? 'delight' : undefined}
       aria-hidden={interactive || !title ? true : undefined}
       role={!interactive && title ? 'img' : undefined}
       aria-label={!interactive && title ? title : undefined}
       focusable="false"
+      onPointerDown={reactive && !interactive ? playDelight : undefined}
     >
       <g className="tess-figure">
-        {SLOTS.map((slot, index) => {
-          const spec = SLOT_SPECS[slot];
-          const pose = def.poses[slot];
-          const slotVars = {
-            '--tess-tx': `${pose.dx}px`,
-            '--tess-ty': `${pose.dy}px`,
-            '--tess-rot': `${pose.rotate}deg`,
-            '--tess-scale': String(pose.scale),
-            '--tess-op': String(pose.opacity),
-            '--tess-i': String(index),
-          } as CSSProperties;
-          return (
-            <g key={slot} className="tess-slot" data-slot={slot} style={slotVars}>
-              <g className="tess-drift">
-                {slot === 'heart' ? (
-                  <>
-                    <rect
-                      className="tess-ember"
-                      x={spec.x - 3}
-                      y={spec.y - 3}
-                      width={TILE + 6}
-                      height={TILE + 6}
-                      rx={TILE_RADIUS + 1.5}
-                    />
-                    <rect
-                      className="tess-ember-hover"
-                      x={spec.x - 3}
-                      y={spec.y - 3}
-                      width={TILE + 6}
-                      height={TILE + 6}
-                      rx={TILE_RADIUS + 1.5}
-                    />
-                  </>
-                ) : null}
-                <rect
-                  className="tess-tile"
-                  data-role={pose.role}
-                  x={spec.x}
-                  y={spec.y}
-                  width={TILE}
-                  height={TILE}
-                  rx={TILE_RADIUS}
-                />
+        <g className="tess-breathe">
+          {SLOTS.map((slot, index) => {
+            const spec = SLOT_SPECS[slot];
+            const pose = def.poses[slot];
+            const slotVars = {
+              '--tess-tx': `${pose.dx}px`,
+              '--tess-ty': `${pose.dy}px`,
+              '--tess-rot': `${pose.rotate}deg`,
+              '--tess-scale': String(pose.scale),
+              '--tess-op': String(pose.opacity),
+              '--tess-i': String(index),
+            } as CSSProperties;
+            return (
+              <g key={slot} className="tess-slot" data-slot={slot} style={slotVars}>
+                <g className="tess-drift">
+                  {slot === 'heart' ? (
+                    <>
+                      <rect
+                        className="tess-ember"
+                        x={spec.x - 3}
+                        y={spec.y - 3}
+                        width={spec.w + 6}
+                        height={spec.h + 6}
+                        rx={spec.rx + 1.5}
+                      />
+                      <rect
+                        className="tess-ember-hover"
+                        x={spec.x - 3}
+                        y={spec.y - 3}
+                        width={spec.w + 6}
+                        height={spec.h + 6}
+                        rx={spec.rx + 1.5}
+                      />
+                    </>
+                  ) : null}
+                  <rect
+                    className="tess-tile"
+                    data-role={pose.role}
+                    x={spec.x}
+                    y={spec.y}
+                    width={spec.w}
+                    height={spec.h}
+                    rx={spec.rx}
+                  />
+                  {slot === 'crown' ? (
+                    <g className="tess-face" style={faceVars}>
+                      <g ref={gazeRef} className="tess-gaze">
+                        <rect
+                          className="tess-eye"
+                          x={HEAD_CENTER.x - EYE.spread - EYE.w / 2}
+                          y={HEAD_CENTER.y + EYE.lift - EYE.h / 2}
+                          width={EYE.w}
+                          height={EYE.h}
+                          rx={EYE.rx}
+                        />
+                        <rect
+                          className="tess-eye"
+                          x={HEAD_CENTER.x + EYE.spread - EYE.w / 2}
+                          y={HEAD_CENTER.y + EYE.lift - EYE.h / 2}
+                          width={EYE.w}
+                          height={EYE.h}
+                          rx={EYE.rx}
+                        />
+                      </g>
+                    </g>
+                  ) : null}
+                </g>
               </g>
-            </g>
-          );
-        })}
-        <rect className="tess-sheen" x={39} y={-20} width={TILE} height={VIEWBOX + 40} rx={4} />
+            );
+          })}
+          <rect
+            className="tess-sheen"
+            x={(VIEWBOX - 18) / 2}
+            y={-20}
+            width={18}
+            height={VIEWBOX + 40}
+            rx={4}
+          />
+        </g>
       </g>
     </svg>
   );
@@ -171,7 +304,10 @@ export function Mascot({
       type="button"
       className={className ? `tess-button ${className}` : 'tess-button'}
       aria-label={title}
-      onClick={handleActivate}
+      onClick={() => {
+        playDelight();
+        onActivate?.();
+      }}
     >
       {svg}
     </button>

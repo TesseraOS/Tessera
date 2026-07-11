@@ -195,6 +195,50 @@ requests; axe AA both themes. Evidence per
 7. Constellation supervisor (e2e + budget evidence + screenshots).
 8. Effect-trace, progress, checkpoint; commit per standing cadence.
 
+## Revision v2 (2026-07-11 — stakeholder review round)
+
+Verdict on v1: *"lifeless, unprofessional, non-interactive, non-animated — blocks are not
+a mascot; we need a small cute attention-seeker, a lively child or pet that can also act
+as an assistant."* Root causes accepted: (a) two of three placements sat inside
+`pointer-events-none`, so hover/click could not fire at all; (b) no placement was
+interactive; (c) ambient rates (9–14s breath, ≤3px drift) are background-art rates,
+invisible on a character; (d) a faceless figure cannot read as a creature. This repeats
+the recorded lesson [[design-contract-mechanism-outlives-parameters]] — this stakeholder
+reads austerity as lifelessness.
+
+**v2 design (ADR-0046 v2):**
+
+1. **Anatomy — cute proportions + a face.** Big head tile (26×22) over the 3-wide mosaic
+   body, gilded heart on the chest, small feet. The head carries **two ink eyes** — the
+   minimal face. The brand ban is amended: *no gloves/limbs/mouth-driven cartoon; minimal
+   eyes are required for liveliness* (precedent: Mona/Clyde/Glitch — geometric mascots
+   with eyes). Eyes get per-mood parameters (openness, gaze bias) validated by
+   `defineMood()`.
+2. **Life motion at creature rate:** breathing bob ~3.2–5.2s (THERMAL breath bounds move
+   to 3000–6000ms for the CHARACTER; field-art ambient stays 9–14s per BRAND §7),
+   periodic blinks (CSS keyframe window), per-mood gestures (curious head-tilt, alarmed
+   shiver, lost/searching scan, greeting wave, celebrating heart pop), heart ember at
+   visible amplitude.
+3. **Interactive everywhere (reactive by default):** hover = perk (rise, head tilt, eye
+   widen, ember flare) + **cursor-following gaze** (rAF-smoothed, ±≈2px, wander targets
+   when idle, disabled under reduced motion / SSR-neutral); click/tap on ANY placement =
+   one-shot **delight** reaction (hop + happy-squint + heart re-seat + sheen; ~1.2s,
+   absorbed while playing). Decorative instances stay `aria-hidden` with **no tab stop**
+   — the reaction is a keyboard-neutral easter egg carrying no information; the
+   `interactive` button mode remains for real controls. Placements must never sit under
+   `pointer-events-none`.
+4. **`/dev/mascot` lab** (marketing): every mood × sizes, reactive playground, works on
+   both themes via the footer toggle; `robots: noindex`, absent from sitemap/nav/llms;
+   design-lint `allowIn` gains the lab files as a sanctioned DEV exception (manifest
+   4.7.0 documents it).
+5. **Menu placement fixed:** Tess overlays the dead corner above the mosaic strip
+   (absolute, zero added layout height) — fills whitespace instead of creating it.
+6. **Masters regenerated** with the face; drift test unchanged in mechanism.
+
+Verification adds: motion PROOF (two timed frames must differ under normal motion and be
+identical under reduced motion), hover/click reaction e2e, dev-lab e2e (axe both themes),
+and re-run of the full v1 evidence set.
+
 ## Risks / open questions
 
 - ~~**OQ1 — Name.**~~ **Resolved:** **Tess** (stakeholder, 2026-07-11).

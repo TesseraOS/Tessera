@@ -1,7 +1,7 @@
 {
   "$comment": "Machine-readable projection of docs/design/MARKETING-DESIGN.md v4 (Terra Mosaic — ADR-0043/0044/0045; BRAND.md carries the brand). The design-lint gate in apps/marketing COMPILES enforcement.bannedPatterns/requiredPatterns from this file — editing a pattern changes what the gate fails. Keep doc and manifest in lockstep.",
   "name": "tessera-marketing-design",
-  "version": "4.6.0",
+  "version": "4.7.0",
   "status": "accepted",
   "source": "docs/design/MARKETING-DESIGN.md",
   "authority": [
@@ -133,15 +133,16 @@
   "bannedArchetypes": ["terminal windows", "code-block panels", "file trees", "fake dashboards", "browser-chrome screenshots"],
   "components": ["Container", "Button(primary|secondary|ghost; sm|md|lg; hover lift+sheen)", "TextLink(draw-in underline)", "Badge", "Panel", "SectionHeading", "PageHeader(subpage full-height shader hero + signature-art slot — v4.5)", "PlanMosaic(pricing hero: one engine at three scales; plan names via props from the PLANS display model)", "TenantPerimeter(enterprise hero: isolation islands, refused crossing, live ledger)", "SkillLoop(skills hero: the agent discipline as a traveling ring)", "FaqList(native details/summary cards; name exclusive-open)", "Wordmark", "Logo/LogoIcon(v2 mark)", "MosaicField(seeded ambient tessellation; .tile-hover pointer-lit)", "ShaderField(WebGL fragment shader; hero+band ground)", "Constellation(Canvas-2D knowledge-graph engine; fixed 3/4 camera)", "ConstellationBand(lazy boundary + graph-wash + right-aligned telemetry + sr-only alternative)", "AgentMarks(simple-icons paths, CC0; wordmark fallback)", "EffectWeb(pure SVG edges + HTML chips)", "PipelineFlow(HTML chips + connector SVGs)", "CompilerAssembly", "GovernanceGate", "ProblemBand illustrations", "ThemeToggle(footer; view-transition ripple)", "Reveal(in-view rise)", "Marquee(hover-paused)", "lib/motion.tsx (the ONLY framer-motion import)", "lib/theme.tsx (the ONLY next-themes import; system-initial + useThemeTransition)", "Mascot(@tessera/mascot — Tess, the tessera-built brand figure: 9 tiles, gilded heart, moods as data, package-internal CSS motion; usage budget = mobile menu / 404 / constellation supervisor ONLY — lint-enforced allowIn; ADR-0046)"],
   "mascot": {
-    "$comment": "ADR-0046 + BRAND.md §5 + MARKETING-DESIGN.md §4.1 — the machine-readable summary of Tess on this surface.",
+    "$comment": "ADR-0046 v2 + BRAND.md §5 + MARKETING-DESIGN.md §4.1 — the machine-readable summary of Tess on this surface.",
     "package": "@tessera/mascot (packages/mascot — shared workspace package, zero runtime deps, React peer)",
-    "moods": { "core": ["idle", "curious", "working", "satisfied", "alarmed", "celebrating"], "surface": ["greeting (mobile menu)", "lost (404)", "searching (empty states)", "watching (constellation supervisor)"], "custom": "defineMood() — validated data (all slots + reduced-motion still pose + thermal budgets)" },
-    "usageBudget": ["components/site-nav.tsx (mobile-menu ground, greeting)", "app/not-found.tsx (lost)", "components/home/constellation-band.tsx (watching supervisor)"],
-    "never": ["hero", "pricing", "content bands as decoration", "sole carrier of information"],
+    "character": "cute big-headed tessera creature: head tile with two ink EYES (blink, glance, pointer-following gaze), gilded heart chest, mosaic body — no gloves/limbs/mouth (ADR-0046 v2)",
+    "moods": { "core": ["idle", "curious", "working", "satisfied", "alarmed", "celebrating"], "surface": ["greeting (mobile menu)", "lost (404)", "searching (empty states)", "watching (constellation supervisor)"], "custom": "defineMood() — validated data (all slots + eyes {openness, gazeX, gazeY} + reduced-motion still pose + thermal budgets)" },
+    "usageBudget": ["components/site-nav.tsx (mobile-menu ground, greeting)", "app/not-found.tsx (lost)", "components/home/constellation-band.tsx (watching supervisor)", "app/dev/mascot/* (DEV LAB exception: every mood x sizes for debugging; robots noindex, absent from sitemap/nav/llms.txt)"],
+    "never": ["hero", "pricing", "content bands as decoration", "sole carrier of information", "inside pointer-events-none (kills the reactions — the v1 bug)", "stacked placements that add layout height (overlay existing whitespace instead)"],
     "theming": "globals.css binds the closed --mascot-* contract (tile/tile-warm/tile-deep/heart/sheen/ink) to Terra Mosaic tokens per theme; components never restyle Tess",
     "accentInteraction": "the heart renders on --gold: where Tess appears it IS that band's one gold moment (no second ember in the band)",
-    "motion": "package-internal CSS only (no framer): mood morphs <=700ms, hover acknowledge 150-250ms, click re-seat once <=1.2s, heart breath 9-14s ambient; prefers-reduced-motion = designed still pose per mood",
-    "a11y": "decorative = aria-hidden (+ sibling sr-only text where state matters); interactive = real button + label; always mirrors state that exists as text"
+    "motion": "package-internal CSS + rAF gaze spring (no framer): creature-rate breath/bob 3-6s, blink windows, per-mood gestures (curious tilt / alarmed shiver / lost+searching scan / greeting wave / celebrating heart pop), mood morphs <=700ms, hover perk 150-250ms + gaze lock + ember flare, click delight once <=1.2s on every placement; prefers-reduced-motion = designed still pose, gaze + reactions disabled",
+    "a11y": "decorative = aria-hidden, NO tab stop (reactions are keyboard-neutral easter eggs; + sibling sr-only text where state matters); interactive = real button + label; always mirrors state that exists as text"
   },
   "motion": {
     "system": "thermal — settle, drift, glow once; stillness is the default state",
@@ -156,7 +157,7 @@
     "mosaicWave": "tile-wave — a crest of lift+light sweeping MosaicField diagonally forever (per-tile negative delays); replaces drift as that band's ambient system; pairs with tile-hover (CTA band, mobile menu — v4.2)",
     "liveLedger": "GovernanceGate's caption tallies the cycle as it happens (rAF phase on the shared clock); CompilerAssembly's token meter breathes with the tiles (fill-hold-drain on the same period)",
     "themePropagation": "theme switch = radial view transition from the toggle (clip-path circle, 550ms house ease); skipped without the API or under reduced motion",
-    "mascot": "Tess animates via package-internal CSS (transform/opacity, house ease): mood morphs <=700ms, hover 150-250ms, click re-seat once <=1.2s, heart breath 9-14s (counts as the viewport's ambient system where present); reduced motion = still pose",
+    "mascot": "Tess animates via package-internal CSS + a rAF gaze spring (transform/opacity, house ease): breath/bob 3-6s creature rate, blinks, per-mood gestures, pointer-following eyes, mood morphs <=700ms, hover perk 150-250ms, click delight once <=1.2s (counts as the viewport's ambient system where present); reduced motion = still pose, gaze/reactions off",
     "banned": ["animating h1/LCP from invisible", "scroll-jacking/parallax", "transition-all", "layout-property animation", "bounce/spin/flash", "typing effects"],
     "reducedMotion": "complete, still, final layout — global CSS kill-switch + MotionConfig"
   },
@@ -396,8 +397,8 @@
         "pattern": "from\\s+['\"]@tessera/mascot",
         "flags": "",
         "files": ["**/*.tsx", "**/*.ts"],
-        "allowIn": ["components/site-nav.tsx", "app/not-found.tsx", "components/home/constellation-band.tsx"],
-        "reason": "Tess appears only inside the ADR-0046 usage budget (mobile menu / 404 / constellation supervisor) — never the hero, never pricing (§4.1)."
+        "allowIn": ["components/site-nav.tsx", "app/not-found.tsx", "components/home/constellation-band.tsx", "app/dev/mascot/page.tsx", "app/dev/mascot/mascot-lab.tsx"],
+        "reason": "Tess appears only inside the ADR-0046 usage budget (mobile menu / 404 / constellation supervisor) plus the noindexed /dev/mascot debugging lab (v2) — never the hero, never pricing (§4.1)."
       }
     ],
     "requiredPatterns": [

@@ -3,6 +3,56 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-11 (v2) — F-066 DONE — Tess alive: face, creature-rate motion, reactions, dev lab (ADR-0046 v2)
+
+**Stakeholder review of v1: "lifeless, unprofessional, non-interactive — blocks are not a
+mascot; we need a small cute attention-seeker, a lively child or pet."** Root causes owned:
+two placements sat under `pointer-events-none` (hover/click could never fire), no placement
+was interactive, 9–14s ambient rates are invisible on a character, and a faceless figure
+cannot read as a creature. (The recorded F-051 lesson struck again: this brand reads
+austerity as lifelessness.) All resolved as **ADR-0046 v2** + MARKETING-DESIGN v4.7 +
+manifest 4.7.0 + BRAND §5 v2:
+
+- **Tess has a face now:** big-head cute proportions (26×22 head over the mosaic body,
+  viewBox 104 with tested life-motion headroom) and **two ink eyes** that blink (CSS
+  windows), hold per-mood expressions (`defineMood` gains validated
+  `eyes {openness, gazeX, gazeY}` — alarmed stares wide at the popped tile, celebrating
+  squints down at its lifted heart, lost scans left), and **follow the pointer** (a rAF
+  spring writing `--tess-look-*` on the gaze rig; wanders to random glances when the
+  pointer is idle — the attention-seeker). Eyes render on `--mascot-ink` (noon inverts to
+  a dark-bodied, light-eyed creature — token-true).
+- **Creature-rate motion:** breathing bob 3–6s (THERMAL bounds moved; 9–14s stays correct
+  for FIELD art), per-tile drift on the shared clock, per-mood gestures in CSS (curious
+  peek-tilt, alarmed shiver bursts, lost/searching head scan, greeting double wave,
+  celebrating heart pop).
+- **Reactive on every placement (default):** hover = perk (rise + head tilt + eye widen
+  + ember flare + gaze lock); click/tap = the one-shot **delight** (crouch-hop with the
+  squash only in the crouch, happy-squint, heart re-seat, sheen — ≤1.2s, absorbed while
+  playing). Keyboard-neutral easter egg: decorative instances stay `aria-hidden`, zero
+  tab stops; `interactive` button mode unchanged. Placement rules hardened in the
+  manifest: **never inside `pointer-events-none`; overlay whitespace, never add it**
+  (menu Tess now overlays the MosaicField's built-in 40-unit headroom — zero layout
+  growth; supervisor perch got `pointer-events-auto`).
+- **`/dev/mascot` lab** (stakeholder directive): specimen playground + all 10 moods at
+  3 sizes, mood/size switchers, both themes via the footer toggle; `robots noindex`,
+  absent from sitemap/nav/llms; sanctioned as a lint `allowIn` DEV exception.
+- Masters regenerated with the face; the SSR-determinism invariant held (gaze vars live
+  on an element React renders without a style prop, so re-renders can't wipe them).
+
+**Evidence** — package 36/36 (eye budgets, eye-in-head bounds, viewBox headroom incl.
+bob+hop, reaction one-shot, SSR skeleton identity across all moods); marketing unit 45/45
+(design-lint incl. the widened allowIn); e2e **27/27** (new: animations RUNNING under
+normal motion — `tess-bob`/`tess-blink`/`tess-breath` by computed name; gaze vars written
+on pointer approach; click → `data-react=delight` → auto-settle; dev lab 11 figures +
+mood switch + axe both themes; stillness now proves 5 layers `none`); **motion proof:
+two frames 1.6s apart DIFFER live and are byte-identical under reduced motion**;
+workspace turbo gates green; first-load **225.4KB gz home / 190.9KB gz 404** (budget
+240 — all the life cost ~2KB); screenshots reviewed (menu overlay, 404 dusk+noon, lab
+dusk+noon, hover perk state).
+
+**Next step** — F-067 legal pages (R3 must) or F-054 per stakeholder; F-068 dashboard
+Tess adoption when scheduled.
+
 ## 2026-07-11 — F-066 DONE — brand mascot Tess: @tessera/mascot + marketing integrations (ADR-0046)
 
 **Stakeholder-directed scope expansion** (recorded in the plan + ADR): the mascot serves

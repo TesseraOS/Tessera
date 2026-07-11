@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | Accepted v4.6 — F-066 (mascot Tess joins v4.5's shader heroes + constellation + living subpages) |
+| **Status** | Accepted v4.7 — F-066 v2 (Tess alive: face + creature-rate motion + reactions + dev lab; v4.6 introduced the mascot) |
 | **Last updated** | 2026-07-11 |
 | **Scope** | `apps/marketing` (apex domain). Later: the public chrome of `apps/docs`. |
 | **Brand** | [`BRAND.md`](./BRAND.md) + [Terra Mosaic philosophy](./brand/terra-mosaic-philosophy.md) — read both first |
@@ -227,27 +227,35 @@ only framer-motion import) · **`Mascot`** (from `@tessera/mascot` — see §4.1
 Flow imports live only in `components/art/*` (effect-web); canvas/WebGL engines live
 only in `components/art/*`; `three`/`@react-three` are banned.
 
-### 4.1 The mascot — Tess (v4.6, ADR-0046)
+### 4.1 The mascot — Tess (v4.7, ADR-0046 v2)
 
-Tess is the brand mascot from **`@tessera/mascot`** (shared workspace package): nine
-rounded-square tesserae, the gilded heart tile always present, moods as data
-(BRAND.md §5). On this surface:
+Tess is the brand mascot from **`@tessera/mascot`** (shared workspace package): a cute
+big-headed tessera creature — ink eyes, gilded heart, moods as data (BRAND.md §5). On
+this surface:
 
 - **Usage budget (lint-enforced `allowIn`):** the mobile-menu ground (`greeting`), the
   404 page (`lost`), and the constellation supervisor (`watching`, reacting to the same
   simulated telemetry as the island). **Never the hero, never pricing**, never inside
-  content bands as decoration.
+  content bands as decoration. The **`/dev/mascot` lab** is a sanctioned DEV exception
+  (noindex; absent from sitemap/nav/llms.txt) for debugging every mood on both themes.
+- **Alive by contract:** eyes blink and follow the pointer; the body breathes at
+  creature rate (3–6s — field-art ambient stays 9–14s); per-mood gestures (curious
+  tilt, alarmed shiver, lost scan, greeting wave). Hover = perk + gaze lock + ember
+  flare; click = the one-shot *delight* hop (≤1.2s). Reactions are keyboard-neutral;
+  **never place Tess inside `pointer-events-none`** (v1's dead-interaction bug).
+- **Placement principle:** Tess overlays existing whitespace (absolute positioning,
+  zero added layout height) — it fills dead corners, it never pushes content.
 - **Accent interaction:** the heart renders on `--gold` — where Tess appears it **is**
   that band's one gold moment (§1.2). No second ember in the same band.
 - **Theming:** globals.css binds the closed `--mascot-*` contract to Terra Mosaic tokens
   per theme (dusk + noon + chapter inherit). Components never restyle Tess directly.
-- **Motion:** self-contained CSS (package `styles.css`) — thermal-compliant (micro
-  ≤250ms, one-shot re-seat ≤1.2s, ambient breath 9–14s), transform/opacity only,
-  `prefers-reduced-motion` ⇒ designed still pose per mood. The framer seam is not
-  involved; Tess's ambient breath counts toward §5's ≤1 ambient system per viewport.
-- **A11y:** decorative placements `aria-hidden` (+ sibling sr-only text where state
-  matters); interactive placements are real buttons; Tess never carries information that
-  isn't also text (the supervisor mirrors the telemetry island).
+- **Motion:** self-contained CSS + a tiny rAF gaze spring (package-internal; the framer
+  seam is not involved), transform/opacity only, `prefers-reduced-motion` ⇒ designed
+  still pose per mood, gaze and reactions disabled. Tess counts toward §5's ≤1 ambient
+  system per viewport.
+- **A11y:** decorative placements `aria-hidden` with no tab stop (+ sibling sr-only text
+  where state matters); interactive placements are real buttons; Tess never carries
+  information that isn't also text (the supervisor mirrors the telemetry island).
 
 ## 5. Motion — thermal system + the constellation
 
@@ -261,7 +269,7 @@ gilded tile arrives once; reduced-motion = stillness). Additions:
 | Canvas rules | page scroll always wins (no wheel/touch capture); keyboard-inert + `aria-hidden` (decorative-interactive); telemetry ticks 1.2–2s, right-aligned |
 | Illustration loops | flowing dashes are that band's ambient system; assembly **breathes** (assemble–hold–disperse ping-pong) and the gate **cycles** on one shared clock — always eased, never jumping |
 | Theme switch | radial view transition from the toggle (clip-path circle, 550ms house ease); instant without the API or under reduced motion |
-| Mascot (Tess) | package-internal CSS: mood morphs eased ≤700ms, hover acknowledge 150–250ms, click re-seat once ≤1.2s, heart breath 9–14s ambient (counts as the viewport's ambient system where present) |
+| Mascot (Tess) | package-internal CSS + rAF gaze: breath/bob 3–6s creature rate, blinks + per-mood gestures, mood morphs ≤700ms, hover perk 150–250ms + pointer-following eyes, click delight once ≤1.2s (counts as the viewport's ambient system where present; reduced motion ⇒ still pose, gaze/reactions off) |
 | Reduced motion | shader frozen; constellation frozen layout, zero packets; no dash animation; theme switch instant; Tess = designed still pose per mood |
 
 ## 6. Voice & content — unchanged

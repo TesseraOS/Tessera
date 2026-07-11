@@ -172,13 +172,16 @@ export function SiteNav() {
             </ButtonLink>
           </Container>
           {/*
-           * The menu's quiet ground (ADR-0045 v4.1) — with Tess greeting from its edge
-           * (ADR-0046). Tess's heart is this surface's one gold moment, so the field's
-           * own ember stays unrendered (§4.1 accent interaction).
+           * The menu's quiet ground (ADR-0045 v4.1) — with Tess greeting from it
+           * (ADR-0046 v2). Tess OVERLAYS the field's built-in headroom (the mosaic svg
+           * reserves 40 units above its tiles), so it fills existing whitespace and adds
+           * zero layout height. Its heart is this surface's one gold moment, so the
+           * field's own ember stays unrendered (§4.1); reactions stay live — never
+           * pointer-events-none.
            */}
           <div className="rise-in relative shrink-0">
-            <div className="pointer-events-none relative z-10 -mb-4 flex justify-end pr-10">
-              <Mascot mood="greeting" size={64} />
+            <div className="absolute -top-3 right-12 z-10">
+              <Mascot mood="greeting" size={60} />
             </div>
             <MosaicField
               emberId="ember-menu-field"
@@ -189,7 +192,7 @@ export function SiteNav() {
               wave
               ember={false}
               className="fade-x tile-hover relative px-4 pb-6"
-              label="A strip of mosaic tiles beneath the menu with a crest of light sweeping across it; Tess, the small tile-figure mascot, greets from its edge"
+              label="A strip of mosaic tiles beneath the menu with a crest of light sweeping across it; Tess, the small tile-creature mascot, greets from its edge"
             />
           </div>
         </div>

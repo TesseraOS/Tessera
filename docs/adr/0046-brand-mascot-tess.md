@@ -1,6 +1,6 @@
 # ADR-0046: Brand mascot "Tess" — shared tessera-built character with data-driven moods
 
-- **Status:** Accepted
+- **Status:** Accepted **v2** (v1 2026-07-11; v2 same day — stakeholder review round, §Amendment)
 - **Date:** 2026-07-11
 - **Deciders:** stakeholder (name, scope, mood set — confirmed 2026-07-11) + agent (design/packaging)
 - **Tags:** brand, frontend, marketing, shared-package
@@ -107,6 +107,46 @@ the usage budget". `MARKETING-DESIGN.md` + manifest move to v4.6 in lockstep.
   token-theming impossible (bakes colors), violates "tokens only".
 - **Static SVG poses without a rig** — no interactivity or telemetry reaction; fails the
   feature's brief (interactive, animated, mood-driven).
+
+## Amendment v2 (2026-07-11) — alive, cute, interactive (stakeholder review)
+
+The v1 figure was reviewed as *lifeless and non-interactive*: two placements sat under
+`pointer-events-none` (hover/click could not fire), no placement was interactive, the
+9–14s ambient rates read as stillness on a character, and a faceless block figure does
+not read as a creature. The stakeholder directed: *"a small cute attention-seeker — a
+lively child or pet that can also act as an assistant."* (This repeats the recorded
+F-051 lesson: this brand reads austerity as lifelessness.)
+
+Amended decisions:
+
+1. **Tess has a face.** Big-head cute proportions (head tile 26×22 over the mosaic body)
+   with **two ink eyes** — blinking, glancing, and following the pointer. §1's
+   "no face" and BRAND's cartoon ban are amended to: *no gloves, no limbs, no
+   mouth-driven cartoon acting — a minimal eye pair is REQUIRED for liveliness*
+   (precedent: GitHub Mona, Discord Clyde, the Twitch Glitch — geometric mascots whose
+   eyes carry the life). Eyes are mood data: `defineMood()` gains validated
+   `eyes: { openness, gazeX, gazeY }`.
+2. **Character motion runs at creature rate:** breath/bob 3–6s (THERMAL character bounds
+   3000–6000ms), periodic blink windows, per-mood gestures (curious tilt, alarmed
+   shiver, lost/searching scan, greeting wave, celebrating heart pop). The 9–14s ambient
+   spec remains correct for FIELD art (MosaicField, shader) — a character is not a
+   field. Tess still counts as the viewport's one ambient system; transform/opacity
+   only; reduced motion still freezes to the designed pose.
+3. **Reactive by default on every placement:** hover = perk + gaze lock + ember flare;
+   click/tap = the one-shot **delight** reaction (hop, happy-squint, heart re-seat,
+   sheen — ≤1.2s, absorbed while playing). Decorative instances remain `aria-hidden`
+   with **no tab stop**: the reaction is a keyboard-neutral easter egg conveying no
+   information; `interactive` (real button) mode remains for genuine controls.
+   **Placements must never sit inside `pointer-events-none`.** Pointer tracking is
+   rAF-smoothed, wanders when idle ("attention-seeking"), is disabled under reduced
+   motion, and renders SSR-neutral markup (gaze defaults 0,0 — hydration-safe).
+4. **A `/dev/mascot` lab route** on the marketing app: all moods × sizes, reactive
+   playground, both themes. `robots: noindex`, excluded from sitemap/nav/llms.txt; the
+   design-lint usage budget gains the lab files as a sanctioned dev exception
+   (manifest 4.7.0).
+5. **Placement principle:** the mascot fills existing whitespace (overlay positioning),
+   never creates it — the menu instance overlays the corner above the mosaic strip with
+   zero added layout height.
 
 ## References
 

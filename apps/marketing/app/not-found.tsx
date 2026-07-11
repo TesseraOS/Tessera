@@ -42,7 +42,7 @@ export default function NotFound() {
               </div>
             </div>
             <div className="flex justify-center md:col-span-5 md:justify-end md:pr-8">
-              <Mascot mood="lost" size={176} />
+              <Mascot mood="lost" size={208} />
             </div>
           </Container>
         </section>

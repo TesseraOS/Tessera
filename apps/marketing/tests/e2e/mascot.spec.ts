@@ -107,11 +107,83 @@ test('reduced motion: every Tess animation is off — the pose is the still fram
   const animations = await page
     .locator('[data-tess]')
     .evaluate((svg) =>
-      ['.tess-ember', '.tess-drift', '.tess-slot'].map((selector) =>
+      ['.tess-breathe', '.tess-ember', '.tess-drift', '.tess-slot', '.tess-eye'].map((selector) =>
         svg.querySelector(selector)
           ? getComputedStyle(svg.querySelector(selector) as Element).animationName
           : 'missing',
       ),
     );
-  expect(animations).toEqual(['none', 'none', 'none']);
+  expect(animations).toEqual(['none', 'none', 'none', 'none', 'none']);
+});
+
+test('Tess is ALIVE under normal motion: breath, blink, and ember run (ADR-0046 v2)', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference', colorScheme: 'dark' });
+  await page.goto('/this-tile-does-not-exist');
+
+  const names = await page
+    .locator('[data-tess]')
+    .evaluate((svg) =>
+      ['.tess-breathe', '.tess-eye', '.tess-ember'].map((selector) =>
+        svg.querySelector(selector)
+          ? getComputedStyle(svg.querySelector(selector) as Element).animationName
+          : 'missing',
+      ),
+    );
+  expect(names).toEqual(['tess-bob', 'tess-blink', 'tess-breath']);
+});
+
+test('hover locks the gaze onto the pointer; click plays the delight one-shot', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference', colorScheme: 'dark' });
+  await page.goto('/this-tile-does-not-exist');
+
+  const tess = page.locator('[data-tess]');
+  await expect(tess).toHaveAttribute('data-reactive', 'true');
+
+  // Move the pointer to Tess's left: the rAF spring must write the look vars.
+  const box = await tess.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x - 60, box!.y + box!.height / 2, { steps: 4 });
+  await expect
+    .poll(async () =>
+      tess.evaluate((svg) =>
+        (svg.querySelector('.tess-gaze') as SVGGElement).style.getPropertyValue('--tess-look-x'),
+      ),
+    )
+    .toMatch(/^-\d/);
+
+  // Click = the unique reaction (hop + happy squint + heart re-seat + sheen)…
+  await tess.click();
+  await expect(tess).toHaveAttribute('data-react', 'delight');
+  // …and it settles back on its own.
+  await expect(tess).not.toHaveAttribute('data-react', 'delight', { timeout: 3000 });
+});
+
+test('the /dev/mascot lab shows every mood, switches them, and passes axe on both themes', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' });
+  await page.goto('/dev/mascot');
+
+  await expect(page.locator('h1')).toHaveCount(1);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+
+  // 1 specimen + the 10-mood registry grid.
+  await expect(page.locator('[data-tess]')).toHaveCount(11);
+
+  // Mood switching drives the specimen.
+  await page.getByRole('button', { name: 'alarmed' }).click();
+  await expect(page.locator('[data-tess]').first()).toHaveAttribute('data-mood', 'alarmed');
+
+  const dusk = await new AxeBuilder({ page }).withTags(WCAG).analyze();
+  expect(dusk.violations).toEqual([]);
+
+  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' });
+  await page.reload();
+  await expect(page.locator('html')).toHaveClass(/light/);
+  const noon = await new AxeBuilder({ page }).withTags(WCAG).analyze();
+  expect(noon.violations).toEqual([]);
 });

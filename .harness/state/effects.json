@@ -818,7 +818,7 @@
         },
         {
           "kind": "module",
-          "ref": "mascot on this surface (F-066, ADR-0046, v4.6): app/globals.css binds the closed --mascot-* contract to Terra Mosaic tokens (mascot-tokens-bound requiredPattern pins --mascot-heart); the mascot-usage-budget bannedPattern compiles the ADR budget into the gate (imports of @tessera/mascot allowed ONLY in components/site-nav.tsx, app/not-found.tsx, components/home/constellation-band.tsx); §3.13 not-found archetype; the mascot heart counts as the band's one gold moment"
+          "ref": "mascot on this surface (F-066, ADR-0046 v2, v4.7): app/globals.css binds the closed --mascot-* contract to Terra Mosaic tokens (mascot-tokens-bound requiredPattern pins --mascot-heart); the mascot-usage-budget bannedPattern compiles the ADR budget into the gate (imports allowed ONLY in components/site-nav.tsx, app/not-found.tsx, components/home/constellation-band.tsx + the noindexed app/dev/mascot/* lab); §3.13 not-found archetype; the mascot heart counts as the band's one gold moment; placements NEVER sit under pointer-events-none and overlay whitespace instead of adding layout height"
         },
         {
           "kind": "decision",
@@ -838,12 +838,12 @@
       "id": "E-023",
       "from": {
         "kind": "contract",
-        "ref": "@tessera/mascot (packages/mascot, ADR-0046, F-066) — the mascot contract: named tile slots (geometry.ts), the typed mood registry + defineMood() validation (moods.ts), the closed --mascot-* CSS-variable theming contract (tile/tile-warm/tile-deep/heart/sheen/ink; monochrome currentColor fallback), the Mascot component props (mood/size/interactive/title), and styles.css (package-internal CSS motion: transform/opacity, house ease, prefers-reduced-motion still poses)"
+        "ref": "@tessera/mascot (packages/mascot, ADR-0046 v2, F-066) — the mascot contract: named tile slots incl. the 26x22 head + EYE face constants (geometry.ts), the typed mood registry + defineMood() validation incl. eyes {openness, gazeX, gazeY} (moods.ts), the closed --mascot-* CSS-variable theming contract (tile/tile-warm/tile-deep/heart/sheen/ink — ink renders the eyes; monochrome currentColor fallback), the Mascot component props (mood/size/reactive/interactive/title), and styles.css + the rAF gaze spring (creature-rate breath 3-6s, blink, per-mood gestures, hover perk, click delight; prefers-reduced-motion = still pose, gaze/reactions off; THERMAL's bob/hop constants are headroom-tested against the viewBox)"
       },
       "to": [
         {
           "kind": "module",
-          "ref": "apps/marketing consumers: components/site-nav.tsx (mobile-menu ground, greeting), app/not-found.tsx (404, lost), components/home/constellation-band.tsx (supervisor, watching ← ConstellationTelemetry) + the globals.css --mascot-* binding — all pinned by the manifest's mascot-usage-budget/mascot-tokens-bound patterns (E-022)"
+          "ref": "apps/marketing consumers: components/site-nav.tsx (mobile-menu ground, greeting — overlays the MosaicField headroom, ember:false), app/not-found.tsx (404, lost), components/home/constellation-band.tsx (supervisor, watching ← ConstellationTelemetry; pointer-events-auto island perch), app/dev/mascot/* (the noindexed debugging lab) + the globals.css --mascot-* binding — all pinned by the manifest's mascot-usage-budget/mascot-tokens-bound patterns (E-022)"
         },
         {
           "kind": "artifact",

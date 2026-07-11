@@ -1,14 +1,14 @@
 /**
- * Brand-master renderers (ADR-0046) — pure string SVG built from the same geometry and
- * mood data as the live rig, so the checked-in brand assets can never drift from the
- * shipped figure (a package test compares them byte-for-byte).
+ * Brand-master renderers (ADR-0046 v2) — pure string SVG built from the same geometry
+ * and mood data as the live rig, so the checked-in brand assets can never drift from
+ * the shipped figure (a package test compares them byte-for-byte).
  *
  * Masters carry the Desert Rose dusk values BY VALUE — the same sanctioned
  * "reproduce token values by hand" class as the OG/icon renderers (BRAND.md §2.1,
  * effect E-022): standalone brand files cannot consume CSS variables.
  */
 
-import { SLOTS, SLOT_SPECS, TILE, TILE_RADIUS, VIEWBOX } from './geometry.js';
+import { EYE, HEAD_CENTER, SLOTS, SLOT_SPECS, VIEWBOX } from './geometry.js';
 import type { TileRole } from './geometry.js';
 import { CORE_MOODS, MOODS, SURFACE_MOODS } from './moods.js';
 import type { MoodDefinition } from './moods.js';
@@ -20,6 +20,7 @@ const DUSK = {
   warm: '#E2A3A8',
   deep: '#C8836C',
   heart: '#E4B65A',
+  ink: '#161013',
   caption: '#B7A8A8',
 } as const;
 
@@ -36,34 +37,52 @@ const GENERATED_NOTE =
 
 const fmt = (n: number): string => String(Number(n.toFixed(3)));
 
-/** One figure's tiles at the given origin offset, as SVG markup. */
+/** One figure's tiles + face at the given origin offset, as SVG markup. */
 function renderFigure(mood: MoodDefinition, ox: number, oy: number): string {
   const parts: string[] = [];
   for (const slot of SLOTS) {
     const spec = SLOT_SPECS[slot];
     const pose = mood.poses[slot];
-    const cx = ox + spec.x + TILE / 2 + pose.dx;
-    const cy = oy + spec.y + TILE / 2 + pose.dy;
-    const transform = `translate(${fmt(cx)} ${fmt(cy)}) rotate(${fmt(pose.rotate)}) scale(${fmt(
+    const cx = ox + spec.x + spec.w / 2 + pose.dx;
+    const cy = oy + spec.y + spec.h / 2 + pose.dy;
+    const group = `translate(${fmt(cx)} ${fmt(cy)}) rotate(${fmt(pose.rotate)}) scale(${fmt(
       pose.scale,
     )})`;
+    const tile = `<rect x="${fmt(-spec.w / 2)}" y="${fmt(-spec.h / 2)}" width="${fmt(
+      spec.w,
+    )}" height="${fmt(spec.h)}" rx="${fmt(spec.rx)}" fill="${FILL[pose.role]}" opacity="${fmt(
+      pose.opacity,
+    )}"/>`;
     if (slot === 'heart') {
       // The still ember glow — the calm frame the reduced-motion rig shows.
-      parts.push(
-        `<rect x="${fmt(-TILE / 2 - 3)}" y="${fmt(-TILE / 2 - 3)}" width="${fmt(
-          TILE + 6,
-        )}" height="${fmt(TILE + 6)}" rx="${fmt(TILE_RADIUS + 1.5)}" fill="${
-          DUSK.heart
-        }" opacity="0.16" transform="${transform}"/>`,
-      );
+      const ember = `<rect x="${fmt(-spec.w / 2 - 3)}" y="${fmt(-spec.h / 2 - 3)}" width="${fmt(
+        spec.w + 6,
+      )}" height="${fmt(spec.h + 6)}" rx="${fmt(spec.rx + 1.5)}" fill="${
+        DUSK.heart
+      }" opacity="0.16"/>`;
+      parts.push(`<g transform="${group}">${ember}${tile}</g>`);
+    } else if (slot === 'crown') {
+      // The face: two ink eyes at the mood's openness and gaze bias (ADR-0046 v2).
+      const eyes = [-1, 1]
+        .map((side) => {
+          const ex = HEAD_CENTER.x - (SLOT_SPECS.crown.x + SLOT_SPECS.crown.w / 2);
+          const eyeCx = ex + side * EYE.spread + mood.eyes.gazeX;
+          const eyeCy =
+            HEAD_CENTER.y -
+            (SLOT_SPECS.crown.y + SLOT_SPECS.crown.h / 2) +
+            EYE.lift +
+            mood.eyes.gazeY;
+          return `<g transform="translate(${fmt(eyeCx)} ${fmt(eyeCy)}) scale(1 ${fmt(
+            mood.eyes.openness,
+          )})"><rect x="${fmt(-EYE.w / 2)}" y="${fmt(-EYE.h / 2)}" width="${fmt(
+            EYE.w,
+          )}" height="${fmt(EYE.h)}" rx="${fmt(EYE.rx)}" fill="${DUSK.ink}"/></g>`;
+        })
+        .join('');
+      parts.push(`<g transform="${group}">${tile}${eyes}</g>`);
+    } else {
+      parts.push(`<g transform="${group}">${tile}</g>`);
     }
-    parts.push(
-      `<rect x="${fmt(-TILE / 2)}" y="${fmt(-TILE / 2)}" width="${fmt(TILE)}" height="${fmt(
-        TILE,
-      )}" rx="${fmt(TILE_RADIUS)}" fill="${FILL[pose.role]}" opacity="${fmt(
-        pose.opacity,
-      )}" transform="${transform}"/>`,
-    );
   }
   return parts.join('\n    ');
 }

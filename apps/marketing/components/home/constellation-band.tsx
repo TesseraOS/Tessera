@@ -54,10 +54,12 @@ export function ConstellationBand() {
         <Constellation onTelemetry={setTelemetry} />
 
         {/* telemetry island — floats over the graph, never blocks it; Tess perches on
-            its edge, the supervisor reacting to the same simulated telemetry (ADR-0046) */}
+            its edge, the supervisor reacting to the same simulated telemetry (ADR-0046).
+            The island stays pointer-inert, but Tess herself must stay clickable
+            (pointer-events-auto) — reactions die inside pointer-events-none (v2). */}
         <div className="pointer-events-none absolute right-4 bottom-4 z-10 sm:right-6 sm:bottom-6">
-          <div className="relative z-10 -mb-3 flex justify-end pr-5">
-            <Mascot mood={supervisorMood(telemetry)} size={52} />
+          <div className="pointer-events-auto relative z-10 -mb-3 flex justify-end pr-5">
+            <Mascot mood={supervisorMood(telemetry)} size={56} />
           </div>
           <dl className="bg-card/90 border-border-strong flex items-baseline gap-x-8 rounded-lg border px-7 py-5 sm:gap-x-10">
             <div className="flex items-baseline gap-1.5">

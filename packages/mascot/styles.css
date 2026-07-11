@@ -1,5 +1,5 @@
 /**
- * @tessera/mascot — Tess's motion + theming layer (ADR-0046).
+ * @tessera/mascot — Tess's motion + theming layer (ADR-0046 v2).
  *
  * Import once per app: `import '@tessera/mascot/styles.css'`.
  *
@@ -12,17 +12,21 @@
  *   --mascot-tile-deep   the deep/clay tile(s)
  *   --mascot-heart       the gilded heart (and its ember glow)
  *   --mascot-sheen       the one-shot glint (keep it LIGHT on both themes)
- *   --mascot-ink         reserved for seams/sockets on future surfaces
+ *   --mascot-ink         the eyes (and future seams/sockets)
  *
- * Motion: thermal rules (BRAND.md §7) — transform/opacity only, the house ease,
- * mood morphs 600ms, micro 200ms, one-shots 1100ms, ambient 9–14s. Interruptible by
- * construction (CSS transitions retarget from the current state).
- * prefers-reduced-motion ⇒ every animation/transition stops; the mood's pose IS the
- * designed still frame.
+ * Motion (ADR-0046 v2): the CHARACTER runs at creature rate — breath/bob 3–6s, blink
+ * windows, per-mood gestures, pointer-following gaze (JS-driven vars), hover perk
+ * 150–250ms, one-shot delight ≤1.2s. Transform/opacity only, the house ease,
+ * interruptible by construction. prefers-reduced-motion ⇒ every animation, gesture,
+ * gaze and reaction stops; the mood's pose IS the designed still frame.
  */
 
 .tess {
   display: block;
+}
+
+.tess[data-reactive='true'] {
+  cursor: pointer;
 }
 
 /* ---------------------------------------------------------------- figure + poses -- */
@@ -39,6 +43,23 @@
   transform: translateY(-2px);
 }
 
+/* The breath: a visible, gentle bob — feet planted (origin at the ground line). */
+.tess-breathe {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: tess-bob var(--tess-breath-period, 4200ms) ease-in-out infinite;
+}
+
+@keyframes tess-bob {
+  0%,
+  100% {
+    transform: translateY(0) scaleY(1);
+  }
+  50% {
+    transform: translateY(-1.4px) scaleY(1.02);
+  }
+}
+
 .tess-slot {
   transform-box: fill-box;
   transform-origin: center;
@@ -48,6 +69,14 @@
   transition:
     transform 600ms cubic-bezier(0.22, 0.61, 0.36, 1),
     opacity 600ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Hover perk: the head tilts a little further toward you (composes with the pose). */
+.tess:hover .tess-slot[data-slot='crown'],
+.tess-button:hover .tess-slot[data-slot='crown'],
+.tess-button:focus-visible .tess-slot[data-slot='crown'] {
+  transform: translate(var(--tess-tx, 0px), var(--tess-ty, 0px))
+    rotate(calc(var(--tess-rot, 0deg) + 4deg)) scale(var(--tess-scale, 1));
 }
 
 /* ------------------------------------------------------------------------ tiles -- */
@@ -69,14 +98,56 @@
   fill: var(--mascot-heart, currentColor);
 }
 
+/* --------------------------------------------------------------------- the face -- */
+
+/* Gaze = mood bias (React inline vars on .tess-face) + pointer look (JS vars here). */
+.tess-gaze {
+  transform: translate(
+    calc(var(--tess-gaze-x, 0px) + var(--tess-look-x, 0px)),
+    calc(var(--tess-gaze-y, 0px) + var(--tess-look-y, 0px))
+  );
+}
+
+/*
+ * Eyes: ink pills that hold the mood's openness and blink in short windows. The base
+ * transform carries openness so the still (reduced-motion) frame keeps the expression;
+ * the blink animation composes the same vars, so a mid-blink mood change stays smooth.
+ * --tess-eye-boost is the hover widen (a class-level var — inline vars would win).
+ */
+.tess-eye {
+  fill: var(--mascot-ink, currentColor);
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scaleY(calc(var(--tess-eye-open, 1) * var(--tess-eye-boost, 1)));
+  animation: tess-blink 4.6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes tess-blink {
+  0%,
+  91%,
+  96.5%,
+  100% {
+    transform: scaleY(calc(var(--tess-eye-open, 1) * var(--tess-eye-boost, 1)));
+  }
+  93.5% {
+    transform: scaleY(0.08);
+  }
+}
+
+.tess:hover .tess-face,
+.tess-button:hover .tess-face,
+.tess-button:focus-visible .tess-face {
+  --tess-eye-boost: 1.18;
+}
+
 /* ------------------------------------------------------------- ambient (thermal) -- */
 
-/* Per-tile drift on one shared clock; negative delays de-phase the tiles. */
+/* Per-tile micro drift on the shared breath clock; negative delays de-phase tiles. */
 .tess-drift {
   transform-box: fill-box;
   transform-origin: center;
-  animation: tess-drift var(--tess-breath-period, 12s) ease-in-out infinite alternate;
-  animation-delay: calc(var(--tess-i, 0) * -1300ms);
+  animation: tess-drift var(--tess-breath-period, 4200ms) ease-in-out infinite alternate;
+  animation-delay: calc(var(--tess-i, 0) * -530ms);
 }
 
 @keyframes tess-drift {
@@ -91,21 +162,21 @@
 /* The heart's ember glow breathes — a square glow, tile language, never a halo. */
 .tess-ember {
   fill: var(--mascot-heart, currentColor);
-  opacity: var(--tess-breath-lo, 0.1);
-  animation: tess-breath var(--tess-breath-period, 12s) ease-in-out infinite;
+  opacity: var(--tess-breath-lo, 0.12);
+  animation: tess-breath var(--tess-breath-period, 4200ms) ease-in-out infinite;
 }
 
 @keyframes tess-breath {
   0%,
   100% {
-    opacity: var(--tess-breath-lo, 0.1);
+    opacity: var(--tess-breath-lo, 0.12);
   }
   50% {
-    opacity: var(--tess-breath-hi, 0.26);
+    opacity: var(--tess-breath-hi, 0.3);
   }
 }
 
-/* Hover acknowledge: a second glow layer fades in (no conflict with the breath). */
+/* Hover flare: a second glow layer fades in (no conflict with the breath). */
 .tess-ember-hover {
   fill: var(--mascot-heart, currentColor);
   opacity: 0;
@@ -115,18 +186,150 @@
 .tess:hover .tess-ember-hover,
 .tess-button:hover .tess-ember-hover,
 .tess-button:focus-visible .tess-ember-hover {
-  opacity: 0.22;
+  opacity: 0.3;
+}
+
+/* ------------------------------------------------------- per-mood gestures (v2) -- */
+
+/* Curious: the head tilts a beat further, then settles — every few breaths. */
+.tess[data-mood='curious'] .tess-slot[data-slot='crown'] .tess-drift {
+  animation: tess-peek 5.4s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes tess-peek {
+  0%,
+  52%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  60%,
+  72% {
+    transform: rotate(3.5deg) translateY(-0.8px);
+  }
+  82% {
+    transform: rotate(-1.5deg) translateY(0);
+  }
+}
+
+/* Alarmed: the popped tile shivers in short bursts. */
+.tess[data-mood='alarmed'] .tess-slot[data-slot='sideR'] .tess-drift {
+  animation: tess-shiver 3.1s linear infinite;
+}
+
+@keyframes tess-shiver {
+  0%,
+  14%,
+  100% {
+    transform: translateX(0);
+  }
+  2%,
+  6%,
+  10% {
+    transform: translateX(0.8px);
+  }
+  4%,
+  8%,
+  12% {
+    transform: translateX(-0.8px);
+  }
+}
+
+/* Lost + searching: the head scans left and right, hunting for the piece. */
+.tess[data-mood='lost'] .tess-slot[data-slot='crown'] .tess-drift,
+.tess[data-mood='searching'] .tess-slot[data-slot='crown'] .tess-drift {
+  animation: tess-scan 4.8s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes tess-scan {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(4deg);
+  }
+  65% {
+    transform: rotate(-3deg);
+  }
+}
+
+/* Greeting: the lifted shoulder tile waves twice, then rests. */
+.tess[data-mood='greeting'] .tess-slot[data-slot='shoulderR'] .tess-drift {
+  animation: tess-wave 4.6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes tess-wave {
+  0%,
+  34%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  8% {
+    transform: rotate(10deg) translateY(-1.2px);
+  }
+  16% {
+    transform: rotate(-4deg) translateY(-0.4px);
+  }
+  24% {
+    transform: rotate(7deg) translateY(-1px);
+  }
+}
+
+/* Celebrating: the heart pops on the beat. */
+.tess[data-mood='celebrating'] .tess-slot[data-slot='heart'] .tess-drift {
+  animation: tess-heartpop 2.3s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes tess-heartpop {
+  0%,
+  55%,
+  100% {
+    transform: scale(1);
+  }
+  68% {
+    transform: scale(1.07);
+  }
 }
 
 /* ------------------------------------------------------------------- one-shots -- */
 
 /*
- * The re-seat gesture: the heart lifts and clicks back into place. Keyframes compose
- * the mood pose (same custom properties), so the gesture plays FROM wherever the heart
- * currently sits. Plays on click (data-reseat) and once on entering `celebrating`.
+ * The delight reaction (click/tap on any reactive placement): an eased hop with a
+ * crouch, happy-squint eyes, the heart re-seat, and one sheen sweep. Plays once
+ * (absorbed while active); also fires on entering `celebrating`.
  */
-.tess[data-reseat='true'] .tess-slot[data-slot='heart'] {
-  animation: tess-reseat 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) 1;
+.tess[data-react='delight'] .tess-breathe {
+  animation: tess-hop 1150ms cubic-bezier(0.22, 0.61, 0.36, 1) 1;
+}
+
+/* The apex stays at -4px with NO stretch (THERMAL.hopTranslate — headroom-tested);
+   the squash lives only in the crouch, where it moves the figure DOWN. */
+@keyframes tess-hop {
+  0%,
+  100% {
+    transform: translateY(0) scaleY(1);
+  }
+  16% {
+    transform: translateY(1.6px) scaleY(0.96);
+  }
+  42% {
+    transform: translateY(-4px) scaleY(1);
+  }
+  64% {
+    transform: translateY(0.4px) scaleY(0.99);
+  }
+  80% {
+    transform: translateY(-1px) scaleY(1);
+  }
+}
+
+.tess[data-react='delight'] .tess-eye {
+  animation: none;
+  transform: scaleY(0.3);
+}
+
+.tess[data-react='delight'] .tess-slot[data-slot='heart'] {
+  animation: tess-reseat 1150ms cubic-bezier(0.22, 0.61, 0.36, 1) 1;
 }
 
 @keyframes tess-reseat {
@@ -137,7 +340,7 @@
   }
   38%,
   56% {
-    transform: translate(var(--tess-tx, 0px), calc(var(--tess-ty, 0px) - 9px))
+    transform: translate(var(--tess-tx, 0px), calc(var(--tess-ty, 0px) - 8px))
       rotate(var(--tess-rot, 0deg)) scale(calc(var(--tess-scale, 1) * 1.09));
   }
 }
@@ -151,8 +354,8 @@
 }
 
 .tess[data-mood='celebrating'] .tess-sheen,
-.tess[data-reseat='true'] .tess-sheen {
-  animation: tess-sheen 1100ms cubic-bezier(0.22, 0.61, 0.36, 1) 1 both;
+.tess[data-react='delight'] .tess-sheen {
+  animation: tess-sheen 1150ms cubic-bezier(0.22, 0.61, 0.36, 1) 1 both;
 }
 
 @keyframes tess-sheen {
@@ -202,12 +405,21 @@
     transition: none;
   }
 
+  .tess-breathe,
   .tess-drift,
   .tess-ember,
+  .tess-eye,
   .tess-sheen,
-  .tess[data-reseat='true'] .tess-slot[data-slot='heart'],
+  .tess[data-mood='curious'] .tess-slot[data-slot='crown'] .tess-drift,
+  .tess[data-mood='alarmed'] .tess-slot[data-slot='sideR'] .tess-drift,
+  .tess[data-mood='lost'] .tess-slot[data-slot='crown'] .tess-drift,
+  .tess[data-mood='searching'] .tess-slot[data-slot='crown'] .tess-drift,
+  .tess[data-mood='greeting'] .tess-slot[data-slot='shoulderR'] .tess-drift,
+  .tess[data-mood='celebrating'] .tess-slot[data-slot='heart'] .tess-drift,
+  .tess[data-react='delight'] .tess-breathe,
+  .tess[data-react='delight'] .tess-slot[data-slot='heart'],
   .tess[data-mood='celebrating'] .tess-sheen,
-  .tess[data-reseat='true'] .tess-sheen {
+  .tess[data-react='delight'] .tess-sheen {
     animation: none;
   }
 
@@ -215,6 +427,23 @@
   .tess-button:hover .tess-figure,
   .tess-button:focus-visible .tess-figure {
     transform: none;
+  }
+
+  .tess:hover .tess-slot[data-slot='crown'],
+  .tess-button:hover .tess-slot[data-slot='crown'],
+  .tess-button:focus-visible .tess-slot[data-slot='crown'] {
+    transform: translate(var(--tess-tx, 0px), var(--tess-ty, 0px)) rotate(var(--tess-rot, 0deg))
+      scale(var(--tess-scale, 1));
+  }
+
+  .tess:hover .tess-face,
+  .tess-button:hover .tess-face,
+  .tess-button:focus-visible .tess-face {
+    --tess-eye-boost: 1;
+  }
+
+  .tess[data-reactive='true'] {
+    cursor: default;
   }
 
   /* The still ember: calm, present, unmoving. */

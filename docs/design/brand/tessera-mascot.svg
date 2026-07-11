@@ -2,12 +2,12 @@
   <!-- GENERATED from @tessera/mascot mood data by scripts/render-masters.mjs (ADR-0046). Do not hand-edit: regenerate via the package script `render-masters`. -->
   <rect width="104" height="104" fill="#161013"/>
   <g>
+    <g transform="translate(52 34) rotate(1.5) scale(1)"><rect x="-19" y="-16" width="38" height="32" rx="10" fill="#F4EDE7" opacity="0.97"/><rect x="-14.25" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><rect x="8.75" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><g transform="translate(-6.5 -1.5) scale(1 1)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g><g transform="translate(6.5 -1.5) scale(1 1)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g></g>
+    <g transform="translate(52 63.5) rotate(0) scale(1)"><rect x="-14" y="-12.5" width="28" height="25" rx="7.5" fill="#E4B65A" opacity="0.16"/><rect x="-11" y="-9.5" width="22" height="19" rx="6" fill="#E4B65A" opacity="1"/></g>
+    <g transform="translate(31 62) rotate(0) scale(1)"><rect x="-6" y="-6" width="12" height="12" rx="4.5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(73 62) rotate(0) scale(1)"><rect x="-6" y="-6" width="12" height="12" rx="4.5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(43 82) rotate(0) scale(1)"><rect x="-6" y="-5" width="12" height="10" rx="4" fill="#F4EDE7" opacity="0.85"/></g>
+    <g transform="translate(61 82) rotate(0) scale(1)"><rect x="-6" y="-5" width="12" height="10" rx="4" fill="#F4EDE7" opacity="0.85"/></g>
     
-    <g transform="translate(52 29) rotate(1.5) scale(1)"><rect x="-18" y="-15" width="36" height="30" rx="9" fill="#F4EDE7" opacity="0.97"/><rect x="-14.25" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><rect x="8.75" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><g transform="translate(-6.5 -1.5) scale(1 1)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g><g transform="translate(6.5 -1.5) scale(1 1)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g></g>
-    <g transform="translate(52 61) rotate(0) scale(1)"><rect x="-18" y="-16" width="36" height="32" rx="8.5" fill="#E4B65A" opacity="0.16"/><rect x="-15" y="-13" width="30" height="26" rx="7" fill="#E4B65A" opacity="1"/></g>
-    <g transform="translate(26.5 58.5) rotate(0) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
-    <g transform="translate(77.5 58.5) rotate(0) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
-    <g transform="translate(44.5 83.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
-    <g transform="translate(63.5 83.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
   </g>
 </svg>

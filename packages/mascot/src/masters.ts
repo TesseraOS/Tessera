@@ -46,25 +46,31 @@ function renderProp(mood: MoodName | string, ox: number, oy: number): string {
       .map(([a, b]) => {
         const na = PROPS.kg.nodes[a]!;
         const nb = PROPS.kg.nodes[b]!;
-        return `<line x1="${fmt(ox + na.x)}" y1="${fmt(oy + na.y)}" x2="${fmt(ox + nb.x)}" y2="${fmt(
-          oy + nb.y,
-        )}" stroke="${DUSK.tile}" stroke-width="1" opacity="0.3"/>`;
+        const mx = (na.x + nb.x) / 2;
+        const my = (na.y + nb.y) / 2;
+        const len = Math.hypot(nb.x - na.x, nb.y - na.y) || 1;
+        const cx = mx + (-(nb.y - na.y) / len) * PROPS.kg.bow;
+        const cy = my + ((nb.x - na.x) / len) * PROPS.kg.bow;
+        return `<path d="M ${fmt(ox + na.x)} ${fmt(oy + na.y)} Q ${fmt(ox + cx)} ${fmt(
+          oy + cy,
+        )} ${fmt(ox + nb.x)} ${fmt(oy + nb.y)}" fill="none" stroke="${
+          DUSK.tile
+        }" stroke-width="1" opacity="0.3"/>`;
       })
       .join('');
     const nodes = PROPS.kg.nodes
       .map(
         (n, i) =>
-          `<rect x="${fmt(ox + n.x - n.r)}" y="${fmt(oy + n.y - n.r)}" width="${fmt(
-            n.r * 2,
-          )}" height="${fmt(n.r * 2)}" rx="${fmt(n.r * 0.55)}" fill="${FILL[n.role]}" opacity="${
-            i === 0 ? '1' : '0.4'
-          }"/>`,
+          `<circle cx="${fmt(ox + n.x)}" cy="${fmt(oy + n.y)}" r="${fmt(n.r)}" fill="${
+            FILL[n.role]
+          }" opacity="${i === 0 ? '1' : '0.4'}"/>`,
       )
       .join('');
     return edges + nodes;
   }
   if (mood === 'working') {
-    const t = PROPS.work.tile;
+    const s = PROPS.work.screen;
+    const b = PROPS.work.base;
     const ticks = PROPS.work.ticks
       .map(
         (k, i) =>
@@ -76,9 +82,13 @@ function renderProp(mood: MoodName | string, ox: number, oy: number): string {
       )
       .join('');
     return (
-      `<rect x="${fmt(ox + t.x)}" y="${fmt(oy + t.y)}" width="${fmt(t.w)}" height="${fmt(
-        t.h,
-      )}" rx="${fmt(t.rx)}" fill="${DUSK.deep}"/>` + ticks
+      `<rect x="${fmt(ox + s.x)}" y="${fmt(oy + s.y)}" width="${fmt(s.w)}" height="${fmt(
+        s.h,
+      )}" rx="${fmt(s.rx)}" fill="${DUSK.deep}" opacity="0.9"/>` +
+      ticks +
+      `<rect x="${fmt(ox + b.x)}" y="${fmt(oy + b.y)}" width="${fmt(b.w)}" height="${fmt(
+        b.h,
+      )}" rx="${fmt(b.rx)}" fill="${DUSK.deep}"/>`
     );
   }
   if (mood === 'celebrating') {
@@ -104,7 +114,7 @@ function renderProp(mood: MoodName | string, ox: number, oy: number): string {
 
 /** One figure's pieces + face + prop at the given origin offset, as SVG markup. */
 function renderFigure(mood: MoodDefinition, ox: number, oy: number): string {
-  const parts: string[] = [renderProp(mood.name, ox, oy)];
+  const parts: string[] = [];
   for (const slot of SLOTS) {
     const spec = SLOT_SPECS[slot];
     const pose = mood.poses[slot];
@@ -156,6 +166,9 @@ function renderFigure(mood: MoodDefinition, ox: number, oy: number): string {
       parts.push(`<g transform="${group}">${tile}</g>`);
     }
   }
+  // Props paint AFTER the pieces — same stacking as the live DOM (the laptop sits in
+  // front of the body; the graph floats over the scene).
+  parts.push(renderProp(mood.name, ox, oy));
   return parts.join('\n    ');
 }
 

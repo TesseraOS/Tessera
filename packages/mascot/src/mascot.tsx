@@ -311,38 +311,43 @@ export function Mascot({
             root (decorative aria-hidden / role=img), so the group needs no ARIA. */}
         <g className="tess-props">
           <g className="tess-prop tess-prop-kg">
-            {PROPS.kg.edges.map(([a, b], i) => (
-              <line
-                key={`e${i}`}
-                className="tess-kg-edge"
-                x1={PROPS.kg.nodes[a]!.x}
-                y1={PROPS.kg.nodes[a]!.y}
-                x2={PROPS.kg.nodes[b]!.x}
-                y2={PROPS.kg.nodes[b]!.y}
-              />
-            ))}
+            {PROPS.kg.edges.map(([a, b], i) => {
+              const na = PROPS.kg.nodes[a]!;
+              const nb = PROPS.kg.nodes[b]!;
+              // A gentle quadratic bow perpendicular to the chord (smooth curves, v3.1).
+              const mx = (na.x + nb.x) / 2;
+              const my = (na.y + nb.y) / 2;
+              const len = Math.hypot(nb.x - na.x, nb.y - na.y) || 1;
+              const cx = mx + (-(nb.y - na.y) / len) * PROPS.kg.bow;
+              const cy = my + ((nb.x - na.x) / len) * PROPS.kg.bow;
+              return (
+                <path
+                  key={`e${i}`}
+                  className="tess-kg-edge"
+                  d={`M ${na.x} ${na.y} Q ${cx.toFixed(2)} ${cy.toFixed(2)} ${nb.x} ${nb.y}`}
+                />
+              );
+            })}
             {PROPS.kg.nodes.map((node, i) => (
-              <rect
+              <circle
                 key={`n${i}`}
                 className="tess-kg-node"
                 data-role={node.role}
                 data-n={i}
-                x={node.x - node.r}
-                y={node.y - node.r}
-                width={node.r * 2}
-                height={node.r * 2}
-                rx={node.r * 0.55}
+                cx={node.x}
+                cy={node.y}
+                r={node.r}
               />
             ))}
           </g>
           <g className="tess-prop tess-prop-work">
             <rect
-              className="tess-work-tile"
-              x={PROPS.work.tile.x}
-              y={PROPS.work.tile.y}
-              width={PROPS.work.tile.w}
-              height={PROPS.work.tile.h}
-              rx={PROPS.work.tile.rx}
+              className="tess-work-screen"
+              x={PROPS.work.screen.x}
+              y={PROPS.work.screen.y}
+              width={PROPS.work.screen.w}
+              height={PROPS.work.screen.h}
+              rx={PROPS.work.screen.rx}
             />
             {PROPS.work.ticks.map((tick, i) => (
               <line
@@ -355,6 +360,14 @@ export function Mascot({
                 y2={tick.y2}
               />
             ))}
+            <rect
+              className="tess-work-base"
+              x={PROPS.work.base.x}
+              y={PROPS.work.base.y}
+              width={PROPS.work.base.w}
+              height={PROPS.work.base.h}
+              rx={PROPS.work.base.rx}
+            />
           </g>
           <g className="tess-prop tess-prop-confetti">
             {PROPS.confetti.map((bit, i) => (

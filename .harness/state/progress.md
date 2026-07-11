@@ -3,6 +3,33 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-12 (v3.1) — F-066 DONE — Tess refined: chibi ratio, real laptop, bigger smooth KG, feet choreography
+
+**Third stakeholder review (proportions + activity polish):** *"the body is too big — much
+smaller than the head, bigger than the limbs; the KG is too small, more nodes, smooth
+corners; why is the laptop block at the feet; animate the legs too; more refined
+emotions."* All addressed as data/CSS refinement inside ADR-0046 v3:
+
+- **Chibi ratio locked by test:** head 38×32, gilded body 22×19 (≤65% of the head in both
+  axes), hands 12, feet 12×10 — body much smaller than head, clearly bigger than limbs.
+- **Working got a real laptop at hand height:** screen (with the flickering code ticks
+  INSIDE it) over a base the hands type on, painted in front of the body — the floor-tile
+  bench is gone; masters' stacking fixed to match the live DOM (props in front).
+- **Searching KG rebuilt:** six smooth CIRCLE nodes (hub-and-spoke + rim links), gently
+  curved quadratic edges, larger spread — kept fully clear of the face (the first cut
+  tangled with the bigger head; caught in screenshot review). The prop-bounds test caught
+  a real clip (node pulsing past the left margin) — nudged in.
+- **Feet act in seven moods:** toe-taps in the typing rhythm (with a head nod), a dance
+  step with the celebrating cheer, tip-toes as the search sweeps, trembling when alarmed,
+  a shuffle on lost's remaining foot, watching's weight shifts, idle's occasional heel
+  lift.
+
+**Evidence** — package 40/40 (new chibi-ratio + prop-amplitude tests); marketing 45/45;
+e2e 27/27; workspace turbo 71/71; motion proof (live frames differ / reduced identical);
+first-load 226.5KB gz home / 191.5KB gz 404 (stable min across runs — the measurement
+window sometimes catches next/link prefetches of other routes, noted); screenshots
+reviewed (mood sheet ×3 iterations, lab searching + working mid-activity, menu, 404).
+
 ## 2026-07-11 (v3) — F-066 DONE — Tess ACTS: six-piece anatomy, activity moods with props, sheen removed (ADR-0046 v3)
 
 **Second stakeholder review: "liveness is the mascot DOING something — all moods should

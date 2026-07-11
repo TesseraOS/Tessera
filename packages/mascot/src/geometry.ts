@@ -48,16 +48,20 @@ export interface SlotSpec {
   readonly limb: boolean;
 }
 
-/** The head: the creature's dominant mass (chibi proportions). */
-export const HEAD = { x: 34, y: 14, w: 36, h: 30, rx: 9 } as const;
+/**
+ * The head: the creature's dominant mass. Chibi ratio (v3.1, stakeholder-tuned): the
+ * gilded body is ~58% of the head's width — much smaller than the head, clearly bigger
+ * than the limbs (ratio-tested).
+ */
+export const HEAD = { x: 33, y: 18, w: 38, h: 32, rx: 10 } as const;
 
 export const SLOT_SPECS: Record<SlotName, SlotSpec> = {
   crown: { ...HEAD, role: 'tile', baseOpacity: 0.97, limb: false },
-  heart: { x: 37, y: 48, w: 30, h: 26, rx: 7, role: 'heart', baseOpacity: 1, limb: false },
-  handL: { x: 20, y: 52, w: 13, h: 13, rx: 5, role: 'tile', baseOpacity: 0.92, limb: true },
-  handR: { x: 71, y: 52, w: 13, h: 13, rx: 5, role: 'tile', baseOpacity: 0.92, limb: true },
-  footL: { x: 39, y: 78, w: 13, h: 11, rx: 4.5, role: 'tile', baseOpacity: 0.85, limb: false },
-  footR: { x: 56, y: 78, w: 13, h: 11, rx: 4.5, role: 'tile', baseOpacity: 0.85, limb: false },
+  heart: { x: 41, y: 54, w: 22, h: 19, rx: 6, role: 'heart', baseOpacity: 1, limb: false },
+  handL: { x: 25, y: 56, w: 12, h: 12, rx: 4.5, role: 'tile', baseOpacity: 0.92, limb: true },
+  handR: { x: 67, y: 56, w: 12, h: 12, rx: 4.5, role: 'tile', baseOpacity: 0.92, limb: true },
+  footL: { x: 38, y: 77, w: 12, h: 10, rx: 4, role: 'tile', baseOpacity: 0.85, limb: false },
+  footR: { x: 54, y: 77, w: 12, h: 10, rx: 4, role: 'tile', baseOpacity: 0.85, limb: false },
 };
 
 /** The face: two ink eyes + a warm blush (ADR-0046 v2/v3). No gloves, no mouth. */
@@ -85,28 +89,44 @@ export const GAZE_MAX = 2.6;
  * the DOM; `[data-mood]` CSS shows the relevant one and drives its activity loop.
  */
 export const PROPS = {
-  /** searching: a mini knowledge graph floating up-left; Tess scans its nodes. */
+  /**
+   * searching: a knowledge graph floating up-left — six SMOOTH circle nodes with gently
+   * curved edges (v3.1: bigger, rounder, more graph). Tess sweeps it node by node.
+   */
   kg: {
+    /** Kept fully LEFT of the head's posed edge (x ≤ 29 vs head ≥ 31) — the graph must
+     * never tangle with the face. */
     nodes: [
-      { x: 8, y: 26, r: 3.6, role: 'warm' as TileRole },
-      { x: 20, y: 14, r: 3, role: 'tile' as TileRole },
-      { x: 24, y: 32, r: 3.2, role: 'deep' as TileRole },
-      { x: 33, y: 20, r: 2.6, role: 'tile' as TileRole },
+      { x: 8, y: 29, r: 4.2, role: 'warm' as TileRole },
+      { x: 15, y: 10, r: 3.4, role: 'tile' as TileRole },
+      { x: 24, y: 41, r: 3.8, role: 'deep' as TileRole },
+      { x: 26, y: 18, r: 3, role: 'tile' as TileRole },
+      { x: 24, y: 30, r: 2.6, role: 'warm' as TileRole },
+      { x: 15, y: 22, r: 3, role: 'tile' as TileRole },
     ],
+    /** Hub-and-spoke around node 5, plus rim links. */
     edges: [
-      [0, 1],
-      [1, 3],
+      [5, 0],
+      [5, 1],
+      [5, 3],
+      [5, 4],
+      [4, 2],
       [0, 2],
-      [2, 3],
     ] as ReadonlyArray<readonly [number, number]>,
+    /** Perpendicular bow of each curved edge, user units. */
+    bow: 2.5,
   },
-  /** working: the tile on the bench + output tick lines flickering beside Tess. */
+  /**
+   * working: a real laptop at hand height (v3.1) — screen with flickering code ticks
+   * over a base Tess's hands type on. Painted in front of the body.
+   */
   work: {
-    tile: { x: 46, y: 80, w: 12, h: 10, rx: 3 },
+    screen: { x: 42, y: 60, w: 20, h: 13, rx: 2.5 },
+    base: { x: 40, y: 74.5, w: 24, h: 4, rx: 2 },
     ticks: [
-      { x1: 14, y1: 58, x2: 30, y2: 58 },
-      { x1: 14, y1: 64, x2: 26, y2: 64 },
-      { x1: 14, y1: 70, x2: 28, y2: 70 },
+      { x1: 45, y1: 63.5, x2: 58, y2: 63.5 },
+      { x1: 45, y1: 66.5, x2: 54, y2: 66.5 },
+      { x1: 45, y1: 69.5, x2: 56, y2: 69.5 },
     ],
   },
   /** celebrating + delight: confetti tesserae bursting over the head. */
@@ -118,5 +138,5 @@ export const PROPS = {
     { x: 88, y: 30, s: 3, role: 'deep' as TileRole },
   ],
   /** alarmed: the loose tile that slipped out of the mosaic, shivering midair. */
-  loose: { x: 82, y: 44, w: 11, h: 11, rx: 4, rotate: 14 },
+  loose: { x: 80, y: 46, w: 11, h: 11, rx: 4, rotate: 14 },
 } as const;

@@ -207,6 +207,7 @@
 .tess-kg-edge {
   stroke: var(--mascot-tile, currentColor);
   stroke-width: 1;
+  fill: none;
   opacity: 0.3;
 }
 
@@ -225,10 +226,13 @@
   fill: var(--mascot-tile-deep, currentColor);
 }
 
-.tess-work-tile {
+.tess-work-screen,
+.tess-work-base {
   fill: var(--mascot-tile-deep, currentColor);
-  transform-box: fill-box;
-  transform-origin: center;
+}
+
+.tess-work-screen {
+  opacity: 0.9;
 }
 
 .tess-work-tick {
@@ -317,17 +321,38 @@
   }
 }
 
-.tess[data-mood='working'] .tess-work-tile {
-  animation: tess-work-settle 1.24s ease-in-out infinite;
+/* The head follows the typing rhythm with a tiny nod; the feet tap along. */
+.tess[data-mood='working'] .tess-slot[data-slot='crown'] .tess-drift {
+  animation: tess-nod 1.24s ease-in-out infinite;
 }
 
-@keyframes tess-work-settle {
+@keyframes tess-nod {
   0%,
   100% {
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
   50% {
-    transform: translateY(0.8px) scale(0.985);
+    transform: translateY(0.8px);
+  }
+}
+
+.tess[data-mood='working'] .tess-slot[data-slot='footL'] .tess-drift {
+  animation: tess-toe-tap 1.24s ease-in-out infinite;
+}
+
+.tess[data-mood='working'] .tess-slot[data-slot='footR'] .tess-drift {
+  animation: tess-toe-tap 1.24s ease-in-out infinite;
+  animation-delay: -0.62s;
+}
+
+@keyframes tess-toe-tap {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  80% {
+    transform: translateY(-1px) rotate(-3deg);
   }
 }
 
@@ -360,15 +385,41 @@
 }
 
 .tess[data-mood='searching'] .tess-kg-node[data-n='1'] {
-  animation-delay: 0.8s;
+  animation-delay: 0.6s;
 }
 
 .tess[data-mood='searching'] .tess-kg-node[data-n='2'] {
-  animation-delay: 1.6s;
+  animation-delay: 1.2s;
 }
 
 .tess[data-mood='searching'] .tess-kg-node[data-n='3'] {
+  animation-delay: 1.8s;
+}
+
+.tess[data-mood='searching'] .tess-kg-node[data-n='4'] {
   animation-delay: 2.4s;
+}
+
+.tess[data-mood='searching'] .tess-kg-node[data-n='5'] {
+  animation-delay: 3s;
+}
+
+/* …rising to tip-toe as the search sweeps. */
+.tess[data-mood='searching'] .tess-slot[data-slot='footL'] .tess-drift,
+.tess[data-mood='searching'] .tess-slot[data-slot='footR'] .tess-drift {
+  animation: tess-tiptoe 3.2s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes tess-tiptoe {
+  0%,
+  40%,
+  100% {
+    transform: translateY(0);
+  }
+  60%,
+  80% {
+    transform: translateY(-1.2px);
+  }
 }
 
 @keyframes tess-node-pulse {
@@ -456,6 +507,12 @@
   }
 }
 
+.tess[data-mood='alarmed'] .tess-slot[data-slot='footL'] .tess-drift,
+.tess[data-mood='alarmed'] .tess-slot[data-slot='footR'] .tess-drift {
+  animation: tess-tremble 0.5s linear infinite;
+  animation-delay: -0.25s;
+}
+
 .tess[data-mood='alarmed'] .tess-loose-tile {
   animation: tess-shiver 3.1s linear infinite;
 }
@@ -511,6 +568,26 @@
   }
   68% {
     transform: scale(1.05);
+  }
+}
+
+/* …and the feet dance in step with the cheer. */
+.tess[data-mood='celebrating'] .tess-slot[data-slot='footL'] .tess-drift {
+  animation: tess-step 1.15s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+.tess[data-mood='celebrating'] .tess-slot[data-slot='footR'] .tess-drift {
+  animation: tess-step 1.15s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+  animation-delay: -0.575s;
+}
+
+@keyframes tess-step {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-2px) rotate(-4deg);
   }
 }
 
@@ -573,9 +650,28 @@
   }
 }
 
-/* LOST: scratching its head while scanning (the scan is shared with searching). */
+/* LOST: scratching its head while scanning; the remaining foot shuffles in place. */
 .tess[data-mood='lost'] .tess-slot[data-slot='handR'] .tess-drift {
   animation: tess-scratch 3.4s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+.tess[data-mood='lost'] .tess-slot[data-slot='footL'] .tess-drift {
+  animation: tess-shuffle 4.8s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes tess-shuffle {
+  0%,
+  24%,
+  100% {
+    transform: translateX(0);
+  }
+  32% {
+    transform: translateX(1.6px);
+  }
+  60%,
+  68% {
+    transform: translateX(-1.2px);
+  }
 }
 
 @keyframes tess-scratch {
@@ -598,9 +694,47 @@
   }
 }
 
-/* WATCHING: a slow lookout turn, left then right. */
+/* WATCHING: a slow lookout turn, weight shifting foot to foot. */
 .tess[data-mood='watching'] .tess-slot[data-slot='crown'] .tess-drift {
   animation: tess-lookout 6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+.tess[data-mood='watching'] .tess-slot[data-slot='footL'] .tess-drift {
+  animation: tess-weight 6s ease-in-out infinite;
+}
+
+.tess[data-mood='watching'] .tess-slot[data-slot='footR'] .tess-drift {
+  animation: tess-weight 6s ease-in-out infinite;
+  animation-delay: -3s;
+}
+
+@keyframes tess-weight {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.7px);
+  }
+}
+
+/* IDLE: an occasional heel lift — small talk from the feet. */
+.tess[data-mood='idle'] .tess-slot[data-slot='footR'] .tess-drift {
+  animation: tess-heel 4.2s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes tess-heel {
+  0%,
+  70%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  78% {
+    transform: rotate(-4deg) translateY(-0.8px);
+  }
+  86% {
+    transform: rotate(0deg) translateY(0);
+  }
 }
 
 @keyframes tess-lookout {

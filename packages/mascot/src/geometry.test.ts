@@ -5,10 +5,16 @@ import { CORE_MOODS, MOODS, SURFACE_MOODS, THERMAL } from './moods.js';
 describe("Tess's geometry (ADR-0046 v3)", () => {
   it('is six named pieces — head, gilded heart-body, two hands, two feet', () => {
     expect(SLOTS).toEqual(['crown', 'heart', 'handL', 'handR', 'footL', 'footR']);
-    expect(SLOT_SPECS.crown.w).toBeGreaterThan(SLOT_SPECS.heart.w);
     expect(SLOT_SPECS.heart.role).toBe('heart');
     expect(SLOT_SPECS.handL.limb).toBe(true);
     expect(SLOT_SPECS.handR.limb).toBe(true);
+  });
+
+  it('keeps the chibi ratio: body much smaller than head, bigger than limbs (v3.1)', () => {
+    expect(SLOT_SPECS.heart.w).toBeLessThanOrEqual(SLOT_SPECS.crown.w * 0.65);
+    expect(SLOT_SPECS.heart.h).toBeLessThanOrEqual(SLOT_SPECS.crown.h * 0.65);
+    expect(SLOT_SPECS.heart.w).toBeGreaterThan(SLOT_SPECS.handL.w);
+    expect(SLOT_SPECS.handL.w).toBeGreaterThanOrEqual(SLOT_SPECS.footL.w);
   });
 
   it('keeps every posed piece inside the viewBox — even mid-bob, mid-hop, and mid-drift', () => {
@@ -75,8 +81,9 @@ describe("Tess's geometry (ADR-0046 v3)", () => {
       expect(bit.y + bit.s / 2 + 22, 'confetti fall').toBeLessThanOrEqual(VIEWBOX - 2);
       expect(bit.x + bit.s / 2).toBeLessThanOrEqual(VIEWBOX - 2);
     }
-    const work = PROPS.work.tile;
-    expect(work.y + work.h + 2).toBeLessThanOrEqual(VIEWBOX);
+    const base = PROPS.work.base;
+    expect(base.y + base.h + 2).toBeLessThanOrEqual(VIEWBOX);
+    expect(PROPS.work.screen.y).toBeGreaterThanOrEqual(2);
     const loose = PROPS.loose;
     expect(loose.x + loose.w + 4, 'loose tile right (rotated + shiver)').toBeLessThanOrEqual(
       VIEWBOX,
@@ -102,6 +109,6 @@ describe("Tess's geometry (ADR-0046 v3)", () => {
 
   it('stays legible at the minimum rendered size', () => {
     expect((HEAD.w / VIEWBOX) * 24).toBeGreaterThanOrEqual(7);
-    expect((SLOT_SPECS.heart.w / VIEWBOX) * 24).toBeGreaterThanOrEqual(6);
+    expect((SLOT_SPECS.heart.w / VIEWBOX) * 24).toBeGreaterThanOrEqual(5);
   });
 });

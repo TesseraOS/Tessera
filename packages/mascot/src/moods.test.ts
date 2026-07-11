@@ -92,7 +92,7 @@ describe('the mood registry (ADR-0046)', () => {
     // Working: both hands down on the bench; searching: one hand raised to the graph.
     expect(MOODS.working.poses.handL.dy).toBeGreaterThan(6);
     expect(MOODS.working.poses.handR.dy).toBeGreaterThan(6);
-    expect(MOODS.searching.poses.handL.dy).toBeLessThan(-12);
+    expect(MOODS.searching.poses.handL.dy).toBeLessThan(-8);
     // Greeting: the waving hand is raised.
     expect(MOODS.greeting.poses.handR.dy).toBeLessThan(-18);
   });

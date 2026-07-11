@@ -817,6 +817,10 @@
           "ref": "subpage system (F-051 v4.4→v4.5, ADR-0045): §3.12 page-header = a FULL-HEIGHT subpage hero over the SAME lazy shader-field ground as home (components/page-header.tsx — .fade-bottom mask dissolves the field into the next band; calm pocket under the statement; optional signature-art right column) + signature arts components/art/{plan-mosaic,tenant-perimeter,skill-loop}.tsx (PlanMosaic takes plan names as PROPS from the PLANS display model — E-019) + §3.9 faq v2 (components/faq-list.tsx: bg-card disclosure cards, native details name= exclusive-open, two-column with sticky heading) + pages app/{features,pricing,enterprise,skills}/page.tsx + nav/footer/sitemap/llms.txt lists. Seam policy: same-ground seams dissolve via washes, hairlines mark elevation only, blur stays nav-only. HYDRATION RULE (the v4.5 lesson): never branch SSR'd markup or initial state on useReducedMotion() — one element, vary animate/transition only (fixed in the new arts AND latent instances in compiler-assembly + governance-gate). Manifest 4.5.0 in lockstep"
         },
         {
+          "kind": "module",
+          "ref": "mascot on this surface (F-066, ADR-0046, v4.6): app/globals.css binds the closed --mascot-* contract to Terra Mosaic tokens (mascot-tokens-bound requiredPattern pins --mascot-heart); the mascot-usage-budget bannedPattern compiles the ADR budget into the gate (imports of @tessera/mascot allowed ONLY in components/site-nav.tsx, app/not-found.tsx, components/home/constellation-band.tsx); §3.13 not-found archetype; the mascot heart counts as the band's one gold moment"
+        },
+        {
           "kind": "decision",
           "ref": "docs/adr/0043-terra-mosaic-brand-and-marketing-overhaul.md"
         },
@@ -828,6 +832,35 @@
       "kind": "EFFECT_LINK",
       "rationale": "The marketing design contract is executable: the manifest's patterns ARE the design-lint gate, the type scale exists in three places that must agree (globals.css @theme, the tailwind-merge font-size group, the manifest), and key token values are pinned by requiredPatterns. Changing any of tokens/scale/patterns therefore ripples across globals.css, lib/utils.ts, the design-lint suite, and the doc+manifest pair — and a silent mismatch degrades to WCAG failures caught only by axe e2e.",
       "confidence": 0.95,
+      "origin": "manual"
+    },
+    {
+      "id": "E-023",
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/mascot (packages/mascot, ADR-0046, F-066) — the mascot contract: named tile slots (geometry.ts), the typed mood registry + defineMood() validation (moods.ts), the closed --mascot-* CSS-variable theming contract (tile/tile-warm/tile-deep/heart/sheen/ink; monochrome currentColor fallback), the Mascot component props (mood/size/interactive/title), and styles.css (package-internal CSS motion: transform/opacity, house ease, prefers-reduced-motion still poses)"
+      },
+      "to": [
+        {
+          "kind": "module",
+          "ref": "apps/marketing consumers: components/site-nav.tsx (mobile-menu ground, greeting), app/not-found.tsx (404, lost), components/home/constellation-band.tsx (supervisor, watching ← ConstellationTelemetry) + the globals.css --mascot-* binding — all pinned by the manifest's mascot-usage-budget/mascot-tokens-bound patterns (E-022)"
+        },
+        {
+          "kind": "artifact",
+          "ref": "docs/design/brand/tessera-mascot.svg + tessera-mascot-moods.svg — GENERATED from the package mood data by packages/mascot/scripts/render-masters.mjs; a package test fails when the checked-in masters drift from the data (regenerate, never hand-edit)"
+        },
+        {
+          "kind": "package",
+          "ref": "future consumers — F-068 (backlog): apps/web dashboard adoption binds --mascot-* to the dashboard's monochrome vocabulary under DESIGN-SYSTEM.md; apps/docs when it exists. Any breaking change to slots/moods/variables/props must visit every consumer that has landed"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0046-brand-mascot-tess.md"
+        }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "The mascot is a cross-frontend contract: slot names, mood names, component props, and the --mascot-* variables are consumed by marketing today and the dashboard/docs later, while the brand masters are build artifacts of the same data. Renaming a mood or variable therefore ripples across every consuming app, the design-lint patterns that pin usage, and the checked-in brand SVGs — the drift test and the manifest patterns turn silent divergence into gate failures.",
+      "confidence": 0.9,
       "origin": "manual"
     }
   ]

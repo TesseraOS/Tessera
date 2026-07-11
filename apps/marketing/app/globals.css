@@ -129,6 +129,25 @@
   --ring: #9e4a56;
 }
 
+/*
+ * Mascot binding (§4.1, ADR-0046) — the closed --mascot-* contract from @tessera/mascot
+ * bound to Terra Mosaic tokens. The var() indirections resolve against <html>'s current
+ * theme, so one block per theme covers dusk and noon; the sheen is the only value that
+ * needs a different source per theme (a glint must stay light on both grounds).
+ */
+:root {
+  --mascot-tile: var(--foreground);
+  --mascot-tile-warm: var(--rose);
+  --mascot-tile-deep: var(--clay);
+  --mascot-heart: var(--gold);
+  --mascot-sheen: var(--foreground); /* ivory glint on dusk */
+  --mascot-ink: var(--background);
+}
+
+.light {
+  --mascot-sheen: var(--card); /* white glint on noon */
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);

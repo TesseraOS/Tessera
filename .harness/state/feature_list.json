@@ -2157,23 +2157,23 @@
     },
     {
       "id": "F-066",
-      "title": "Brand mascot: tessera-built character with moods, animation rig, and site integrations",
+      "title": "Brand mascot Tess: shared tessera-built character (@tessera/mascot) with moods, CSS rig, and marketing integrations",
       "requirements": [
         "FR-67"
       ],
       "service": "web",
-      "package": "@tessera/marketing",
+      "package": "@tessera/mascot",
       "release": "R4",
       "priority": "could",
-      "status": "backlog",
+      "status": "in_progress",
       "blockedBy": [
         "F-051"
       ],
       "acceptance": [
-        "Brand foundation FIRST (complete harness setup): BRAND.md addendum defining the mascot (a small figure assembled from tesserae, the gilded tile as its heart; geometric, token-colored, no eyes-and-gloves cartoon) + an ADR locking name, personality, mood set (4-6: curious, working, alarmed, satisfied, idle, celebrating), usage budget (menu/empty/404/KG supervisor — NEVER hero or pricing) and the explicit non-goals; MARKETING-DESIGN.md + manifest updated (sanctioned component, accent budget interaction, design-lint patterns if any)",
-        "The rig: a single SVG master (docs/design/brand/ source of truth) + a Mascot component in components/art/* — moods as composable tile arrangements animated via the lib/motion.tsx seam (thermal rules: eased, interruptible, reduced-motion = still), tokens-only, aria-hidden with text alternative where decorative",
-        "Integrations behind the usage budget: mobile-menu ground, 404/empty states, and the constellation supervisor variant (perched at the band edge, reacting to simulated telemetry moods) — each screenshot-verified on both themes",
-        "Gates green (design-lint, axe both themes, budgets unchanged); progress + effects recorded (E-022 extended); brand-swap test still passes with the mascot covered"
+        "Brand foundation FIRST (ADR-0046, stakeholder-confirmed 2026-07-11): BRAND.md §5 defines Tess (nine tesserae, gilded heart tile, no eyes-and-gloves cartoon — expression via posture/alignment/rhythm/light); ADR locks name, personality, moods (core idle/curious/working/satisfied/alarmed/celebrating + surface greeting/lost/searching/watching + validated defineMood() API), usage budget (menu/empty/404/KG supervisor — NEVER hero or pricing), accent interaction (the heart IS the band's one gold moment) and non-goals; MARKETING-DESIGN v4.6 + manifest 4.6.0 in lockstep (sanctioned Mascot, §3.13 not-found archetype, mascot-usage-budget + mascot-tokens-bound patterns)",
+        "The rig ships as @tessera/mascot (packages/mascot — stakeholder-directed cross-frontend scope; supersedes the original components/art/* scoping): zero runtime deps with React as peer; moods are typed data (single source of truth); package-internal CSS motion (transform/opacity only, house ease, interruptible; micro <=250ms, one-shot re-seat <=1.2s, heart breath 9-14s), closed --mascot-* CSS-variable theming contract with monochrome currentColor fallback; prefers-reduced-motion = designed still pose per mood; SSR-deterministic markup (one element shape, styling varies by data-mood — the v4.5 hydration rule holds structurally); brand masters docs/design/brand/tessera-mascot*.svg GENERATED from mood data and drift-tested",
+        "Integrations behind the usage budget (marketing binds --mascot-* in globals.css): mobile-menu ground (greeting), app/not-found.tsx 404 page (lost — §3.13 archetype), and the constellation supervisor (watching, perched at the band edge, reacting to the simulated telemetry) — each screenshot-verified on both themes incl. reduced motion; dashboard adoption is F-068, docs adoption when apps/docs exists",
+        "Gates green (typecheck/lint/test incl. design-lint + the package suite, e2e incl. axe AA both themes; first-load JS budget unchanged, zero hydration errors on a fresh server); progress + effects recorded (E-022 extended, new E-023 mascot contract); brand-swap test still passes with the mascot covered"
       ],
       "verification": [
         "typecheck",
@@ -2182,7 +2182,8 @@
         "e2e"
       ],
       "effects": [
-        "E-022"
+        "E-022",
+        "E-023"
       ]
     },
     {
@@ -2214,6 +2215,36 @@
       ],
       "effects": [
         "E-022"
+      ]
+    },
+    {
+      "id": "F-068",
+      "title": "Dashboard mascot adoption: Tess in empty/error states under DESIGN-SYSTEM governance",
+      "requirements": [
+        "FR-49"
+      ],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R4",
+      "priority": "could",
+      "status": "backlog",
+      "blockedBy": [
+        "F-066"
+      ],
+      "acceptance": [
+        "Token binding decided FIRST under DESIGN-SYSTEM.md (not MARKETING-DESIGN): bind the closed --mascot-* CSS variable contract from @tessera/mascot to the dashboard's neutral vocabulary (monochrome ramp; whether the gilded heart keeps an accent hue on this surface is a recorded design decision — ADR or DESIGN-SYSTEM amendment, consistent with the emerald/red-only functional-accent rule)",
+        "Placements behind a usage budget mirroring ADR-0046: empty states and error surfaces only (searching/lost/alarmed moods) — never headers, navigation, or data views; decorative instances aria-hidden with existing text states remaining the information carrier",
+        "No new runtime deps in apps/web beyond @tessera/mascot (zero-dep package, CSS-driven motion); reduced-motion still poses verified; both themes screenshot-verified",
+        "Gates green (typecheck, lint, test, e2e incl. axe on touched screens); effects updated (mascot-contract effect gains the apps/web consumer); progress recorded"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-004"
       ]
     }
   ]

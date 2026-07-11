@@ -2,11 +2,11 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | Accepted v4.5 — F-051 ("Terra Mosaic", shader-field heroes site-wide + constellation graph + living subpages) |
+| **Status** | Accepted v4.6 — F-066 (mascot Tess joins v4.5's shader heroes + constellation + living subpages) |
 | **Last updated** | 2026-07-11 |
 | **Scope** | `apps/marketing` (apex domain). Later: the public chrome of `apps/docs`. |
 | **Brand** | [`BRAND.md`](./BRAND.md) + [Terra Mosaic philosophy](./brand/terra-mosaic-philosophy.md) — read both first |
-| **Authority** | [ADR-0045](../adr/0045-marketing-v4-constellation-shader-hero-theme-true-chapters.md) (v4 directives) · [ADR-0044](../adr/0044-marketing-v3-dual-themes-illustration-first-live-graph.md) (dual themes / illustration-first) · [ADR-0043](../adr/0043-terra-mosaic-brand-and-marketing-overhaul.md) (brand) · [ADR-0042](../adr/0042-marketing-site-design-direction.md) (enforcement mechanism) |
+| **Authority** | [ADR-0046](../adr/0046-brand-mascot-tess.md) (mascot) · [ADR-0045](../adr/0045-marketing-v4-constellation-shader-hero-theme-true-chapters.md) (v4 directives) · [ADR-0044](../adr/0044-marketing-v3-dual-themes-illustration-first-live-graph.md) (dual themes / illustration-first) · [ADR-0043](../adr/0043-terra-mosaic-brand-and-marketing-overhaul.md) (brand) · [ADR-0042](../adr/0042-marketing-site-design-direction.md) (enforcement mechanism) |
 | **Enforced by** | design-lint (vitest, compiles [`marketing-design.manifest.json`](./marketing-design.manifest.json)) · axe AA e2e **on both themes** · screenshot review (§8) |
 
 > **Binding for every pixel of the marketing site.** v4 encodes the stakeholder's fourth
@@ -199,6 +199,13 @@ checklist enforces).
     constellation stays homepage-only.** Subpage sections compose the existing shapes;
     same-ground seams dissolve (washes), hairlines mark elevation changes only.
 
+13. **`not-found`** (v4.6, the 404) — a quiet full-height statement on the base dusk/noon
+    ground (no shader, no constellation): label eyebrow (`404 — page not found`) · serif
+    `title`-token h1 (e.g. *"A tile is missing."*) · one body line · primary CTA home +
+    TextLink to docs — with **Tess in the `lost` mood** beside the statement (its missing
+    tile IS the 404 metaphor). Decorative (`aria-hidden`), still under reduced motion.
+    The mascot's heart is the page's one gold moment.
+
 **Banned archetypes:** terminal windows, code-block panels, file trees, fake dashboards,
 browser-chrome screenshots.
 
@@ -216,9 +223,31 @@ engine at three scales; plan names arrive via props from the PLANS display model
 ledger) · **`SkillLoop`** (skills hero — the agent discipline as a traveling ring) ·
 **`ProblemBand` illustrations** ·
 **`ThemeToggle`** (footer) · `Reveal` / `Marquee` / motion seam `lib/motion.tsx` (the
-only framer-motion import). React Flow imports live only in `components/art/*`
-(effect-web); canvas/WebGL engines live only in `components/art/*`; `three`/
-`@react-three` are banned.
+only framer-motion import) · **`Mascot`** (from `@tessera/mascot` — see §4.1). React
+Flow imports live only in `components/art/*` (effect-web); canvas/WebGL engines live
+only in `components/art/*`; `three`/`@react-three` are banned.
+
+### 4.1 The mascot — Tess (v4.6, ADR-0046)
+
+Tess is the brand mascot from **`@tessera/mascot`** (shared workspace package): nine
+rounded-square tesserae, the gilded heart tile always present, moods as data
+(BRAND.md §5). On this surface:
+
+- **Usage budget (lint-enforced `allowIn`):** the mobile-menu ground (`greeting`), the
+  404 page (`lost`), and the constellation supervisor (`watching`, reacting to the same
+  simulated telemetry as the island). **Never the hero, never pricing**, never inside
+  content bands as decoration.
+- **Accent interaction:** the heart renders on `--gold` — where Tess appears it **is**
+  that band's one gold moment (§1.2). No second ember in the same band.
+- **Theming:** globals.css binds the closed `--mascot-*` contract to Terra Mosaic tokens
+  per theme (dusk + noon + chapter inherit). Components never restyle Tess directly.
+- **Motion:** self-contained CSS (package `styles.css`) — thermal-compliant (micro
+  ≤250ms, one-shot re-seat ≤1.2s, ambient breath 9–14s), transform/opacity only,
+  `prefers-reduced-motion` ⇒ designed still pose per mood. The framer seam is not
+  involved; Tess's ambient breath counts toward §5's ≤1 ambient system per viewport.
+- **A11y:** decorative placements `aria-hidden` (+ sibling sr-only text where state
+  matters); interactive placements are real buttons; Tess never carries information that
+  isn't also text (the supervisor mirrors the telemetry island).
 
 ## 5. Motion — thermal system + the constellation
 
@@ -232,7 +261,8 @@ gilded tile arrives once; reduced-motion = stillness). Additions:
 | Canvas rules | page scroll always wins (no wheel/touch capture); keyboard-inert + `aria-hidden` (decorative-interactive); telemetry ticks 1.2–2s, right-aligned |
 | Illustration loops | flowing dashes are that band's ambient system; assembly **breathes** (assemble–hold–disperse ping-pong) and the gate **cycles** on one shared clock — always eased, never jumping |
 | Theme switch | radial view transition from the toggle (clip-path circle, 550ms house ease); instant without the API or under reduced motion |
-| Reduced motion | shader frozen; constellation frozen layout, zero packets; no dash animation; theme switch instant |
+| Mascot (Tess) | package-internal CSS: mood morphs eased ≤700ms, hover acknowledge 150–250ms, click re-seat once ≤1.2s, heart breath 9–14s ambient (counts as the viewport's ambient system where present) |
+| Reduced motion | shader frozen; constellation frozen layout, zero packets; no dash animation; theme switch instant; Tess = designed still pose per mood |
 
 ## 6. Voice & content — unchanged
 

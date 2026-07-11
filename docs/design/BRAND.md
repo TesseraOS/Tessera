@@ -26,8 +26,9 @@ the logo, the hero animation, the loading state, the 404, everything.
 
 **Personality in one line:** *an archivist with a jeweler's hands, working at dusk.*
 
-**Explicitly not:** neon/indigo AI gradients, glassmorphism, particle storms, cartoon
-mascots, fake testimonials, hype vocabulary.
+**Explicitly not:** neon/indigo AI gradients, glassmorphism, particle storms,
+eyes-and-gloves cartoon mascots (the geometric tessera figure Tess — §5 — is sanctioned
+within its usage budget), fake testimonials, hype vocabulary.
 
 ## 2. Color — the "Terra Mosaic" palette
 
@@ -105,7 +106,36 @@ the palette, or place on non-brand backgrounds.
 `tessera-brand-canvas.png` (the Terra Mosaic art piece). Regenerate PNGs with
 `node apps/marketing/scripts/render-brand-assets.mjs` (Playwright, deterministic).
 
-## 5. Art direction (site + collateral)
+## 5. Mascot — Tess (ADR-0046)
+
+**Tess is a living fragment of the mosaic:** a compact figure of **nine rounded-square
+tesserae** — the mark's own geometry — with the **gilded ember tile as its heart**,
+forever mid-assembly. Personality: *the archivist's apprentice* — curious, patient,
+precise. Tess has **no face** (the eyes-and-gloves cartoon stays banned); expression is
+pure brand language:
+
+- **Posture** — tile arrangement: gathered = attentive, low = resting, scattered = alarmed.
+- **Alignment** — a *misplaced tile* is distress; a perfectly seated grid is satisfaction.
+- **Rhythm** — the heart-glow breathing rate and tile-drift cadence carry energy.
+- **Light** — one ember sheen sweep is celebration: the arriving-tile gesture itself.
+
+**Moods** (data-driven; the rig is the `@tessera/mascot` workspace package): core —
+`idle`, `curious`, `working`, `satisfied`, `alarmed`, `celebrating`; surface — `greeting`
+(menu), `lost` (404: one tile visibly missing), `searching` (empty states), `watching`
+(telemetry supervisor). Every mood defines a reduced-motion still pose. New moods are
+added as validated data (`defineMood()`), never by redrawing the figure.
+
+**Usage budget:** menus, empty states, 404s, and the constellation supervisor — **never
+the hero, never pricing**, never as the sole carrier of information. Where Tess appears,
+its heart **is** that band's one gilded moment (§8 accent budget). Colors bind per
+surface via the `--mascot-*` CSS contract; unthemed surfaces render Tess monochrome
+(`currentColor`) — the same fallback stance as the logo.
+
+**Masters** (generated from the rig's mood data — never hand-edited):
+`brand/tessera-mascot.svg` (idle) + `brand/tessera-mascot-moods.svg` (mood sheet);
+regenerate with `node packages/mascot/scripts/render-masters.mjs`.
+
+## 6. Art direction (site + collateral)
 
 - **The signature gesture:** tessellation fields — offset tile grids in rose/clay/gold on
   dusk, opacity-graded, one gilded tile animated into place. SVG-first, responsive, never
@@ -117,7 +147,7 @@ the palette, or place on non-brand backgrounds.
 - **Chapters:** the page moves dusk → sand → dusk (dark hero, light middle band, dark
   close) — the emotional arc that flat single-ground pages lack.
 
-## 6. Motion personality — "thermal"
+## 7. Motion personality — "thermal"
 
 Warm air, not machinery. Things **settle, drift, and glow**; they never bounce, spin, or
 scroll-jack.
@@ -130,7 +160,7 @@ scroll-jack.
 | Signature | the ember tile arrives once per page load (≤1.2s), then stillness |
 | Always | `prefers-reduced-motion` ⇒ final layout, zero movement; LCP never animated from invisible |
 
-## 7. Brand metrics (measurable, gate-backed)
+## 8. Brand metrics (measurable, gate-backed)
 
 - **Contrast:** every §2 pairing ≥4.5:1 body / ≥3:1 large — axe AA is a hard gate.
 - **Accent budget:** ≤1 gilded (gold/ember) moment per band; rose ≤3 elements per viewport.
@@ -142,7 +172,7 @@ scroll-jack.
 - **Brand-swap test:** logo covered ⇒ still identifiable by tessellation + dusk/rose/gold +
   serif voice.
 
-## 8. Appendix — image-generation prompts (optional raster art)
+## 9. Appendix — image-generation prompts (optional raster art)
 
 Everything on the site is SVG/CSS. If raster art is ever wanted (blog covers, social,
 print), use these with ChatGPT (gpt-image) or Gemini (Imagen / "nano banana") — then

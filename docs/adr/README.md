@@ -61,6 +61,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0043](0043-terra-mosaic-brand-and-marketing-overhaul.md) | Terra Mosaic brand + marketing design v2 — warm palette, serif voice, living motion | Accepted |
 | [0044](0044-marketing-v3-dual-themes-illustration-first-live-graph.md) | Marketing v3 — dual themes (Desert Rose/Modern Minimalist), illustration-first, live-graph hero | Amended by 0045 |
 | [0045](0045-marketing-v4-constellation-shader-hero-theme-true-chapters.md) | Marketing v4 — shader-field hero, canvas constellation graph, theme-true chapter bands | Accepted |
+| [0046](0046-brand-mascot-tess.md) | Brand mascot "Tess" — shared tessera-built character (`@tessera/mascot`), data-driven moods, CSS motion, usage budget | Accepted |
 
 ## Conventions
 

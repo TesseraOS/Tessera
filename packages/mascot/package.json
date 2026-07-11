@@ -1,0 +1,40 @@
+{
+  "name": "@tessera/mascot",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tess — the Tessera brand mascot: a tessera-built figure with data-driven moods, CSS-only motion, and a closed --mascot-* theming contract (ADR-0046).",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles.css": "./styles.css"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "styles.css"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.typecheck.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "render-masters": "node scripts/render-masters.mjs"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "jsdom": "^25.0.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  }
+}

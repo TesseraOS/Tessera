@@ -1,0 +1,140 @@
+// @vitest-environment jsdom
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { DEFAULT_SIZE, MIN_SIZE, Mascot } from './mascot.js';
+import { CORE_MOODS, MOODS, SURFACE_MOODS, defineMood } from './moods.js';
+
+beforeAll(() => {
+  (globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true;
+});
+
+/** The tag skeleton of a markup string — structure without attribute values. */
+const skeleton = (markup: string): string => markup.replace(/<([a-zA-Z0-9]+)[^>]*>/g, '<$1>');
+
+describe('SSR determinism (the v4.5 hydration rule, held structurally)', () => {
+  it('renders byte-identical markup across repeated renders', () => {
+    const a = renderToStaticMarkup(<Mascot mood="idle" />);
+    const b = renderToStaticMarkup(<Mascot mood="idle" />);
+    expect(a).toBe(b);
+  });
+
+  it('renders the SAME element skeleton for every mood — only styling varies', () => {
+    const reference = skeleton(renderToStaticMarkup(<Mascot mood="idle" />));
+    for (const name of [...CORE_MOODS, ...SURFACE_MOODS]) {
+      expect(skeleton(renderToStaticMarkup(<Mascot mood={name} />)), name).toBe(reference);
+    }
+  });
+
+  it('carries the mood as data + custom properties, never as branched markup', () => {
+    const markup = renderToStaticMarkup(<Mascot mood="alarmed" />);
+    expect(markup).toContain('data-mood="alarmed"');
+    expect(markup).toContain('--tess-tx');
+    expect(markup).toContain('--tess-breath-period:9000ms');
+  });
+});
+
+describe('accessibility semantics', () => {
+  it('is decorative without a title', () => {
+    const markup = renderToStaticMarkup(<Mascot />);
+    expect(markup).toContain('aria-hidden="true"');
+    expect(markup).not.toContain('role="img"');
+  });
+
+  it('is a named image with a title', () => {
+    const markup = renderToStaticMarkup(<Mascot title="Tess rests" />);
+    expect(markup).toContain('role="img"');
+    expect(markup).toContain('aria-label="Tess rests"');
+    expect(markup).not.toContain('aria-hidden');
+  });
+
+  it('is a real labelled button when interactive (svg hidden inside)', () => {
+    const markup = renderToStaticMarkup(<Mascot interactive title="Tess, the Tessera mascot" />);
+    expect(markup).toMatch(/<button type="button"[^>]*aria-label="Tess, the Tessera mascot"/);
+    expect(markup).toContain('aria-hidden="true"');
+  });
+
+  it('refuses an interactive Tess without an accessible name', () => {
+    expect(() => renderToStaticMarkup(<Mascot interactive />)).toThrow(/requires a title/);
+  });
+
+  it('refuses unknown mood names with the full registry in the message', () => {
+    expect(() => renderToStaticMarkup(<Mascot mood={'sleeping' as never} />)).toThrow(
+      /unknown mood "sleeping"/,
+    );
+  });
+});
+
+describe('sizing', () => {
+  it('defaults to 96 and clamps below the legibility floor', () => {
+    expect(renderToStaticMarkup(<Mascot />)).toContain(`width="${DEFAULT_SIZE}"`);
+    expect(renderToStaticMarkup(<Mascot size={10} />)).toContain(`width="${MIN_SIZE}"`);
+    expect(renderToStaticMarkup(<Mascot size={48} />)).toContain('width="48"');
+  });
+});
+
+describe('custom moods', () => {
+  it('renders a defineMood() definition under its own data-mood', () => {
+    const mood = defineMood({
+      name: 'docs-waiting',
+      description: 'Tess waits patiently beside the docs search.',
+      poses: { crown: { rotate: 4 } },
+      rhythm: { breathPeriodMs: 11000, breathIntensity: 0.4, driftAmp: 1 },
+    });
+    const markup = renderToStaticMarkup(<Mascot mood={mood} />);
+    expect(markup).toContain('data-mood="docs-waiting"');
+    expect(skeleton(markup)).toBe(skeleton(renderToStaticMarkup(<Mascot mood="idle" />)));
+  });
+});
+
+describe('interaction (the one-shot re-seat)', () => {
+  let container: HTMLDivElement;
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('click sets data-reseat and calls onActivate; the state clears after the gesture', async () => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    let activated = 0;
+    await act(async () => {
+      root.render(
+        <Mascot
+          interactive
+          title="Tess, the Tessera mascot"
+          onActivate={() => {
+            activated += 1;
+          }}
+        />,
+      );
+    });
+    const button = container.querySelector('button');
+    const svg = container.querySelector('svg');
+    expect(button).not.toBeNull();
+    expect(svg?.getAttribute('data-reseat')).toBeNull();
+
+    await act(async () => {
+      button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(activated).toBe(1);
+    expect(svg?.getAttribute('data-reseat')).toBe('true');
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1300));
+    });
+    expect(svg?.getAttribute('data-reseat')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+  }, 10000);
+
+  it('exposes every mood description for consumer sr-text', () => {
+    // Consumers pair the figure with text — the registry guarantees the words exist.
+    for (const name of [...CORE_MOODS, ...SURFACE_MOODS]) {
+      expect(MOODS[name].description.length).toBeGreaterThan(0);
+    }
+  });
+});

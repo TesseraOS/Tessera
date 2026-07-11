@@ -1,24 +1,18 @@
 /**
- * @tessera/mascot — Tess's motion + theming layer (ADR-0046 v2).
+ * @tessera/mascot — Tess's motion + theming layer (ADR-0046 v3).
  *
  * Import once per app: `import '@tessera/mascot/styles.css'`.
  *
- * Theming: the closed --mascot-* contract. Bind these in the consuming app's global
- * stylesheet; every value falls back to currentColor, so an unbound app renders a
- * monochrome Tess (the logo's own fallback stance) — never off-brand color.
+ * Theming: the closed --mascot-* contract (see README). Every value falls back to
+ * currentColor, so an unbound app renders a monochrome Tess — never off-brand color.
  *
- *   --mascot-tile        base tesserae
- *   --mascot-tile-warm   the warm accent tile(s)
- *   --mascot-tile-deep   the deep/clay tile(s)
- *   --mascot-heart       the gilded heart (and its ember glow)
- *   --mascot-sheen       the one-shot glint (keep it LIGHT on both themes)
- *   --mascot-ink         the eyes (and future seams/sockets)
- *
- * Motion (ADR-0046 v2): the CHARACTER runs at creature rate — breath/bob 3–6s, blink
- * windows, per-mood gestures, pointer-following gaze (JS-driven vars), hover perk
- * 150–250ms, one-shot delight ≤1.2s. Transform/opacity only, the house ease,
- * interruptible by construction. prefers-reduced-motion ⇒ every animation, gesture,
- * gaze and reaction stops; the mood's pose IS the designed still frame.
+ * v3: every mood is an ACTIVITY — an infinite, eased loop in which Tess visibly does
+ * something (types on its bench tile, sweeps a mini knowledge graph node by node,
+ * waves, cheers under confetti, scratches its head, throws its hands up at a loose
+ * tile). Props are always in the DOM; [data-mood] shows the active one and runs its
+ * loop. Transform/opacity only, the house ease, creature-rate rhythm (3–6s breath).
+ * prefers-reduced-motion ⇒ everything freezes on the mood's designed still frame
+ * (props stay visible, static — the scene still tells the story).
  */
 
 .tess {
@@ -79,7 +73,7 @@
     rotate(calc(var(--tess-rot, 0deg) + 4deg)) scale(var(--tess-scale, 1));
 }
 
-/* ------------------------------------------------------------------------ tiles -- */
+/* ------------------------------------------------------------------------ pieces -- */
 
 .tess-tile {
   fill: var(--mascot-tile, currentColor);
@@ -100,6 +94,11 @@
 
 /* --------------------------------------------------------------------- the face -- */
 
+.tess-blush {
+  fill: var(--mascot-tile-warm, currentColor);
+  opacity: 0.45;
+}
+
 /* Gaze = mood bias (React inline vars on .tess-face) + pointer look (JS vars here). */
 .tess-gaze {
   transform: translate(
@@ -110,8 +109,7 @@
 
 /*
  * Eyes: ink pills that hold the mood's openness and blink in short windows. The base
- * transform carries openness so the still (reduced-motion) frame keeps the expression;
- * the blink animation composes the same vars, so a mid-blink mood change stays smooth.
+ * transform carries openness so the still (reduced-motion) frame keeps the expression.
  * --tess-eye-boost is the hover widen (a class-level var — inline vars would win).
  */
 .tess-eye {
@@ -142,7 +140,7 @@
 
 /* ------------------------------------------------------------- ambient (thermal) -- */
 
-/* Per-tile micro drift on the shared breath clock; negative delays de-phase tiles. */
+/* Gentle per-piece float on the shared clock; gestures below override per mood. */
 .tess-drift {
   transform-box: fill-box;
   transform-origin: center;
@@ -159,7 +157,7 @@
   }
 }
 
-/* The heart's ember glow breathes — a square glow, tile language, never a halo. */
+/* The heart-body's ember glow breathes — square glow, tile language, never a halo. */
 .tess-ember {
   fill: var(--mascot-heart, currentColor);
   opacity: var(--tess-breath-lo, 0.12);
@@ -189,9 +187,97 @@
   opacity: 0.3;
 }
 
-/* ------------------------------------------------------- per-mood gestures (v2) -- */
+/* ------------------------------------------------------------------------ props -- */
 
-/* Curious: the head tilts a beat further, then settles — every few breaths. */
+.tess-prop {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 300ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.tess[data-mood='searching'] .tess-prop-kg,
+.tess[data-mood='working'] .tess-prop-work,
+.tess[data-mood='celebrating'] .tess-prop-confetti,
+.tess[data-react='delight'] .tess-prop-confetti,
+.tess[data-mood='alarmed'] .tess-prop-loose {
+  visibility: visible;
+  opacity: 1;
+}
+
+.tess-kg-edge {
+  stroke: var(--mascot-tile, currentColor);
+  stroke-width: 1;
+  opacity: 0.3;
+}
+
+.tess-kg-node {
+  fill: var(--mascot-tile, currentColor);
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0.4;
+}
+
+.tess-kg-node[data-role='warm'] {
+  fill: var(--mascot-tile-warm, currentColor);
+}
+
+.tess-kg-node[data-role='deep'] {
+  fill: var(--mascot-tile-deep, currentColor);
+}
+
+.tess-work-tile {
+  fill: var(--mascot-tile-deep, currentColor);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.tess-work-tick {
+  stroke: var(--mascot-tile, currentColor);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  opacity: 0.25;
+}
+
+.tess-confetti {
+  transform-box: fill-box;
+  transform-origin: center;
+  fill: var(--mascot-tile, currentColor);
+  opacity: 0;
+}
+
+.tess-confetti[data-role='warm'] {
+  fill: var(--mascot-tile-warm, currentColor);
+}
+
+.tess-confetti[data-role='deep'] {
+  fill: var(--mascot-tile-deep, currentColor);
+}
+
+.tess-loose-tile {
+  fill: var(--mascot-tile-deep, currentColor);
+}
+
+/* -------------------------------------------------- per-mood activities (v3) -- */
+
+/* CURIOUS: hand at the chin, tapping in thought; the head peeks. */
+.tess[data-mood='curious'] .tess-slot[data-slot='handR'] .tess-drift {
+  animation: tess-chin 2.8s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes tess-chin {
+  0%,
+  55%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  65% {
+    transform: translateY(-1.6px) rotate(-6deg);
+  }
+  75% {
+    transform: translateY(0.4px) rotate(-2deg);
+  }
+}
+
 .tess[data-mood='curious'] .tess-slot[data-slot='crown'] .tess-drift {
   animation: tess-peek 5.4s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
 }
@@ -211,32 +297,115 @@
   }
 }
 
-/* Alarmed: the popped tile shivers in short bursts. */
-.tess[data-mood='alarmed'] .tess-slot[data-slot='sideR'] .tess-drift {
-  animation: tess-shiver 3.1s linear infinite;
+/* WORKING: both hands type on the bench tile; tick lines flicker as output. */
+.tess[data-mood='working'] .tess-slot[data-slot='handL'] .tess-drift {
+  animation: tess-type 0.62s ease-in-out infinite;
 }
 
-@keyframes tess-shiver {
+.tess[data-mood='working'] .tess-slot[data-slot='handR'] .tess-drift {
+  animation: tess-type 0.62s ease-in-out infinite;
+  animation-delay: -0.31s;
+}
+
+@keyframes tess-type {
   0%,
-  14%,
   100% {
-    transform: translateX(0);
+    transform: translateY(0);
   }
-  2%,
-  6%,
-  10% {
-    transform: translateX(0.8px);
-  }
-  4%,
-  8%,
-  12% {
-    transform: translateX(-0.8px);
+  50% {
+    transform: translateY(2.6px);
   }
 }
 
-/* Lost + searching: the head scans left and right, hunting for the piece. */
-.tess[data-mood='lost'] .tess-slot[data-slot='crown'] .tess-drift,
-.tess[data-mood='searching'] .tess-slot[data-slot='crown'] .tess-drift {
+.tess[data-mood='working'] .tess-work-tile {
+  animation: tess-work-settle 1.24s ease-in-out infinite;
+}
+
+@keyframes tess-work-settle {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(0.8px) scale(0.985);
+  }
+}
+
+.tess[data-mood='working'] .tess-work-tick {
+  animation: tess-tick 1.86s ease-in-out infinite;
+}
+
+.tess[data-mood='working'] .tess-work-tick[data-n='1'] {
+  animation-delay: 0.62s;
+}
+
+.tess[data-mood='working'] .tess-work-tick[data-n='2'] {
+  animation-delay: 1.24s;
+}
+
+@keyframes tess-tick {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  30% {
+    opacity: 0.85;
+  }
+}
+
+/* SEARCHING: the mini graph hangs up-left; nodes light in sequence and the raised
+   hand sweeps from node to node; the head scans. */
+.tess[data-mood='searching'] .tess-kg-node {
+  animation: tess-node-pulse 3.2s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+.tess[data-mood='searching'] .tess-kg-node[data-n='1'] {
+  animation-delay: 0.8s;
+}
+
+.tess[data-mood='searching'] .tess-kg-node[data-n='2'] {
+  animation-delay: 1.6s;
+}
+
+.tess[data-mood='searching'] .tess-kg-node[data-n='3'] {
+  animation-delay: 2.4s;
+}
+
+@keyframes tess-node-pulse {
+  0%,
+  28%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  10% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+}
+
+.tess[data-mood='searching'] .tess-slot[data-slot='handL'] .tess-drift {
+  animation: tess-sweep 3.2s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes tess-sweep {
+  0%,
+  100% {
+    transform: translate(-3px, 2px) rotate(-4deg);
+  }
+  25% {
+    transform: translate(1px, -5px) rotate(-12deg);
+  }
+  50% {
+    transform: translate(3px, 1px) rotate(-2deg);
+  }
+  75% {
+    transform: translate(-1px, -7px) rotate(-10deg);
+  }
+}
+
+.tess[data-mood='searching'] .tess-slot[data-slot='crown'] .tess-drift,
+.tess[data-mood='lost'] .tess-slot[data-slot='crown'] .tess-drift {
   animation: tess-scan 4.8s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
 }
 
@@ -253,29 +422,83 @@
   }
 }
 
-/* Greeting: the lifted shoulder tile waves twice, then rests. */
-.tess[data-mood='greeting'] .tess-slot[data-slot='shoulderR'] .tess-drift {
-  animation: tess-wave 4.6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+/* SATISFIED: hands on hips, chest swelling gently with pride. */
+.tess[data-mood='satisfied'] .tess-slot[data-slot='heart'] .tess-drift {
+  animation: tess-proud 4s ease-in-out infinite;
 }
 
-@keyframes tess-wave {
+@keyframes tess-proud {
   0%,
-  34%,
   100% {
-    transform: rotate(0deg) translateY(0);
+    transform: scale(1);
   }
-  8% {
-    transform: rotate(10deg) translateY(-1.2px);
-  }
-  16% {
-    transform: rotate(-4deg) translateY(-0.4px);
-  }
-  24% {
-    transform: rotate(7deg) translateY(-1px);
+  50% {
+    transform: scale(1.02);
   }
 }
 
-/* Celebrating: the heart pops on the beat. */
+/* ALARMED: hands thrown up and trembling; the loose tile shivers midair. */
+.tess[data-mood='alarmed'] .tess-slot[data-slot='handL'] .tess-drift,
+.tess[data-mood='alarmed'] .tess-slot[data-slot='handR'] .tess-drift {
+  animation: tess-tremble 0.5s linear infinite;
+}
+
+@keyframes tess-tremble {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(0.8px);
+  }
+  75% {
+    transform: translateX(-0.8px);
+  }
+}
+
+.tess[data-mood='alarmed'] .tess-loose-tile {
+  animation: tess-shiver 3.1s linear infinite;
+}
+
+@keyframes tess-shiver {
+  0%,
+  14%,
+  100% {
+    transform: translate(0, 0);
+  }
+  2%,
+  6%,
+  10% {
+    transform: translate(0.9px, -0.4px);
+  }
+  4%,
+  8%,
+  12% {
+    transform: translate(-0.9px, 0.4px);
+  }
+}
+
+/* CELEBRATING: both hands cheer in alternation; confetti tesserae tumble down; the
+   gilded body pops on the beat. */
+.tess[data-mood='celebrating'] .tess-slot[data-slot='handL'] .tess-drift {
+  animation: tess-cheer 1.15s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+.tess[data-mood='celebrating'] .tess-slot[data-slot='handR'] .tess-drift {
+  animation: tess-cheer 1.15s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+  animation-delay: -0.575s;
+}
+
+@keyframes tess-cheer {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(6deg);
+  }
+}
+
 .tess[data-mood='celebrating'] .tess-slot[data-slot='heart'] .tess-drift {
   animation: tess-heartpop 2.3s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
 }
@@ -287,23 +510,123 @@
     transform: scale(1);
   }
   68% {
-    transform: scale(1.07);
+    transform: scale(1.05);
+  }
+}
+
+.tess[data-mood='celebrating'] .tess-confetti {
+  animation: tess-confetti-fall 2.6s linear infinite;
+}
+
+.tess[data-mood='celebrating'] .tess-confetti[data-n='1'] {
+  animation-delay: 0.5s;
+}
+
+.tess[data-mood='celebrating'] .tess-confetti[data-n='2'] {
+  animation-delay: 1s;
+}
+
+.tess[data-mood='celebrating'] .tess-confetti[data-n='3'] {
+  animation-delay: 1.5s;
+}
+
+.tess[data-mood='celebrating'] .tess-confetti[data-n='4'] {
+  animation-delay: 2s;
+}
+
+@keyframes tess-confetti-fall {
+  0% {
+    transform: translateY(-5px) rotate(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.95;
+  }
+  70% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(20px) rotate(150deg);
+    opacity: 0;
+  }
+}
+
+/* GREETING: the raised hand waves — twice, then a beat of rest. */
+.tess[data-mood='greeting'] .tess-slot[data-slot='handR'] .tess-drift {
+  animation: tess-wave 4.6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes tess-wave {
+  0%,
+  34%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  8% {
+    transform: rotate(14deg) translateY(-1.2px);
+  }
+  16% {
+    transform: rotate(-8deg) translateY(-0.4px);
+  }
+  24% {
+    transform: rotate(10deg) translateY(-1px);
+  }
+}
+
+/* LOST: scratching its head while scanning (the scan is shared with searching). */
+.tess[data-mood='lost'] .tess-slot[data-slot='handR'] .tess-drift {
+  animation: tess-scratch 3.4s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes tess-scratch {
+  0%,
+  50%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  56% {
+    transform: translate(-1.6px, 1px) rotate(-5deg);
+  }
+  62% {
+    transform: translate(1px, -0.4px) rotate(2deg);
+  }
+  68% {
+    transform: translate(-1.6px, 0.6px) rotate(-5deg);
+  }
+  74% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+/* WATCHING: a slow lookout turn, left then right. */
+.tess[data-mood='watching'] .tess-slot[data-slot='crown'] .tess-drift {
+  animation: tess-lookout 6s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes tess-lookout {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  30% {
+    transform: rotate(2.5deg);
+  }
+  65% {
+    transform: rotate(-2deg);
   }
 }
 
 /* ------------------------------------------------------------------- one-shots -- */
 
 /*
- * The delight reaction (click/tap on any reactive placement): an eased hop with a
- * crouch, happy-squint eyes, the heart re-seat, and one sheen sweep. Plays once
- * (absorbed while active); also fires on entering `celebrating`.
+ * The delight reaction (click/tap on any reactive placement): a crouch-hop with the
+ * squash only in the crouch (THERMAL.hopTranslate — headroom-tested), happy-squint
+ * eyes, and a one-shot confetti burst. Plays once; absorbed while active.
  */
 .tess[data-react='delight'] .tess-breathe {
   animation: tess-hop 1150ms cubic-bezier(0.22, 0.61, 0.36, 1) 1;
 }
 
-/* The apex stays at -4px with NO stretch (THERMAL.hopTranslate — headroom-tested);
-   the squash lives only in the crouch, where it moves the figure DOWN. */
 @keyframes tess-hop {
   0%,
   100% {
@@ -328,49 +651,21 @@
   transform: scaleY(0.3);
 }
 
-.tess[data-react='delight'] .tess-slot[data-slot='heart'] {
-  animation: tess-reseat 1150ms cubic-bezier(0.22, 0.61, 0.36, 1) 1;
+.tess[data-react='delight']:not([data-mood='celebrating']) .tess-confetti {
+  animation: tess-confetti-burst 1150ms cubic-bezier(0.22, 0.61, 0.36, 1) 1 both;
 }
 
-@keyframes tess-reseat {
-  0%,
-  100% {
-    transform: translate(var(--tess-tx, 0px), var(--tess-ty, 0px)) rotate(var(--tess-rot, 0deg))
-      scale(var(--tess-scale, 1));
-  }
-  38%,
-  56% {
-    transform: translate(var(--tess-tx, 0px), calc(var(--tess-ty, 0px) - 8px))
-      rotate(var(--tess-rot, 0deg)) scale(calc(var(--tess-scale, 1) * 1.09));
-  }
-}
-
-/* The glint: a flat translucent bar sweeps the figure once (no gradient, no blur). */
-.tess-sheen {
-  fill: var(--mascot-sheen, currentColor);
-  opacity: 0;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.tess[data-mood='celebrating'] .tess-sheen,
-.tess[data-react='delight'] .tess-sheen {
-  animation: tess-sheen 1150ms cubic-bezier(0.22, 0.61, 0.36, 1) 1 both;
-}
-
-@keyframes tess-sheen {
+@keyframes tess-confetti-burst {
   0% {
-    transform: translateX(-72px) rotate(18deg);
+    transform: translateY(8px) scale(0.4);
     opacity: 0;
   }
-  20% {
-    opacity: 0.3;
-  }
-  80% {
-    opacity: 0.3;
+  30% {
+    opacity: 0.95;
+    transform: translateY(-4px) scale(1);
   }
   100% {
-    transform: translateX(72px) rotate(18deg);
+    transform: translateY(14px) rotate(120deg) scale(0.9);
     opacity: 0;
   }
 }
@@ -401,26 +696,16 @@
   .tess-figure,
   .tess-slot,
   .tess-tile,
-  .tess-ember-hover {
+  .tess-ember-hover,
+  .tess-prop {
     transition: none;
   }
 
-  .tess-breathe,
-  .tess-drift,
-  .tess-ember,
-  .tess-eye,
-  .tess-sheen,
-  .tess[data-mood='curious'] .tess-slot[data-slot='crown'] .tess-drift,
-  .tess[data-mood='alarmed'] .tess-slot[data-slot='sideR'] .tess-drift,
-  .tess[data-mood='lost'] .tess-slot[data-slot='crown'] .tess-drift,
-  .tess[data-mood='searching'] .tess-slot[data-slot='crown'] .tess-drift,
-  .tess[data-mood='greeting'] .tess-slot[data-slot='shoulderR'] .tess-drift,
-  .tess[data-mood='celebrating'] .tess-slot[data-slot='heart'] .tess-drift,
-  .tess[data-react='delight'] .tess-breathe,
-  .tess[data-react='delight'] .tess-slot[data-slot='heart'],
-  .tess[data-mood='celebrating'] .tess-sheen,
-  .tess[data-react='delight'] .tess-sheen {
-    animation: none;
+  /* One broad stroke: every rig animation off — the pose + visible prop IS the scene. */
+  .tess *,
+  .tess *::before,
+  .tess *::after {
+    animation: none !important;
   }
 
   .tess:hover .tess-figure,
@@ -446,8 +731,12 @@
     cursor: default;
   }
 
-  /* The still ember: calm, present, unmoving. */
+  /* The still ember: calm, present, unmoving; confetti rests visible mid-scene. */
   .tess-ember {
     opacity: 0.16;
+  }
+
+  .tess[data-mood='celebrating'] .tess-confetti {
+    opacity: 0.85;
   }
 }

@@ -122,16 +122,21 @@ test('Tess is ALIVE under normal motion: breath, blink, and ember run (ADR-0046 
   await page.emulateMedia({ reducedMotion: 'no-preference', colorScheme: 'dark' });
   await page.goto('/this-tile-does-not-exist');
 
-  const names = await page
-    .locator('[data-tess]')
-    .evaluate((svg) =>
-      ['.tess-breathe', '.tess-eye', '.tess-ember'].map((selector) =>
-        svg.querySelector(selector)
-          ? getComputedStyle(svg.querySelector(selector) as Element).animationName
-          : 'missing',
-      ),
-    );
-  expect(names).toEqual(['tess-bob', 'tess-blink', 'tess-breath']);
+  const names = await page.locator('[data-tess]').evaluate((svg) =>
+    [
+      '.tess-breathe',
+      '.tess-eye',
+      '.tess-ember',
+      // lost's ACTIVITY (ADR-0046 v3): the head-scratch + scan loops must be running.
+      '.tess-slot[data-slot="crown"] .tess-drift',
+      '.tess-slot[data-slot="handR"] .tess-drift',
+    ].map((selector) =>
+      svg.querySelector(selector)
+        ? getComputedStyle(svg.querySelector(selector) as Element).animationName
+        : 'missing',
+    ),
+  );
+  expect(names).toEqual(['tess-bob', 'tess-blink', 'tess-breath', 'tess-scan', 'tess-scratch']);
 });
 
 test('hover locks the gaze onto the pointer; click plays the delight one-shot', async ({
@@ -174,9 +179,12 @@ test('the /dev/mascot lab shows every mood, switches them, and passes axe on bot
   // 1 specimen + the 10-mood registry grid.
   await expect(page.locator('[data-tess]')).toHaveCount(11);
 
-  // Mood switching drives the specimen.
+  // Mood switching drives the specimen — and its activity prop appears with it.
   await page.getByRole('button', { name: 'alarmed' }).click();
   await expect(page.locator('[data-tess]').first()).toHaveAttribute('data-mood', 'alarmed');
+  await expect(page.locator('[data-tess]').first().locator('.tess-prop-loose')).toBeVisible();
+  await page.getByRole('button', { name: 'searching' }).click();
+  await expect(page.locator('[data-tess]').first().locator('.tess-prop-kg')).toBeVisible();
 
   const dusk = await new AxeBuilder({ page }).withTags(WCAG).analyze();
   expect(dusk.violations).toEqual([]);

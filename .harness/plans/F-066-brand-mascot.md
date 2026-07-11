@@ -239,6 +239,23 @@ Verification adds: motion PROOF (two timed frames must differ under normal motio
 identical under reduced motion), hover/click reaction e2e, dev-lab e2e (axe both themes),
 and re-run of the full v1 evidence set.
 
+## Revision v3 (2026-07-11 — second stakeholder review round)
+
+Verdict on v2: *"liveness is the mascot DOING something — pointer tracking on a static
+figure isn't liveness; all moods should be smooth infinite activity animations; the
+celebrating sheen reveals the bounding box; add hands (proposal: head, 2 hands, heart
+body, 2 feet); place the menu Tess in the link column's empty right side."* Reference
+studied: the Senzops sentinel bot (`E:\Senzops\frontend` — arms + per-mood props with
+infinite task loops).
+
+Adopted (ADR-0046 v3): the six-piece anatomy — the gilded heart IS the body; hands are
+limbs with a wider validated offset budget (±32); every mood is an infinite activity
+loop with an always-rendered prop (mini knowledge graph for searching, bench tile +
+flickering output ticks for working, confetti tesserae for celebrating/delight, the
+shivering loose tile for alarmed); the sheen is removed; blush carries the warm accent
+on the figure; the menu Tess overlays the nav link column's right half, z-above the
+full-width link rows. MARKETING-DESIGN v4.8 + manifest 4.8.0 in lockstep.
+
 ## Risks / open questions
 
 - ~~**OQ1 — Name.**~~ **Resolved:** **Tess** (stakeholder, 2026-07-11).

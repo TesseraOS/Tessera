@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SLOTS } from './geometry.js';
+import { SLOTS, SLOT_SPECS } from './geometry.js';
 import { CORE_MOODS, MOODS, SURFACE_MOODS, THERMAL, defineMood, isMoodName } from './moods.js';
 
 const ALL_NAMES = [...CORE_MOODS, ...SURFACE_MOODS];
@@ -26,13 +26,14 @@ describe('the mood registry (ADR-0046)', () => {
     }
   });
 
-  it('keeps every pose and rhythm inside the thermal budgets', () => {
+  it('keeps every pose and rhythm inside the thermal budgets (limbs get the wide one)', () => {
     for (const name of ALL_NAMES) {
       const mood = MOODS[name];
       for (const slot of SLOTS) {
         const pose = mood.poses[slot];
-        expect(Math.abs(pose.dx), `${name}.${slot}.dx`).toBeLessThanOrEqual(THERMAL.maxOffset);
-        expect(Math.abs(pose.dy), `${name}.${slot}.dy`).toBeLessThanOrEqual(THERMAL.maxOffset);
+        const budget = SLOT_SPECS[slot].limb ? THERMAL.maxLimbOffset : THERMAL.maxOffset;
+        expect(Math.abs(pose.dx), `${name}.${slot}.dx`).toBeLessThanOrEqual(budget);
+        expect(Math.abs(pose.dy), `${name}.${slot}.dy`).toBeLessThanOrEqual(budget);
         expect(Math.abs(pose.rotate), `${name}.${slot}.rotate`).toBeLessThanOrEqual(
           THERMAL.maxRotate,
         );
@@ -75,18 +76,25 @@ describe('the mood registry (ADR-0046)', () => {
     }
   });
 
-  it('expresses the brand channels: satisfied is a seated grid, lost misses a tile', () => {
+  it('expresses the activities: hips, missing tile, hands thrown up, hands at work', () => {
+    // Satisfied: body seated (hands on hips are the gesture — the BODY is at rest).
     for (const slot of SLOTS) {
+      if (SLOT_SPECS[slot].limb) continue;
       const pose = MOODS.satisfied.poses[slot];
       expect([pose.dx, pose.dy, pose.rotate], `satisfied.${slot}`).toEqual([0, 0, 0]);
     }
+    // Lost: exactly one empty socket (the missing foot).
     const socket = SLOTS.filter((slot) => MOODS.lost.poses[slot].opacity <= 0.2);
-    expect(socket, 'lost renders exactly one empty socket').toHaveLength(1);
-    const popped = SLOTS.filter((slot) => {
-      const p = MOODS.alarmed.poses[slot];
-      return Math.abs(p.dx) + Math.abs(p.dy) > 8;
-    });
-    expect(popped, 'alarmed pops exactly one tile out of place').toHaveLength(1);
+    expect(socket, 'lost renders exactly one empty socket').toEqual(['footR']);
+    // Alarmed: both hands thrown high.
+    expect(MOODS.alarmed.poses.handL.dy).toBeLessThan(-18);
+    expect(MOODS.alarmed.poses.handR.dy).toBeLessThan(-18);
+    // Working: both hands down on the bench; searching: one hand raised to the graph.
+    expect(MOODS.working.poses.handL.dy).toBeGreaterThan(6);
+    expect(MOODS.working.poses.handR.dy).toBeGreaterThan(6);
+    expect(MOODS.searching.poses.handL.dy).toBeLessThan(-12);
+    // Greeting: the waving hand is raised.
+    expect(MOODS.greeting.poses.handR.dy).toBeLessThan(-18);
   });
 
   it('freezes the registry data', () => {
@@ -107,16 +115,34 @@ describe('defineMood validation', () => {
       rhythm,
     });
     expect(mood.poses.crown.rotate).toBe(4);
-    expect(mood.poses.core).toEqual({
+    expect(mood.poses.footL).toEqual({
       dx: 0,
       dy: 0,
       rotate: 0,
       scale: 1,
-      opacity: 0.92,
+      opacity: 0.85,
       role: 'tile',
     });
     // The face defaults to neutral open eyes looking ahead.
     expect(mood.eyes).toEqual({ openness: 1, gazeX: 0, gazeY: 0 });
+  });
+
+  it('gives limbs the wide gesture budget and bodies the tight one', () => {
+    const ok = defineMood({
+      name: 'reaching',
+      description: 'a hand reaches far across the figure',
+      poses: { handR: { dx: -24, dy: -24 } },
+      rhythm,
+    });
+    expect(ok.poses.handR.dx).toBe(-24);
+    expect(() =>
+      defineMood({
+        name: 'overreach',
+        description: 'a limb beyond even the limb budget',
+        poses: { handR: { dy: -33 } },
+        rhythm,
+      }),
+    ).toThrow(/±32/);
   });
 
   it('rejects non-kebab names', () => {

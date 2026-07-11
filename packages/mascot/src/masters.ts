@@ -1,17 +1,19 @@
 /**
- * Brand-master renderers (ADR-0046 v2) — pure string SVG built from the same geometry
+ * Brand-master renderers (ADR-0046 v3) — pure string SVG built from the same geometry
  * and mood data as the live rig, so the checked-in brand assets can never drift from
- * the shipped figure (a package test compares them byte-for-byte).
+ * the shipped figure (a package test compares them byte-for-byte). Each mood renders
+ * with its prop in the designed still frame — the scene tells the activity's story
+ * even frozen.
  *
  * Masters carry the Desert Rose dusk values BY VALUE — the same sanctioned
  * "reproduce token values by hand" class as the OG/icon renderers (BRAND.md §2.1,
  * effect E-022): standalone brand files cannot consume CSS variables.
  */
 
-import { EYE, HEAD_CENTER, SLOTS, SLOT_SPECS, VIEWBOX } from './geometry.js';
+import { BLUSH, EYE, HEAD_CENTER, PROPS, SLOTS, SLOT_SPECS, VIEWBOX } from './geometry.js';
 import type { TileRole } from './geometry.js';
 import { CORE_MOODS, MOODS, SURFACE_MOODS } from './moods.js';
-import type { MoodDefinition } from './moods.js';
+import type { MoodDefinition, MoodName } from './moods.js';
 
 /** BRAND.md §2.1 (dusk) — reproduced by value for standalone assets. */
 const DUSK = {
@@ -37,9 +39,72 @@ const GENERATED_NOTE =
 
 const fmt = (n: number): string => String(Number(n.toFixed(3)));
 
-/** One figure's tiles + face at the given origin offset, as SVG markup. */
+/** The mood's prop in its still state, as SVG markup (offset by ox/oy). */
+function renderProp(mood: MoodName | string, ox: number, oy: number): string {
+  if (mood === 'searching') {
+    const edges = PROPS.kg.edges
+      .map(([a, b]) => {
+        const na = PROPS.kg.nodes[a]!;
+        const nb = PROPS.kg.nodes[b]!;
+        return `<line x1="${fmt(ox + na.x)}" y1="${fmt(oy + na.y)}" x2="${fmt(ox + nb.x)}" y2="${fmt(
+          oy + nb.y,
+        )}" stroke="${DUSK.tile}" stroke-width="1" opacity="0.3"/>`;
+      })
+      .join('');
+    const nodes = PROPS.kg.nodes
+      .map(
+        (n, i) =>
+          `<rect x="${fmt(ox + n.x - n.r)}" y="${fmt(oy + n.y - n.r)}" width="${fmt(
+            n.r * 2,
+          )}" height="${fmt(n.r * 2)}" rx="${fmt(n.r * 0.55)}" fill="${FILL[n.role]}" opacity="${
+            i === 0 ? '1' : '0.4'
+          }"/>`,
+      )
+      .join('');
+    return edges + nodes;
+  }
+  if (mood === 'working') {
+    const t = PROPS.work.tile;
+    const ticks = PROPS.work.ticks
+      .map(
+        (k, i) =>
+          `<line x1="${fmt(ox + k.x1)}" y1="${fmt(oy + k.y1)}" x2="${fmt(ox + k.x2)}" y2="${fmt(
+            oy + k.y2,
+          )}" stroke="${DUSK.tile}" stroke-width="1.4" stroke-linecap="round" opacity="${
+            i === 0 ? '0.85' : '0.25'
+          }"/>`,
+      )
+      .join('');
+    return (
+      `<rect x="${fmt(ox + t.x)}" y="${fmt(oy + t.y)}" width="${fmt(t.w)}" height="${fmt(
+        t.h,
+      )}" rx="${fmt(t.rx)}" fill="${DUSK.deep}"/>` + ticks
+    );
+  }
+  if (mood === 'celebrating') {
+    return PROPS.confetti
+      .map(
+        (bit) =>
+          `<rect x="${fmt(ox + bit.x - bit.s / 2)}" y="${fmt(oy + bit.y - bit.s / 2)}" width="${fmt(
+            bit.s,
+          )}" height="${fmt(bit.s)}" rx="${fmt(bit.s * 0.3)}" fill="${FILL[bit.role]}" opacity="0.85"/>`,
+      )
+      .join('');
+  }
+  if (mood === 'alarmed') {
+    const l = PROPS.loose;
+    return `<rect x="${fmt(ox + l.x)}" y="${fmt(oy + l.y)}" width="${fmt(l.w)}" height="${fmt(
+      l.h,
+    )}" rx="${fmt(l.rx)}" fill="${DUSK.deep}" transform="rotate(${fmt(l.rotate)} ${fmt(
+      ox + l.x + l.w / 2,
+    )} ${fmt(oy + l.y + l.h / 2)})"/>`;
+  }
+  return '';
+}
+
+/** One figure's pieces + face + prop at the given origin offset, as SVG markup. */
 function renderFigure(mood: MoodDefinition, ox: number, oy: number): string {
-  const parts: string[] = [];
+  const parts: string[] = [renderProp(mood.name, ox, oy)];
   for (const slot of SLOTS) {
     const spec = SLOT_SPECS[slot];
     const pose = mood.poses[slot];
@@ -62,16 +127,23 @@ function renderFigure(mood: MoodDefinition, ox: number, oy: number): string {
       }" opacity="0.16"/>`;
       parts.push(`<g transform="${group}">${ember}${tile}</g>`);
     } else if (slot === 'crown') {
-      // The face: two ink eyes at the mood's openness and gaze bias (ADR-0046 v2).
+      // The face: blush + two ink eyes at the mood's openness and gaze bias.
+      const relY = HEAD_CENTER.y - (spec.y + spec.h / 2);
+      const relX = HEAD_CENTER.x - (spec.x + spec.w / 2);
+      const blush = [-1, 1]
+        .map(
+          (side) =>
+            `<rect x="${fmt(relX + side * BLUSH.spread - BLUSH.w / 2)}" y="${fmt(
+              relY + EYE.lift + BLUSH.drop,
+            )}" width="${fmt(BLUSH.w)}" height="${fmt(BLUSH.h)}" rx="${fmt(BLUSH.rx)}" fill="${
+              DUSK.warm
+            }" opacity="0.45"/>`,
+        )
+        .join('');
       const eyes = [-1, 1]
         .map((side) => {
-          const ex = HEAD_CENTER.x - (SLOT_SPECS.crown.x + SLOT_SPECS.crown.w / 2);
-          const eyeCx = ex + side * EYE.spread + mood.eyes.gazeX;
-          const eyeCy =
-            HEAD_CENTER.y -
-            (SLOT_SPECS.crown.y + SLOT_SPECS.crown.h / 2) +
-            EYE.lift +
-            mood.eyes.gazeY;
+          const eyeCx = relX + side * EYE.spread + mood.eyes.gazeX;
+          const eyeCy = relY + EYE.lift + mood.eyes.gazeY;
           return `<g transform="translate(${fmt(eyeCx)} ${fmt(eyeCy)}) scale(1 ${fmt(
             mood.eyes.openness,
           )})"><rect x="${fmt(-EYE.w / 2)}" y="${fmt(-EYE.h / 2)}" width="${fmt(
@@ -79,7 +151,7 @@ function renderFigure(mood: MoodDefinition, ox: number, oy: number): string {
           )}" height="${fmt(EYE.h)}" rx="${fmt(EYE.rx)}" fill="${DUSK.ink}"/></g>`;
         })
         .join('');
-      parts.push(`<g transform="${group}">${tile}${eyes}</g>`);
+      parts.push(`<g transform="${group}">${tile}${blush}${eyes}</g>`);
     } else {
       parts.push(`<g transform="${group}">${tile}</g>`);
     }
@@ -99,7 +171,7 @@ export function renderMascotMasterSvg(): string {
 `;
 }
 
-/** The mood sheet: every predefined mood, labeled, on the dusk ground. */
+/** The mood sheet: every predefined mood with its prop, labeled, on the dusk ground. */
 export function renderMoodSheetSvg(): string {
   const names = [...CORE_MOODS, ...SURFACE_MOODS];
   const cols = 5;

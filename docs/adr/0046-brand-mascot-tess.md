@@ -1,6 +1,6 @@
 # ADR-0046: Brand mascot "Tess" — shared tessera-built character with data-driven moods
 
-- **Status:** Accepted **v2** (v1 2026-07-11; v2 same day — stakeholder review round, §Amendment)
+- **Status:** Accepted **v3** (v1/v2/v3 2026-07-11 — two stakeholder review rounds, §Amendments)
 - **Date:** 2026-07-11
 - **Deciders:** stakeholder (name, scope, mood set — confirmed 2026-07-11) + agent (design/packaging)
 - **Tags:** brand, frontend, marketing, shared-package
@@ -147,6 +147,31 @@ Amended decisions:
 5. **Placement principle:** the mascot fills existing whitespace (overlay positioning),
    never creates it — the menu instance overlays the corner above the mosaic strip with
    zero added layout height.
+
+## Amendment v3 (2026-07-11) — moods are ACTIVITIES; hands; props (stakeholder review)
+
+v2 was reviewed as still reading idle: *"liveness is the mascot DOING something — all
+moods should be smooth infinite activity animations; pointer tracking on a static figure
+isn't liveness."* Reference studied: the Senzops sentinel bot (arms + per-mood props —
+laptop, log sheet, crate — with infinite task loops). The stakeholder also proposed the
+anatomy change (adopted) and flagged the celebrating sheen as box-revealing (removed).
+
+1. **Anatomy (stakeholder proposal, adopted):** six pieces — head, **the gilded heart AS
+   the body** (Tess is literally the arriving gilded tile), **two hands** (limbs with a
+   wider validated offset budget), two feet. The torso rows are gone; rose/clay move to
+   the props and a warm **blush**.
+2. **Every mood is an activity loop:** working = typing on a bench tile while output
+   ticks flicker; searching = a **mini knowledge graph** floats up-left and Tess sweeps
+   it node by node; curious = chin-tap thinking; alarmed = hands thrown up, trembling at
+   the shivering loose tile; celebrating = cheering under falling **confetti tesserae**;
+   greeting = a real wave; lost = head-scratching while scanning; satisfied = hands on
+   hips, chest swelling; watching = a slow lookout turn. Props are ALWAYS in the DOM
+   (SSR-identical markup); `[data-mood]` CSS shows the active one and runs its loop.
+3. **The sheen is removed** (its full-height sweep revealed the svg bounding box). The
+   celebration light is now the confetti + heart pop; the click delight bursts confetti.
+4. **Menu placement corrected again:** Tess lives in the empty right half of the menu's
+   link column, z-layered above the full-width link rows (tapping Tess never follows a
+   link) — still zero added layout height.
 
 ## References
 

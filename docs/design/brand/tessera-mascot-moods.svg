@@ -2,123 +2,103 @@
   <!-- GENERATED from @tessera/mascot mood data by scripts/render-masters.mjs (ADR-0046). Do not hand-edit: regenerate via the package script `render-masters`. -->
   <rect width="600" height="276" fill="#161013"/>
   <g>
-    <g transform="translate(60 29) rotate(1.5) scale(1)"><rect x="-13" y="-11" width="26" height="22" rx="6.5" fill="#F4EDE7" opacity="0.97"/><g transform="translate(-5.6 -0.8) scale(1 1)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g><g transform="translate(5.6 -0.8) scale(1 1)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g></g>
-    <g transform="translate(38 53) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(60 53) rotate(0) scale(1)"><rect x="-12" y="-12" width="24" height="24" rx="6" fill="#E4B65A" opacity="0.16"/><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E4B65A" opacity="1"/></g>
-    <g transform="translate(82 53) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(38 75) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E2A3A8" opacity="0.88"/></g>
-    <g transform="translate(60 75) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.92"/></g>
-    <g transform="translate(82 75) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#C8836C" opacity="0.88"/></g>
-    <g transform="translate(48 97) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
-    <g transform="translate(72 97) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    
+    <g transform="translate(60 39) rotate(1.5) scale(1)"><rect x="-18" y="-15" width="36" height="30" rx="9" fill="#F4EDE7" opacity="0.97"/><rect x="-14.25" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><rect x="8.75" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><g transform="translate(-6.5 -1.5) scale(1 1)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g><g transform="translate(6.5 -1.5) scale(1 1)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g></g>
+    <g transform="translate(60 71) rotate(0) scale(1)"><rect x="-18" y="-16" width="36" height="32" rx="8.5" fill="#E4B65A" opacity="0.16"/><rect x="-15" y="-13" width="30" height="26" rx="7" fill="#E4B65A" opacity="1"/></g>
+    <g transform="translate(34.5 68.5) rotate(0) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(85.5 68.5) rotate(0) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(52.5 93.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    <g transform="translate(71.5 93.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
     <text x="60" y="132" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" letter-spacing="0.08em" fill="#B7A8A8">idle</text>
   </g>
   <g>
-    <g transform="translate(182 28) rotate(6) scale(1)"><rect x="-13" y="-11" width="26" height="22" rx="6.5" fill="#F4EDE7" opacity="0.97"/><g transform="translate(-4 -1.6) scale(1 1.15)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g><g transform="translate(7.2 -1.6) scale(1 1.15)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g></g>
-    <g transform="translate(158 53) rotate(-2) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(180.5 52.5) rotate(0) scale(1)"><rect x="-12" y="-12" width="24" height="24" rx="6" fill="#E4B65A" opacity="0.16"/><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E4B65A" opacity="1"/></g>
-    <g transform="translate(203 52) rotate(3) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(158 75) rotate(-1) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E2A3A8" opacity="0.88"/></g>
-    <g transform="translate(180.5 75) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.92"/></g>
-    <g transform="translate(202.5 75) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#C8836C" opacity="0.88"/></g>
-    <g transform="translate(169 97) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
-    <g transform="translate(192 96.5) rotate(2) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    
+    <g transform="translate(182 38) rotate(6) scale(1)"><rect x="-18" y="-15" width="36" height="30" rx="9" fill="#F4EDE7" opacity="0.97"/><rect x="-14.25" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><rect x="8.75" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><g transform="translate(-4.9 -2.3) scale(1 1.15)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g><g transform="translate(8.1 -2.3) scale(1 1.15)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g></g>
+    <g transform="translate(180.5 71) rotate(0) scale(1)"><rect x="-18" y="-16" width="36" height="32" rx="8.5" fill="#E4B65A" opacity="0.16"/><rect x="-15" y="-13" width="30" height="26" rx="7" fill="#E4B65A" opacity="1"/></g>
+    <g transform="translate(153.5 69.5) rotate(0) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(202 56) rotate(-10) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(173.5 93.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    <g transform="translate(191.5 93.5) rotate(2) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
     <text x="180" y="132" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" letter-spacing="0.08em" fill="#B7A8A8">curious</text>
   </g>
   <g>
-    <g transform="translate(300 30.5) rotate(-1) scale(1)"><rect x="-13" y="-11" width="26" height="22" rx="6.5" fill="#F4EDE7" opacity="0.97"/><g transform="translate(-5.1 0.3) scale(1 0.8)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g><g transform="translate(6.1 0.3) scale(1 0.8)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g></g>
-    <g transform="translate(279.5 53.5) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(300 53) rotate(0) scale(0.96)"><rect x="-12" y="-12" width="24" height="24" rx="6" fill="#E4B65A" opacity="0.16"/><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E4B65A" opacity="1"/></g>
-    <g transform="translate(320.5 53.5) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(280 75) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E2A3A8" opacity="0.88"/></g>
-    <g transform="translate(300 75.5) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.92"/></g>
-    <g transform="translate(320 75) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#C8836C" opacity="0.88"/></g>
-    <g transform="translate(290 97) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
-    <g transform="translate(310 97) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    <rect x="294" y="90" width="12" height="10" rx="3" fill="#C8836C"/><line x1="262" y1="68" x2="278" y2="68" stroke="#F4EDE7" stroke-width="1.4" stroke-linecap="round" opacity="0.85"/><line x1="262" y1="74" x2="274" y2="74" stroke="#F4EDE7" stroke-width="1.4" stroke-linecap="round" opacity="0.25"/><line x1="262" y1="80" x2="276" y2="80" stroke="#F4EDE7" stroke-width="1.4" stroke-linecap="round" opacity="0.25"/>
+    <g transform="translate(300 40.5) rotate(-1) scale(1)"><rect x="-18" y="-15" width="36" height="30" rx="9" fill="#F4EDE7" opacity="0.97"/><rect x="-14.25" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><rect x="8.75" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><g transform="translate(-6.2 -0.3) scale(1 0.8)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g><g transform="translate(6.8 -0.3) scale(1 0.8)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g></g>
+    <g transform="translate(300 71.5) rotate(0) scale(1)"><rect x="-18" y="-16" width="36" height="32" rx="8.5" fill="#E4B65A" opacity="0.16"/><rect x="-15" y="-13" width="30" height="26" rx="7" fill="#E4B65A" opacity="1"/></g>
+    <g transform="translate(292 82) rotate(8) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(308 82) rotate(-8) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(294.5 93.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    <g transform="translate(309.5 93.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
     <text x="300" y="132" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" letter-spacing="0.08em" fill="#B7A8A8">working</text>
   </g>
   <g>
-    <g transform="translate(420 29) rotate(0) scale(1)"><rect x="-13" y="-11" width="26" height="22" rx="6.5" fill="#F4EDE7" opacity="0.99"/><g transform="translate(-5.6 -0.5) scale(1 0.55)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g><g transform="translate(5.6 -0.5) scale(1 0.55)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g></g>
-    <g transform="translate(398 53) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.95"/></g>
-    <g transform="translate(420 53) rotate(0) scale(1)"><rect x="-12" y="-12" width="24" height="24" rx="6" fill="#E4B65A" opacity="0.16"/><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E4B65A" opacity="1"/></g>
-    <g transform="translate(442 53) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.95"/></g>
-    <g transform="translate(398 75) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E2A3A8" opacity="0.94"/></g>
-    <g transform="translate(420 75) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.97"/></g>
-    <g transform="translate(442 75) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#C8836C" opacity="0.94"/></g>
-    <g transform="translate(409 97) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.92"/></g>
-    <g transform="translate(431 97) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.92"/></g>
+    
+    <g transform="translate(420 39) rotate(0) scale(1)"><rect x="-18" y="-15" width="36" height="30" rx="9" fill="#F4EDE7" opacity="0.97"/><rect x="-14.25" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><rect x="8.75" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><g transform="translate(-6.5 -1.2) scale(1 0.55)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g><g transform="translate(6.5 -1.2) scale(1 0.55)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g></g>
+    <g transform="translate(420 71) rotate(0) scale(1)"><rect x="-18" y="-16" width="36" height="32" rx="8.5" fill="#E4B65A" opacity="0.16"/><rect x="-15" y="-13" width="30" height="26" rx="7" fill="#E4B65A" opacity="1"/></g>
+    <g transform="translate(401 72) rotate(-18) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(439 72) rotate(18) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(413.5 93.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    <g transform="translate(430.5 93.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
     <text x="420" y="132" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" letter-spacing="0.08em" fill="#B7A8A8">satisfied</text>
   </g>
   <g>
-    <g transform="translate(539 29) rotate(-6) scale(1)"><rect x="-13" y="-11" width="26" height="22" rx="6.5" fill="#F4EDE7" opacity="0.97"/><g transform="translate(-3.8 -0.4) scale(1 1.35)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g><g transform="translate(7.4 -0.4) scale(1 1.35)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g></g>
-    <g transform="translate(516 53) rotate(-2) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(540 53) rotate(0) scale(1.04)"><rect x="-12" y="-12" width="24" height="24" rx="6" fill="#E4B65A" opacity="0.16"/><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E4B65A" opacity="1"/></g>
-    <g transform="translate(560.5 53) rotate(-3) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(515.5 75) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E2A3A8" opacity="0.88"/></g>
-    <g transform="translate(539 75) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.92"/></g>
-    <g transform="translate(569 70) rotate(16) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#C8836C" opacity="0.95"/></g>
-    <g transform="translate(526 97) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
-    <g transform="translate(554 97) rotate(-2) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    <rect x="570" y="54" width="11" height="11" rx="4" fill="#C8836C" transform="rotate(14 575.5 59.5)"/>
+    <g transform="translate(539 39) rotate(-6) scale(1)"><rect x="-18" y="-15" width="36" height="30" rx="9" fill="#F4EDE7" opacity="0.97"/><rect x="-14.25" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><rect x="8.75" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><g transform="translate(-4.7 -1.1) scale(1 1.35)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g><g transform="translate(8.3 -1.1) scale(1 1.35)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g></g>
+    <g transform="translate(539 71) rotate(0) scale(1.03)"><rect x="-18" y="-16" width="36" height="32" rx="8.5" fill="#E4B65A" opacity="0.16"/><rect x="-15" y="-13" width="30" height="26" rx="7" fill="#E4B65A" opacity="1"/></g>
+    <g transform="translate(512 46) rotate(-14) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(568 46) rotate(14) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(530.5 93.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    <g transform="translate(553.5 93.5) rotate(-2) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
     <text x="540" y="132" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" letter-spacing="0.08em" fill="#B7A8A8">alarmed</text>
   </g>
   <g>
-    <g transform="translate(60 166) rotate(3) scale(1)"><rect x="-13" y="-11" width="26" height="22" rx="6.5" fill="#F4EDE7" opacity="0.97"/><g transform="translate(-5.6 0.4) scale(1 0.6)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g><g transform="translate(5.6 0.4) scale(1 0.6)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g></g>
-    <g transform="translate(35 190) rotate(-6) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E2A3A8" opacity="0.9"/></g>
-    <g transform="translate(60 188) rotate(0) scale(1.1)"><rect x="-12" y="-12" width="24" height="24" rx="6" fill="#E4B65A" opacity="0.16"/><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E4B65A" opacity="1"/></g>
-    <g transform="translate(85 190) rotate(6) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E2A3A8" opacity="0.9"/></g>
-    <g transform="translate(36.5 213) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E2A3A8" opacity="0.88"/></g>
-    <g transform="translate(60 213.5) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.92"/></g>
-    <g transform="translate(83.5 213) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#C8836C" opacity="0.88"/></g>
-    <g transform="translate(50 235) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
-    <g transform="translate(70 235) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    <rect x="30" y="164" width="4" height="4" rx="1.2" fill="#E2A3A8" opacity="0.85"/><rect x="46.3" y="156.3" width="3.4" height="3.4" rx="1.02" fill="#C8836C" opacity="0.85"/><rect x="66" y="155" width="4" height="4" rx="1.2" fill="#F4EDE7" opacity="0.85"/><rect x="82.3" y="162.3" width="3.4" height="3.4" rx="1.02" fill="#E2A3A8" opacity="0.85"/><rect x="94.5" y="176.5" width="3" height="3" rx="0.9" fill="#C8836C" opacity="0.85"/>
+    <g transform="translate(60 176) rotate(3) scale(1)"><rect x="-18" y="-15" width="36" height="30" rx="9" fill="#F4EDE7" opacity="0.97"/><rect x="-14.25" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><rect x="8.75" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><g transform="translate(-6.5 -2.5) scale(1 0.6)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g><g transform="translate(6.5 -2.5) scale(1 0.6)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g></g>
+    <g transform="translate(60 208) rotate(0) scale(1.06)"><rect x="-18" y="-16" width="36" height="32" rx="8.5" fill="#E4B65A" opacity="0.16"/><rect x="-15" y="-13" width="30" height="26" rx="7" fill="#E4B65A" opacity="1"/></g>
+    <g transform="translate(36 182) rotate(-12) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(84 182) rotate(12) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(54.5 231.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    <g transform="translate(69.5 231.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
     <text x="60" y="270" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" letter-spacing="0.08em" fill="#B7A8A8">celebrating</text>
   </g>
   <g>
-    <g transform="translate(180 168) rotate(8) scale(1)"><rect x="-13" y="-11" width="26" height="22" rx="6.5" fill="#F4EDE7" opacity="0.97"/><g transform="translate(-5.6 -0.8) scale(1 1.1)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g><g transform="translate(5.6 -0.8) scale(1 1.1)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g></g>
-    <g transform="translate(158 191.5) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(180 191.5) rotate(0) scale(1)"><rect x="-12" y="-12" width="24" height="24" rx="6" fill="#E4B65A" opacity="0.16"/><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E4B65A" opacity="1"/></g>
-    <g transform="translate(202 187.5) rotate(8) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(158 213) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E2A3A8" opacity="0.88"/></g>
-    <g transform="translate(180 213) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.92"/></g>
-    <g transform="translate(202 213) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#C8836C" opacity="0.88"/></g>
-    <g transform="translate(168.5 235) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
-    <g transform="translate(191.5 235) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    
+    <g transform="translate(180 177.5) rotate(8) scale(1)"><rect x="-18" y="-15" width="36" height="30" rx="9" fill="#F4EDE7" opacity="0.97"/><rect x="-14.25" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><rect x="8.75" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><g transform="translate(-6.5 -1.5) scale(1 1.1)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g><g transform="translate(6.5 -1.5) scale(1 1.1)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g></g>
+    <g transform="translate(180 209.5) rotate(0) scale(1)"><rect x="-18" y="-16" width="36" height="32" rx="8.5" fill="#E4B65A" opacity="0.16"/><rect x="-15" y="-13" width="30" height="26" rx="7" fill="#E4B65A" opacity="1"/></g>
+    <g transform="translate(154.5 206.5) rotate(0) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(206 184) rotate(14) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(173 231.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    <g transform="translate(191 231.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
     <text x="180" y="270" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" letter-spacing="0.08em" fill="#B7A8A8">greeting</text>
   </g>
   <g>
-    <g transform="translate(298 167) rotate(-9) scale(1)"><rect x="-13" y="-11" width="26" height="22" rx="6.5" fill="#F4EDE7" opacity="0.97"/><g transform="translate(-7.4 -0.2) scale(1 1.1)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g><g transform="translate(3.8 -0.2) scale(1 1.1)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g></g>
-    <g transform="translate(277 191) rotate(-3) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(299.5 191) rotate(0) scale(1.02)"><rect x="-12" y="-12" width="24" height="24" rx="6" fill="#E4B65A" opacity="0.16"/><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E4B65A" opacity="1"/></g>
-    <g transform="translate(321.5 191) rotate(-2) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(276.5 213) rotate(-2) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E2A3A8" opacity="0.88"/></g>
-    <g transform="translate(299 213) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.92"/></g>
-    <g transform="translate(321 213) rotate(2) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#C8836C" opacity="0.88"/></g>
-    <g transform="translate(287 235) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
-    <g transform="translate(311 236) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.15"/></g>
+    
+    <g transform="translate(298 177) rotate(-9) scale(1)"><rect x="-18" y="-15" width="36" height="30" rx="9" fill="#F4EDE7" opacity="0.97"/><rect x="-14.25" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><rect x="8.75" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><g transform="translate(-8.3 -0.9) scale(1 1.1)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g><g transform="translate(4.7 -0.9) scale(1 1.1)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g></g>
+    <g transform="translate(299 209) rotate(0) scale(1)"><rect x="-18" y="-16" width="36" height="32" rx="8.5" fill="#E4B65A" opacity="0.16"/><rect x="-15" y="-13" width="30" height="26" rx="7" fill="#E4B65A" opacity="1"/></g>
+    <g transform="translate(273.5 207.5) rotate(0) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(321 176) rotate(-12) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(291.5 231.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    <g transform="translate(310.5 232.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.15"/></g>
     <text x="300" y="270" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" letter-spacing="0.08em" fill="#B7A8A8">lost</text>
   </g>
   <g>
-    <g transform="translate(418 166.5) rotate(-8) scale(1)"><rect x="-13" y="-11" width="26" height="22" rx="6.5" fill="#F4EDE7" opacity="0.97"/><g transform="translate(-7.2 -2) scale(1 1.15)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g><g transform="translate(4 -2) scale(1 1.15)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g></g>
-    <g transform="translate(396.5 190.5) rotate(-4) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(419.5 191) rotate(0) scale(1)"><rect x="-12" y="-12" width="24" height="24" rx="6" fill="#E4B65A" opacity="0.16"/><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E4B65A" opacity="1"/></g>
-    <g transform="translate(441 191) rotate(-3) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(397 213) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E2A3A8" opacity="0.88"/></g>
-    <g transform="translate(420 213) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.92"/></g>
-    <g transform="translate(441.5 213) rotate(-1) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#C8836C" opacity="0.88"/></g>
-    <g transform="translate(409 235) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
-    <g transform="translate(431.5 235) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    <line x1="376" y1="174" x2="388" y2="162" stroke="#F4EDE7" stroke-width="1" opacity="0.3"/><line x1="388" y1="162" x2="401" y2="168" stroke="#F4EDE7" stroke-width="1" opacity="0.3"/><line x1="376" y1="174" x2="392" y2="180" stroke="#F4EDE7" stroke-width="1" opacity="0.3"/><line x1="392" y1="180" x2="401" y2="168" stroke="#F4EDE7" stroke-width="1" opacity="0.3"/><rect x="372.4" y="170.4" width="7.2" height="7.2" rx="1.98" fill="#E2A3A8" opacity="1"/><rect x="385" y="159" width="6" height="6" rx="1.65" fill="#F4EDE7" opacity="0.4"/><rect x="388.8" y="176.8" width="6.4" height="6.4" rx="1.76" fill="#C8836C" opacity="0.4"/><rect x="398.4" y="165.4" width="5.2" height="5.2" rx="1.43" fill="#F4EDE7" opacity="0.4"/>
+    <g transform="translate(418 176.5) rotate(-8) scale(1)"><rect x="-18" y="-15" width="36" height="30" rx="9" fill="#F4EDE7" opacity="0.97"/><rect x="-14.25" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><rect x="8.75" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><g transform="translate(-8.1 -2.7) scale(1 1.15)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g><g transform="translate(4.9 -2.7) scale(1 1.15)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g></g>
+    <g transform="translate(419.5 209) rotate(0) scale(1)"><rect x="-18" y="-16" width="36" height="32" rx="8.5" fill="#E4B65A" opacity="0.16"/><rect x="-15" y="-13" width="30" height="26" rx="7" fill="#E4B65A" opacity="1"/></g>
+    <g transform="translate(404 184) rotate(-8) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(444.5 207.5) rotate(0) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(413.5 231.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    <g transform="translate(431 231.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
     <text x="420" y="270" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" letter-spacing="0.08em" fill="#B7A8A8">searching</text>
   </g>
   <g>
-    <g transform="translate(540 169) rotate(-2) scale(1)"><rect x="-13" y="-11" width="26" height="22" rx="6.5" fill="#F4EDE7" opacity="0.97"/><g transform="translate(-4.4 -0.6) scale(1 0.9)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g><g transform="translate(6.8 -0.6) scale(1 0.9)"><rect x="-2" y="-3.5" width="4" height="7" rx="2" fill="#161013"/></g></g>
-    <g transform="translate(519 192.5) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(540 192) rotate(0) scale(0.97)"><rect x="-12" y="-12" width="24" height="24" rx="6" fill="#E4B65A" opacity="0.16"/><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E4B65A" opacity="1"/></g>
-    <g transform="translate(561 192.5) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.9"/></g>
-    <g transform="translate(520 214) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#E2A3A8" opacity="0.88"/></g>
-    <g transform="translate(540 214) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.92"/></g>
-    <g transform="translate(560 214) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#C8836C" opacity="0.88"/></g>
-    <g transform="translate(530.5 234) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
-    <g transform="translate(549.5 234) rotate(0) scale(1)"><rect x="-9" y="-9" width="18" height="18" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    
+    <g transform="translate(540 179) rotate(-2) scale(1)"><rect x="-18" y="-15" width="36" height="30" rx="9" fill="#F4EDE7" opacity="0.97"/><rect x="-14.25" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><rect x="8.75" y="3.5" width="5.5" height="3" rx="1.5" fill="#E2A3A8" opacity="0.45"/><g transform="translate(-5.3 -1.3) scale(1 0.9)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g><g transform="translate(7.7 -1.3) scale(1 0.9)"><rect x="-2.25" y="-4" width="4.5" height="8" rx="2.2" fill="#161013"/></g></g>
+    <g transform="translate(540 210) rotate(0) scale(0.98)"><rect x="-18" y="-16" width="36" height="32" rx="8.5" fill="#E4B65A" opacity="0.16"/><rect x="-15" y="-13" width="30" height="26" rx="7" fill="#E4B65A" opacity="1"/></g>
+    <g transform="translate(518.5 208.5) rotate(0) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(561.5 208.5) rotate(0) scale(1)"><rect x="-6.5" y="-6.5" width="13" height="13" rx="5" fill="#F4EDE7" opacity="0.92"/></g>
+    <g transform="translate(535 230.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
+    <g transform="translate(549 230.5) rotate(0) scale(1)"><rect x="-6.5" y="-5.5" width="13" height="11" rx="4.5" fill="#F4EDE7" opacity="0.85"/></g>
     <text x="540" y="270" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" letter-spacing="0.08em" fill="#B7A8A8">watching</text>
   </g>
 </svg>

@@ -1,7 +1,7 @@
 {
   "$comment": "Machine-readable projection of docs/design/MARKETING-DESIGN.md v4 (Terra Mosaic — ADR-0043/0044/0045; BRAND.md carries the brand). The design-lint gate in apps/marketing COMPILES enforcement.bannedPatterns/requiredPatterns from this file — editing a pattern changes what the gate fails. Keep doc and manifest in lockstep.",
   "name": "tessera-marketing-design",
-  "version": "4.7.0",
+  "version": "4.8.0",
   "status": "accepted",
   "source": "docs/design/MARKETING-DESIGN.md",
   "authority": [
@@ -135,7 +135,8 @@
   "mascot": {
     "$comment": "ADR-0046 v2 + BRAND.md §5 + MARKETING-DESIGN.md §4.1 — the machine-readable summary of Tess on this surface.",
     "package": "@tessera/mascot (packages/mascot — shared workspace package, zero runtime deps, React peer)",
-    "character": "cute big-headed tessera creature: head tile with two ink EYES (blink, glance, pointer-following gaze), gilded heart chest, mosaic body — no gloves/limbs/mouth (ADR-0046 v2)",
+    "character": "cute big-headed six-piece tessera creature (ADR-0046 v3): head with two ink EYES (blink, glance, pointer-following gaze) + warm blush, the GILDED HEART AS THE BODY, two floating hands (the acting limbs), two feet — no mouth, no glove cartoon",
+    "activities": "every mood is an infinite eased task loop with an always-rendered prop: working = typing on a bench tile + flickering output ticks; searching = sweeping a mini knowledge graph node by node; alarmed = hands up at the shivering loose tile; celebrating = cheering under falling confetti tesserae (the sheen is REMOVED — it revealed the bounding box); greeting = a real wave; lost = head-scratch + scan; curious = chin-tap; satisfied = hands on hips; watching = slow lookout",
     "moods": { "core": ["idle", "curious", "working", "satisfied", "alarmed", "celebrating"], "surface": ["greeting (mobile menu)", "lost (404)", "searching (empty states)", "watching (constellation supervisor)"], "custom": "defineMood() — validated data (all slots + eyes {openness, gazeX, gazeY} + reduced-motion still pose + thermal budgets)" },
     "usageBudget": ["components/site-nav.tsx (mobile-menu ground, greeting)", "app/not-found.tsx (lost)", "components/home/constellation-band.tsx (watching supervisor)", "app/dev/mascot/* (DEV LAB exception: every mood x sizes for debugging; robots noindex, absent from sitemap/nav/llms.txt)"],
     "never": ["hero", "pricing", "content bands as decoration", "sole carrier of information", "inside pointer-events-none (kills the reactions — the v1 bug)", "stacked placements that add layout height (overlay existing whitespace instead)"],
@@ -157,7 +158,7 @@
     "mosaicWave": "tile-wave — a crest of lift+light sweeping MosaicField diagonally forever (per-tile negative delays); replaces drift as that band's ambient system; pairs with tile-hover (CTA band, mobile menu — v4.2)",
     "liveLedger": "GovernanceGate's caption tallies the cycle as it happens (rAF phase on the shared clock); CompilerAssembly's token meter breathes with the tiles (fill-hold-drain on the same period)",
     "themePropagation": "theme switch = radial view transition from the toggle (clip-path circle, 550ms house ease); skipped without the API or under reduced motion",
-    "mascot": "Tess animates via package-internal CSS + a rAF gaze spring (transform/opacity, house ease): breath/bob 3-6s creature rate, blinks, per-mood gestures, pointer-following eyes, mood morphs <=700ms, hover perk 150-250ms, click delight once <=1.2s (counts as the viewport's ambient system where present); reduced motion = still pose, gaze/reactions off",
+    "mascot": "Tess animates via package-internal CSS + a rAF gaze spring (transform/opacity, house ease): every mood is an infinite ACTIVITY loop with hands + props (v3), breath/bob 3-6s creature rate, blinks, pointer-following eyes, mood morphs <=700ms, hover perk 150-250ms, click delight (hop + confetti burst) once <=1.2s; reduced motion = the still scene (pose + static prop), gaze/reactions off",
     "banned": ["animating h1/LCP from invisible", "scroll-jacking/parallax", "transition-all", "layout-property animation", "bounce/spin/flash", "typing effects"],
     "reducedMotion": "complete, still, final layout — global CSS kill-switch + MotionConfig"
   },

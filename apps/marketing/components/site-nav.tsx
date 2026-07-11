@@ -160,6 +160,12 @@ export function SiteNav() {
                 {link.label}
               </Link>
             ))}
+            {/* Tess greets from the empty right half of the link column (ADR-0046 v2/v3:
+                fill existing whitespace, add none) — layered ABOVE the full-width link
+                rows so tapping the mascot never follows a link. */}
+            <div className="rise-in absolute top-1/4 right-8 z-10">
+              <Mascot mood="greeting" size={100} />
+            </div>
           </nav>
           <Container className="relative shrink-0 pb-8">
             <ButtonLink
@@ -171,30 +177,20 @@ export function SiteNav() {
               Start free
             </ButtonLink>
           </Container>
-          {/*
-           * The menu's quiet ground (ADR-0045 v4.1) — with Tess greeting from it
-           * (ADR-0046 v2). Tess OVERLAYS the field's built-in headroom (the mosaic svg
-           * reserves 40 units above its tiles), so it fills existing whitespace and adds
-           * zero layout height. Its heart is this surface's one gold moment, so the
-           * field's own ember stays unrendered (§4.1); reactions stay live — never
-           * pointer-events-none.
-           */}
-          <div className="rise-in relative shrink-0">
-            <div className="absolute -top-3 right-12 z-10">
-              <Mascot mood="greeting" size={60} />
-            </div>
-            <MosaicField
-              emberId="ember-menu-field"
-              cols={12}
-              rows={2}
-              seed={41522}
-              seamAt={0.62}
-              wave
-              ember={false}
-              className="fade-x tile-hover relative px-4 pb-6"
-              label="A strip of mosaic tiles beneath the menu with a crest of light sweeping across it; Tess, the small tile-creature mascot, greets from its edge"
-            />
-          </div>
+          {/* The menu's quiet ground (ADR-0045 v4.1). Tess owns this surface's gold
+              moment (its gilded body), so the field's own ember stays unrendered
+              (§4.1 accent interaction). */}
+          <MosaicField
+            emberId="ember-menu-field"
+            cols={12}
+            rows={2}
+            seed={41522}
+            seamAt={0.62}
+            wave
+            ember={false}
+            className="fade-x tile-hover rise-in relative shrink-0 px-4 pb-6"
+            label="A strip of mosaic tiles beneath the menu with a crest of light sweeping across it"
+          />
         </div>
       ) : null}
     </>

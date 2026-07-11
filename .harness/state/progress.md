@@ -3,6 +3,38 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-11 (v3) — F-066 DONE — Tess ACTS: six-piece anatomy, activity moods with props, sheen removed (ADR-0046 v3)
+
+**Second stakeholder review: "liveness is the mascot DOING something — all moods should
+be smooth infinite activity animations; pointer tracking on a static figure isn't
+liveness; the sheen reveals a box; add hands (six-piece proposal); menu Tess belongs in
+the link column's empty right side."** Reference studied: the Senzops sentinel bot
+(arms + per-mood props — laptop/log-sheet/crate — as infinite task loops).
+
+- **Anatomy (stakeholder proposal adopted):** head + **the gilded heart AS the body** +
+  two hands (limbs, validated ±32 offset budget) + two feet; warm blush on the face;
+  rose/clay move into the props. Tess is literally the arriving gilded tile now.
+- **Every mood is an activity loop:** working types on a bench tile while output ticks
+  flicker; searching sweeps a floating **mini knowledge graph** node by node (the
+  stakeholder's exact ask); curious chin-taps; alarmed throws trembling hands up at the
+  shivering loose tile; celebrating cheers under falling confetti tesserae; greeting
+  waves; lost head-scratches while scanning (missing-foot socket stays); satisfied
+  stands hands-on-hips, chest swelling; watching turns a slow lookout. Props are ALWAYS
+  in the DOM (SSR-identical markup); `[data-mood]` CSS shows + choreographs.
+- **Sheen removed** (bounding-box tell); celebration light = confetti + heart pop; the
+  click delight now bursts confetti.
+- **Menu corrected:** Tess overlays the nav link column's empty right half, z-above the
+  full-width link rows (tapping her never follows a link); zero added layout height.
+- Masters regenerated: the mood sheet now shows each activity's still scene.
+
+**Evidence** — package 39/39 (limb budgets, prop bounds incl. animation amplitudes,
+prop-DOM invariance, activity poses); marketing 45/45; e2e **27/27** (activity loops
+proven by computed animation-name — `tess-scan`+`tess-scratch` running on the 404's
+lost Tess; lab: alarmed shows the loose tile, searching shows the graph; stillness = 5
+layers `none`); motion proof frames differ live / identical reduced; first-load
+**215.6KB gz home / 191.3KB gz 404** (budget 240); screenshots reviewed (menu, 404,
+lab searching/working mid-activity); workspace turbo gates green.
+
 ## 2026-07-11 (v2) — F-066 DONE — Tess alive: face, creature-rate motion, reactions, dev lab (ADR-0046 v2)
 
 **Stakeholder review of v1: "lifeless, unprofessional, non-interactive — blocks are not a

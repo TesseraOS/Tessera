@@ -7,14 +7,14 @@
  */
 
 export {
+  BLUSH,
   EYE,
   GAZE_MAX,
   HEAD,
   HEAD_CENTER,
+  PROPS,
   SLOTS,
   SLOT_SPECS,
-  TILE,
-  TILE_RADIUS,
   VIEWBOX,
 } from './geometry.js';
 export type { SlotName, SlotSpec, TileRole } from './geometry.js';

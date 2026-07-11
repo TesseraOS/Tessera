@@ -1,16 +1,18 @@
 'use client';
 
 /**
- * The Mascot rig (ADR-0046 v2) — renders Tess as inline SVG.
+ * The Mascot rig (ADR-0046 v3) — renders Tess as inline SVG.
  *
  * Structural invariants (tested):
- * - The DOM shape is IDENTICAL for every mood and every client state; only attribute
- *   values (inline custom properties, data-*) vary. Server markup therefore never
- *   depends on client conditions — the hydration-mismatch class is impossible here.
- * - Ambient motion (breath/bob, blink, per-mood gestures) lives in styles.css; the only
- *   JS-driven motion is the pointer-following gaze (a rAF spring writing `--tess-look-*`
- *   onto the gaze group — an element React renders WITHOUT a style prop, so re-renders
- *   never wipe the JS-set vars) and the one-shot delight reaction (`data-react`).
+ * - The DOM shape is IDENTICAL for every mood and every client state: all pieces AND all
+ *   mood props (mini knowledge graph, work bench, confetti, the loose tile) are always
+ *   rendered; `[data-mood]` CSS shows the relevant prop and drives its activity loop.
+ *   Server markup therefore never depends on client conditions.
+ * - Activities (typing, scanning, waving, cheering), breath/bob, blink and gestures live
+ *   in styles.css; the only JS-driven motion is the pointer-following gaze (a rAF spring
+ *   writing `--tess-look-*` onto the gaze group — an element React renders WITHOUT a
+ *   style prop, so re-renders never wipe the JS-set vars) and the one-shot delight
+ *   reaction (`data-react`).
  * - Reduced motion disables gaze, wander, and reactions entirely (CSS freezes the rest);
  *   the mood's pose is the designed still frame.
  * - Colors resolve through the closed `--mascot-*` contract; unbound consumers get a
@@ -19,7 +21,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
-import { EYE, GAZE_MAX, HEAD_CENTER, SLOTS, SLOT_SPECS, VIEWBOX } from './geometry.js';
+import { BLUSH, EYE, GAZE_MAX, HEAD_CENTER, PROPS, SLOTS, SLOT_SPECS } from './geometry.js';
+import { VIEWBOX } from './geometry.js';
 import { MOODS, THERMAL, isMoodName } from './moods.js';
 import type { MoodDefinition, MoodName } from './moods.js';
 
@@ -261,6 +264,22 @@ export function Mascot({
                   />
                   {slot === 'crown' ? (
                     <g className="tess-face" style={faceVars}>
+                      <rect
+                        className="tess-blush"
+                        x={HEAD_CENTER.x - BLUSH.spread - BLUSH.w / 2}
+                        y={HEAD_CENTER.y + EYE.lift + BLUSH.drop}
+                        width={BLUSH.w}
+                        height={BLUSH.h}
+                        rx={BLUSH.rx}
+                      />
+                      <rect
+                        className="tess-blush"
+                        x={HEAD_CENTER.x + BLUSH.spread - BLUSH.w / 2}
+                        y={HEAD_CENTER.y + EYE.lift + BLUSH.drop}
+                        width={BLUSH.w}
+                        height={BLUSH.h}
+                        rx={BLUSH.rx}
+                      />
                       <g ref={gazeRef} className="tess-gaze">
                         <rect
                           className="tess-eye"
@@ -285,14 +304,86 @@ export function Mascot({
               </g>
             );
           })}
-          <rect
-            className="tess-sheen"
-            x={(VIEWBOX - 18) / 2}
-            y={-20}
-            width={18}
-            height={VIEWBOX + 40}
-            rx={4}
-          />
+        </g>
+
+        {/* Mood props — ALWAYS rendered (SSR-identical DOM); CSS shows the active one
+            per data-mood and choreographs its activity loop. Semantics live on the svg
+            root (decorative aria-hidden / role=img), so the group needs no ARIA. */}
+        <g className="tess-props">
+          <g className="tess-prop tess-prop-kg">
+            {PROPS.kg.edges.map(([a, b], i) => (
+              <line
+                key={`e${i}`}
+                className="tess-kg-edge"
+                x1={PROPS.kg.nodes[a]!.x}
+                y1={PROPS.kg.nodes[a]!.y}
+                x2={PROPS.kg.nodes[b]!.x}
+                y2={PROPS.kg.nodes[b]!.y}
+              />
+            ))}
+            {PROPS.kg.nodes.map((node, i) => (
+              <rect
+                key={`n${i}`}
+                className="tess-kg-node"
+                data-role={node.role}
+                data-n={i}
+                x={node.x - node.r}
+                y={node.y - node.r}
+                width={node.r * 2}
+                height={node.r * 2}
+                rx={node.r * 0.55}
+              />
+            ))}
+          </g>
+          <g className="tess-prop tess-prop-work">
+            <rect
+              className="tess-work-tile"
+              x={PROPS.work.tile.x}
+              y={PROPS.work.tile.y}
+              width={PROPS.work.tile.w}
+              height={PROPS.work.tile.h}
+              rx={PROPS.work.tile.rx}
+            />
+            {PROPS.work.ticks.map((tick, i) => (
+              <line
+                key={`t${i}`}
+                className="tess-work-tick"
+                data-n={i}
+                x1={tick.x1}
+                y1={tick.y1}
+                x2={tick.x2}
+                y2={tick.y2}
+              />
+            ))}
+          </g>
+          <g className="tess-prop tess-prop-confetti">
+            {PROPS.confetti.map((bit, i) => (
+              <rect
+                key={`c${i}`}
+                className="tess-confetti"
+                data-role={bit.role}
+                data-n={i}
+                x={bit.x - bit.s / 2}
+                y={bit.y - bit.s / 2}
+                width={bit.s}
+                height={bit.s}
+                rx={bit.s * 0.3}
+              />
+            ))}
+          </g>
+          <g className="tess-prop tess-prop-loose">
+            <rect
+              className="tess-loose-tile"
+              x={PROPS.loose.x}
+              y={PROPS.loose.y}
+              width={PROPS.loose.w}
+              height={PROPS.loose.h}
+              rx={PROPS.loose.rx}
+              transform={`rotate(${PROPS.loose.rotate} ${PROPS.loose.x + PROPS.loose.w / 2} ${
+                PROPS.loose.y + PROPS.loose.h / 2
+              })`}
+            />
+          </g>
         </g>
       </g>
     </svg>

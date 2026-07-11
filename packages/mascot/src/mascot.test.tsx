@@ -34,7 +34,22 @@ describe('SSR determinism (the v4.5 hydration rule, held structurally)', () => {
     expect(markup).toContain('--tess-breath-period:3000ms');
     expect(markup).toContain('--tess-eye-open:1.35');
     expect((markup.match(/tess-eye"/g) ?? []).length).toBe(2);
+    expect((markup.match(/tess-blush"/g) ?? []).length).toBe(2);
     expect(markup).toContain('tess-gaze');
+  });
+
+  it('always renders every mood prop — visibility is CSS, never branched DOM', () => {
+    // The idle markup carries the searching graph, work bench, confetti, and loose tile
+    // (hidden by CSS): mood switches can never change the DOM shape.
+    const markup = renderToStaticMarkup(<Mascot mood="idle" />);
+    for (const prop of [
+      'tess-prop-kg',
+      'tess-prop-work',
+      'tess-prop-confetti',
+      'tess-prop-loose',
+    ]) {
+      expect(markup).toContain(prop);
+    }
   });
 });
 

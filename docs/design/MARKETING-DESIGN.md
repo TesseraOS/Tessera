@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | Accepted v4.7 — F-066 v2 (Tess alive: face + creature-rate motion + reactions + dev lab; v4.6 introduced the mascot) |
+| **Status** | Accepted v4.8 — F-066 v3 (Tess acts: hands + per-mood activity loops + props, sheen removed; v4.7 face/reactions, v4.6 introduced the mascot) |
 | **Last updated** | 2026-07-11 |
 | **Scope** | `apps/marketing` (apex domain). Later: the public chrome of `apps/docs`. |
 | **Brand** | [`BRAND.md`](./BRAND.md) + [Terra Mosaic philosophy](./brand/terra-mosaic-philosophy.md) — read both first |
@@ -269,7 +269,7 @@ gilded tile arrives once; reduced-motion = stillness). Additions:
 | Canvas rules | page scroll always wins (no wheel/touch capture); keyboard-inert + `aria-hidden` (decorative-interactive); telemetry ticks 1.2–2s, right-aligned |
 | Illustration loops | flowing dashes are that band's ambient system; assembly **breathes** (assemble–hold–disperse ping-pong) and the gate **cycles** on one shared clock — always eased, never jumping |
 | Theme switch | radial view transition from the toggle (clip-path circle, 550ms house ease); instant without the API or under reduced motion |
-| Mascot (Tess) | package-internal CSS + rAF gaze: breath/bob 3–6s creature rate, blinks + per-mood gestures, mood morphs ≤700ms, hover perk 150–250ms + pointer-following eyes, click delight once ≤1.2s (counts as the viewport's ambient system where present; reduced motion ⇒ still pose, gaze/reactions off) |
+| Mascot (Tess) | package-internal CSS + rAF gaze: every mood is an infinite ACTIVITY loop (typing/searching a mini graph/waving/cheering under confetti — hands + always-rendered props, v3), breath/bob 3–6s, blinks, mood morphs ≤700ms, hover perk + pointer-following eyes, click delight once ≤1.2s (counts as the viewport's ambient system; reduced motion ⇒ the still scene — pose + static prop) |
 | Reduced motion | shader frozen; constellation frozen layout, zero packets; no dash animation; theme switch instant; Tess = designed still pose per mood |
 
 ## 6. Voice & content — unchanged

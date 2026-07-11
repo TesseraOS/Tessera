@@ -1,38 +1,40 @@
 /**
- * Tess's moods — data, not code (ADR-0046 v2).
+ * Tess's moods — data, not code (ADR-0046 v3).
  *
- * A mood is a validated record: one pose per slot, a face (eye openness + gaze bias),
- * and a rhythm. The pose IS the reduced-motion still frame (breath, blink, gaze and
- * gestures are overlays that simply stop), so every mood has a designed still pose by
- * construction. New moods — including surface-specific ones in consuming apps — go
- * through {@link defineMood}, which enforces slot coverage and the motion budgets; the
- * figure is never redrawn.
+ * A mood is a validated record: one pose per slot (incl. the HANDS — the limbs that act
+ * out each mood), a face (eye openness + gaze bias), and a rhythm. The activity itself
+ * (typing on the work tile, scanning the mini knowledge graph, waving, cheering under
+ * confetti) is choreographed in styles.css per `data-mood`, driving these posed pieces
+ * and the always-rendered props. The pose IS the reduced-motion still frame, so every
+ * mood has a designed still pose by construction. New moods go through
+ * {@link defineMood}, which enforces slot coverage and the motion budgets.
  */
 
 import { GAZE_MAX, SLOTS, SLOT_SPECS } from './geometry.js';
 import type { SlotName, TileRole } from './geometry.js';
 
 /**
- * Motion budgets (ADR-0046 v2). The CHARACTER breathes at creature rate (3–6s) — the
- * brand's 9–14s ambient spec applies to field art (mosaic fields, shaders), not to a
- * pet. CSS mirrors these values.
+ * Motion budgets (ADR-0046 v2/v3). The CHARACTER breathes at creature rate (3–6s) — the
+ * brand's 9–14s ambient spec applies to field art, not to a pet. CSS mirrors these.
  */
 export const THERMAL = {
   /** Mood-to-mood morph duration (ms) — reveals budget is ≤700. */
   moodMorphMs: 600,
   /** Micro-interaction duration (ms) — hover perk sits in 150–250. */
   microMs: 200,
-  /** One-shot gestures (ms) — the delight hop / re-seat / sheen; budget ≤1200. */
+  /** One-shot gestures (ms) — the delight hop + confetti burst; budget ≤1200. */
   oneShotMs: 1150,
   /** Breath/bob period bounds (ms) — creature rate, visibly alive. */
   breathMinMs: 3000,
   breathMaxMs: 6000,
-  /** Pose limits: offsets (user units), rotation (deg), scale, ambient drift (units). */
+  /** Pose limits for body pieces: offsets (user units), rotation (deg), scale. */
   maxOffset: 12,
   maxRotate: 20,
   minScale: 0.9,
   maxScale: 1.15,
   maxDrift: 6,
+  /** Hands are limbs — they travel to chin/bench/graph/sky (ADR-0046 v3). */
+  maxLimbOffset: 32,
   /** Face limits: eye openness scale and gaze bias travel (user units). */
   minOpenness: 0.25,
   maxOpenness: 1.4,
@@ -51,11 +53,11 @@ export interface TilePose {
   /** Offset from the slot's base position, user units. */
   readonly dx: number;
   readonly dy: number;
-  /** Rotation about the tile center, degrees. */
+  /** Rotation about the piece center, degrees. */
   readonly rotate: number;
-  /** Scale about the tile center. */
+  /** Scale about the piece center. */
   readonly scale: number;
-  /** Absolute opacity (a near-zero value reads as the tile's empty socket). */
+  /** Absolute opacity (a near-zero value reads as the piece's empty socket). */
   readonly opacity: number;
   /** Color role for this mood. */
   readonly role: TileRole;
@@ -77,7 +79,7 @@ export interface MoodRhythm {
   readonly breathPeriodMs: number;
   /** Breath amplitude 0–1 (maps to the ember glow's opacity swing). */
   readonly breathIntensity: number;
-  /** Ambient per-tile drift amplitude, user units (0 = concentrated stillness). */
+  /** Ambient piece drift amplitude, user units (0 = concentrated stillness). */
   readonly driftAmp: number;
 }
 
@@ -110,8 +112,8 @@ function fail(name: string, message: string): never {
 
 /**
  * Build a validated mood. Throws with a precise message when the data would break the
- * figure (unknown slot, missing heart) or the motion budgets (offsets, rotation, scale,
- * breath period, drift, eye openness, gaze). Apps use this for custom surface moods.
+ * figure (unknown slot, missing heart) or the motion budgets (offsets — limbs get the
+ * wider budget, rotation, scale, breath period, drift, eye openness, gaze).
  */
 export function defineMood(input: MoodInput): MoodDefinition {
   const { name, description, rhythm } = input;
@@ -139,8 +141,9 @@ export function defineMood(input: MoodInput): MoodDefinition {
       opacity: p.opacity ?? spec.baseOpacity,
       role: p.role ?? spec.role,
     };
-    if (Math.abs(pose.dx) > THERMAL.maxOffset || Math.abs(pose.dy) > THERMAL.maxOffset) {
-      fail(name, `slot "${slot}" offset exceeds ±${THERMAL.maxOffset} user units`);
+    const offsetBudget = spec.limb ? THERMAL.maxLimbOffset : THERMAL.maxOffset;
+    if (Math.abs(pose.dx) > offsetBudget || Math.abs(pose.dy) > offsetBudget) {
+      fail(name, `slot "${slot}" offset exceeds ±${offsetBudget} user units`);
     }
     if (Math.abs(pose.rotate) > THERMAL.maxRotate) {
       fail(name, `slot "${slot}" rotation exceeds ±${THERMAL.maxRotate}°`);
@@ -204,36 +207,32 @@ export const SURFACE_MOODS = ['greeting', 'lost', 'searching', 'watching'] as co
 export type MoodName = (typeof CORE_MOODS)[number] | (typeof SURFACE_MOODS)[number];
 
 /**
- * The predefined registry. Expression channels (BRAND.md §5): the eyes (openness,
- * gaze), posture (arrangement), alignment (a misplaced tile is distress; a seated grid
- * is satisfaction), rhythm (breath/bob at creature rate), light (the ember; the
- * celebrating sheen plays in CSS on mood entry). Per-mood gestures live in styles.css.
+ * The predefined registry. Every mood is an ACTIVITY (ADR-0046 v3): the pose below is
+ * its still frame, and styles.css choreographs the loop — hands act, props appear, the
+ * face follows. Hand targets are computed from slot centers (handL 26.5/58.5,
+ * handR 77.5/58.5).
  */
 export const MOODS: Readonly<Record<MoodName, MoodDefinition>> = Object.freeze({
   idle: defineMood({
     name: 'idle',
-    description: 'Tess rests — breathing softly, eyes wandering now and then.',
+    description: 'Tess rests — breathing softly, blinking, glancing about.',
     poses: {
       crown: { rotate: 1.5 },
       footL: { dx: -1 },
       footR: { dx: 1 },
     },
-    eyes: { openness: 1 },
     rhythm: { breathPeriodMs: 4200, breathIntensity: 0.5, driftAmp: 1.5 },
   }),
 
   curious: defineMood({
     name: 'curious',
-    description: 'Tess leans in, head tilted, eyes wide on something interesting.',
+    description: 'Tess leans in, a hand at its chin, eyes wide on something interesting.',
     poses: {
       crown: { dx: 2, dy: -1, rotate: 6 },
-      shoulderL: { rotate: -2 },
-      shoulderR: { dx: 1, dy: -1, rotate: 3 },
-      heart: { dx: 0.5, dy: -0.5 },
-      sideL: { rotate: -1 },
-      sideR: { dx: 0.5 },
-      core: { dx: 0.5 },
-      footR: { dx: 1, dy: -0.5, rotate: 2 },
+      heart: { dx: 0.5 },
+      handL: { dx: -1, dy: 1 },
+      handR: { dx: -3.5, dy: -12.5, rotate: -10 },
+      footR: { dx: 1, rotate: 2 },
     },
     eyes: { openness: 1.15, gazeX: 1.6, gazeY: -0.8 },
     rhythm: { breathPeriodMs: 3600, breathIntensity: 0.65, driftAmp: 1.5 },
@@ -241,34 +240,25 @@ export const MOODS: Readonly<Record<MoodName, MoodDefinition>> = Object.freeze({
 
   working: defineMood({
     name: 'working',
-    description: 'Tess gathers its tiles tight, eyes down on the work, heart beating fast.',
+    description: 'Tess types away at a tile on its bench, eyes down on the work.',
     poses: {
       crown: { dy: 1.5, rotate: -1 },
-      shoulderL: { dx: 1.5, dy: 0.5 },
-      shoulderR: { dx: -1.5, dy: 0.5 },
-      heart: { scale: 0.96 },
-      sideL: { dx: 2 },
-      sideR: { dx: -2 },
-      core: { dy: 0.5 },
+      heart: { dy: 0.5 },
+      handL: { dx: 17.5, dy: 13.5, rotate: 8 },
+      handR: { dx: -17.5, dy: 13.5, rotate: -8 },
       footL: { dx: 1 },
       footR: { dx: -1 },
     },
-    eyes: { openness: 0.8, gazeX: 0.5, gazeY: 1.1 },
+    eyes: { openness: 0.8, gazeX: 0.3, gazeY: 1.2 },
     rhythm: { breathPeriodMs: 3200, breathIntensity: 0.85, driftAmp: 1 },
   }),
 
   satisfied: defineMood({
     name: 'satisfied',
-    description: 'Every tile seated perfectly — Tess squints with quiet contentment.',
+    description: 'Hands on hips, work done — Tess squints with quiet contentment.',
     poses: {
-      crown: { opacity: 0.99 },
-      shoulderL: { opacity: 0.95 },
-      shoulderR: { opacity: 0.95 },
-      sideL: { opacity: 0.94 },
-      core: { opacity: 0.97 },
-      sideR: { opacity: 0.94 },
-      footL: { opacity: 0.92 },
-      footR: { opacity: 0.92 },
+      handL: { dx: 6.5, dy: 3.5, rotate: -18 },
+      handR: { dx: -6.5, dy: 3.5, rotate: 18 },
     },
     eyes: { openness: 0.55, gazeY: 0.3 },
     rhythm: { breathPeriodMs: 5200, breathIntensity: 0.45, driftAmp: 1 },
@@ -276,15 +266,12 @@ export const MOODS: Readonly<Record<MoodName, MoodDefinition>> = Object.freeze({
 
   alarmed: defineMood({
     name: 'alarmed',
-    description: 'A tile has slipped out of place — Tess stares wide-eyed and braces.',
+    description: 'A tile has slipped loose — Tess throws its hands up, wide-eyed.',
     poses: {
       crown: { dx: -1, rotate: -6 },
-      shoulderL: { dx: -2, rotate: -2 },
-      shoulderR: { dx: -1.5, rotate: -3 },
-      heart: { scale: 1.04 },
-      sideL: { dx: -2.5 },
-      core: { dx: -1 },
-      sideR: { dx: 7, dy: -5, rotate: 16, opacity: 0.95 },
+      heart: { dx: -1, scale: 1.03 },
+      handL: { dx: -2.5, dy: -22.5, rotate: -14 },
+      handR: { dx: 2.5, dy: -22.5, rotate: 14 },
       footL: { dx: -3 },
       footR: { dx: 3, rotate: -2 },
     },
@@ -294,30 +281,26 @@ export const MOODS: Readonly<Record<MoodName, MoodDefinition>> = Object.freeze({
 
   celebrating: defineMood({
     name: 'celebrating',
-    description: 'The gilded heart lifts and re-seats — Tess gazes up at it, delighted.',
+    description: 'Confetti tesserae rain down — Tess cheers with both hands high.',
     poses: {
       crown: { dy: -1, rotate: 3 },
-      shoulderL: { dx: -3, dy: -1, rotate: -6, role: 'warm' },
-      shoulderR: { dx: 3, dy: -1, rotate: 6, role: 'warm' },
-      heart: { dy: -3, scale: 1.1 },
-      sideL: { dx: -1.5 },
-      sideR: { dx: 1.5 },
-      core: { dy: 0.5 },
+      heart: { dy: -1, scale: 1.06 },
+      handL: { dx: 1.5, dy: -24.5, rotate: -12 },
+      handR: { dx: -1.5, dy: -24.5, rotate: 12 },
       footL: { dx: 1 },
       footR: { dx: -1 },
     },
-    eyes: { openness: 0.6, gazeY: 1.2 },
+    eyes: { openness: 0.6, gazeY: -1 },
     rhythm: { breathPeriodMs: 3400, breathIntensity: 1, driftAmp: 1.5 },
   }),
 
   greeting: defineMood({
     name: 'greeting',
-    description: 'Tess bows slightly and lifts a shoulder tile in welcome, eyes bright.',
+    description: 'Tess waves a hand in welcome, eyes bright.',
     poses: {
-      crown: { dy: 1, rotate: 8 },
-      shoulderL: { dy: 0.5 },
-      shoulderR: { dy: -3.5, rotate: 8 },
+      crown: { dy: 0.5, rotate: 8 },
       heart: { dy: 0.5 },
+      handR: { dx: 0.5, dy: -22.5, rotate: 14 },
       footL: { dx: -0.5 },
       footR: { dx: 0.5 },
     },
@@ -327,15 +310,12 @@ export const MOODS: Readonly<Record<MoodName, MoodDefinition>> = Object.freeze({
 
   lost: defineMood({
     name: 'lost',
-    description: 'One tile is missing — Tess scans left and right for the piece.',
+    description: 'A foot tile is missing — Tess scratches its head, scanning for the piece.',
     poses: {
       crown: { dx: -2, rotate: -9 },
-      shoulderL: { dx: -1, rotate: -3 },
-      shoulderR: { dx: -0.5, rotate: -2 },
-      heart: { dx: -0.5, scale: 1.02 },
-      sideL: { dx: -1.5, rotate: -2 },
-      core: { dx: -1 },
-      sideR: { dx: -1, rotate: 2 },
+      heart: { dx: -1 },
+      handL: { dx: -1, dy: 1 },
+      handR: { dx: -4.5, dy: -30.5, rotate: -12 },
       footL: { dx: -2 },
       footR: { dy: 1, opacity: 0.15 },
     },
@@ -345,14 +325,12 @@ export const MOODS: Readonly<Record<MoodName, MoodDefinition>> = Object.freeze({
 
   searching: defineMood({
     name: 'searching',
-    description: 'Tess looks up and away, eyes sweeping for something not yet found.',
+    description: 'A little knowledge graph hangs in the air — Tess sweeps it node by node.',
     poses: {
       crown: { dx: -2, dy: -0.5, rotate: -8 },
-      shoulderL: { dx: -1.5, dy: -0.5, rotate: -4 },
-      shoulderR: { dx: -1, rotate: -3 },
       heart: { dx: -0.5 },
-      sideL: { dx: -1 },
-      sideR: { dx: -0.5, rotate: -1 },
+      handL: { dx: 9.5, dy: -22.5, rotate: -8 },
+      handR: { dx: -1, dy: 1 },
       footR: { dx: 0.5 },
     },
     eyes: { openness: 1.15, gazeX: -1.6, gazeY: -1.2 },
@@ -361,15 +339,12 @@ export const MOODS: Readonly<Record<MoodName, MoodDefinition>> = Object.freeze({
 
   watching: defineMood({
     name: 'watching',
-    description: 'Perched and compact, Tess keeps a calm, blinking watch.',
+    description: 'Perched and compact, Tess keeps a slow, blinking lookout.',
     poses: {
       crown: { dy: 2, rotate: -2 },
-      shoulderL: { dx: 1, dy: 1.5 },
-      shoulderR: { dx: -1, dy: 1.5 },
-      heart: { dy: 1, scale: 0.97 },
-      sideL: { dx: 2, dy: 1 },
-      core: { dy: 1 },
-      sideR: { dx: -2, dy: 1 },
+      heart: { dy: 1, scale: 0.98 },
+      handL: { dx: 4, dy: 2 },
+      handR: { dx: -4, dy: 2 },
       footL: { dx: 1.5, dy: -1 },
       footR: { dx: -1.5, dy: -1 },
     },

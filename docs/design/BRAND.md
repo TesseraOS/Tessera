@@ -108,13 +108,16 @@ the palette, or place on non-brand backgrounds.
 
 ## 5. Mascot — Tess (ADR-0046 v2)
 
-**Tess is a living fragment of the mosaic:** a small, cute, big-headed creature built
-from rounded tesserae — the mark's own geometry — with the **gilded ember tile as its
-heart**, forever mid-assembly. Personality: *the archivist's apprentice* — a curious,
+**Tess is a living fragment of the mosaic:** a small, cute, big-headed creature of six
+tesserae — a head, **the gilded ember tile as its whole body**, two floating hands, two
+feet (v3, stakeholder-directed). Personality: *the archivist's apprentice* — a curious,
 attention-seeking pet that also acts as an assistant. Tess has a **minimal face: two ink
-eyes** that blink, glance around, and follow the pointer (v2 — eyes are what make a
-geometric mascot read as alive; gloves, limbs, and mouth-driven cartoon acting stay
-banned). Expression channels:
+eyes** that blink, glance around, and follow the pointer, plus a warm blush (v2 — eyes
+are what make a geometric mascot read as alive; mouths and glove-cartoon acting stay
+banned). **Every mood is an activity** (v3): Tess visibly does the mood's task on an
+infinite eased loop — typing at a bench, sweeping a mini knowledge graph node by node,
+waving, cheering under confetti tesserae, scratching its head — with the mood's prop
+part of the rig. Expression channels:
 
 - **The eyes** — blink, openness, and gaze carry attention (wide = alarmed, squint = joy,
   scanning = lost/searching, pointer-following = curious about *you*).

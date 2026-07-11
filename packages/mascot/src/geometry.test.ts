@@ -1,22 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { EYE, HEAD, SLOTS, SLOT_SPECS, VIEWBOX } from './geometry.js';
+import { EYE, HEAD, PROPS, SLOTS, SLOT_SPECS, VIEWBOX } from './geometry.js';
 import { CORE_MOODS, MOODS, SURFACE_MOODS, THERMAL } from './moods.js';
 
-describe("Tess's geometry (ADR-0046 v2)", () => {
-  it('is nine named tiles with a dominant head (cute proportions)', () => {
-    expect(SLOTS).toHaveLength(9);
-    expect(new Set(SLOTS).size).toBe(9);
-    expect(SLOT_SPECS.crown.w).toBeGreaterThan(SLOT_SPECS.core.w);
-    expect(SLOT_SPECS.crown.h).toBeGreaterThan(SLOT_SPECS.core.h);
+describe("Tess's geometry (ADR-0046 v3)", () => {
+  it('is six named pieces — head, gilded heart-body, two hands, two feet', () => {
+    expect(SLOTS).toEqual(['crown', 'heart', 'handL', 'handR', 'footL', 'footR']);
+    expect(SLOT_SPECS.crown.w).toBeGreaterThan(SLOT_SPECS.heart.w);
+    expect(SLOT_SPECS.heart.role).toBe('heart');
+    expect(SLOT_SPECS.handL.limb).toBe(true);
+    expect(SLOT_SPECS.handR.limb).toBe(true);
   });
 
-  it('keeps every posed tile inside the viewBox — even mid-bob, mid-hop, and mid-drift', () => {
-    // The figure's ground line (bob/hop scale about it) and total height.
+  it('keeps every posed piece inside the viewBox — even mid-bob, mid-hop, and mid-drift', () => {
     const bottom = Math.max(...SLOTS.map((s) => SLOT_SPECS[s].y + SLOT_SPECS[s].h));
     const top = Math.min(...SLOTS.map((s) => SLOT_SPECS[s].y));
     const figureHeight = bottom - top;
-    // Worst-case upward displacement of the whole body: the bob's translate+stretch at
-    // the head line, or the delight hop's apex (which replaces the bob while playing).
     const bobLift = THERMAL.bobTranslate + (THERMAL.bobScale - 1) * figureHeight;
     const bodyLift = Math.max(bobLift, THERMAL.hopTranslate);
 
@@ -25,7 +23,6 @@ describe("Tess's geometry (ADR-0046 v2)", () => {
       for (const slot of SLOTS) {
         const spec = SLOT_SPECS[slot];
         const pose = mood.poses[slot];
-        // Exact axis-aligned half-extents of a rotated, scaled rectangle.
         const rad = (Math.abs(pose.rotate) * Math.PI) / 180;
         const extX =
           ((spec.w / 2) * Math.abs(Math.cos(rad)) + (spec.h / 2) * Math.abs(Math.sin(rad))) *
@@ -52,7 +49,7 @@ describe("Tess's geometry (ADR-0046 v2)", () => {
     }
   });
 
-  it('never overlaps base tiles (the mosaic keeps its seams)', () => {
+  it('never overlaps base pieces (the mosaic keeps its seams)', () => {
     for (let a = 0; a < SLOTS.length; a += 1) {
       for (let b = a + 1; b < SLOTS.length; b += 1) {
         const sa = SLOT_SPECS[SLOTS[a]!];
@@ -67,7 +64,26 @@ describe("Tess's geometry (ADR-0046 v2)", () => {
     }
   });
 
-  it('keeps both eyes inside the head tile at every mood gaze and openness', () => {
+  it('keeps every prop inside the viewBox with its animation amplitude', () => {
+    // Confetti falls up to 22 units and floats 5 up; KG pulses scale 1.3; margins of 2.
+    for (const node of PROPS.kg.nodes) {
+      expect(node.x - node.r * 1.3).toBeGreaterThanOrEqual(2);
+      expect(node.y - node.r * 1.3).toBeGreaterThanOrEqual(2);
+    }
+    for (const bit of PROPS.confetti) {
+      expect(bit.y - bit.s / 2 - 5, 'confetti top').toBeGreaterThanOrEqual(2);
+      expect(bit.y + bit.s / 2 + 22, 'confetti fall').toBeLessThanOrEqual(VIEWBOX - 2);
+      expect(bit.x + bit.s / 2).toBeLessThanOrEqual(VIEWBOX - 2);
+    }
+    const work = PROPS.work.tile;
+    expect(work.y + work.h + 2).toBeLessThanOrEqual(VIEWBOX);
+    const loose = PROPS.loose;
+    expect(loose.x + loose.w + 4, 'loose tile right (rotated + shiver)').toBeLessThanOrEqual(
+      VIEWBOX,
+    );
+  });
+
+  it('keeps both eyes inside the head at every mood gaze and openness', () => {
     const headCx = HEAD.x + HEAD.w / 2;
     const headCy = HEAD.y + HEAD.h / 2;
     for (const name of [...CORE_MOODS, ...SURFACE_MOODS]) {
@@ -84,8 +100,8 @@ describe("Tess's geometry (ADR-0046 v2)", () => {
     }
   });
 
-  it('stays legible at the minimum rendered size (body tile ≥ 4 CSS px at 24px)', () => {
-    expect((SLOT_SPECS.core.w / VIEWBOX) * 24).toBeGreaterThanOrEqual(4);
-    expect((HEAD.w / VIEWBOX) * 24).toBeGreaterThanOrEqual(5.5);
+  it('stays legible at the minimum rendered size', () => {
+    expect((HEAD.w / VIEWBOX) * 24).toBeGreaterThanOrEqual(7);
+    expect((SLOT_SPECS.heart.w / VIEWBOX) * 24).toBeGreaterThanOrEqual(6);
   });
 });

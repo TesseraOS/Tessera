@@ -3,6 +3,7 @@
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { Mascot } from '@tessera/mascot';
 import { Logo } from '@/components/logo';
 import { MosaicField } from '@/components/art/mosaic-field';
 import { ButtonLink } from '@/components/ui/button';
@@ -170,17 +171,27 @@ export function SiteNav() {
               Start free
             </ButtonLink>
           </Container>
-          {/* the menu's quiet ground — the mosaic drifting under the links (ADR-0045 v4.1) */}
-          <MosaicField
-            emberId="ember-menu-field"
-            cols={12}
-            rows={2}
-            seed={41522}
-            seamAt={0.62}
-            wave
-            className="fade-x tile-hover rise-in relative shrink-0 px-4 pb-6"
-            label="A strip of mosaic tiles beneath the menu with a crest of light sweeping across it; one gilded tile arriving"
-          />
+          {/*
+           * The menu's quiet ground (ADR-0045 v4.1) — with Tess greeting from its edge
+           * (ADR-0046). Tess's heart is this surface's one gold moment, so the field's
+           * own ember stays unrendered (§4.1 accent interaction).
+           */}
+          <div className="rise-in relative shrink-0">
+            <div className="pointer-events-none relative z-10 -mb-4 flex justify-end pr-10">
+              <Mascot mood="greeting" size={64} />
+            </div>
+            <MosaicField
+              emberId="ember-menu-field"
+              cols={12}
+              rows={2}
+              seed={41522}
+              seamAt={0.62}
+              wave
+              ember={false}
+              className="fade-x tile-hover relative px-4 pb-6"
+              label="A strip of mosaic tiles beneath the menu with a crest of light sweeping across it; Tess, the small tile-figure mascot, greets from its edge"
+            />
+          </div>
         </div>
       ) : null}
     </>

@@ -32,6 +32,11 @@ interface MosaicFieldProps {
   drift?: boolean;
   /** The traveling crest (ADR-0045 v4.1) — replaces drift as the band's ambient system. */
   wave?: boolean;
+  /**
+   * Render the arriving gilded tile. Off when another element owns the band's one gold
+   * moment — e.g. Tess's heart in the mobile menu (§4.1 accent interaction, ADR-0046).
+   */
+  ember?: boolean;
   className?: string;
   label?: string;
 }
@@ -44,6 +49,7 @@ export function MosaicField({
   seamAt = 0.64,
   drift = true,
   wave = false,
+  ember = true,
   className,
   label = 'A mosaic of warm tiles with a diagonal seam of light; one gilded tile arrives to complete the picture',
 }: MosaicFieldProps) {
@@ -65,7 +71,7 @@ export function MosaicField({
       const roll = rand();
       const driftRoll = rand();
 
-      if (c === gildCol && r === gildRow) {
+      if (ember && c === gildCol && r === gildRow) {
         tiles.push(
           <rect
             key="seat"

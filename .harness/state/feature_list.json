@@ -2165,7 +2165,7 @@
       "package": "@tessera/mascot",
       "release": "R4",
       "priority": "could",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-051"
       ],

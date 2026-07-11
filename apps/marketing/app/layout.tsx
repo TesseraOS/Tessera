@@ -4,6 +4,7 @@ import { Instrument_Serif, Manrope } from 'next/font/google';
 import { MotionProvider } from '@/lib/motion';
 import { siteConfig } from '@/lib/site';
 import { ThemeProvider } from '@/lib/theme';
+import '@tessera/mascot/styles.css';
 import './globals.css';
 
 /* Brand faces (BRAND.md §3, ADR-0044) — self-hosted by next/font; zero runtime requests. */

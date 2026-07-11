@@ -3,6 +3,63 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-11 — F-066 DONE — brand mascot Tess: @tessera/mascot + marketing integrations (ADR-0046)
+
+**Stakeholder-directed scope expansion** (recorded in the plan + ADR): the mascot serves
+every frontend, not just marketing — it ships as **`@tessera/mascot`**, the repo's first
+shared UI package. Dashboard adoption is **F-068** (new backlog entry, FR-49, blocked by
+F-066). F-066 was claimed out of strict release order (R3 musts remain open) by explicit
+stakeholder direction.
+
+- **Governance first:** [ADR-0046](../../docs/adr/0046-brand-mascot-tess.md) locks the
+  name (**Tess** — stakeholder-confirmed, with mood-set and scope options, via a decision
+  round), personality (*the archivist's apprentice*), moods (core
+  idle/curious/working/satisfied/alarmed/celebrating + surface greeting/lost/searching/
+  watching + validated `defineMood()` data API), the usage budget (mobile menu / empty /
+  404 / KG supervisor — **never hero, never pricing**, design-lint-enforced `allowIn`),
+  the accent interaction (**Tess's heart IS the band's one gold moment**), CSS-only
+  motion, and the `--mascot-*` theming contract. BRAND.md gains §5 (mascot; §§5–8
+  renumbered 6–9; the "cartoon mascots" ban amended to sanction the geometric figure).
+  MARKETING-DESIGN v4.6 + manifest 4.6.0 in lockstep (§4.1 mascot, §3.13 `not-found`
+  archetype, `mascot-usage-budget` + `mascot-tokens-bound` patterns).
+- **The rig:** nine named tile slots (the logo's geometry; gilded heart always present),
+  moods as frozen validated data, an SSR-deterministic component (ONE DOM shape for every
+  mood/state — the v4.5 hydration rule held structurally, no `useReducedMotion` in the
+  package), package-internal CSS motion (transform/opacity, house ease, morph 600ms /
+  hover 200ms / one-shot re-seat+sheen 1.1s / breath 9–14s, interruptible by
+  construction; `prefers-reduced-motion` ⇒ the pose IS the designed still frame),
+  `currentColor` monochrome fallback when the contract is unbound. Interactivity: hover
+  acknowledge (rise + ember brighten) and a click-triggered re-seat gesture behind real
+  button semantics.
+- **Brand masters are build artifacts:** `docs/design/brand/tessera-mascot{,-moods}.svg`
+  are GENERATED from the mood data (`render-masters` script) and drift-tested — they
+  cannot diverge from the shipped rig.
+- **Marketing integrations** (globals.css binds `--mascot-*` per theme): mobile-menu
+  ground (`greeting`; MosaicField gained an `ember:false` knob so Tess's heart owns the
+  menu's single gold moment), **`app/not-found.tsx`** ("A tile is missing." — Tess `lost`,
+  its missing tile as the 404 metaphor), and the **constellation supervisor** perched on
+  the telemetry island, mood mapped from the simulated telemetry (agents drop → alarmed;
+  rpm ≥280 → working; ≤130 → curious; else watching; reduced motion holds the still
+  `watching` seed).
+- **New lesson** [[xml-comment-double-hyphen-breaks-svg-as-image]]: `--` inside an XML
+  comment (a `--flag` in the provenance note) breaks standalone SVG with zero
+  console/network signal — found because masters are reviewed AS `<img>`.
+
+**Evidence** — mascot package 33/33 (mood budgets, geometry-in-viewBox incl. drift,
+SSR determinism, a11y semantics, interaction, master drift); marketing unit 45/45
+(design-lint 40 incl. the two new patterns); e2e **24/24** (404: real 404 status, one h1,
+axe AA dusk+noon, 375px, zero console errors; menu: greeting Tess decorative + zero
+field-ember; supervisor: watching + sr disclosure; reduced-motion animation-name none);
+workspace turbo **71/71 tasks** (nothing existing broke); build green;
+first-load **223.0KB gz home / 189.7KB gz 404** (budget 240); 7 review screenshots
+(404 dusk/noon/375, menu dusk/noon, graph dusk/noon) + the generated mood sheet reviewed;
+design-review audit zero hits; brand-swap holds (logo covered, the tessera figure + serif
+voice + dusk/rose/gold still say Tessera). `verify-state` green (68 features, 23
+effect-links — E-022 extended, new E-023 mascot contract).
+
+**Next step** — F-067 legal pages (R3 must) or F-054 skills registry per stakeholder;
+F-068 (dashboard Tess) when scheduled.
+
 ## 2026-07-11 (v4.5) — F-051 DONE — living subpages: shader heroes, signature arts, FAQ v2
 
 **Ninth review (8 directives): the v4.4 subpages read flat. Resolved (ADR-0045 v4.5):**

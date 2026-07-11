@@ -87,6 +87,9 @@ importers:
       '@tessera/billing':
         specifier: workspace:*
         version: link:../../packages/billing
+      '@tessera/mascot':
+        specifier: workspace:*
+        version: link:../../packages/mascot
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

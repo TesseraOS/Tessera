@@ -3,6 +3,59 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-12 — F-067 DONE — legal pages: privacy/terms/cookies/imprint + footer legal column (ADR-0045 v4.9)
+
+**What changed** (stakeholder-directed selection ahead of lowest-id F-044 — "remaining
+marketing work first"; plan `.harness/plans/F-067-legal-pages.md`)
+- **§3.14 `legal-prose` archetype** (MARKETING-DESIGN v4.9 + manifest 4.9.0 in lockstep,
+  ADR-0045 amendment v4.9): compact quiet opening on the base ground (recorded deviation
+  from §3.12's full-height shader hero; §3.13 precedent — the document is the point), then
+  a `max-w-prose` article: serif h2s on the heading size, token tables, and **CounselReview
+  callouts** (dashed hairline aside, `role="note"`, zero accent) for every unresolved fact.
+- **Content as typed data** (house precedent: PLANS, moods): `lib/legal/*` LegalDocs with a
+  **closed 14-id `CounselId` union** — entity/address/jurisdiction/contact-email/dpo/
+  processors/retention/transfers/supervisory-authority/oss-license/payments/… Every
+  unknown renders as a marked placeholder, never prose; `tests/legal-content.test.ts` (60
+  tests) pins the per-doc placeholder sets and runs fabrication tripwires (no entities,
+  emails, domains, named licenses, compliance claims) + the manifest's voice regexes over
+  the `.ts` copy (design-lint only scans `.tsx`).
+- **Honest pages:** privacy (GDPR/CCPA skeleton; site truth: no accounts/forms/cookies/
+  analytics; product truth split local-vs-cloud per ADR-0003), terms (open-core split;
+  cloud marked not-GA; plan limits by LINK to /pricing — E-019 untouched; **no license
+  cited — none exists**, NFR-18/OQ4), cookies (**executable claims**: no cookies, one
+  localStorage `theme` key written only on toggle — verified against next-themes 0.4.6
+  source AND asserted in e2e; zero third-party requests), imprint (placeholders by design).
+- **Plumbing:** footer gains the `legal` column (brand block col-span-5→4, grid 4+4×2=12);
+  sitemap +4 (`yearly`/0.3); llms.txt `## Legal` section disclosing draft status; per-page
+  metadata + canonicals. Legal stays footer-only (nav untouched); no mascot on legal pages.
+
+**Evidence/verification** (generator ran gates; **independent evaluator PASS**, fresh runs)
+- verify-state ok · typecheck 33/33 · lint 19/19 · format clean · test 33/33 tasks
+  (marketing **105/105**, was 45; design-lint 40 green against manifest 4.9.0) · build
+  green — all four `/legal/*` routes `○ Static` prerendered (17/17 pages) · e2e marketing
+  **40/40** (was 27; `legal.spec.ts` truth checks: four 200s, footer legal nav resolves,
+  counsel callouts visible, `document.cookie === ''`, localStorage `[]`→`['theme']` only
+  after toggle, all requests same-origin) · web e2e 14/14.
+- Screenshot review (Browser pane, dev server): privacy/terms/imprint/cookies dusk + noon,
+  counsel callout + tables both themes, 375px no-overflow (scrollWidth 375; table wraps),
+  footer grid one row at 1280 (brand + 4 columns, no overflow). design-review skill pass:
+  **zero anti-pattern hits** (all values on-token, no side-stripes/gradients/ghost cards,
+  eyebrow only as the sanctioned opening, no added motion).
+- Budget note: Next 16.2.9/Turbopack no longer prints first-load JS in the route table;
+  legal pages add **zero client JS** (static server components, no client islands) and the
+  generator's over-the-wire measurement put them at ~212KB gz (route-group glue chunk
+  included), under the 240KB cap; no legal copy ships in client chunks (chunk grep clean).
+
+**Decisions**
+- ADR-0045 amendment v4.9 (compact legal opening; fallback to strict PageHeader recorded).
+- OQ-1 license file (MIT vs Apache-2.0 + LICENSE, own ADR under NFR-18), OQ-2 contact
+  mailbox — **stakeholder items, open**; the `oss-license`/`contact-email` placeholders
+  hold until resolved. OQ-3: the whole 14-row counsel table awaits counsel before launch.
+
+**Next step**
+- Remaining marketing candidates: none open in R3 besides plumbing follow-ups; next
+  eligible by id is **F-044** (API hardening) unless the stakeholder directs otherwise.
+
 ## 2026-07-12 (v3.1) — F-066 DONE — Tess refined: chibi ratio, real laptop, bigger smooth KG, feet choreography
 
 **Third stakeholder review (proportions + activity polish):** *"the body is too big — much

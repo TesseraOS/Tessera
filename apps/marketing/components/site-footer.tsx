@@ -30,14 +30,25 @@ const COLUMNS = [
       { href: siteConfig.docsUrl, label: 'Self-host' },
     ],
   },
+  {
+    title: 'legal',
+    links: [
+      { href: '/legal/privacy', label: 'Privacy' },
+      { href: '/legal/terms', label: 'Terms' },
+      { href: '/legal/cookies', label: 'Cookies' },
+      { href: '/legal/imprint', label: 'Imprint' },
+    ],
+  },
 ] as const;
 
-/** Site footer (MARKETING-DESIGN §3.11) — the last register of the plate. */
+/** Site footer (MARKETING-DESIGN §3.11) — the last register of the plate. F-067 adds
+ * the legal column; the brand block yields one column so 4 + 4×2 sums inside the
+ * 12-col grid. */
 export function SiteFooter() {
   return (
     <footer className="border-t">
       <Container className="grid gap-12 py-16 md:grid-cols-12">
-        <div className="md:col-span-5">
+        <div className="md:col-span-4">
           <Logo emberId="ember-footer" />
           <p className="text-small text-muted-foreground mt-4 max-w-xs">{siteConfig.tagline}.</p>
           <p className="font-serif text-lead text-faint-foreground mt-6 max-w-xs italic">

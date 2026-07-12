@@ -2,8 +2,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | Accepted v4.8 — F-066 v3 (Tess acts: hands + per-mood activity loops + props, sheen removed; v4.7 face/reactions, v4.6 introduced the mascot) |
-| **Last updated** | 2026-07-11 |
+| **Status** | Accepted v4.9 — F-067 (legal-prose archetype: /legal/* compact quiet openings + prose articles + counsel-review placeholders; v4.8 Tess acts, v4.6–4.7 introduced the mascot) |
+| **Last updated** | 2026-07-12 |
 | **Scope** | `apps/marketing` (apex domain). Later: the public chrome of `apps/docs`. |
 | **Brand** | [`BRAND.md`](./BRAND.md) + [Terra Mosaic philosophy](./brand/terra-mosaic-philosophy.md) — read both first |
 | **Authority** | [ADR-0046](../adr/0046-brand-mascot-tess.md) (mascot) · [ADR-0045](../adr/0045-marketing-v4-constellation-shader-hero-theme-true-chapters.md) (v4 directives) · [ADR-0044](../adr/0044-marketing-v3-dual-themes-illustration-first-live-graph.md) (dual themes / illustration-first) · [ADR-0043](../adr/0043-terra-mosaic-brand-and-marketing-overhaul.md) (brand) · [ADR-0042](../adr/0042-marketing-site-design-direction.md) (enforcement mechanism) |
@@ -206,13 +206,33 @@ checklist enforces).
     tile IS the 404 metaphor). Decorative (`aria-hidden`), still under reduced motion.
     The mascot's heart is the page's one gold moment.
 
+14. **`legal-prose`** (v4.9, F-067 — the `/legal/*` treatment) — **opening:** a compact
+    quiet opening on the BASE ground (no shader, no `min-h-svh` — precedent: §3.13's
+    quiet utility ground; a full-viewport hero would push the document below the fold):
+    label eyebrow (`legal — privacy`) · serif **`title`-token** h1 · lead ≤56ch · a
+    "last updated" line (`<time>`) + a `Badge` reading *draft — pending counsel review*.
+    **Body:** a single-column `max-w-prose` article (~65ch, inside §2.4's 60–72ch rule);
+    h2s are serif via the base layer on the **`heading`** size at weight 400 (the serif
+    never bolds); h3s `text-body font-medium`; lists; **token tables** (hairline
+    `border`, `text-small` cells, `th scope="col"`, visible caption) for data
+    categories / retention / browser storage. **`CounselReview` placeholder:** every
+    unresolved entity/jurisdiction/contact fact renders as a visually distinct callout —
+    dashed `border-strong`, `bg-surface`, `text-label` eyebrow "pending counsel review",
+    rendered as `<aside role="note" aria-label="Pending counsel review">` — spending
+    **zero accent** (no rose, no gold, no third hue). **NO fabricated legal facts** —
+    placeholders, never prose, carry the unknowns. Static server components only (no
+    client islands, no motion seam, no mascot). Content lives as typed `LegalBlock` data
+    in `lib/legal/*.ts`; `LegalArticle` is the only styling surface.
+
 **Banned archetypes:** terminal windows, code-block panels, file trees, fake dashboards,
 browser-chrome screenshots.
 
 ## 4. Components (closed set)
 
 `Container` · `Button` · `TextLink` · `Badge` · `Panel` · `SectionHeading` ·
-**`PageHeader`** (subpage opening, v4.4) · `Wordmark` ·
+**`PageHeader`** (subpage opening, v4.4) · **`LegalArticle`** (typed `LegalBlock`
+renderer: headings/paragraphs/lists/tables + the `CounselReview` callout — legal pages
+only, v4.9) · `Wordmark` ·
 `Logo/LogoIcon` · `MosaicField` · **`ShaderField`** (WebGL fragment shader, hero + band
 ground) · **`Constellation`** (Canvas-2D knowledge-graph engine) ·
 **`ConstellationBand`** (the band: lazy boundary, heading, telemetry chips, sr-only

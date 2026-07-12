@@ -35,6 +35,20 @@ add_source, scan_source, list_sources, assert_effect
   RBAC, OIDC SSO, quotas, audit trail, deployment sovereignty.
 - [Skills](${siteConfig.siteUrl}/skills): first-party agent skills registry (in development).
 
+## Legal
+
+Drafts pending counsel review — unresolved entity/jurisdiction facts render as marked
+placeholders, never as fabricated statements.
+
+- [Privacy](${siteConfig.siteUrl}/legal/privacy): what the site and product process — the
+  site has no accounts, no cookies, no analytics — and your rights.
+- [Terms](${siteConfig.siteUrl}/legal/terms): managed-cloud service terms (not yet
+  generally available) vs the open-core repository license.
+- [Cookies](${siteConfig.siteUrl}/legal/cookies): no cookies; one localStorage entry for
+  the theme choice; zero third-party requests.
+- [Imprint](${siteConfig.siteUrl}/legal/imprint): operator identity — mostly counsel-review
+  placeholders until incorporation.
+
 ## Related surfaces
 
 - Dashboard: ${siteConfig.appUrl}

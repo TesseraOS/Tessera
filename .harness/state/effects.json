@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-07-11",
+  "updated": "2026-07-12",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -819,6 +819,10 @@
         {
           "kind": "module",
           "ref": "mascot on this surface (F-066, ADR-0046 v2, v4.7): app/globals.css binds the closed --mascot-* contract to Terra Mosaic tokens (mascot-tokens-bound requiredPattern pins --mascot-heart); the mascot-usage-budget bannedPattern compiles the ADR budget into the gate (imports allowed ONLY in components/site-nav.tsx, app/not-found.tsx, components/home/constellation-band.tsx + the noindexed app/dev/mascot/* lab); §3.13 not-found archetype; the mascot heart counts as the band's one gold moment; placements NEVER sit under pointer-events-none and overlay whitespace instead of adding layout height"
+        },
+        {
+          "kind": "module",
+          "ref": "legal surface (F-067, ADR-0045 v4.9): §3.14 legal-prose archetype — compact quiet opening on the BASE ground (recorded deviation from §3.12's full-height hero; §3.13 precedent) + lib/legal/* typed LegalDoc content with the CLOSED 14-id CounselId union (every unresolved entity/jurisdiction fact is a counsel block, NEVER prose — the set is pinned per-doc by tests/legal-content.test.ts, so replacing a placeholder with a real fact or adding one must visit that test) + components/legal-article.tsx (the ONLY styling surface) + app/legal/{privacy,terms,cookies,imprint} routes + footer legal column (site-footer.tsx brand block col-span-5→4, grid 4+4×2=12) + sitemap/llms.txt legal entries. The cookies page's claims are EXECUTABLE: tests/e2e/legal.spec.ts asserts no cookies, localStorage 'theme' written only on toggle (next-themes 0.4.6 behavior), zero third-party requests — wording changes there must keep the truth test green. Terms cites NO license (none committed — NFR-18/OQ4) and links plan limits to /pricing (E-019 untouched)"
         },
         {
           "kind": "decision",

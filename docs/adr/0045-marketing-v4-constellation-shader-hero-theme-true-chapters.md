@@ -247,6 +247,41 @@ resolved as follows (manifest 4.5.0 in lockstep):
 5. **/skills placeholder debt recorded** on F-054's feature entry (replace the
    `planned` cards with the real catalog when the registry ships).
 
+## Amendment — v4.9 (2026-07-12, F-067 legal-prose archetype)
+
+The legal pages (`/legal/privacy`, `/legal/terms`, `/legal/cookies`, `/legal/imprint`)
+need a section shape §3 did not define — a *document* treatment, not a marketing band.
+Extensions, in lockstep with the manifest (4.9.0):
+
+1. **`legal-prose` archetype (§3.14)** — a **compact quiet opening on the base ground**
+   (label eyebrow · serif `title`-token h1 · lead ≤56ch · last-updated line + a Badge
+   reading *draft — pending counsel review*), then a single-column `max-w-prose` article
+   (~65ch): serif h2s on the `heading` size at weight 400, `text-body font-medium` h3s,
+   lists, and token tables (hairline borders, `text-small` cells, `th scope="col"`,
+   visible caption). **Deliberate deviation from §3.12:** no shader field and no
+   `min-h-svh` — precedent is §3.13's quiet utility ground; a full-viewport WebGL hero
+   over a privacy policy would push the document below the fold and spend budget on the
+   wrong thing. Fallback if review rejects the deviation: reuse `PageHeader` verbatim
+   (art-less); nothing else changes.
+2. **`CounselReview` placeholder callout** — every unresolved legal fact (entity,
+   address, jurisdiction, contact mailbox, processors, retention, transfers, the exact
+   OSS license, payment specifics, rights phrasing) renders as a visually distinct
+   `<aside role="note" aria-label="Pending counsel review">` with dashed `border-strong`
+   on `bg-surface` and a `text-label` eyebrow — **zero accent spent** (no rose/gold, no
+   third hue). Placeholders, never prose, carry the unknowns; the placeholder set is
+   pinned by a unit test against the tracked table in the F-067 plan.
+3. **Content as typed data** — legal copy lives as `LegalBlock[]` in `lib/legal/*.ts`
+   (house precedent: the PLANS display model, mascot moods); `LegalArticle` is the only
+   styling surface. Because design-lint's `hype-vocabulary` / `exclamation-in-copy`
+   patterns scan `.tsx` only, the legal-content unit test re-applies the manifest's
+   regexes to `lib/legal/*.ts` — coverage extended, no contract weakened.
+4. **Chrome:** the footer gains a fourth **legal** column (Privacy / Terms / Cookies /
+   Imprint); the brand block rebalances `md:col-span-5` → `md:col-span-4` so the grid
+   sums to 12. Legal routes join sitemap (`yearly`, `0.3`) and llms.txt (with their
+   draft/counsel-review status disclosed); they are indexed (no `noindex` — these pages
+   are meant to be found). No banned/required-pattern or `allowIn` changes — the
+   existing contract covers the new files automatically.
+
 ## Alternatives considered
 
 - **three.js / react-three-fiber scene** — rejected: bundle (~150KB+ gz) vs. 240KB budget,

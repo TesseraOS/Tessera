@@ -34,5 +34,29 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    {
+      url: `${siteConfig.siteUrl}/legal/privacy`,
+      lastModified,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: `${siteConfig.siteUrl}/legal/terms`,
+      lastModified,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: `${siteConfig.siteUrl}/legal/cookies`,
+      lastModified,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: `${siteConfig.siteUrl}/legal/imprint`,
+      lastModified,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
   ];
 }

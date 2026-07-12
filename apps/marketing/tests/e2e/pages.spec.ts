@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
-/** The F-051 subpages (ADR-0045 v4.4) + F-067 legal routes (v4.9) — h1 fragments
+/** The F-051 subpages (ADR-0045 v4.4) + F-067 v2 legal routes (v4.10) — h1 fragments
  * identify each page's statement. Legal routes inherit the whole battery: one h1,
  * axe AA on both themes, 375px no-overflow, sitemap + llms.txt listing. */
 const PAGES = [
@@ -15,6 +15,7 @@ const PAGES = [
   { path: '/legal/privacy', h1: 'Privacy policy' },
   { path: '/legal/terms', h1: 'Terms of service' },
   { path: '/legal/cookies', h1: 'Cookie policy' },
+  { path: '/legal/gdpr', h1: 'GDPR at Tessera' },
   { path: '/legal/imprint', h1: 'Imprint' },
 ] as const;
 

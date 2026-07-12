@@ -165,6 +165,89 @@ Budget evidence: `next build` route table — each `/legal/*` first-load JS expe
 3. **Remaining pages + plumbing:** terms/cookies/imprint content + pages, sitemap, llms.txt, `PAGES` += 3 → gates.
 4. **Proof + record:** `legal.spec.ts` truth checks, full gate run, screenshot/design-review evidence, budget numbers, effect-trace, progress + status, checkpoint.
 
+---
+
+# v2 — stakeholder review round (2026-07-12): expressive frame, calm document
+
+**Stakeholder verdict on v1:** *"too dull, lifeless, lacking design and creativity; the
+first section should be a full-height hero like the homepage; most pages lack
+illustrations; add creative, polished, interactive, animated illustrations — artistic
+masterpieces; add a GDPR page; soften the draft badge; capture pending items in the
+harness."* Direction confirmed via decision prompt: **expressive frame, calm document**
+(hero + signature art per page; the article body stays §3.14-calm). This repeats the
+F-051/F-066 lesson ([[design-contract-mechanism-outlives-parameters]] — this project lead
+reads austere minimalism as lifeless); v1's compact opening was the wrong call and its
+recorded fallback (PageHeader reuse) becomes the rule, extended with per-page art.
+
+## v2 scope
+
+1. **Hero:** all legal pages (now five) open with §3.12 `PageHeader` — full-height shader
+   ground, eyebrow/title/lead from the LegalDoc, the updated-line + softened Badge as
+   `children`, and a bespoke **legal signature art** in the `art` slot. The §3.14 body
+   article below is unchanged (calm, max-w-prose, tables, counsel callouts).
+2. **Signature arts** (components/art/legal-*.tsx, one per page — honest product truths in
+   the house art language; motion-seam imports only, SSR-deterministic markup, reduced-
+   motion = designed still scene, decorative-interactive per the canvas/art lessons,
+   `role="img"` + aria-label, tokens-only, no new deps):
+   - privacy → **RedactionGate**: content tiles stream through a gate; secret-shaped
+     glyphs mask as they pass (F-006 redaction, shipped truth). Hover = inspection lens.
+   - terms → **TwoCovenants**: one engine core, two grounds — open field (self-host) vs
+     managed canopy (cloud); tiles flow through both under different light.
+   - cookies → **OneTile**: a near-empty storage shelf; the single `theme` tile lights
+     only when touched — echoing the page's e2e-proven localStorage truth.
+   - imprint → **Nameplate**: the nine-tile seal assembles over engraved slots that stay
+     visibly empty (the counsel placeholders, as art).
+   - gdpr → **RightsLedger**: a request tile arrives; an export copy leaves the vault; an
+     erased tile dissolves (rights model — no live-feature claim; F-047 ships the product
+     side later).
+3. **/legal/gdpr — "GDPR at Tessera"** (posture page, NOT a compliance claim — the
+   fabrication tripwire banning "GDPR-compliant" stays): roles (self-hosted = the
+   customer's own infrastructure per ADR-0003 — structural truth; managed cloud pre-GA),
+   data-subject-rights mapping, DPA + transfers as counsel placeholders. `CounselId`
+   union +`dpa` → **15 ids**; per-doc pins updated (the tracked table below gains a row).
+4. **Badge softened:** page-level Badge becomes **"preliminary — final on incorporation"**
+   (stakeholder decision; per-section counsel callouts and their aria-labels unchanged —
+   facts are still unknown, so the marking mechanism stays).
+5. **Plumbing:** footer legal column gains GDPR (5 links, column count unchanged);
+   sitemap/llms.txt/e2e PAGES + legal.spec extended; metadata per house rules.
+6. **Harness capture:** F-067 reopened `in_progress` with the v2 acceptance bullet
+   (house F-066 precedent); **F-069** (backlog, R4 must, blockedBy F-067) now carries
+   domain/mailbox wiring + counsel-fact replacement + trademark clearance; domain research
+   recorded there (RDAP 2026-07-12: plain tessera.* all registered except
+   `tessera.platform`; `tessera.dev` for sale on Afternic; fallbacks tesseraos.dev/.io/.app
+   free). Wiring happens only after booking + live mailboxes — no fabricated domains.
+
+## v2 governance (increment 1, before code)
+
+- ADR-0045 **amendment v4.10**: legal-prose opening changes from the compact quiet opening
+  to §3.12 PageHeader + legal signature arts (v4.9's recorded fallback, promoted; the
+  compact opening is retired), badge wording, GDPR page in the legal set.
+- MARKETING-DESIGN v4.10 + manifest **4.10.0** in lockstep: §3.14 legal-prose section text
+  updated (opening = page-header + legal art; body unchanged); components[] gains
+  `LegalArts(RedactionGate/TwoCovenants/OneTile/Nameplate/RightsLedger …)`. No
+  banned/required-pattern or allowIn changes.
+
+## v2 test/verification deltas
+
+- legal-content.test.ts: pins grow to 15 ids (+`dpa` on gdpr); gdpr doc joins every
+  structural/tripwire/voice battery; badge-text assertion if present updates.
+- e2e: PAGES += /legal/gdpr (axe both themes, one h1, 375px); legal.spec footer column
+  expects 5 links; counsel-callout visibility adds gdpr; art presence asserted via
+  role=img labels on each legal hero; reduced-motion still verified in the motion proof.
+- Budget: heroes add the SHARED shader chunk (already on all other subpages) + art code;
+  measure over the wire per [[turbopack-route-table-no-first-load-js]]; ≤240KB gz holds.
+- Full gate battery + independent evaluator + screenshot review (5 pages × 2 themes ×
+  2 widths + reduced-motion) + design-review skill pass, as v1.
+
+## v2 increments
+
+1. Governance (ADR v4.10 + doc/manifest 4.10.0) — design-lint green.
+2. PageHeader adoption on the four existing pages + badge softening (no arts yet) — gates
+   + screenshots (proves the hero register before art lands).
+3. The five signature arts + wiring into the heroes — gates + motion proof + screenshots.
+4. /legal/gdpr (content + page + counsel-id extension + plumbing) — gates.
+5. Full battery + evaluator + record (progress, E-022 v2 note, feature done) + checkpoint.
+
 ## Risks / open questions
 
 - **OQ-1 (stakeholder, blocks placeholder `oss-license` only — not this feature):** choose and commit the concrete permissive license (MIT vs Apache-2.0) + root `LICENSE` file. OQ4 resolved the *model*; the file is an NFR-18 launch item and needs its own ADR. Until then `/legal/terms` keeps the placeholder — **do not** create a LICENSE inside F-067 (scope creep).

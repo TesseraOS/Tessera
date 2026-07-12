@@ -46,6 +46,8 @@ placeholders, never as fabricated statements.
   generally available) vs the open-core repository license.
 - [Cookies](${siteConfig.siteUrl}/legal/cookies): no cookies; one localStorage entry for
   the theme choice; zero third-party requests.
+- [GDPR](${siteConfig.siteUrl}/legal/gdpr): posture by deployment profile — self-hosted
+  data stays with the customer; managed cloud pre-GA; DPA pending counsel.
 - [Imprint](${siteConfig.siteUrl}/legal/imprint): operator identity — mostly counsel-review
   placeholders until incorporation.
 

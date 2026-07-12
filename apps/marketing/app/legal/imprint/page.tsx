@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
-import { LegalArticle } from '@/components/legal-article';
+import { LegalNameplate } from '@/components/art/legal-nameplate';
+import { LegalArticle, LegalMeta } from '@/components/legal-article';
+import { PageHeader } from '@/components/page-header';
 import { imprintDoc } from '@/lib/legal/imprint';
 
 export const metadata: Metadata = {
@@ -10,5 +12,17 @@ export const metadata: Metadata = {
 };
 
 export default function ImprintPage() {
-  return <LegalArticle doc={imprintDoc} />;
+  return (
+    <>
+      <PageHeader
+        eyebrow={imprintDoc.eyebrow}
+        title={imprintDoc.title}
+        lead={imprintDoc.lead}
+        art={<LegalNameplate />}
+      >
+        <LegalMeta updated={imprintDoc.updated} />
+      </PageHeader>
+      <LegalArticle doc={imprintDoc} />
+    </>
+  );
 }

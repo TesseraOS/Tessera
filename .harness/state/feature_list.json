@@ -2206,7 +2206,8 @@
         "Legal routes on the marketing app (static-first, MARKETING-DESIGN v4 tokens/type; a shared legal-page layout with serif headings, prose measure, table support): /legal/privacy (GDPR/CCPA-aware structure: data categories, purposes, processors, retention, rights, contact), /legal/terms (SaaS + open-core split: service terms vs repository licenses), /legal/cookies (honest: first-party only today, no third-party requests - reflects the zero-third-party budget), /legal/imprint (operator identity + contact; jurisdiction placeholders clearly marked for counsel review)",
         "Plumbing: footer legal column links resolve (replacing placeholders), per-page SEO metadata + sitemap entries, llms.txt updated, headings/landmarks pass axe AA on both themes, 375px no-overflow",
         "Honesty rule: NO fabricated legal claims - unresolved entity/jurisdiction facts render as clearly-marked counsel-review placeholders and are tracked in the plan; content notes which sections require counsel sign-off before launch",
-        "Gates green incl. design-lint + e2e (routes 200, one h1 each, axe both themes); progress + effects recorded"
+        "Gates green incl. design-lint + e2e (routes 200, one h1 each, axe both themes); progress + effects recorded",
+        "v2 (stakeholder review 2026-07-12 — 'too dull and lifeless; the first section should be a full-height hero like the homepage; most pages lack illustrations; add artistic interactive animated illustrations; add a GDPR page; soften the draft badge; capture pending items in the harness'; direction confirmed: expressive frame, calm document): every legal page opens with the §3.12 PageHeader hero (same shader-field ground as all subpages) carrying a bespoke legal signature art in the art slot — privacy RedactionGate (tiles pass a gate, secret glyphs masked: F-006 truth), terms TwoCovenants (one engine core, open field vs managed canopy), cookies OneTile (near-empty shelf, the single theme tile lights on touch), imprint Nameplate (nine-tile seal over visibly empty engraved slots), gdpr RightsLedger (request in, export copy out, erased tile dissolves) — each honest product truth as brand art: motion-seam imports only, SSR-deterministic (no reduced-motion markup branching), reduced-motion still scenes, decorative-interactive per the canvas/art lessons, role=img labeled, tokens-only; the DOCUMENT body keeps the calm §3.14 article treatment (arts frame, never invade); new /legal/gdpr posture page 'GDPR at Tessera' (roles incl. self-hosted controller truth per ADR-0003, rights mapping, DPA/transfers as counsel placeholders — CounselId union +dpa = 15 ids, NEVER claims 'GDPR compliant', the tripwire stays) joins footer column/sitemap/llms.txt/e2e batteries; page badge softened to 'preliminary — final on incorporation' (per-section counsel callouts and aria-labels unchanged); MARKETING-DESIGN v4.10 + manifest 4.10.0 + ADR-0045 amendment v4.10 record the archetype change in lockstep; first-load budget still ≤240KB gz measured over the wire; F-069 (backlog) captures operator identity/domain/mailbox/counsel finalization so nothing pends outside the harness"
       ],
       "verification": [
         "typecheck",
@@ -2246,6 +2247,37 @@
       ],
       "effects": [
         "E-004"
+      ]
+    },
+    {
+      "id": "F-069",
+      "title": "Operator identity & legal finalization: domain + mailboxes wired, counsel facts replace the pinned placeholders",
+      "requirements": [
+        "FR-67",
+        "NFR-17"
+      ],
+      "service": "web",
+      "package": "@tessera/marketing",
+      "release": "R4",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-067"
+      ],
+      "acceptance": [
+        "Domain decision: STAKEHOLDER CHOSE tesseraos.dev (2026-07-12) — mailboxes privacy@/legal@/hello@tesseraos.dev; booking is the stakeholder's action, still pending. Research recorded (2026-07-12 RDAP at the registries): every plain tessera.* checked is registered — .com/.net/.org/.co/.so/.io/.dev/.ai/.app/.sh/.me/.tools/.cloud/.systems/.build/.software/.codes/.tech/.one/.run/.page and more — except tessera.platform (free at Identity Digital, declined); tessera.dev is Afternic-listed for sale (declined), tessera.me Afternic-parked; tesseraos.io/.app also free (defensive grabs recommended), tesseraos.ai taken. Once booked + mailboxes live: record ADR (registrar, dates, mailbox provider) and wire ONLY via env-driven siteConfig — the design-lint hardcoded-domain ban stays; content placeholders (contact-email) resolve through the pinned tests, not prose edits; trademark clearance for the software category (TESSERA marks exist in semiconductors/Adeia and biotech) flagged to counsel before brand spend",
+        "Counsel placeholder replacement workflow: each of the 15 pinned CounselIds (entity, address, representative, register-number, jurisdiction, contact-email, dpo, processors, retention, transfers, supervisory-authority, oss-license, payments, rights-phrasing, dpa) is resolved by editing lib/legal/* content + the pinned sets in tests/legal-content.test.ts together — never prose edits around the pin; the 'preliminary' page badge drops per page only when that page's placeholder set is empty; oss-license resolves via F-059's LICENSE + ADR (cross-reference, not duplicated here)",
+        "Legal content re-dated and counsel sign-off recorded in progress.md when the last placeholder falls; llms.txt draft-status wording updated to match",
+        "Gates green (typecheck, lint, test incl. the updated pins, e2e truth checks); effects (E-022 legal surface) + progress updated"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-022"
       ]
     }
   ]

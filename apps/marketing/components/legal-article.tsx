@@ -5,11 +5,12 @@ import { TextLink } from '@/components/ui/text-link';
 import type { LegalBlock, LegalDoc } from '@/lib/legal/types';
 
 /**
- * The legal-prose treatment (MARKETING-DESIGN §3.14, ADR-0045 v4.9) — the ONLY styling
- * surface for /legal/*. A compact quiet opening on the base ground (no shader, no
- * min-h-svh: §3.13 precedent — the document, not a hero, is the point), then a
- * single-column max-w-prose article rendered from typed LegalBlock data. Static server
- * component: no client islands, no motion seam, no mascot.
+ * The legal-prose treatment (MARKETING-DESIGN §3.14, ADR-0045 v4.10) — the calm
+ * document half of "expressive frame, calm document". Pages compose the §3.12
+ * PageHeader hero (eyebrow/title/lead from the LegalDoc + LegalMeta as children + a
+ * legal signature art); LegalArticle renders the max-w-prose body from typed
+ * LegalBlock data. Static server component: no client islands, no motion seam, no
+ * mascot — the hero's art carries the page's motion.
  */
 
 const DATE_FORMAT = new Intl.DateTimeFormat('en-US', {
@@ -20,6 +21,23 @@ const DATE_FORMAT = new Intl.DateTimeFormat('en-US', {
 });
 
 const formatUpdated = (iso: string): string => DATE_FORMAT.format(new Date(`${iso}T00:00:00Z`));
+
+/**
+ * The hero's status line (§3.14): the softened preliminary Badge + the real revision
+ * date, rendered as PageHeader children so every legal page states its standing the
+ * same way. Wording is a stakeholder decision (ADR-0045 v4.10) — the per-section
+ * CounselReview callouts still carry the unresolved facts.
+ */
+export function LegalMeta({ updated }: { updated: string }) {
+  return (
+    <>
+      <Badge>preliminary — final on incorporation</Badge>
+      <p className="text-small text-faint-foreground">
+        last updated <time dateTime={updated}>{formatUpdated(updated)}</time>
+      </p>
+    </>
+  );
+}
 
 /** Inline same-site links in paragraph/list text: `[label](/path)` (see lib/legal/types.ts). */
 const INLINE_LINK = /\[([^\]]+)\]\(([^)\s]+)\)/g;
@@ -128,29 +146,15 @@ function LegalBlockView({ block }: { block: LegalBlock }) {
   }
 }
 
+/** The calm document body — the hero above it is composed by the page (§3.14 v4.10). */
 export function LegalArticle({ doc }: { doc: LegalDoc }) {
   return (
-    <>
-      <header className="border-b">
-        <Container className="pt-32 pb-12 md:pt-36 md:pb-16">
-          <p className="text-label text-faint-foreground uppercase">{doc.eyebrow}</p>
-          <h1 className="text-title text-foreground mt-4 text-balance">{doc.title}</h1>
-          <p className="text-lead text-muted-foreground mt-5 max-w-xl text-pretty">{doc.lead}</p>
-          <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
-            <Badge>draft — pending counsel review</Badge>
-            <p className="text-small text-faint-foreground">
-              last updated <time dateTime={doc.updated}>{formatUpdated(doc.updated)}</time>
-            </p>
-          </div>
-        </Container>
-      </header>
-      <Container>
-        <article className="max-w-prose pb-20 md:pb-24">
-          {doc.blocks.map((block, index) => (
-            <LegalBlockView key={index} block={block} />
-          ))}
-        </article>
-      </Container>
-    </>
+    <Container>
+      <article className="max-w-prose pb-20 md:pb-24">
+        {doc.blocks.map((block, index) => (
+          <LegalBlockView key={index} block={block} />
+        ))}
+      </article>
+    </Container>
   );
 }

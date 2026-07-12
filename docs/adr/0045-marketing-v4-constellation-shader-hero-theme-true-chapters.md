@@ -282,6 +282,44 @@ Extensions, in lockstep with the manifest (4.9.0):
    are meant to be found). No banned/required-pattern or `allowIn` changes — the
    existing contract covers the new files automatically.
 
+## Amendment — v4.10 (2026-07-12, F-067 v2: expressive frame, calm document)
+
+The stakeholder rejected v4.9's compact legal opening (*"too dull, lifeless, lacking
+design and creativity; the first section should be a full-height hero like the
+homepage; add creative interactive animated illustrations; add a GDPR page; soften the
+draft badge"*) — the same signal that produced the v4.5 amendment: this project lead
+reads austere minimalism as lifeless. Direction confirmed: **expressive frame, calm
+document**. In lockstep with the manifest (4.10.0):
+
+1. **The legal opening is the §3.12 `PageHeader` hero.** v4.9's recorded fallback is
+   promoted to the rule and extended: eyebrow/title/lead from the `LegalDoc`, the
+   updated line + Badge as children, and a bespoke **legal signature art** in the art
+   slot. The compact quiet opening is retired. The §3.14 body article below is
+   unchanged — calm `max-w-prose`, token tables, counsel callouts.
+2. **Five legal signature arts** (`components/art/legal-*.tsx`, house art rules:
+   motion-seam imports only, SSR-deterministic markup, constant-derived geometry,
+   `role="img"` + label, reduced-motion = designed still scene, tokens-only, hover
+   responses — decorative-interactive): **RedactionGate** (privacy — tiles stream
+   through a gate, secret glyphs mask as they pass; F-006 truth), **TwoCovenants**
+   (terms — one engine core, two grounds: open field vs managed canopy), **OneTile**
+   (cookies — a near-empty shelf whose single `theme` tile lights only when touched;
+   the e2e-proven localStorage truth), **Nameplate** (imprint — the seal assembles
+   beside engraved slots left visibly empty: the counsel placeholders, as art),
+   **RightsLedger** (gdpr — request in, export copy out, an erased tile dissolves; a
+   rights *model*, no live-feature claim).
+3. **`/legal/gdpr` — "GDPR at Tessera"** joins the legal set: a posture page (roles by
+   deployment profile per ADR-0003, the data-subject-rights mapping, DPA/transfers/
+   supervisory items as counsel placeholders). The `CounselId` union gains `dpa` → 15
+   ids; the fabrication tripwire banning "GDPR-compliant" claims stays and applies to
+   the new page.
+4. **Badge softened:** *draft — pending counsel review* → **"preliminary — final on
+   incorporation"** (stakeholder wording). Per-section `CounselReview` callouts and
+   their aria-labels are unchanged — the facts are still unknown, so the marking
+   mechanism stays.
+5. **Chrome/plumbing:** footer legal column gains GDPR (five links); sitemap
+   (`yearly`/0.3), llms.txt `## Legal`, and the e2e batteries extend to the fifth
+   route. No banned/required-pattern or `allowIn` changes.
+
 ## Alternatives considered
 
 - **three.js / react-three-fiber scene** — rejected: bundle (~150KB+ gz) vs. 240KB budget,

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
-import { LegalArticle } from '@/components/legal-article';
+import { LegalOneTile } from '@/components/art/legal-one-tile';
+import { LegalArticle, LegalMeta } from '@/components/legal-article';
+import { PageHeader } from '@/components/page-header';
 import { cookiesDoc } from '@/lib/legal/cookies';
 
 export const metadata: Metadata = {
@@ -10,5 +12,17 @@ export const metadata: Metadata = {
 };
 
 export default function CookiesPage() {
-  return <LegalArticle doc={cookiesDoc} />;
+  return (
+    <>
+      <PageHeader
+        eyebrow={cookiesDoc.eyebrow}
+        title={cookiesDoc.title}
+        lead={cookiesDoc.lead}
+        art={<LegalOneTile />}
+      >
+        <LegalMeta updated={cookiesDoc.updated} />
+      </PageHeader>
+      <LegalArticle doc={cookiesDoc} />
+    </>
+  );
 }

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
-import { LegalArticle } from '@/components/legal-article';
+import { LegalRedactionGate } from '@/components/art/legal-redaction-gate';
+import { LegalArticle, LegalMeta } from '@/components/legal-article';
+import { PageHeader } from '@/components/page-header';
 import { privacyDoc } from '@/lib/legal/privacy';
 
 export const metadata: Metadata = {
@@ -10,5 +12,17 @@ export const metadata: Metadata = {
 };
 
 export default function PrivacyPage() {
-  return <LegalArticle doc={privacyDoc} />;
+  return (
+    <>
+      <PageHeader
+        eyebrow={privacyDoc.eyebrow}
+        title={privacyDoc.title}
+        lead={privacyDoc.lead}
+        art={<LegalRedactionGate />}
+      >
+        <LegalMeta updated={privacyDoc.updated} />
+      </PageHeader>
+      <LegalArticle doc={privacyDoc} />
+    </>
+  );
 }

@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { cookiesDoc } from '../lib/legal/cookies';
+import { gdprDoc } from '../lib/legal/gdpr';
 import { imprintDoc } from '../lib/legal/imprint';
 import { privacyDoc } from '../lib/legal/privacy';
 import { termsDoc } from '../lib/legal/terms';
@@ -19,7 +20,7 @@ import type { CounselId, LegalBlock, LegalDoc } from '../lib/legal/types';
  * manifest's regexes to lib/legal/*.ts — coverage extended, no contract weakened.
  */
 
-const DOCS: readonly LegalDoc[] = [privacyDoc, termsDoc, cookiesDoc, imprintDoc];
+const DOCS: readonly LegalDoc[] = [privacyDoc, termsDoc, cookiesDoc, imprintDoc, gdprDoc];
 
 /** The tracked counsel-review table from the F-067 plan — pinned exactly, per doc. */
 const EXPECTED_PLACEHOLDERS: Record<LegalDoc['slug'], readonly CounselId[]> = {
@@ -44,6 +45,7 @@ const EXPECTED_PLACEHOLDERS: Record<LegalDoc['slug'], readonly CounselId[]> = {
     'contact-email',
     'jurisdiction',
   ],
+  gdpr: ['dpa', 'rights-phrasing', 'transfers', 'supervisory-authority'],
 };
 
 const counselBlocks = (doc: LegalDoc) =>
@@ -203,7 +205,7 @@ describe('legal content: voice (manifest regexes extended to lib/legal/*.ts)', (
     }));
 
   it('scans a non-empty legal content tree', () => {
-    expect(legalFiles.length).toBeGreaterThanOrEqual(5);
+    expect(legalFiles.length).toBeGreaterThanOrEqual(6);
   });
 
   for (const id of ['hype-vocabulary', 'exclamation-in-copy'] as const) {

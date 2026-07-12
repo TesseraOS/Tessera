@@ -53,6 +53,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.3,
     },
     {
+      url: `${siteConfig.siteUrl}/legal/gdpr`,
+      lastModified,
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
       url: `${siteConfig.siteUrl}/legal/imprint`,
       lastModified,
       changeFrequency: 'yearly',

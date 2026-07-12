@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
-import { LegalArticle } from '@/components/legal-article';
+import { LegalTwoCovenants } from '@/components/art/legal-two-covenants';
+import { LegalArticle, LegalMeta } from '@/components/legal-article';
+import { PageHeader } from '@/components/page-header';
 import { termsDoc } from '@/lib/legal/terms';
 
 export const metadata: Metadata = {
@@ -10,5 +12,17 @@ export const metadata: Metadata = {
 };
 
 export default function TermsPage() {
-  return <LegalArticle doc={termsDoc} />;
+  return (
+    <>
+      <PageHeader
+        eyebrow={termsDoc.eyebrow}
+        title={termsDoc.title}
+        lead={termsDoc.lead}
+        art={<LegalTwoCovenants />}
+      >
+        <LegalMeta updated={termsDoc.updated} />
+      </PageHeader>
+      <LegalArticle doc={termsDoc} />
+    </>
+  );
 }

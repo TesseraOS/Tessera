@@ -36,6 +36,7 @@ const COLUMNS = [
       { href: '/legal/privacy', label: 'Privacy' },
       { href: '/legal/terms', label: 'Terms' },
       { href: '/legal/cookies', label: 'Cookies' },
+      { href: '/legal/gdpr', label: 'GDPR' },
       { href: '/legal/imprint', label: 'Imprint' },
     ],
   },

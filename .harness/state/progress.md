@@ -3,6 +3,80 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-12 (v2) — F-067 DONE — legal pages get expressive heroes + 5 signature arts + GDPR page (ADR-0045 v4.10)
+
+**Stakeholder review of v1: "too dull, lifeless, lacking design/creativity; the first
+section should be a full-height hero like the homepage; most pages lack illustrations; add
+creative, polished, interactive, animated illustrations — artistic masterpieces; add a
+GDPR page; soften the draft badge; capture pending items in the harness."** Direction
+confirmed via decision prompt: **expressive frame, calm document**. This is the F-051/F-066
+lesson again ([[design-contract-mechanism-outlives-parameters]] — this lead reads austere
+minimalism as lifeless); v1's compact opening was retired and its recorded PageHeader
+fallback promoted, extended with per-page art.
+
+**What changed**
+- **Every legal page (now five) opens with the §3.12 `PageHeader`** — the same full-height
+  shader-field ground as features/pricing/enterprise — carrying a bespoke **legal
+  signature art** in the art slot; the §3.14 article body below stays calm (max-w-prose,
+  serif h2s, tables, counsel callouts). `legal-article.tsx` is body-only now; the new
+  `LegalMeta` export renders the badge + updated line as PageHeader children; one h1/page.
+- **Five signature arts** (components/art/legal-*.tsx), each a shipped product truth in the
+  house art language: **RedactionGate** (privacy — tiles stream a gate, secret glyphs mask
+  at the crossing = F-006; hover = inspection lens + "patterns scrubbed · content kept"),
+  **TwoCovenants** (terms — one engine core under open-field vs managed-canopy grounds),
+  **OneTile** (cookies — near-empty shelf, the single gold `theme` tile lights only when
+  touched = the localStorage truth), **Nameplate** (imprint — the nine-tile seal assembles
+  beside engraved slots left visibly empty), **RightsLedger** (gdpr — request in, export
+  copy out, erased tile dissolves). All: framer via the lib/motion seam only, role=img +
+  descriptive label, tokens-only, SSR-deterministic (reduced-motion varies animate/
+  transition never markup — the v4.5 hydration rule), designed reduced-motion still scenes,
+  keyboard-inert, interactive hover.
+- **New /legal/gdpr "GDPR at Tessera"** — an honest posture page (roles by deployment
+  profile per ADR-0003 self-hosted truth; rights mapping arts. 15–21; DPA/transfers/
+  supervisory as counsel placeholders). NEVER claims certification — it explicitly
+  disclaims it, and the compliance-claim tripwire stays green. `CounselId` union → **15**
+  (+`dpa`); per-doc pins updated.
+- **Badge softened** to "preliminary — final on incorporation" (per-section counsel
+  callouts and aria-labels unchanged — the 15 facts are still genuinely unknown).
+- Plumbing: footer legal column += GDPR (5 links); sitemap/llms.txt/e2e PAGES extended.
+- **Harness capture** (stakeholder ask #8): F-067 reopened for v2 (F-066 precedent); new
+  **F-069** (backlog, R4 must) carries domain/mailbox wiring + the 15-placeholder counsel
+  replacement workflow + trademark clearance; domain research recorded there.
+
+**Evidence/verification** (generator ran gates; **orchestrator re-ran every gate fresh** —
+the evaluator subagent was lost to a process exit, so I verified directly)
+- verify-state ok · typecheck 33/33 · lint 19/19 · format clean · test 33/33 tasks
+  (marketing **119/119**: legal-content **74**, design-lint 40 @ manifest 4.10.0) · build
+  green — all **5** `/legal/*` routes `○ Static` (18/18 pages) · e2e **48/48** (five routes
+  200, five-link footer, per-page art via role=img + badge text, counsel callouts on
+  privacy/gdpr/imprint, cookies truth test, one h1 + axe AA both themes + 375px on all
+  five).
+- Audits I ran: fabrication tripwires over lib/legal/*.ts — zero hits (no entities/emails/
+  domains incl. tesseraos.*/named-license claims; the only "compliance" match is gdpr's
+  own certification *disclaimer*). CounselId union = exactly 15. Manifest enforcement
+  config byte-identical (only version/sections/components lines changed); ADR-0045 v4.10
+  amendment present. All five arts: framer via seam only, role=img, tokens-only, no
+  reduced-motion markup branching. No legal *body* copy in client chunks (only the arts'
+  own labels, expected — arts are client components).
+- Browser review (dev server, both themes): all five heroes carry the shader register + a
+  living art; RedactionGate hover proven; OneTile's gold tile seated; Nameplate verified in
+  noon; footer shows 5 legal links; badge reads "preliminary — final on incorporation".
+  design-review skill pass on v1 held; v2 adds only sanctioned archetype art.
+- Budget (generator, wire-measured per [[turbopack-route-table-no-first-load-js]]):
+  ~208KB gz privacy/gdpr (home ~208.6) ≤ 240 cap; the shader chunk stays lazy/post-LCP.
+
+**Decisions**
+- ADR-0045 amendment v4.10 (compact opening retired → PageHeader + LegalArts); manifest
+  4.10.0 in lockstep. Domain: **stakeholder chose tesseraos.dev** (plain tessera.* all
+  taken except tessera.platform; tessera.dev is Afternic-for-sale) — booking + wiring is
+  F-069, nothing referencing it enters code until the domain + mailboxes are live.
+- Badge wording softened; counsel callouts retained (facts still unknown).
+
+**Next step**
+- F-067 closed. Open R3 marketing work is done; next eligible by id is **F-044** (API
+  hardening) unless the stakeholder redirects. F-069 (identity/domain finalization) waits
+  on the stakeholder booking tesseraos.dev + standing up mailboxes.
+
 ## 2026-07-12 — F-067 DONE — legal pages: privacy/terms/cookies/imprint + footer legal column (ADR-0045 v4.9)
 
 **What changed** (stakeholder-directed selection ahead of lowest-id F-044 — "remaining

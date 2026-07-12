@@ -4,11 +4,27 @@ import { expect, test } from '@playwright/test';
  * F-067 truth checks — the legal pages' claims, executed against the production build.
  * pages.spec.ts already covers h1/axe/overflow/sitemap/llms for these routes; this
  * spec proves the surface-specific facts: routes resolve, the footer legal nav exists,
- * placeholders cannot silently vanish, and the cookie policy's storage claims are
+ * placeholders cannot silently vanish, each hero carries its signature art + the
+ * preliminary badge (v2, ADR-0045 v4.10), and the cookie policy's storage claims are
  * literally true (see lib/legal/cookies.ts — wording and assertions move together).
  */
 
-const LEGAL_ROUTES = ['/legal/privacy', '/legal/terms', '/legal/cookies', '/legal/imprint'];
+const LEGAL_ROUTES = [
+  '/legal/privacy',
+  '/legal/terms',
+  '/legal/cookies',
+  '/legal/gdpr',
+  '/legal/imprint',
+];
+
+/** Each legal hero's signature art, identified by a fragment of its role=img label. */
+const HERO_ARTS = [
+  { route: '/legal/privacy', art: /redaction gate/i },
+  { route: '/legal/terms', art: /two covenants/i },
+  { route: '/legal/cookies', art: /storage shelf/i },
+  { route: '/legal/gdpr', art: /rights model/i },
+  { route: '/legal/imprint', art: /nameplate/i },
+] as const;
 
 test('every legal route responds 200', async ({ page }) => {
   for (const route of LEGAL_ROUTES) {
@@ -17,7 +33,7 @@ test('every legal route responds 200', async ({ page }) => {
   }
 });
 
-test('the footer exposes a legal nav whose four links resolve', async ({ page }) => {
+test('the footer exposes a legal nav whose five links resolve', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/');
 
@@ -28,7 +44,7 @@ test('the footer exposes a legal nav whose four links resolve', async ({ page })
   }
 });
 
-for (const route of ['/legal/privacy', '/legal/imprint']) {
+for (const route of ['/legal/privacy', '/legal/gdpr', '/legal/imprint']) {
   test(`${route} renders visible counsel-review placeholders`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(route);
@@ -36,6 +52,18 @@ for (const route of ['/legal/privacy', '/legal/imprint']) {
     const callouts = page.getByRole('note', { name: 'Pending counsel review' });
     expect(await callouts.count()).toBeGreaterThanOrEqual(1);
     await expect(callouts.first()).toBeVisible();
+  });
+}
+
+for (const { route, art } of HERO_ARTS) {
+  test(`${route} hero carries its signature art and the preliminary badge`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(route);
+
+    // The art exposes itself as a labelled image (decorative-interactive contract).
+    await expect(page.getByRole('img', { name: art })).toBeVisible();
+    // The softened status badge (v2 wording) sits in the hero.
+    await expect(page.getByText('preliminary — final on incorporation')).toBeVisible();
   });
 }
 

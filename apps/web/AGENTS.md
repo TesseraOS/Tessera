@@ -20,7 +20,16 @@ generated SDK. See [`../../docs/architecture/ARCHITECTURE.md`](../../docs/archit
 - **UX baseline is mandatory** (PRD FR-49): loading/empty/error states, ⌘K, themes,
   optimistic updates, virtualization, toasts.
 - **Accessibility is a gate** (NFR-9, WCAG 2.1 AA): semantic HTML, keyboard paths, focus,
-  contrast.
+  contrast. Contrast is **executable** — rule
+  [`contrast.md`](../../.harness/rules/frontend/contrast.md) + skill
+  [`contrast-checker`](../../.harness/skills/contrast-checker/SKILL.md); token changes must
+  keep `tests/contrast.test.ts` green across all 4 themes × 2 modes (ADR-0047).
+- **Theming** (DESIGN-SYSTEM §0.1, ADR-0047): mode = `.dark` class (next-themes) × theme =
+  `data-theme` (`monkai` default / `amber` / `claude` / `notebook`). Components are
+  token-only and never branch on either; theme tokens live in `app/themes.css` (vendored —
+  never `shadcn add` over `:root`); appearance switches ripple via `lib/theme.tsx`.
+- **Illustrations & mascot are budgeted** (DESIGN-SYSTEM §11): empty/error/404/onboarding/
+  overview-hero only — never headers, nav, or data views; honest (no fabricated data).
 
 ## Relevant features
 **F-028** (UI foundation) → **F-014** (dashboard), then the R1+ dashboard features (F-027, etc.)

@@ -1,6 +1,6 @@
 # ADR-0023: Adopt efferd Dashboard 3 as the dashboard's binding design reference
 
-- **Status:** Accepted
+- **Status:** Superseded in part by [ADR-0047](0047-dashboard-multi-theme-illustration-layer-contrast-gate.md) (2026-07-12: the *color* clauses — monochrome-only, dark-only-first, no brand hue — now apply to the Monkai default theme rather than the dashboard as a whole; layout/shell/honesty decisions stand)
 - **Date:** 2026-06-30
 - **Deciders:** Project lead, Claude
 - **Tags:** frontend, design, web

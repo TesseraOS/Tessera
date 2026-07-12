@@ -23,11 +23,15 @@ Motion, React Flow, Monaco, Recharts/Tremor).
 - **Command palette (⌘K)**, keyboard operability, toasts for feedback.
 - **Virtualized** long lists/tables; no rendering thousands of rows eagerly.
 - Tasteful **micro-interactions** (Framer Motion) — purposeful, not decorative.
-- Light / dark / system themes.
+- Light / dark / system modes × the DESIGN-SYSTEM §0.1 theme catalog (ADR-0047) —
+  components are token-only and never branch on theme or mode.
 
 ## Accessibility (NFR-9 — WCAG 2.1 AA)
 - Semantic HTML, labelled controls, focus management, visible focus rings, sufficient
   contrast, full keyboard paths. Accessibility is a verification gate for UI features.
+- Contrast is governed by [`contrast.md`](contrast.md) (≥ 4.5:1 body, ≥ 3:1 large/non-text,
+  across every theme × mode) and enforced executably — see the
+  [`contrast-checker`](../../skills/contrast-checker/SKILL.md) skill.
 
 ## Performance
 - Mind bundle size (code-split, lazy-load heavy views like the graph/Monaco); measure with

@@ -2,7 +2,7 @@
   "$schemaRef": "./schemas/feature_list.schema.json",
   "version": 1,
   "project": "tessera",
-  "updated": "2026-07-11",
+  "updated": "2026-07-12",
   "policy": {
     "wip_limit": 1,
     "ordering": "by release, then id; respect blockedBy"
@@ -2247,7 +2247,8 @@
       ],
       "effects": [
         "E-004"
-      ]
+      ],
+      "notes": "ABSORBED INTO F-070 (2026-07-12, stakeholder-directed dashboard overhaul): the mascot adoption lands as F-070's illustration/mascot workstream under the same governance (token binding decided under DESIGN-SYSTEM v2 / ADR-0047; usage budget: empty/error/404/onboarding only). Marked done together with F-070."
     },
     {
       "id": "F-069",
@@ -2279,6 +2280,44 @@
       "effects": [
         "E-022"
       ]
+    },
+    {
+      "id": "F-070",
+      "title": "Dashboard experience overhaul: 4-theme system (Monkai/Amber/Claude/Notebook × light/dark) with radial appearance propagation, signature illustration layer + Tess adoption, WCAG-AA contrast gate",
+      "requirements": [
+        "FR-49",
+        "NFR-9"
+      ],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R4",
+      "priority": "must",
+      "status": "in_progress",
+      "blockedBy": [
+        "F-066"
+      ],
+      "acceptance": [
+        "Theme system: four selectable themes — Monkai (the existing efferd tokens, stays DEFAULT and byte-identical), Amber (tweakcn amber-minimal), Claude (tweakcn claude), Notebook (tweakcn notebook) — each with full light+dark token sets (roles, charts, sidebar, radius, shadows, per-theme font stacks) VENDORED into scoped [data-theme] blocks (never shadcn-add clobbering :root); mode (light/dark/system) stays next-themes class-based; theme persisted (localStorage) with a pre-paint script (no FOUC); theme fonts self-hosted via next/font with preload:false (no runtime requests, no first-load bloat)",
+        "Appearance propagation: theme AND mode switches ripple as a radial view transition from the control that asked (marketing's startViewTransition + clip-path pattern ported to apps/web/lib/theme.tsx); instant fallback under prefers-reduced-motion or a missing View Transitions API; switcher in the header (mode segment + theme picker with swatches), mirrored in the command palette and a /settings Appearance card",
+        "Contrast Checker: new rule .harness/rules/frontend/contrast.md + skill contrast-checker (+ .claude shim) operationalizing WCAG 2.x AA (>= 4.5:1 body text, >= 3:1 large text/non-text UI); an EXECUTABLE checker (apps/web tests, zero-dep oklch/hex->sRGB->ratio math) asserts the registered token pairings across all 4 themes x 2 modes inside the standard test gate; vendored values failing AA are minimally nudged and documented (ADR-0047)",
+        "Illustration layer: apps/web/components/art/* signature arts (constellation-hero, compiler-assembly, signal-field, memory-strata, pipeline-flow, ledger-gate, time-river) in the marketing art idiom — server-rendered SVG, dashboard tokens only, CSS-only motion with reduced-motion kill, aria-hidden decorative, honest (no fabricated data) — adopted via new optional art/mascot slots on EmptyState/ErrorState and page surfaces under a documented usage budget (empty/error/404/onboarding/hero bands — never data views)",
+        "Mascot adoption (F-068 ABSORBED): @tessera/mascot dependency + --mascot-* bound per theme in globals.css; placements per budget: empty (searching/watching), error (alarmed), new app/not-found.tsx 404 (lost), overview onboarding (greeting); reduced-motion still poses verified",
+        "Page-level polish: overview greeting hero + illustrated onboarding + restyled (still honest) stat cards; consistent page-header pattern and micro-interactions (150-250ms, interruptible, reduced-motion-safe) across all 10 routes; surface treatment token-driven so non-Monkai themes express borders/shadows while Monkai stays visually identical (screenshot-compared)",
+        "Governance: ADR-0047 supersedes ADR-0023's monochrome/dark-only constraint (efferd stays the layout/structure reference); DESIGN-SYSTEM.md v2 + design-system.manifest.json updated in lockstep; zero regressions — all existing gates green (typecheck/lint/format/test/build/e2e incl. the 9 existing specs + axe) plus a new appearance e2e (data-theme set + persists, no-FOUC, reduced-motion instant, axe across 4 themes x 2 modes on representative routes); effects E-004/E-023 updated; progress recorded"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "format",
+        "test",
+        "build",
+        "e2e"
+      ],
+      "effects": [
+        "E-004",
+        "E-023"
+      ],
+      "notes": "Registered 2026-07-12 from the stakeholder dashboard review ('dull, lifeless, lacks design and creativity; most pages lack illustrations; awwwards-grade; add the four tweakcn themes with a propagating toggle like marketing's; WCAG AA contrast rule+skill'). Plan: .harness/plans/F-070-dashboard-overhaul.md. Absorbs F-068."
     }
   ]
 }

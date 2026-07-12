@@ -21,10 +21,12 @@ and tool-agnostic; each lives in its own folder as `SKILL.md` with a small front
 | [`motion`](motion/SKILL.md) | Functional, `prefers-reduced-motion`-safe animation. |
 | [`design-review`](design-review/SKILL.md) | Auditing a built/changed screen against design anti-patterns before UI is done. |
 | [`marketing-ui`](marketing-ui/SKILL.md) | Building a marketing-site (`apps/marketing`) page/section — MARKETING-DESIGN archetypes, honest content, design-lint. |
+| [`contrast-checker`](contrast-checker/SKILL.md) | Verifying/fixing WCAG AA contrast (≥ 4.5:1 body, ≥ 3:1 large/non-text) across every theme × mode. |
 
 `coding-standards`, `strategic-compact`, and `continuous-learning` are **general-purpose execution
 skills** (adapted from ECC, MIT); `skill-observer` extends that self-improvement loop (adapted
-CC BY 4.0). `build-ui`, `shadcn`, `frontend-craft`, `motion`, `design-review`, and `marketing-ui` are the
+CC BY 4.0). `build-ui`, `shadcn`, `frontend-craft`, `motion`, `design-review`, `marketing-ui`, and
+`contrast-checker` are the
 **frontend/design** skills — subordinate to
 [`DESIGN-SYSTEM.md`](../../docs/design/DESIGN-SYSTEM.md) for the dashboard and to
 [`MARKETING-DESIGN.md`](../../docs/design/MARKETING-DESIGN.md) for the public surfaces

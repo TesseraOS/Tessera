@@ -2,10 +2,10 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | Draft v1.0 — Phase B.1 |
-| **Last updated** | 2026-06-27 |
-| **Authority** | [ADR-0009](../adr/0009-frontend-stack-and-design-system.md) (frontend stack & design foundation) |
-| **Enforced by** | [`.harness/rules/frontend/frontend.md`](../../.harness/rules/frontend/frontend.md), [`apps/web/.harness/rules/frontend.md`](../../apps/web/.harness/rules/frontend.md) |
+| **Status** | Accepted v2.0 — F-070 (multi-theme catalog, illustration layer + mascot budget, executable contrast gate) |
+| **Last updated** | 2026-07-12 |
+| **Authority** | [ADR-0009](../adr/0009-frontend-stack-and-design-system.md) (frontend stack & design foundation), [ADR-0047](../adr/0047-dashboard-multi-theme-illustration-layer-contrast-gate.md) (theme catalog, illustration layer, contrast gate) |
+| **Enforced by** | [`.harness/rules/frontend/frontend.md`](../../.harness/rules/frontend/frontend.md), [`.harness/rules/frontend/contrast.md`](../../.harness/rules/frontend/contrast.md), [`apps/web/.harness/rules/frontend.md`](../../apps/web/.harness/rules/frontend.md), `apps/web/tests/contrast.test.ts` (executable) |
 
 > **Scope note (F-051 / ADR-0042):** this document governs the **dashboard** (`apps/web`).
 > The public surfaces (`apps/marketing`, later the public chrome of `apps/docs`) are governed
@@ -23,27 +23,65 @@
 
 ---
 
-## 0. Reference implementation — efferd Dashboard 3 (BINDING)
+## 0. Reference implementation — efferd Dashboard 3 (BINDING for layout/structure)
 
-> **This is the authority for the dashboard's look & feel** ([ADR-0023](../adr/0023-adopt-efferd-dashboard-3-design-reference.md)).
+> **This is the authority for the dashboard's layout, shell structure, information design,
+> and honesty** ([ADR-0023](../adr/0023-adopt-efferd-dashboard-3-design-reference.md)).
 > We follow **efferd Dashboard 3** + its app-shell (shadcn blocks: `@efferd/dashboard-3`,
 > `@efferd/app-shell-3`). Deviating requires a superseding ADR. The principles in §1+ still apply;
 > where they conflict, this section wins.
+>
+> **v2 amendment ([ADR-0047](../adr/0047-dashboard-multi-theme-illustration-layer-contrast-gate.md)):**
+> the *color* clauses below (dark-first near-black, monochrome, no brand hue) now describe
+> the **Monkai default theme**, not the dashboard as a whole — see §0.1 for the theme
+> catalog. Everything else in this section (shell, icons, data-viz grammar, honesty)
+> remains binding across every theme.
 
-- **Theme:** **dark-first** (default `dark`), near-black canvas; light theme is a clean inverse.
-- **Surfaces:** flat **bordered** cards — `shadow-none`, never drop-shadowed.
-- **Color:** **monochrome** UI + a monochrome `--chart-*` ramp. The **only** functional accent is
-  **emerald-up / red-down**, via the [`Delta`](../../apps/web/components/delta.tsx) chip. No brand
-  hue, no gradients-for-decoration.
+- **Theme (Monkai default):** **dark-first**, near-black canvas; light theme is a clean inverse;
+  **monochrome** UI. In Monkai the **only** functional accent is **emerald-up / red-down**, via the
+  [`Delta`](../../apps/web/components/delta.tsx) chip. No gradients-for-decoration (all themes).
+- **Surfaces:** flat cards in Monkai (`shadow` tokens defined but flat); other themes express
+  their own vendored border/shadow scale — components use **surface tokens**, never hardcode
+  `shadow-none`/`border-none`.
 - **Icons:** **Lucide** only. **Logo:** the Tessera **mosaic** mark
   ([`logo.tsx`](../../apps/web/components/logo.tsx)).
 - **Shell:** shadcn **Sidebar** (inset, collapsible, **grouped** nav with section labels) +
-  breadcrumb header + ⌘K search + theme/user — see
+  breadcrumb header + ⌘K search + appearance/user — see
   [`app-shell.tsx`](../../apps/web/components/app-shell.tsx).
 - **Data viz:** shadcn **Charts** (Recharts); KPI **stat cards** (label / value / `Delta` /
   footnote); **tables** + divided lists.
 - **Honesty:** **no fabricated data** — surfaces show first-class **empty/zero states** until real
-  data exists (then charts/Delta trends fill in).
+  data exists (then charts/Delta trends fill in). Illustrations (§11) never imply data.
+
+### 0.1 Theme catalog (ADR-0047, F-070)
+
+Two orthogonal axes on `<html>` — components stay token-only and never branch on either:
+
+| Axis | Mechanism | Values |
+|------|-----------|--------|
+| **Mode** | `.dark` class (next-themes; `system` supported) | `light` · `dark` · `system` |
+| **Theme** | `data-theme` attribute (persisted `localStorage('tessera.theme')`, pre-paint script — no FOUC) | `monkai` (default) · `amber` · `claude` · `notebook` |
+
+- **Monkai** — the efferd set (§0 colors), Geist faces; the classless `:root`/`.dark` blocks in
+  [`globals.css`](../../apps/web/app/globals.css) **are** Monkai (byte-stable default).
+- **Amber** (tweakcn `amber-minimal`) — white/near-black canvas, amber primary; Inter /
+  Source Serif 4 / JetBrains Mono; radius 0.375rem.
+- **Claude** (tweakcn `claude`) — warm paper canvas, terracotta primary; system font stacks;
+  radius 0.5rem.
+- **Notebook** (tweakcn `notebook`) — sketchbook neutrals + yellow accent; Architects Daughter /
+  Fira Code; radius 0.625rem.
+
+Vendored (never `shadcn add` — it clobbers `:root`) into `apps/web/app/themes.css` as
+`[data-theme='X']` / `[data-theme='X'].dark`
+blocks: full role set + `--chart-*` + `--sidebar-*` + `--radius` + `--shadow-*` + per-theme
+`--font-sans/serif/mono`. Theme fonts load via `next/font` with `preload: false` (self-hosted,
+fetched only when used). Every vendored value is subject to the §8.1 contrast gate — AA
+failures are minimally nudged in-place with a CSS comment.
+
+**Appearance switching propagates radially** from the control that asked
+(`apps/web/lib/theme.tsx`: `startViewTransition` + clip-path circle;
+instant under `prefers-reduced-motion` or without the API). Switch surfaces: header
+AppearanceSwitcher, ⌘K palette, /settings Appearance card.
 
 ## 1. Design principles
 
@@ -84,9 +122,11 @@ Each role has a background and a foreground (text-on) pairing:
 | `--chart-1` … `--chart-5` | data-viz categorical palette |
 | `--sidebar-*` | sidebar surface tokens (bg/fg/primary/accent/border/ring) |
 
-- **Themes:** light / dark / **system** (default), toggled via a `.dark` class on `:root`;
-  all roles defined for both. Never branch on theme in components — use the tokens.
-- **Contrast:** every text/background pairing meets WCAG AA (≥ 4.5:1 body, ≥ 3:1 large).
+- **Modes:** light / dark / **system**, toggled via a `.dark` class on `:root`; all roles
+  defined for both, **in every theme of the §0.1 catalog**. Never branch on theme or mode in
+  components — use the tokens.
+- **Contrast:** every registered text/background pairing meets WCAG AA (≥ 4.5:1 body, ≥ 3:1
+  large text / non-text UI) — **enforced executably** across all themes × modes (§8.1).
 
 ### 2.2 Radius, typography, spacing, elevation
 - **Radius:** single `--radius` base with derived `sm/md/lg/xl` — consistent rounding.
@@ -174,6 +214,21 @@ Semantic HTML; every control labelled; managed focus order; **visible focus ring
 command palette); `prefers-reduced-motion` honored; screen-reader-tested critical flows.
 Accessibility checks (e.g. axe) run in the web E2E gate.
 
+### 8.1 Contrast gate (ADR-0047 — executable, not aspirational)
+
+Governed by [`.harness/rules/frontend/contrast.md`](../../.harness/rules/frontend/contrast.md)
+and the **`contrast-checker`** skill:
+
+- **≥ 4.5:1** for normal text pairings; **≥ 3:1** for large text (≥ 24px / ≥ 18.66px bold)
+  and non-text UI (focus ring, input boundaries) — WCAG 2.1 SC 1.4.3 + 1.4.11.
+- A **registered pairing list** (fg/bg, card, popover, primary, secondary, muted-fg on
+  muted/background/card, accent, destructive-as-text, sidebar set, ring-vs-background)
+  is asserted by `apps/web/tests/contrast.test.ts` across **all 4 themes × 2 modes** on
+  every `test`-gate run.
+- **Fix the token, never the check.** Failing values get the smallest oklch-lightness nudge
+  that passes, with a CSS comment. New token pairs used for text must be added to the
+  registry in the same change.
+
 ## 9. Performance budgets
 
 - **Code-split & lazy-load** heavy views (React Flow graph, Monaco, charts).
@@ -185,9 +240,36 @@ Accessibility checks (e.g. axe) run in the web E2E gate.
 ## 10. References
 
 Provided by the project lead, used to ground this system:
-- Theming/tokens: <https://tweakcn.com/editor/theme>
+- Theming/tokens: <https://tweakcn.com/editor/theme> (+ the vendored `amber-minimal` /
+  `claude` / `notebook` registry themes, ADR-0047)
 - Dashboard blocks/layout: <https://efferd.com/blocks/dashboard>
 - UI components/conventions: <https://coss.com/ui>
 - UI/UX skills & micro-interactions: <https://www.ui-skills.com/>
 - Premium aesthetic reference: <https://unabyss.com/>
 - Foundations: shadcn/ui, Radix/Base UI, Tailwind CSS.
+
+## 11. Illustration layer & mascot (ADR-0047, F-070 — budgeted)
+
+The dashboard carries a **signature illustration layer** in the marketing art idiom
+(ADR-0044/0045 precedent), owned in `apps/web/components/art/`:
+
+- **Form:** server-rendered SVG on a fixed internal grid; **dashboard tokens only**
+  (`--chart-*`, `--primary`, `--muted-foreground`, …) so every art is theme-true in all
+  4 themes × 2 modes; CSS-only motion (transform/opacity), killed by
+  `prefers-reduced-motion` (a designed still scene remains); decorative instances
+  `aria-hidden` (or `role="img"` + label when informative); cheap interactivity only
+  (hover/pointer — no canvas/WebGL, no animation libraries).
+- **Honesty:** arts depict **product truths** (compiler pipeline, effect propagation,
+  retrieval signals, memory strata, audit ledger) — never fake charts, metrics, or data.
+- **Usage budget (hard):** empty states · error states · the 404 · onboarding/first-run ·
+  the overview hero band. **Never** headers, navigation, or data views (tables, result
+  lists, traces). Text remains the information carrier;
+  [`EmptyState`](../../apps/web/components/empty-state.tsx) /
+  [`ErrorState`](../../apps/web/components/error-state.tsx) expose optional `art` /
+  `mascot` slots.
+- **Mascot (F-068 absorbed):** `@tessera/mascot` with the closed `--mascot-*` contract
+  bound **per theme** in `globals.css` (the gilded heart maps to each theme's warm accent;
+  in Monkai it is the one warm moment on non-data surfaces — the emerald/red functional
+  accent rule applies to data UI, which the mascot never enters). Placements: empty
+  (`searching`/`watching`), error (`alarmed`), 404 (`lost`), overview onboarding
+  (`greeting`). Reduced-motion still poses are part of the a11y gate.

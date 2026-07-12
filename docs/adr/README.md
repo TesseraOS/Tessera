@@ -38,7 +38,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0020](0020-plugin-sdk-and-host.md) | Plugin SDK & host — uniform envelope over existing ports, isolated lifecycle, first-party dogfooding | Accepted |
 | [0021](0021-frontend-harness-and-design-skill-adaptation.md) | Frontend execution harness, design-skill adaptation & Astryx evaluation (keep shadcn) | Accepted |
 | [0022](0022-interim-dashboard-data-client.md) | Interim dashboard data client until the generated SDK (F-022) | Accepted |
-| [0023](0023-adopt-efferd-dashboard-3-design-reference.md) | Adopt efferd Dashboard 3 as the binding dashboard design reference (dark-first, shadcn) | Accepted |
+| [0023](0023-adopt-efferd-dashboard-3-design-reference.md) | Adopt efferd Dashboard 3 as the binding dashboard design reference (dark-first, shadcn) | Superseded in part by 0047 |
 | [0024](0024-github-connector-and-auto-memory-extraction.md) | GitHub connector via REST `fetch` (no Octokit) + heuristic auto-memory extraction (structural memory seam) | Accepted |
 | [0025](0025-generated-typescript-sdk-toolchain.md) | Generated TypeScript SDK — openapi-typescript types + openapi-fetch client | Accepted |
 | [0026](0026-postgres-pgvector-adapters.md) | Postgres + pgvector storage adapters (self-hosted/cloud) + Docker Compose | Accepted |
@@ -62,6 +62,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0044](0044-marketing-v3-dual-themes-illustration-first-live-graph.md) | Marketing v3 — dual themes (Desert Rose/Modern Minimalist), illustration-first, live-graph hero | Amended by 0045 |
 | [0045](0045-marketing-v4-constellation-shader-hero-theme-true-chapters.md) | Marketing v4 — shader-field hero, canvas constellation graph, theme-true chapter bands | Accepted |
 | [0046](0046-brand-mascot-tess.md) | Brand mascot "Tess" — shared tessera-built character (`@tessera/mascot`), data-driven moods, CSS motion, usage budget | Accepted |
+| [0047](0047-dashboard-multi-theme-illustration-layer-contrast-gate.md) | Dashboard 4-theme system (Monkai/Amber/Claude/Notebook × light/dark), radial appearance propagation, illustration layer + Tess, executable WCAG-AA contrast gate | Accepted |
 
 ## Conventions
 

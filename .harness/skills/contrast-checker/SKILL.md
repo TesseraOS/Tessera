@@ -19,7 +19,8 @@ or a contrast test fails.
 |---------|---------------|
 | Normal text (< 24px / < 18.66px bold) | **4.5:1** |
 | Large text (≥ 24px, or ≥ 18.66px bold) | **3:1** |
-| Non-text UI that must be perceived (focus ring, input boundary) | **3:1** |
+| Focus ring on its surfaces (hard-gated) | **3:1** |
+| Components identified **only** by a border (judgment check in design review) | **3:1** |
 
 Ratio = `(L1 + 0.05) / (L2 + 0.05)` over WCAG relative luminance of the **composited**
 sRGB colors (alpha values must be blended over their actual backdrop first).

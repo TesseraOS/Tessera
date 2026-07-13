@@ -8,8 +8,12 @@ the [`contrast-checker`](../../skills/contrast-checker/SKILL.md) skill.
 ## The rule
 
 1. **Normal text** on its background: contrast ratio **≥ 4.5:1** (WCAG 2.1 SC 1.4.3).
-2. **Large text** (≥ 24px, or ≥ 18.66px bold) and **non-text UI** that must be perceived
-   (focus ring vs. canvas, input boundary vs. canvas): **≥ 3:1** (SC 1.4.3 + 1.4.11).
+2. **Large text** (≥ 24px, or ≥ 18.66px bold) and **non-text UI whose boundary is the only
+   thing identifying it** — above all the **focus ring**: **≥ 3:1** (SC 1.4.3 + 1.4.11).
+   The ring is hard-gated. Input/card borders are a **design-review judgment check**: a
+   field identified by its label, placeholder, and fill does not hang on its hairline
+   (per the SC 1.4.11 understanding notes), but a component identified *only* by its
+   border must pass 3:1.
 3. This holds for **every theme × mode combination** the app ships (dashboard: 4 themes ×
    light/dark), not just the default.
 4. **Enforcement is executable, not aspirational.** The dashboard's registered token

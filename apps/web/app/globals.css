@@ -1,14 +1,18 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import './themes.css';
 
 /* Class-based dark mode (next-themes toggles `.dark` on <html>). Dark is the default (efferd). */
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design tokens — semantic CSS variables. Dark-first, following the efferd Dashboard 3
- * reference (DESIGN-SYSTEM.md): near-black canvas, flat bordered surfaces, a MONOCHROME
- * chart ramp, and emerald-up / red-down as the only functional accent (see components/delta).
- * Components reference these tokens only — never hardcode.
+ * Design tokens — semantic CSS variables. The classless :root/.dark blocks ARE the
+ * Monkai default theme (DESIGN-SYSTEM §0.1, ADR-0047): efferd Dashboard 3 — near-black
+ * canvas, flat surfaces, a MONOCHROME chart ramp, and emerald-up / red-down as the only
+ * functional accent (see components/delta). The Amber/Claude/Notebook catalogs live in
+ * themes.css as :root[data-theme='X'] blocks. Components reference tokens only — never
+ * hardcode, never branch on theme/mode. Text pairings are enforced by
+ * tests/contrast.test.ts (WCAG AA; nudged values carry a comment).
  */
 :root {
   --radius: 0.65rem;
@@ -25,13 +29,14 @@
   --secondary: #eeeeee;
   --secondary-foreground: #171717;
   --muted: #eeeeee;
-  --muted-foreground: #737373;
+  --muted-foreground: #696969; /* nudged from #737373 for AA (4.5:1 on --muted/--background) */
   --accent: #eeeeee;
   --accent-foreground: #171717;
-  --destructive: #e40014;
+  --destructive: #d60012; /* nudged from #e40014 for AA (4.5:1 as text on --background) */
+  --destructive-foreground: #ffffff;
   --border: #e4e4e7;
   --input: #e4e4e7;
-  --ring: #a1a1aa;
+  --ring: #71717a; /* nudged from #a1a1aa for AA (3:1 focus ring on --background/--card) */
 
   --chart-1: #f05100;
   --chart-2: #009588;
@@ -46,7 +51,21 @@
   --sidebar-accent: #f1f1f4;
   --sidebar-accent-foreground: #18181b;
   --sidebar-border: #e4e4e7;
-  --sidebar-ring: #a1a1aa;
+  --sidebar-ring: #71717a; /* nudged from #a1a1aa for AA (3:1 focus ring on --sidebar) */
+
+  /* Monkai faces + flat shadow scale (Tailwind v4 defaults, so unthemed rendering is
+     byte-identical); other themes override these per-block in themes.css. */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: ui-serif, Georgia, 'Times New Roman', serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --shadow-2xs: 0 1px rgb(0 0 0 / 0.05);
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
 }
 
 .dark {
@@ -66,8 +85,14 @@
   --accent: #222222;
   --accent-foreground: #fcfcfc;
   --destructive: #ff6568;
+  --destructive-foreground: #0d0d0d; /* dark text on the light red — 6.8:1 (white would be 2.9:1) */
   --border: rgba(255, 255, 255, 0.11);
-  --input: rgba(255, 255, 255, 0.15);
+  --input: rgba(
+    255,
+    255,
+    255,
+    0.22
+  ); /* brightened from 0.15 — field boundaries were near-invisible (contrast rule) */
   --ring: #737373;
 
   --chart-1: #1447e6;
@@ -127,8 +152,20 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  /* Fonts + shadows resolve through the runtime tokens so each theme carries its own
+     faces and elevation scale (DESIGN-SYSTEM §0.1); values live in :root / themes.css. */
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
 }
 
 @layer base {
@@ -194,4 +231,16 @@
       scroll-behavior: auto !important;
     }
   }
+}
+
+/*
+ * Appearance-change propagation (DESIGN-SYSTEM §0.1, ADR-0047) — the new theme/mode
+ * sweeps out radially from the invoking control via the View Transitions API; the JS
+ * animates the circle clip on ::view-transition-new(root) (lib/theme.tsx), so the
+ * default crossfade is disabled here. Reduced-motion visitors never enter a transition.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }

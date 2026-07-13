@@ -153,6 +153,18 @@
         {
           "kind": "artifact",
           "ref": "docs/design/design-system.manifest.json — machine-readable token/component contract (human source is DESIGN-SYSTEM.md; ADR-0021)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web MULTI-THEME CATALOG (F-070, ADR-0047): the classless :root/.dark in globals.css ARE the Monkai default; apps/web/app/themes.css vendors Amber/Claude/Notebook as :root[data-theme='X'] / .dark blocks (full role set + charts + sidebar + radius + shadows + per-theme fonts). Two orthogonal axes — mode=.dark class (next-themes) × theme=data-theme (lib/theme.tsx state + lib/theme-script.ts pre-paint, no FOUC). @theme inline resolves fonts + shadow scale through runtime tokens so components stay token-only across all 4×2 combos. NEVER shadcn-add a theme (clobbers :root)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web appearance controls (F-070): AppearanceSwitcher (header) + command palette + /settings AppearanceSettings card, all rippling via lib/theme.tsx useAppearanceTransition (startViewTransition + clip-path; reduced-motion/no-API → instant). next/font theme faces (Inter/Source Serif 4/JetBrains Mono/Architects Daughter/Fira Code) preload:false, off the Monkai critical path"
+        },
+        {
+          "kind": "artifact",
+          "ref": "apps/web/tests/contrast.test.ts — the EXECUTABLE contrast gate (F-070, ADR-0047, rule .harness/rules/frontend/contrast.md + contrast-checker skill): zero-dep oklch/hex/rgb→sRGB→WCAG math asserts every registered token pair (incl. opacity-composited pairs) across all 4 themes × 2 modes in the test gate; vendored tweakcn AA failures + latent Monkai ones nudged in-place with CSS comments"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -854,8 +866,12 @@
           "ref": "docs/design/brand/tessera-mascot.svg + tessera-mascot-moods.svg — GENERATED from the package mood data by packages/mascot/scripts/render-masters.mjs; a package test fails when the checked-in masters drift from the data (regenerate, never hand-edit)"
         },
         {
+          "kind": "module",
+          "ref": "apps/web dashboard adoption (F-070, absorbs F-068, ADR-0047): globals.css binds --mascot-* to dashboard tokens (heart = a fixed brand ember, overridden to amber/claude's warm --primary; one block covers all 4 themes × 2 modes via var() indirection); layout.tsx imports @tessera/mascot/styles.css once. Placements per the DESIGN-SYSTEM §11 budget: empty (searching/watching via EmptyState.mascot), error (alarmed via ErrorState.mascot), 404 app/not-found.tsx (lost), overview onboarding (watching). Never headers/nav/data views; decorative aria-hidden"
+        },
+        {
           "kind": "package",
-          "ref": "future consumers — F-068 (backlog): apps/web dashboard adoption binds --mascot-* to the dashboard's monochrome vocabulary under DESIGN-SYSTEM.md; apps/docs when it exists. Any breaking change to slots/moods/variables/props must visit every consumer that has landed"
+          "ref": "future consumers: apps/docs when it exists. Any breaking change to slots/moods/variables/props must visit every consumer that has landed (marketing + dashboard today)"
         },
         {
           "kind": "decision",
@@ -863,7 +879,7 @@
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "The mascot is a cross-frontend contract: slot names, mood names, component props, and the --mascot-* variables are consumed by marketing today and the dashboard/docs later, while the brand masters are build artifacts of the same data. Renaming a mood or variable therefore ripples across every consuming app, the design-lint patterns that pin usage, and the checked-in brand SVGs — the drift test and the manifest patterns turn silent divergence into gate failures.",
+      "rationale": "The mascot is a cross-frontend contract: slot names, mood names, component props, and the --mascot-* variables are consumed by marketing AND the dashboard (F-070) today and docs later, while the brand masters are build artifacts of the same data. Renaming a mood or variable therefore ripples across every consuming app, the design-lint patterns that pin usage, and the checked-in brand SVGs — the drift test and the manifest patterns turn silent divergence into gate failures.",
       "confidence": 0.9,
       "origin": "manual"
     }

@@ -3,6 +3,79 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-12 (v3) — F-070 DONE (absorbs F-068) — dashboard experience overhaul: 4-theme catalog, radial appearance propagation, signature illustration layer + Tess, executable WCAG-AA contrast gate
+
+**Stakeholder review of the dashboard: "too dull, lifeless, lacks design and creativity;
+most pages lack illustrations; make it professional, enterprise-grade, Awwwards-worthy; add
+the four tweakcn themes (Amber/Claude/Notebook + Monkai default) each with light/dark, with
+a toggle that propagates from the control like the marketing footer; add a WCAG-AA Contrast
+Checker rule + skill."** The same lesson as F-051/F-067
+([[design-contract-mechanism-outlives-parameters]] — this lead reads austere minimalism as
+lifeless). Shipped in 6 verified increments (one commit each; standing cadence).
+
+**What changed**
+- **Governance:** registered **F-070** (absorbs **F-068**); **ADR-0047** supersedes
+  ADR-0023's *color* clauses (efferd stays the layout/structure reference; color generalizes
+  to a 4-theme catalog); **DESIGN-SYSTEM v2** (+§0.1 theme catalog, §8.1 contrast gate, §11
+  illustration/mascot budget) + `design-system.manifest.json` 2.0.0; new **contrast** rule +
+  **contrast-checker** skill (+ `.claude` shim), cross-referenced from AGENTS/rules.
+- **Theme system:** the classless `:root`/`.dark` in `globals.css` ARE **Monkai** (default,
+  byte-stable — zero regression by construction). `app/themes.css` vendors **Amber / Claude /
+  Notebook** from the tweakcn registry JSONs as `:root[data-theme='X']` / `.dark` blocks (full
+  role set + `--chart-*` + `--sidebar-*` + `--radius` + `--shadow-*` + per-theme fonts). Two
+  orthogonal axes: **mode** = `.dark` (next-themes) × **theme** = `data-theme`
+  (`lib/theme.tsx` state + `lib/theme-script.ts` pre-paint script, **no FOUC**). `@theme
+  inline` resolves fonts + shadow scale through runtime tokens so components stay token-only
+  across all 4×2. Theme faces via `next/font` **`preload:false`** — off the Monkai critical
+  path. **Never `shadcn add`** (clobbers `:root`).
+- **Executable contrast gate:** `apps/web/tests/contrast.test.ts` — zero-dep
+  oklch/hex/rgb→sRGB→WCAG math (self-tested against known values), asserts every registered
+  token pair (incl. **opacity-composited** pairs) across **4 themes × 2 modes** in the standard
+  `test` gate. Vendored tweakcn AA failures **and** latent Monkai ones (dark `--input`,
+  `muted-foreground`, destructive-as-text, focus ring) nudged in-place with CSS comments. The
+  catalog-wide **axe** sweep also caught real composited failures (`text-sidebar-foreground/70`
+  group labels, inspector `/80`,`/60` texts — sub-AA in the light themes; `/80` was already
+  sub-AA in monkai-light, latent since the app defaults to dark) → fixed + registered.
+- **Appearance controls:** header **AppearanceSwitcher** (theme picker w/ swatches + mode
+  segment), ⌘K commands, and a `/settings` **AppearanceSettings** card — all ripple radially
+  from the pressed control (`useAppearanceTransition`: `startViewTransition` + clip-path;
+  instant under reduced-motion / no API). Replaced the old `ThemeToggle`.
+- **Illustration layer** (`components/art/*`, DESIGN-SYSTEM §11): seven server-rendered SVG
+  arts on dashboard tokens with CSS-only motion (`app/art.css`, frozen by the reduced-motion
+  kill-switch) — Constellation, CompilerAssembly, SignalField, PipelineFlow, MemoryStrata,
+  LedgerGate, TimeRiver; each a product truth, decorative (`aria-hidden`), theme-true.
+  `EmptyState`/`ErrorState` gained `art`/`mascot` slots; adopted across every empty/error
+  surface under the usage budget (governance's static RBAC gets none — art only where it fits).
+- **Tess (F-068):** `@tessera/mascot` dep + styles imported once; `--mascot-*` bound per theme
+  in `globals.css` (gilded heart = fixed ember, overridden to amber/claude's warm `--primary`);
+  new `app/not-found.tsx` 404 with Tess `lost`; empties/errors use `searching`/`watching`/
+  `alarmed`. Overview leads with a greeting **HeroBand** (theme-tinted gradient + live
+  Constellation, honest onboarding — no fabricated numbers) and Tess `watching` on the activity
+  empty. Stat cards stay honestly `—` (live data is F-060).
+
+**Evidence/verification** (all gates fresh, workspace-wide)
+- verify-state ok (925 doc links) · typecheck **33** · lint **19** · format clean · test **33**
+  (web **236**, incl. **195** contrast assertions across 4 themes × 2 modes) · build **19**
+  (12 web routes incl. prerendered `/_not-found`) · e2e **18** (web **26** incl. the new
+  `appearance.spec.ts` — data-theme persists, no-FOUC, reduced-motion instant, **axe WCAG A/AA
+  across all 4 themes × 2 modes**; api 45; mcp 16; marketing 48).
+- Browser-verified: all four themes render via pure cascade (screenshots), the ripple + header
+  dropdown + settings card + live switching, the SignalField/CompilerAssembly/Constellation
+  arts, the 404 mascot, and the overview hero in Monkai + Amber; Claude-light shows Tess
+  `alarmed` with a terracotta heart (per-theme mascot binding proven). No horizontal overflow.
+
+**Decisions**
+- ADR-0047: vendor tweakcn themes into scoped `[data-theme]` blocks rather than `shadcn add`
+  (which overwrites the single `:root`/`.dark` set and can't express 4 coexisting themes);
+  contrast is enforced **executably**, not documented; illustration layer + mascot governed by
+  a hard usage budget (never data views); Monkai's efferd monochrome now describes the default
+  theme, not the whole dashboard.
+
+**Next step**
+- The dashboard's next features are unchanged and independent: **F-060** (live overview data +
+  SSE feed), **F-061** (search depth), **F-062** (inspector v2), **F-063** (data tables). This
+  overhaul made no data-layer changes.
+
 ## 2026-07-12 (v2) — F-067 DONE — legal pages get expressive heroes + 5 signature arts + GDPR page (ADR-0045 v4.10)
 
 **Stakeholder review of v1: "too dull, lifeless, lacking design/creativity; the first

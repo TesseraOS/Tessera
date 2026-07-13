@@ -2229,7 +2229,7 @@
       "package": "@tessera/web",
       "release": "R4",
       "priority": "could",
-      "status": "backlog",
+      "status": "done",
       "blockedBy": [
         "F-066"
       ],
@@ -2246,9 +2246,10 @@
         "e2e"
       ],
       "effects": [
-        "E-004"
+        "E-004",
+        "E-023"
       ],
-      "notes": "ABSORBED INTO F-070 (2026-07-12, stakeholder-directed dashboard overhaul): the mascot adoption lands as F-070's illustration/mascot workstream under the same governance (token binding decided under DESIGN-SYSTEM v2 / ADR-0047; usage budget: empty/error/404/onboarding only). Marked done together with F-070."
+      "notes": "DONE 2026-07-12 via F-070 (absorbed — stakeholder-directed dashboard overhaul). The mascot adoption shipped as F-070's illustration/mascot workstream under DESIGN-SYSTEM v2 / ADR-0047: --mascot-* bound per theme in apps/web/app/globals.css (heart = fixed brand ember, overridden to amber/claude's warm --primary); placements under the §11 usage budget — empty (searching/watching), error (alarmed), app/not-found.tsx 404 (lost), overview onboarding (watching); decorative aria-hidden, text carries the information; reduced-motion still poses; both/all themes screenshot-verified; @tessera/mascot is the only new runtime dep; effect E-023 gained the apps/web consumer. See F-070 notes for full evidence."
     },
     {
       "id": "F-069",
@@ -2292,7 +2293,7 @@
       "package": "@tessera/web",
       "release": "R4",
       "priority": "must",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-066"
       ],
@@ -2317,7 +2318,7 @@
         "E-004",
         "E-023"
       ],
-      "notes": "Registered 2026-07-12 from the stakeholder dashboard review ('dull, lifeless, lacks design and creativity; most pages lack illustrations; awwwards-grade; add the four tweakcn themes with a propagating toggle like marketing's; WCAG AA contrast rule+skill'). Plan: .harness/plans/F-070-dashboard-overhaul.md. Absorbs F-068."
+      "notes": "Done 2026-07-12 (stakeholder dashboard overhaul; absorbs F-068). Plan: .harness/plans/F-070-dashboard-overhaul.md; ADR-0047 (supersedes ADR-0023's color clauses); DESIGN-SYSTEM v2 (+§0.1 catalog, §8.1 contrast, §11 illustrations/mascot) + manifest 2.0.0. Shipped in 6 verified increments: (1) governance — F-070 registration, ADR-0047, DESIGN-SYSTEM v2, contrast rule+skill(+.claude shim). (2) THEME SYSTEM — app/themes.css vendors amber/claude/notebook as :root[data-theme='X']/.dark blocks (full role set + charts + sidebar + radius + shadows + per-theme fonts) while the classless :root/.dark stay Monkai (byte-stable default); mode=.dark (next-themes) × theme=data-theme (lib/theme.tsx + lib/theme-script.ts pre-paint, no FOUC); @theme inline resolves fonts+shadows through runtime tokens so components stay token-only; next/font theme faces preload:false. EXECUTABLE contrast gate apps/web/tests/contrast.test.ts (zero-dep oklch/hex→sRGB→WCAG math, 4 themes×2 modes incl. opacity-composited pairs) — vendored tweakcn AA failures + latent Monkai ones nudged in-place with comments. (3) AppearanceSwitcher (header) + ⌘K commands + /settings AppearanceSettings card, all rippling radially via useAppearanceTransition (startViewTransition+clip-path; reduced-motion/no-API→instant); replaced the old ThemeToggle; tests/e2e/appearance.spec.ts (persist, no-FOUC, reduced-motion, axe across 4×2). (4) illustration layer components/art/* (Constellation/CompilerAssembly/SignalField/PipelineFlow/MemoryStrata/LedgerGate/TimeRiver — server SVG, tokens only, CSS motion frozen under reduced-motion, aria-hidden) adopted via EmptyState/ErrorState art+mascot slots under the §11 budget; @tessera/mascot dep + --mascot-* bound per theme + app/not-found.tsx (Tess lost). (5) overview greeting HeroBand (theme-tinted gradient + live Constellation, honest onboarding not metrics) + Tess watching on activity empty. Gates green workspace-wide: verify-state · typecheck 33 · lint 19 · format · test 33 (web 236 incl. 195 contrast) · build 19 · e2e 18 (web 26 incl. axe across 4 themes×2 modes; api 45; mcp 16; marketing 48). Effects E-004 (multi-theme+contrast) + E-023 (dashboard mascot consumer). Deferred (own features): live overview data F-060, search depth F-061, inspector v2 F-062, data tables F-063."
     }
   ]
 }

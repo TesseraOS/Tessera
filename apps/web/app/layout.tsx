@@ -10,6 +10,7 @@ import {
   Source_Serif_4,
 } from 'next/font/google';
 import './globals.css';
+import '@tessera/mascot/styles.css';
 import { AppShell } from '@/components/app-shell';
 import { THEME_INIT_SCRIPT } from '@/lib/theme-script';
 import { Providers } from './providers';

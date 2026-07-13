@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ScrollText, ShieldAlert } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { LedgerGate } from '@/components/art';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { cn } from '@/lib/utils';
@@ -96,6 +97,7 @@ export function AuditView() {
 
       {isError ? (
         <ErrorState
+          mascot
           title="Could not load the audit log"
           description={error instanceof Error ? error.message : 'Unknown error'}
           onRetry={() => void refetch()}
@@ -104,7 +106,7 @@ export function AuditView() {
         <AuditSkeleton />
       ) : events.length === 0 ? (
         <EmptyState
-          icon={ScrollText}
+          art={<LedgerGate />}
           title="No audit events"
           description="Nothing matches these filters yet. Sensitive actions appear here as they happen."
         />

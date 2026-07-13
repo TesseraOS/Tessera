@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CompilerAssembly } from '@/components/art';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { ScoreBar } from '@/components/provenance/score-bar';
@@ -87,6 +88,7 @@ export function InspectorView() {
         <InspectorSkeleton />
       ) : compile.isError ? (
         <ErrorState
+          mascot
           title="Compilation failed"
           description={compile.error instanceof Error ? compile.error.message : 'Unknown error'}
           onRetry={() => {
@@ -98,7 +100,8 @@ export function InspectorView() {
         <PackageView pkg={compile.data} />
       ) : (
         <EmptyState
-          title="Inspector Idle"
+          art={<CompilerAssembly />}
+          title="Inspector idle"
           description="Compile context for a task to see the fragments chosen, why each was included, and the full pipeline trace."
         />
       )}

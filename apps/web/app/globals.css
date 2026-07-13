@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import './themes.css';
+@import './art.css';
 
 /* Class-based dark mode (next-themes toggles `.dark` on <html>). Dark is the default (efferd). */
 @custom-variant dark (&:is(.dark *));
@@ -66,6 +67,29 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+/*
+ * Mascot binding (DESIGN-SYSTEM §11, ADR-0047) — the closed --mascot-* contract from
+ * @tessera/mascot bound to dashboard tokens. The var() indirections resolve against the
+ * active theme, so one block covers every theme × mode; the gilded heart is a fixed warm
+ * gold (the "always-gilded ember tile" of ADR-0046 — the one warm moment on the dashboard's
+ * otherwise-neutral non-data surfaces), overridden to a theme's own warm accent where it
+ * has one. Tess only appears on empty/error/404/onboarding, never in data UI.
+ */
+:root {
+  --mascot-tile: var(--foreground);
+  --mascot-tile-warm: var(--mascot-heart);
+  --mascot-tile-deep: var(--muted-foreground);
+  --mascot-heart: #eab308; /* gilded — the fixed brand ember (ADR-0046) */
+  --mascot-sheen: var(--foreground);
+  --mascot-ink: var(--background);
+}
+:root[data-theme='amber'] {
+  --mascot-heart: var(--primary); /* amber's own warm accent carries the heart */
+}
+:root[data-theme='claude'] {
+  --mascot-heart: var(--primary); /* terracotta */
 }
 
 .dark {

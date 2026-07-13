@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle } from 'lucide-react';
+import { Mascot } from '@tessera/mascot';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -8,6 +9,8 @@ interface ErrorStateProps {
   title?: string;
   description?: string;
   onRetry?: () => void;
+  /** Show Tess (alarmed) instead of the warning glyph — DESIGN-SYSTEM §11 budget. */
+  mascot?: boolean;
   className?: string;
 }
 
@@ -16,6 +19,7 @@ export function ErrorState({
   title = 'Something went wrong',
   description = 'An unexpected error occurred. Please try again.',
   onRetry,
+  mascot = false,
   className,
 }: ErrorStateProps) {
   return (
@@ -26,9 +30,13 @@ export function ErrorState({
         className,
       )}
     >
-      <div className="bg-destructive/10 text-destructive flex size-10 items-center justify-center rounded-full [&_svg]:size-5">
-        <AlertTriangle aria-hidden="true" />
-      </div>
+      {mascot ? (
+        <Mascot mood="alarmed" size={96} />
+      ) : (
+        <div className="bg-destructive/10 text-destructive flex size-10 items-center justify-center rounded-full [&_svg]:size-5">
+          <AlertTriangle aria-hidden="true" />
+        </div>
+      )}
       <div className="space-y-1">
         <p className="text-xs font-semibold text-foreground">{title}</p>
         <p className="text-muted-foreground mx-auto max-w-xs text-[11px] leading-normal">

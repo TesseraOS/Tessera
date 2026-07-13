@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PipelineFlow } from '@/components/art';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { RegisterSourceDialog } from '@/components/sources/register-source-dialog';
@@ -79,6 +80,7 @@ export function SourcesView() {
 
       {isError ? (
         <ErrorState
+          mascot
           title="Could not load sources"
           description={error instanceof Error ? error.message : 'Is the Tessera API running?'}
           onRetry={() => void refetch()}
@@ -87,7 +89,7 @@ export function SourcesView() {
         <SourcesSkeleton />
       ) : sources.length === 0 ? (
         <EmptyState
-          icon={Boxes}
+          art={<PipelineFlow />}
           title="No sources yet"
           description="Register a filesystem or Git repository to start indexing your workspace."
           action={

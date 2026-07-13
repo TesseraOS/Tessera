@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { NotebookText, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MemoryStrata } from '@/components/art';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { MemoryAuthoringDialog } from '@/components/memory/memory-authoring-dialog';
@@ -109,6 +110,7 @@ export function MemoryView() {
 
       {isError ? (
         <ErrorState
+          mascot
           title="Could not load memories"
           description={error instanceof Error ? error.message : 'Is the Tessera API running?'}
           onRetry={() => void refetch()}
@@ -117,7 +119,8 @@ export function MemoryView() {
         <MemorySkeleton />
       ) : filtered.length === 0 ? (
         <EmptyState
-          icon={NotebookText}
+          art={memories.length === 0 ? <MemoryStrata /> : undefined}
+          mascot={memories.length === 0 ? undefined : 'searching'}
           title={memories.length === 0 ? 'No memories yet' : 'No memories match these filters'}
           description={
             memories.length === 0

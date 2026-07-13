@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SignalField } from '@/components/art';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { SignalBadge } from '@/components/provenance/signal-badge';
@@ -49,12 +50,13 @@ export function SearchView() {
 
       {!hasQuery ? (
         <EmptyState
-          icon={Search}
+          art={<SignalField />}
           title="Search across everything"
           description="Find code, memories, and graph nodes. Every result shows the signals that surfaced it."
         />
       ) : isError ? (
         <ErrorState
+          mascot
           title="Search failed"
           description={error instanceof Error ? error.message : 'Unknown error'}
           onRetry={() => void refetch()}
@@ -63,7 +65,7 @@ export function SearchView() {
         <SearchSkeleton />
       ) : results.length === 0 ? (
         <EmptyState
-          icon={Search}
+          mascot="searching"
           title="No results"
           description={`Nothing matched “${debounced}”.`}
         />

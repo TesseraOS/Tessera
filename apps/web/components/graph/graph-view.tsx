@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Constellation } from '@/components/art';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { GraphCanvas } from '@/components/graph/graph-canvas';
@@ -183,6 +184,7 @@ export function GraphView() {
 
       {isError ? (
         <ErrorState
+          mascot
           title="Could not load the graph"
           description={error instanceof Error ? error.message : 'Is the Tessera API running?'}
           onRetry={() => void refetch()}
@@ -191,7 +193,7 @@ export function GraphView() {
         <Skeleton className="h-[65vh] w-full rounded-xl" />
       ) : nodes.length === 0 ? (
         <EmptyState
-          icon={Network}
+          art={<Constellation />}
           title="The knowledge graph is empty"
           description="Register and scan a source — Tessera extracts code symbols and their relationships into the graph."
         />

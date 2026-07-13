@@ -1,0 +1,125 @@
+/*
+ * Signature illustration layer (DESIGN-SYSTEM §11, ADR-0047) — CSS-only motion for the
+ * server-rendered SVG arts in components/art/*. Every animation is transform/opacity only
+ * and designed so frame 0 is a sensible still state; the global prefers-reduced-motion
+ * kill-switch in globals.css freezes them there. Decorative (aria-hidden); tokens only.
+ */
+
+@keyframes tess-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes tess-drift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes tess-drift-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+
+@keyframes tess-dash {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+@keyframes tess-travel {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes tess-fade-cycle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes tess-sheen {
+  0% {
+    transform: translateX(-120%);
+  }
+  60%,
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+/* The art root: motion is opt-in per element via the classes below. */
+.tess-art {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.tess-node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tess-breathe var(--tess-dur, 4s) ease-in-out infinite;
+  animation-delay: var(--tess-delay, 0s);
+}
+
+.tess-float {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tess-drift var(--tess-dur, 6s) ease-in-out infinite;
+  animation-delay: var(--tess-delay, 0s);
+}
+
+.tess-float-slow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tess-drift-slow var(--tess-dur, 7s) ease-in-out infinite;
+  animation-delay: var(--tess-delay, 0s);
+}
+
+.tess-edge {
+  stroke-dasharray: 4 6;
+  animation: tess-dash var(--tess-dur, 2.4s) linear infinite;
+}
+
+.tess-packet {
+  offset-path: var(--tess-path);
+  animation: tess-travel var(--tess-dur, 3.6s) ease-in-out infinite;
+  animation-delay: var(--tess-delay, 0s);
+}
+
+.tess-pulse {
+  animation: tess-fade-cycle var(--tess-dur, 3s) ease-in-out infinite;
+  animation-delay: var(--tess-delay, 0s);
+}

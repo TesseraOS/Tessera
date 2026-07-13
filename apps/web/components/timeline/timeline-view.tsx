@@ -12,6 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TimeRiver } from '@/components/art';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { cn } from '@/lib/utils';
@@ -67,6 +68,7 @@ export function TimelineView() {
 
       {memories.isError ? (
         <ErrorState
+          mascot
           title="Could not load the timeline"
           description={
             memories.error instanceof Error ? memories.error.message : 'Is the Tessera API running?'
@@ -77,7 +79,7 @@ export function TimelineView() {
         <TimelineSkeleton />
       ) : entries.length === 0 ? (
         <EmptyState
-          icon={Activity}
+          art={<TimeRiver />}
           title="No activity yet"
           description="Capture a memory or scan a source — events will appear here in real time."
         />

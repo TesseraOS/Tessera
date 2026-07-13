@@ -1,6 +1,8 @@
-import { Activity, ArrowRight, BookText, Boxes, GitBranch, Network, Search } from 'lucide-react';
+import { ArrowRight, BookText, Boxes, GitBranch, Network, Search, Sparkles } from 'lucide-react';
+import { Mascot } from '@tessera/mascot';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Constellation } from '@/components/art';
 import { DashboardStats } from '@/components/stats';
 
 const steps = [
@@ -26,10 +28,12 @@ const steps = [
   },
 ];
 
-/** Overview — Tessera stat cards + honest empty activity + onboarding (no fabricated data). */
+/** Overview — greeting hero + Tessera stat cards + honest empty activity + onboarding (no fabricated data). */
 export function Dashboard() {
   return (
     <div className="space-y-4">
+      <HeroBand />
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <DashboardStats />
       </div>
@@ -46,10 +50,8 @@ export function Dashboard() {
             <GitBranch className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
           </CardHeader>
           <CardContent className="p-0">
-            <div className="border-border/70 bg-background/40 flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed px-6 py-14 text-center">
-              <span className="bg-muted text-muted-foreground flex size-12 items-center justify-center rounded-xl [&_svg]:size-5">
-                <Activity aria-hidden="true" />
-              </span>
+            <div className="border-border/70 bg-background/40 flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed px-6 py-12 text-center">
+              <Mascot mood="watching" size={92} />
               <div className="space-y-1.5">
                 <p className="text-sm font-semibold">No activity yet</p>
                 <p className="text-muted-foreground mx-auto max-w-sm text-xs leading-relaxed">
@@ -85,8 +87,8 @@ export function Dashboard() {
           <CardContent className="p-0">
             <ol className="space-y-4">
               {steps.map((step, index) => (
-                <li key={step.title} className="flex gap-3">
-                  <span className="bg-muted text-muted-foreground mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md font-mono text-xs tabular-nums">
+                <li key={step.title} className="group flex gap-3">
+                  <span className="bg-muted text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md font-mono text-xs tabular-nums transition-colors">
                     {index + 1}
                   </span>
                   <div className="space-y-0.5">
@@ -103,5 +105,63 @@ export function Dashboard() {
         </Card>
       </div>
     </div>
+  );
+}
+
+/**
+ * Greeting hero (DESIGN-SYSTEM §11, ADR-0047) — a welcoming onboarding band, not a metric.
+ * Theme-tinted gradient surface, the live Constellation art on the right. Honest: it states
+ * what Tessera does, never fabricated numbers.
+ */
+function HeroBand() {
+  return (
+    <section
+      aria-labelledby="overview-hero-title"
+      className="relative overflow-hidden rounded-2xl border p-6 md:p-8"
+      style={{
+        backgroundImage:
+          'linear-gradient(135deg, var(--card), color-mix(in oklab, var(--primary) 7%, var(--card)))',
+      }}
+    >
+      <div className="relative z-10 flex flex-col gap-5 md:max-w-md">
+        <span className="text-muted-foreground inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] tracking-wide">
+          <Sparkles className="size-3" aria-hidden="true" />
+          Context &amp; Memory OS
+        </span>
+        <div className="space-y-2">
+          <h1
+            id="overview-hero-title"
+            className="text-2xl font-semibold tracking-tight text-balance"
+          >
+            Give your agents the right context, every time.
+          </h1>
+          <p className="text-muted-foreground max-w-sm text-sm leading-relaxed text-pretty">
+            Tessera ingests your code and history, links it into a knowledge graph, and compiles
+            token-lean, provenance-tagged context on demand.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild size="sm">
+            <a href="/sources">
+              <Boxes className="size-4" />
+              Connect a source
+            </a>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <a href="/inspector">
+              Try the inspector
+              <ArrowRight className="size-4" />
+            </a>
+          </Button>
+        </div>
+      </div>
+
+      <div
+        className="pointer-events-none absolute top-1/2 right-0 hidden w-[46%] max-w-md -translate-y-1/2 opacity-90 md:block"
+        aria-hidden="true"
+      >
+        <Constellation />
+      </div>
+    </section>
   );
 }

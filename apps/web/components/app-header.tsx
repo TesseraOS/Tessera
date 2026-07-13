@@ -4,10 +4,10 @@ import { usePathname } from 'next/navigation';
 import { Bell, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppBreadcrumbs } from '@/components/app-breadcrumbs';
+import { AppearanceSwitcher } from '@/components/appearance-switcher';
 import { buildFlatNavLinks } from '@/components/app-shared';
 import { CustomSidebarTrigger } from '@/components/custom-sidebar-trigger';
 import { NavUser } from '@/components/nav-user';
-import { ThemeToggle } from '@/components/theme-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,7 +46,7 @@ export function AppHeader() {
 
       <div className="flex items-center gap-1.5">
         <NotificationsMenu />
-        <ThemeToggle />
+        <AppearanceSwitcher />
         <NavUser />
       </div>
     </header>

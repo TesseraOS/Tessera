@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { AppearanceSettings } from '@/components/settings/appearance-settings';
 import { ErrorState } from '@/components/error-state';
 import { cn } from '@/lib/utils';
 import { API_ORIGIN } from '@/lib/api/client';
@@ -41,6 +42,7 @@ function price(plan: Plan): string {
 export function SettingsView() {
   return (
     <div className="space-y-4">
+      <AppearanceSettings />
       <DeploymentCard />
       <PlansCard />
       <GovernanceCard />

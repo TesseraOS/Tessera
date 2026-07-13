@@ -215,6 +215,17 @@ const NON_TEXT_PAIRS: ReadonlyArray<readonly [fg: string, bg: string]> = [
   ['sidebar-ring', 'sidebar'],
 ];
 
+/**
+ * Text rendered through an OPACITY utility (`text-<token>/NN`) — the fg composites over
+ * bg at `alpha` before the ratio is measured. Register the real usages so a theme change
+ * can't silently drop a translucent label below AA (these bit us at introduction: the
+ * sidebar group-label `/70` and the inspector code excerpts failed in the light themes).
+ */
+const ALPHA_TEXT_PAIRS: ReadonlyArray<readonly [fg: string, bg: string, alpha: number]> = [
+  ['sidebar-foreground', 'sidebar', 0.8], // sidebar group labels
+  ['foreground', 'card', 0.8], // inspector drop reason, memory version title/body (≥0.8)
+];
+
 /* ────────────────────────── tests ────────────────────────── */
 
 describe('color math (known WCAG values)', () => {
@@ -269,6 +280,18 @@ describe.each(THEMES.flatMap((t) => MODES.map((m) => [t, m] as const)))(
         `--${fg} (${tokens.get(fg)}) on --${bg} (${tokens.get(bg)}) = ${ratio.toFixed(2)}:1`,
       ).toBeGreaterThanOrEqual(3);
     });
+
+    it.each(ALPHA_TEXT_PAIRS.map(([fg, bg, alpha]) => [fg, bg, alpha]))(
+      'opacity text --%s @%d on --%s ≥ 4.5:1',
+      (fg, bg, alpha) => {
+        const composited = { ...color(fg as string), alpha: alpha as number };
+        const ratio = contrastRatio(composited, color(bg as string));
+        expect(
+          ratio,
+          `--${fg} @${alpha} on --${bg} = ${ratio.toFixed(2)}:1`,
+        ).toBeGreaterThanOrEqual(4.5);
+      },
+    );
 
     it('defines the full color role set (no leakage from Monkai)', () => {
       if (theme === 'monkai') return;

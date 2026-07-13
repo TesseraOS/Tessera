@@ -19,6 +19,26 @@ export const THEME_LABELS: Readonly<Record<ThemeName, string>> = {
   notebook: 'Notebook',
 };
 
+export const THEME_DESCRIPTIONS: Readonly<Record<ThemeName, string>> = {
+  monkai: 'Near-black, monochrome (default)',
+  amber: 'Bright canvas, amber accent',
+  claude: 'Warm paper, terracotta accent',
+  notebook: 'Sketchbook neutrals, hand-drawn',
+};
+
+/**
+ * Representative swatch colors for the theme picker — preview affordances only (the live
+ * tokens live in themes.css and can't be scoped to a nested element because they key off
+ * :root[data-theme]). `surface` is the theme's canvas, `accent` its signature hue. Keep
+ * these visually in step with themes.css; they are not consumed as component tokens.
+ */
+export const THEME_SWATCHES: Readonly<Record<ThemeName, { surface: string; accent: string }>> = {
+  monkai: { surface: '#171717', accent: '#fcfcfc' },
+  amber: { surface: '#ffffff', accent: '#f0a91d' },
+  claude: { surface: '#f2ede4', accent: '#c06843' },
+  notebook: { surface: '#fafafa', accent: '#3f3f3f' },
+};
+
 export function isThemeName(value: unknown): value is ThemeName {
   return typeof value === 'string' && (THEMES as readonly string[]).includes(value);
 }

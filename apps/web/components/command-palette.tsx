@@ -2,8 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Monitor, Moon, Sun } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { Monitor, Moon, Palette, Sun } from 'lucide-react';
 import {
   CommandDialog,
   CommandEmpty,
@@ -15,12 +14,20 @@ import {
 } from '@/components/ui/command';
 import { navItems } from '@/lib/nav';
 import { useCommandMenu } from '@/lib/store/command';
+import { useAppearanceTransition } from '@/lib/theme';
+import { THEMES, THEME_LABELS } from '@/lib/theme-script';
+
+const MODES = [
+  { value: 'light', label: 'Light mode', icon: Sun },
+  { value: 'dark', label: 'Dark mode', icon: Moon },
+  { value: 'system', label: 'System mode', icon: Monitor },
+] as const;
 
 /** Global ⌘K / Ctrl-K command palette (UX baseline, FR-49). */
 export function CommandPalette() {
   const { open, setOpen, toggle } = useCommandMenu();
   const router = useRouter();
-  const { setTheme } = useTheme();
+  const { setAppearance } = useAppearanceTransition();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -53,18 +60,29 @@ export function CommandPalette() {
         </CommandGroup>
         <CommandSeparator />
         <CommandGroup heading="Theme">
-          <CommandItem value="Light theme" onSelect={() => run(() => setTheme('light'))}>
-            <Sun />
-            Light
-          </CommandItem>
-          <CommandItem value="Dark theme" onSelect={() => run(() => setTheme('dark'))}>
-            <Moon />
-            Dark
-          </CommandItem>
-          <CommandItem value="System theme" onSelect={() => run(() => setTheme('system'))}>
-            <Monitor />
-            System
-          </CommandItem>
+          {THEMES.map((name) => (
+            <CommandItem
+              key={name}
+              value={`${THEME_LABELS[name]} theme`}
+              onSelect={() => run(() => setAppearance({ theme: name }))}
+            >
+              <Palette />
+              {THEME_LABELS[name]}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+        <CommandSeparator />
+        <CommandGroup heading="Mode">
+          {MODES.map(({ value, label, icon: Icon }) => (
+            <CommandItem
+              key={value}
+              value={label}
+              onSelect={() => run(() => setAppearance({ mode: value }))}
+            >
+              <Icon />
+              {label}
+            </CommandItem>
+          ))}
         </CommandGroup>
       </CommandList>
     </CommandDialog>

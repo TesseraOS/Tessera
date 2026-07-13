@@ -167,7 +167,7 @@ function PackageView({ pkg }: { pkg: ContextPackage }) {
                 </div>
 
                 {fragment.text ? (
-                  <pre className="text-muted-foreground/80 bg-background/20 rounded-lg p-2 font-mono text-[10px] whitespace-pre-wrap overflow-x-auto max-h-40 scrollbar-thin">
+                  <pre className="text-muted-foreground bg-background/20 rounded-lg p-2 font-mono text-[10px] whitespace-pre-wrap overflow-x-auto max-h-40 scrollbar-thin">
                     {fragment.text}
                   </pre>
                 ) : null}
@@ -224,8 +224,8 @@ function PackageView({ pkg }: { pkg: ContextPackage }) {
                       key={`${drop.ref}-${didx}`}
                       className="text-muted-foreground flex flex-col sm:flex-row sm:justify-between gap-1"
                     >
-                      <span className="break-all text-muted-foreground/80">{drop.ref}</span>
-                      <span className="text-foreground/60 shrink-0">— {drop.reason}</span>
+                      <span className="break-all text-muted-foreground">{drop.ref}</span>
+                      <span className="text-foreground/80 shrink-0">— {drop.reason}</span>
                     </li>
                   ))}
                 </ul>

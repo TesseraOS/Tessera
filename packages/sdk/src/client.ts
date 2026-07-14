@@ -31,6 +31,10 @@ export type Source = paths['/v1/sources']['post']['responses'][201]['content'][J
 export type SourceList = paths['/v1/sources']['get']['responses'][200]['content'][Json];
 export type ScanResult = paths['/v1/sources/{id}/scan']['post']['responses'][200]['content'][Json];
 export type ScanStatus = paths['/v1/sources/{id}/scan']['get']['responses'][200]['content'][Json];
+export type Identity = paths['/v1/me']['get']['responses'][200]['content'][Json];
+export type Plans = paths['/v1/billing/plans']['get']['responses'][200]['content'][Json];
+export type HealthStatus = paths['/health']['get']['responses'][200]['content'][Json];
+export type ReadyStatus = paths['/ready']['get']['responses'][200]['content'][Json];
 
 export interface TesseraClientOptions {
   /** Base URL of the API, including the `/v1`-hosting origin (e.g. `http://localhost:3000`). */
@@ -43,6 +47,8 @@ export interface TesseraClientOptions {
 
 /** A first-class, typed client for the Tessera `/v1` API, generated from its OpenAPI document (FR-39). */
 export interface TesseraClient {
+  /** The caller's resolved identity, tenant, and effective permissions (401 when unauthenticated). */
+  me(): Promise<Identity>;
   /** Hybrid search across code, memory, and the knowledge graph. */
   search(request: SearchRequest): Promise<SearchResults>;
   /** Compile a provenance-tagged, budget-bounded Context Package for a task. */
@@ -77,6 +83,15 @@ export interface TesseraClient {
   scanSource(id: string): Promise<ScanResult>;
   /** A source's most recent scan status. */
   scanStatus(id: string): Promise<ScanStatus>;
+  /** The subscription plan catalog + entitlements (public). */
+  getPlans(): Promise<Plans>;
+  /** Liveness — `GET /health`. */
+  getHealth(): Promise<HealthStatus>;
+  /**
+   * Readiness + dependency checks — `GET /ready`. Returns the readiness body for both `200` (ready)
+   * and `503` (not ready) — a `503` here is a **status to render**, not a client error.
+   */
+  getReady(): Promise<ReadyStatus>;
 }
 
 /** Unwrap an openapi-fetch result: return the body on success, else throw a typed error. */
@@ -98,6 +113,9 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
   });
 
   return {
+    async me() {
+      return unwrap(await client.GET('/v1/me', {}));
+    },
     async search(request) {
       return unwrap(await client.POST('/v1/search', { body: request }));
     },
@@ -157,6 +175,23 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
     },
     async scanStatus(id) {
       return unwrap(await client.GET('/v1/sources/{id}/scan', { params: { path: { id } } }));
+    },
+    async getPlans() {
+      return unwrap(await client.GET('/v1/billing/plans', {}));
+    },
+    async getHealth() {
+      return unwrap(await client.GET('/health', {}));
+    },
+    async getReady() {
+      // `/ready` answers 503 (with a valid readiness body) when a dependency is down — that body is a
+      // status to render, not an error. openapi-fetch surfaces the 200 body as `data` and the 503 body
+      // as `error`; return whichever is present.
+      const result = await client.GET('/ready', {});
+      const body = result.data ?? (result.error as ReadyStatus | undefined);
+      if (body === undefined) {
+        throw new TesseraApiError(result.response.status, parseErrorEnvelope(result.error));
+      }
+      return body;
     },
   };
 }

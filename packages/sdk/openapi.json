@@ -143,6 +143,91 @@
         }
       }
     },
+    "/v1/me": {
+      "get": {
+        "summary": "The resolved identity, tenant, and effective permissions for the caller.",
+        "tags": [
+          "auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "principal": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "local",
+                            "user",
+                            "token"
+                          ]
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "roles": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "member",
+                              "viewer"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "roles"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "tenantId": {
+                      "type": "string"
+                    },
+                    "permissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "search:read",
+                          "compile:read",
+                          "effects:read",
+                          "memory:read",
+                          "memory:write",
+                          "effects:write",
+                          "sources:read",
+                          "sources:manage",
+                          "admin:manage"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "principal",
+                    "tenantId",
+                    "permissions"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/search": {
       "post": {
         "summary": "Hybrid search across code, memory, and the knowledge graph.",

@@ -151,4 +151,23 @@ describe('@tessera/sdk round-trip against the real API (FR-39)', () => {
       client.captureMemory({ kind: 'decision', title: '', body: '' }),
     ).rejects.toMatchObject({ status: 400 });
   });
+
+  it('me() returns the zero-auth local identity', async () => {
+    const identity = await client.me();
+    expect(identity.principal).toMatchObject({ id: 'local', kind: 'local' });
+    expect(identity.tenantId).toBe('default');
+    expect(identity.permissions).toContain('admin:manage');
+  });
+
+  it('getPlans/getHealth/getReady read the ops + billing surfaces', async () => {
+    const plans = await client.getPlans();
+    expect(Array.isArray(plans.plans)).toBe(true);
+
+    const health = await client.getHealth();
+    expect(health.status).toBe('ok');
+
+    // No readiness probe wired on the stub ⇒ ready (200 body returned as data).
+    const ready = await client.getReady();
+    expect(ready.status).toBe('ready');
+  });
 });

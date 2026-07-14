@@ -15,6 +15,7 @@ import { registerSourceRoutes } from './sources.js';
 import { registerEventsRoutes } from './events.js';
 import { registerBillingRoutes } from './billing.js';
 import { registerAuditRoutes } from './audit.js';
+import { registerMeRoutes } from './me.js';
 
 /** Cross-cutting hardening threaded into the `/v1` scope (F-044). */
 export interface V1HardeningOptions {
@@ -49,6 +50,7 @@ export function registerV1Routes(
       }
       // Record an audit event per response for routes flagged with an `audit` action (FR-55).
       recordAudit(v1, audit);
+      registerMeRoutes(v1);
       registerSearchRoutes(v1, services);
       registerCompileRoutes(v1, services);
       registerEffectsRoutes(v1, services);

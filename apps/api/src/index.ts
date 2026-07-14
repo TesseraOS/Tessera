@@ -110,6 +110,7 @@ export { codeForStatus, envelope, statusForCode } from './errors/envelope.js';
 export { mapError, type MappedError } from './errors/error-handler.js';
 
 export * from './schemas/common.js';
+export * from './schemas/identity.js';
 export * from './schemas/search.js';
 export * from './schemas/compile.js';
 export * from './schemas/effects.js';

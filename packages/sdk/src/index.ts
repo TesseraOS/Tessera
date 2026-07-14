@@ -23,6 +23,21 @@ export {
   type MemoryList,
   type Memory,
   type MemoryHistory,
+  type AuditQuery,
+  type AuditPage,
+  type RegisterSourceRequest,
+  type Source,
+  type SourceList,
+  type ScanResult,
+  type ScanStatus,
+  type GraphQuery,
+  type GraphSnapshot,
+  type AssertEffectRequest,
+  type EffectLink,
+  type Identity,
+  type Plans,
+  type HealthStatus,
+  type ReadyStatus,
 } from './client.js';
 export { TesseraApiError, parseErrorEnvelope, type TesseraErrorBody } from './errors.js';
 export type { paths } from './generated/schema.js';

@@ -103,6 +103,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The resolved identity, tenant, and effective permissions for the caller. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            principal: {
+                                id: string;
+                                /** @enum {string} */
+                                kind: "local" | "user" | "token";
+                                displayName?: string;
+                                roles: ("owner" | "admin" | "member" | "viewer")[];
+                            };
+                            tenantId: string;
+                            permissions: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "admin:manage")[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/search": {
         parameters: {
             query?: never;

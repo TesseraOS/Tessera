@@ -9,8 +9,33 @@
  * profile); MCP (F-012) wraps the same services — one engine, two surfaces.
  */
 export { buildServer, startServer } from './server.js';
-export type { BuildServerOptions, ListenOptions } from './server.js';
+export type { BuildServerOptions, CorsOptions, ListenOptions, RateLimitOptions } from './server.js';
 export type { ApiServices, ReadinessCheck, ReadinessReport } from './services.js';
+
+// API hardening (F-044; NFR-1/NFR-2) — security headers, per-key rate limiting, and request-id
+// correlation. The composition root wires these per deployment profile; local defaults are safe.
+export {
+  registerSecurityHeaders,
+  securityHeaders,
+  type SecurityHeadersOptions,
+} from './security/headers.js';
+export {
+  createInMemoryRateLimiter,
+  rateLimitKey,
+  registerRateLimit,
+  type InMemoryRateLimitOptions,
+  type RateLimitDecision,
+  type RateLimiter,
+  type RegisterRateLimitOptions,
+} from './security/rate-limit.js';
+export {
+  REQUEST_ID_HEADER,
+  REQUEST_ID_LOG_LABEL,
+  generateRequestId,
+  registerRequestId,
+  requestIdFrom,
+  sanitizeRequestId,
+} from './security/request-id.js';
 
 // Auth / tenancy / RBAC (F-025; FR-52/FR-54/NFR-2) — the composition root injects an AuthProvider
 // into buildServer (default: zero-auth Local). See ADR-0028.

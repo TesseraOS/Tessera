@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-07-12",
+  "updated": "2026-07-14",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -108,6 +108,10 @@
         {
           "kind": "decision",
           "ref": "docs/adr/0017-mcp-server-surface.md"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api hardening (F-044): cross-cutting security applied via plugins — security headers (CSP default-src none + frame-ancestors none, X-Frame-Options DENY, nosniff, no-referrer; HSTS behind a TLS flag), per-principal (fallback per-IP) rate limiting on /v1 (RateLimiter port + in-memory fixed-window adapter → RATE_LIMITED 429 + RateLimit-Limit/Remaining/Reset + Retry-After), a per-profile CORS allowlist replacing the blanket loopback policy (ADR-0035), and request-id correlation (sanitized inbound x-request-id else req_<uuid>, echoed + bound into logs). ADDITIVE — no route/schema shape change, so the OpenAPI doc / @tessera/sdk / dashboard are unaffected; buildServer gains security?/cors?/rateLimit? options. GET /v1/events (SSE) now authenticates under a non-none provider (no bypass). See E-024"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -491,6 +495,10 @@
         {
           "kind": "decision",
           "ref": "docs/adr/0030-auth-composition-root-wiring.md"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/config api hardening wiring (F-044): a config.api section (rateLimit {enabled,limit,windowMs}, cors {allowedOrigins}, security {hsts}) + TESSERA_API_* env → apps/server maps runtime.config.api onto buildServer security/cors/rateLimit options and, when observability is wired, an onRequest hook calls annotateRequestId(request.id) to tag the active span. Safe local defaults (rate limiting off, loopback-permissive CORS, no HSTS)."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -647,6 +655,10 @@
         {
           "kind": "decision",
           "ref": "docs/adr/0033-data-plane-tenant-isolation.md"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api rate limiting keys on the resolved AuthContext (F-044): registerRateLimit runs AFTER registerAuth so the /v1 limiter meters per-principal (principal:tenant:id), falling back to per-IP for unauthenticated/public requests; GET /v1/events is now authenticated like every other /v1 route (locked by e2e). Reuses the RATE_LIMITED code; no change to the roles→permissions catalog. See E-024"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -881,6 +893,39 @@
       "kind": "EFFECT_LINK",
       "rationale": "The mascot is a cross-frontend contract: slot names, mood names, component props, and the --mascot-* variables are consumed by marketing AND the dashboard (F-070) today and docs later, while the brand masters are build artifacts of the same data. Renaming a mood or variable therefore ripples across every consuming app, the design-lint patterns that pin usage, and the checked-in brand SVGs — the drift test and the manifest patterns turn silent divergence into gate failures.",
       "confidence": 0.9,
+      "origin": "manual"
+    },
+    {
+      "id": "E-024",
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/api security/hardening middleware (apps/api/src/security/*): security-header map + RateLimiter port + request-id correlation, applied uniformly via Fastify plugins (F-044; NFR-1/NFR-2)"
+      },
+      "to": [
+        {
+          "kind": "module",
+          "ref": "@tessera/api security modules — headers.ts (securityHeaders map + registerSecurityHeaders onRequest hook), rate-limit.ts (RateLimiter port + createInMemoryRateLimiter fixed-window adapter + registerRateLimit hook emitting RateLimit-*/Retry-After and throwing RATE_LIMITED), request-id.ts (sanitizeRequestId/requestIdFrom genReqId + registerRequestId echo). Wired in buildServer + registerV1Routes; the hijacked SSE handler reuses the security-header map in writeHead"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/observability annotateRequestId(id) — sets tessera.request.id on the active OTel span (no-op without telemetry), so the composition root can thread the request id into traces without @tessera/api taking an OpenTelemetry dependency (F-016 seam extended)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/config config.api section + TESSERA_API_* and apps/server buildServer wiring select these per deployment profile (E-014)"
+        },
+        {
+          "kind": "test",
+          "ref": "@tessera/api security unit tests (headers HSTS gating, rate-limit windowing) + tests/e2e/hardening.e2e.test.ts (headers present, 429 path + RateLimit headers, request-id generate/honor/sanitize, CORS allowlist honored, SSE 401 under token mode + authenticated stream) + @tessera/config schema tests for the api section"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0035-public-web-platform-three-surfaces.md"
+        }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "F-044 adds a cross-cutting hardening layer at the /v1 boundary: security headers (explicit hooks, no @fastify/helmet — the JSON API needs a strict CSP), a RateLimiter port + in-memory fixed-window adapter mirroring the F-026 MCP QuotaLimiter (a distributed/persistent limiter is the documented seam), a per-profile CORS allowlist (ADR-0035 app↔api cross-origin), and request-id correlation threaded into logs (Fastify reqId) + traces (observability span attribute). All additive and safe-by-default (headers on; rate limiting off; loopback CORS; no HSTS) so existing routes/tools/e2e are unchanged (advances E-003). Extending the header set, swapping in a distributed rate-limiter, adding API-key principals (F-055), or changing the request-id contract ripples through these modules + their config wiring (E-014) + the observability seam (E-015) + the auth keying (E-018).",
+      "confidence": 1,
       "origin": "manual"
     }
   ]

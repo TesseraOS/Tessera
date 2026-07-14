@@ -1,6 +1,6 @@
 import { buildServer } from '@tessera/api';
 import type { Runtime } from '@tessera/config';
-import { instrumentServices, type Observability } from '@tessera/observability';
+import { annotateRequestId, instrumentServices, type Observability } from '@tessera/observability';
 import { createServerRuntime, type ServerRuntimeOptions } from './bootstrap.js';
 
 type ApiApp = ReturnType<typeof buildServer>;
@@ -36,6 +36,7 @@ export async function startApiServer(options: ApiServerOptions = {}): Promise<Ap
   const obs = options.observability;
   const services = obs === undefined ? runtime.services : instrumentServices(runtime.services, obs);
 
+  const api = runtime.config.api;
   const app = buildServer(services, {
     // Guard /v1 with the runtime's configured provider (F-034; default = zero-auth Local).
     auth: runtime.auth.provider,
@@ -43,10 +44,23 @@ export async function startApiServer(options: ApiServerOptions = {}): Promise<Ap
     events: runtime.events,
     // Record the audit trail into the runtime's persistent sink when enabled (F-027; else in-memory).
     ...(runtime.audit !== undefined ? { audit: runtime.audit } : {}),
+    // API hardening from config (F-044): security headers/HSTS, per-profile CORS, rate limiting.
+    security: { hsts: api.security.hsts },
+    cors: { allowedOrigins: api.cors.allowedOrigins },
+    rateLimit: {
+      enabled: api.rateLimit.enabled,
+      limit: api.rateLimit.limit,
+      windowMs: api.rateLimit.windowMs,
+    },
     ...(obs !== undefined ? { loggerInstance: obs.logger } : { logger: options.logger ?? false }),
   });
 
   if (obs !== undefined) {
+    // Thread the request/correlation id onto the active span (F-044); no-op if telemetry is off.
+    app.addHook('onRequest', (request, _reply, done) => {
+      annotateRequestId(request.id);
+      done();
+    });
     app.addHook('onResponse', (request, reply, done) => {
       obs.instruments.httpServerDuration.record(reply.elapsedTime, {
         method: request.method,

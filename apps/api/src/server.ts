@@ -17,10 +17,86 @@ import { registerErrorHandling } from './errors/error-handler.js';
 import { registerOpenapi } from './plugins/openapi.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerV1Routes } from './routes/v1/index.js';
+import { registerSecurityHeaders, type SecurityHeadersOptions } from './security/headers.js';
+import { REQUEST_ID_LOG_LABEL, registerRequestId, requestIdFrom } from './security/request-id.js';
+import { createInMemoryRateLimiter, type RateLimiter } from './security/rate-limit.js';
 import type { ApiServices } from './services.js';
 
 /** Default request body cap (1 MiB) — bounds memory and abuse; override per deployment profile. */
 const DEFAULT_BODY_LIMIT = 1_000_000;
+
+/** Rate-limit defaults when enabled without explicit numbers (120 requests / minute per key). */
+const DEFAULT_RATE_LIMIT = 120;
+const DEFAULT_RATE_LIMIT_WINDOW_MS = 60_000;
+
+/**
+ * Per-profile CORS: an explicit `allowedOrigins` allowlist replaces the blanket loopback policy for
+ * hosted/self-host deployments (ADR-0035 app↔api cross-origin). Omitted/empty ⇒ the permissive
+ * loopback default (local dev + the local dashboard) is used.
+ */
+export interface CorsOptions {
+  readonly allowedOrigins?: readonly string[];
+}
+
+/**
+ * Rate-limit wiring for `/v1` (NFR-1). Pass a ready {@link RateLimiter} (tests, distributed seam) or
+ * `enabled` with `limit`/`windowMs` to build the in-memory fixed-window adapter. Omitted ⇒ no rate
+ * limiting (the local default; existing behavior unchanged).
+ */
+export interface RateLimitOptions {
+  readonly enabled?: boolean;
+  readonly limit?: number;
+  readonly windowMs?: number;
+  /** A pre-built limiter (wins over `enabled`/`limit`/`windowMs`). */
+  readonly limiter?: RateLimiter;
+}
+
+/** Resolve {@link RateLimitOptions} to a limiter, or `undefined` when rate limiting is off. */
+function resolveRateLimiter(options: RateLimitOptions | undefined): RateLimiter | undefined {
+  if (options === undefined) return undefined;
+  if (options.limiter !== undefined) return options.limiter;
+  if (options.enabled !== true) return undefined;
+  return createInMemoryRateLimiter({
+    limit: options.limit ?? DEFAULT_RATE_LIMIT,
+    windowMs: options.windowMs ?? DEFAULT_RATE_LIMIT_WINDOW_MS,
+  });
+}
+
+/**
+ * Build the `@fastify/cors` origin delegate. No `Origin` header ⇒ allow (same-origin / non-browser /
+ * server-to-server). With an allowlist ⇒ allow iff the origin matches exactly. Without one ⇒ the
+ * loopback-permissive default (`localhost`/`127.0.0.1`/`*.localhost`).
+ */
+function corsOriginDelegate(
+  allowedOrigins: readonly string[] | undefined,
+): (origin: string | undefined, cb: (err: Error | null, allow: boolean) => void) => void {
+  const allowlist =
+    allowedOrigins !== undefined && allowedOrigins.length > 0 ? new Set(allowedOrigins) : undefined;
+  return (origin, cb) => {
+    if (!origin) {
+      cb(null, true);
+      return;
+    }
+    if (allowlist !== undefined) {
+      cb(allowlist.has(origin) ? null : new Error('Not allowed by CORS'), allowlist.has(origin));
+      return;
+    }
+    try {
+      const url = new URL(origin);
+      if (
+        url.hostname === 'localhost' ||
+        url.hostname === '127.0.0.1' ||
+        url.hostname.endsWith('.localhost')
+      ) {
+        cb(null, true);
+        return;
+      }
+    } catch {
+      // ignore invalid urls
+    }
+    cb(new Error('Not allowed by CORS'), false);
+  };
+}
 
 export interface BuildServerOptions {
   /** Pino logger config; `false` (default) keeps tests quiet. */
@@ -49,6 +125,20 @@ export interface BuildServerOptions {
    * record an event per response; `GET /v1/audit` (admin) queries it. See {@link AuditLog} + ADR-0034.
    */
   readonly audit?: AuditLog;
+  /**
+   * Security-header hardening (F-044; NFR-2). Headers are on by default; `security.hsts` adds HSTS
+   * for TLS-terminated profiles. See {@link SecurityHeadersOptions}.
+   */
+  readonly security?: SecurityHeadersOptions;
+  /**
+   * Per-profile CORS allowlist (F-044). Omitted ⇒ loopback-permissive (local default). See
+   * {@link CorsOptions}.
+   */
+  readonly cors?: CorsOptions;
+  /**
+   * Rate limiting on `/v1` (F-044). Omitted ⇒ off (local default). See {@link RateLimitOptions}.
+   */
+  readonly rateLimit?: RateLimitOptions;
 }
 
 export interface ListenOptions extends BuildServerOptions {
@@ -67,13 +157,18 @@ export interface ListenOptions extends BuildServerOptions {
  */
 export function buildServer(services: ApiServices, options: BuildServerOptions = {}): ZodFastify {
   // Fastify forbids `logger` + `loggerInstance` together; prefer the injected instance when present.
+  // `requestIdHeader: false` disables raw header pickup so our sanitizing `genReqId` fully controls
+  // the id (honoring a well-formed inbound `x-request-id`, else generating one) — no injection risk.
+  const correlationOptions: FastifyServerOptions = {
+    genReqId: requestIdFrom,
+    requestIdHeader: false,
+    requestIdLogLabel: REQUEST_ID_LOG_LABEL,
+    bodyLimit: options.bodyLimit ?? DEFAULT_BODY_LIMIT,
+  };
   const fastifyOptions: FastifyServerOptions =
     options.loggerInstance !== undefined
-      ? {
-          loggerInstance: options.loggerInstance,
-          bodyLimit: options.bodyLimit ?? DEFAULT_BODY_LIMIT,
-        }
-      : { logger: options.logger ?? false, bodyLimit: options.bodyLimit ?? DEFAULT_BODY_LIMIT };
+      ? { ...correlationOptions, loggerInstance: options.loggerInstance }
+      : { ...correlationOptions, logger: options.logger ?? false };
   const app = Fastify(fastifyOptions).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
@@ -81,29 +176,21 @@ export function buildServer(services: ApiServices, options: BuildServerOptions =
 
   registerErrorHandling(app);
 
+  // Cross-cutting hardening on every response (F-044): correlation id echo + security headers.
+  registerRequestId(app);
+  registerSecurityHeaders(app, options.security ?? {});
+
   app.register(cors, {
-    origin: (origin, cb) => {
-      if (!origin) {
-        cb(null, true);
-        return;
-      }
-      try {
-        const url = new URL(origin);
-        if (
-          url.hostname === 'localhost' ||
-          url.hostname === '127.0.0.1' ||
-          url.hostname.endsWith('.localhost')
-        ) {
-          cb(null, true);
-          return;
-        }
-      } catch {
-        // ignore invalid urls
-      }
-      cb(new Error('Not allowed by CORS'), false);
-    },
+    origin: corsOriginDelegate(options.cors?.allowedOrigins),
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+    exposedHeaders: [
+      'X-Request-Id',
+      'RateLimit-Limit',
+      'RateLimit-Remaining',
+      'RateLimit-Reset',
+      'Retry-After',
+    ],
     credentials: true,
   });
 
@@ -121,6 +208,7 @@ export function buildServer(services: ApiServices, options: BuildServerOptions =
     options.events ?? createApiEventBus(),
     options.auth ?? createLocalAuthProvider(),
     options.audit ?? createInMemoryAuditLog(),
+    { security: options.security ?? {}, rateLimiter: resolveRateLimiter(options.rateLimit) },
   );
 
   return app;

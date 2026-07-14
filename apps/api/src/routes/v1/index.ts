@@ -3,6 +3,8 @@ import type { ZodFastify } from '../../app-types.js';
 import { registerAuth, type AuthProvider } from '../../auth/index.js';
 import { recordAudit, type AuditLog } from '../../audit/index.js';
 import type { ApiEventBus } from '../../events.js';
+import { registerRateLimit, type RateLimiter } from '../../security/rate-limit.js';
+import type { SecurityHeadersOptions } from '../../security/headers.js';
 import type { ApiServices } from '../../services.js';
 import { registerSearchRoutes } from './search.js';
 import { registerCompileRoutes } from './compile.js';
@@ -13,6 +15,14 @@ import { registerSourceRoutes } from './sources.js';
 import { registerEventsRoutes } from './events.js';
 import { registerBillingRoutes } from './billing.js';
 import { registerAuditRoutes } from './audit.js';
+
+/** Cross-cutting hardening threaded into the `/v1` scope (F-044). */
+export interface V1HardeningOptions {
+  /** Security headers reused by the hijacked SSE handler's `writeHead`. */
+  readonly security: SecurityHeadersOptions;
+  /** The rate limiter for `/v1`, or `undefined` when rate limiting is off. */
+  readonly rateLimiter: RateLimiter | undefined;
+}
 
 /**
  * Mount every data route under the `/v1` prefix (NFR-11: versioned, additive). Also serves the
@@ -26,12 +36,17 @@ export function registerV1Routes(
   events: ApiEventBus,
   auth: AuthProvider,
   audit: AuditLog,
+  hardening: V1HardeningOptions,
 ): void {
   app.register(
     (instance, _opts, done) => {
       const v1 = instance.withTypeProvider<ZodTypeProvider>();
       // Authenticate every /v1 request first (per-route authorization is in each route module).
       registerAuth(v1, auth);
+      // Rate limit AFTER auth so the key can use the resolved principal (fallback per-IP) (F-044).
+      if (hardening.rateLimiter !== undefined) {
+        registerRateLimit(v1, { limiter: hardening.rateLimiter });
+      }
       // Record an audit event per response for routes flagged with an `audit` action (FR-55).
       recordAudit(v1, audit);
       registerSearchRoutes(v1, services);
@@ -40,7 +55,7 @@ export function registerV1Routes(
       registerGraphRoutes(v1, services);
       registerMemoryRoutes(v1, services, events);
       registerSourceRoutes(v1, services);
-      registerEventsRoutes(v1, events);
+      registerEventsRoutes(v1, events, hardening.security);
       registerBillingRoutes(v1, services);
       registerAuditRoutes(v1, audit);
 

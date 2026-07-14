@@ -19,6 +19,16 @@ function bool(value: string | undefined): boolean | undefined {
   return undefined;
 }
 
+/** Parse a comma-separated list env var into trimmed, non-empty entries (undefined when absent). */
+function list(value: string | undefined): string[] | undefined {
+  if (value === undefined) return undefined;
+  const items = value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+  return items.length > 0 ? items : undefined;
+}
+
 /** Drop `undefined` values so a section only carries the keys actually provided. */
 function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
   const out: Record<string, unknown> = {};
@@ -98,6 +108,22 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
   const sources = section({
     autoScanOnRegister: bool(env.TESSERA_SOURCES_AUTOSCAN),
   });
+  const apiRateLimit = section({
+    enabled: bool(env.TESSERA_API_RATE_LIMIT_ENABLED),
+    limit: num(env.TESSERA_API_RATE_LIMIT),
+    windowMs: num(env.TESSERA_API_RATE_LIMIT_WINDOW_MS),
+  });
+  const apiCors = section({
+    allowedOrigins: list(env.TESSERA_API_CORS_ALLOWED_ORIGINS),
+  });
+  const apiSecurity = section({
+    hsts: bool(env.TESSERA_API_HSTS),
+  });
+  const api = section({
+    ...(apiRateLimit !== undefined ? { rateLimit: apiRateLimit } : {}),
+    ...(apiCors !== undefined ? { cors: apiCors } : {}),
+    ...(apiSecurity !== undefined ? { security: apiSecurity } : {}),
+  });
 
   if (storage !== undefined) input.storage = storage;
   if (embeddings !== undefined) input.embeddings = embeddings;
@@ -107,6 +133,7 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
   if (billing !== undefined) input.billing = billing;
   if (audit !== undefined) input.audit = audit;
   if (sources !== undefined) input.sources = sources;
+  if (api !== undefined) input.api = api;
   return input as ConfigInput;
 }
 
@@ -125,6 +152,7 @@ function mergeConfig(base: ConfigInput, over: ConfigInput): ConfigInput {
     ...((base.billing ?? over.billing) ? { billing: { ...base.billing, ...over.billing } } : {}),
     ...((base.audit ?? over.audit) ? { audit: { ...base.audit, ...over.audit } } : {}),
     ...((base.sources ?? over.sources) ? { sources: { ...base.sources, ...over.sources } } : {}),
+    ...((base.api ?? over.api) ? { api: { ...base.api, ...over.api } } : {}),
   };
 }
 

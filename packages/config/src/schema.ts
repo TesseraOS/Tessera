@@ -160,6 +160,45 @@ const billingSchema = z
   })
   .default({});
 
+/** Per-`/v1` request rate limiting (F-044; NFR-1). Off by default; a distributed store is a seam. */
+const apiRateLimitSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    /** Max requests per key (principal, fallback IP) per window. */
+    limit: z.number().int().positive().default(120),
+    /** Window length in ms. */
+    windowMs: z.number().int().positive().default(60_000),
+  })
+  .default({});
+
+/** Per-profile CORS allowlist (F-044; ADR-0035). Empty ⇒ loopback-permissive local default. */
+const apiCorsSchema = z
+  .object({
+    /** Exact allowed browser origins (e.g. `https://app.example.com`). */
+    allowedOrigins: z.array(z.string().min(1)).default([]),
+  })
+  .default({});
+
+/**
+ * HTTP hardening for the `/v1` surface (F-044; NFR-2). Security headers are always applied; `hsts`
+ * adds `Strict-Transport-Security` and must only be enabled when the API is served over TLS
+ * (directly or behind a TLS-terminating proxy).
+ */
+const apiSecuritySchema = z
+  .object({
+    hsts: z.boolean().default(false),
+  })
+  .default({});
+
+/** API-surface hardening config (F-044): rate limiting, CORS allowlist, security headers. */
+const apiSchema = z
+  .object({
+    rateLimit: apiRateLimitSchema,
+    cors: apiCorsSchema,
+    security: apiSecuritySchema,
+  })
+  .default({});
+
 /** The validated Tessera configuration (FR-50). Deployment is configuration — one surface. */
 export const configSchema = z.object({
   profile: z.enum(DEPLOYMENT_PROFILES as unknown as [string, ...string[]]).default('local'),
@@ -173,6 +212,7 @@ export const configSchema = z.object({
   billing: billingSchema,
   audit: auditSchema,
   sources: sourcesSchema,
+  api: apiSchema,
 });
 
 /** Caller-facing config input (pre-defaults). */

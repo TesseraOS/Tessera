@@ -55,3 +55,13 @@ export function currentTraceId(): string | undefined {
   const traceId = trace.getSpan(context.active())?.spanContext().traceId;
   return traceId === undefined || traceId === INVALID_TRACE_ID ? undefined : traceId;
 }
+
+/**
+ * Attribute the request/correlation id onto the active span (F-044: request-id threading into
+ * traces). A no-op when no span is active (e.g. telemetry disabled), so callers can wire it
+ * unconditionally. Keeps the API layer free of an OpenTelemetry dependency — the composition root
+ * calls this from a request hook when observability is enabled.
+ */
+export function annotateRequestId(requestId: string): void {
+  trace.getSpan(context.active())?.setAttribute('tessera.request.id', requestId);
+}

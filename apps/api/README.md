@@ -21,6 +21,28 @@ All data routes live under `/v1`; changes are **additive** (NFR-11). Every failu
 envelope: `{ "error": { "code", "message", "details"? } }` (NFR-6), with `code` a stable
 `@tessera/core` `ErrorCode`.
 
+## Hardening (F-044)
+
+Cross-cutting security applied uniformly via plugins (never per-route), configured per deployment
+profile through `@tessera/config`'s `api` section (`TESSERA_API_*` env). Safe local defaults keep
+zero-friction dev.
+
+- **Security headers** (on by default) — every response carries `Content-Security-Policy:
+  default-src 'none'; frame-ancestors 'none'`, `X-Frame-Options: DENY`, `X-Content-Type-Options:
+  nosniff`, `Referrer-Policy: no-referrer`. `Strict-Transport-Security` is added **only** when
+  `security.hsts` is set (TLS profiles). Explicit hooks, not `@fastify/helmet` — no new dependency,
+  and the API is JSON-only so a strict CSP is safe. The SSE handler emits the same headers.
+- **Rate limiting** on `/v1` (`rateLimit.enabled`, default off) — per-principal (fallback per-IP)
+  fixed-window limiter (the F-026 `QuotaLimiter` pattern; distributed store = seam). Denials →
+  `RATE_LIMITED` 429 envelope + `RateLimit-Limit/Remaining/Reset` and `Retry-After` headers.
+- **CORS** — `cors.allowedOrigins` replaces the blanket policy with an exact allowlist (ADR-0035
+  app↔api). Empty ⇒ the loopback-permissive local default.
+- **SSE auth** — `GET /v1/events` lives inside the `/v1` auth scope, so under a non-none provider
+  an unauthenticated request 401s (no bypass); locked by e2e.
+- **Request-id correlation** — a sanitized inbound `x-request-id` is honored (else `req_<uuid>` is
+  generated), bound into every request log line (`requestId`), echoed on the response, and (when
+  observability is wired) attributed onto the active OTel span.
+
 ## Design
 
 - **Schema-first (ADR-0002, ADR-0016).** One Zod schema per route drives **validation,

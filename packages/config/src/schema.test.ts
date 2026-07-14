@@ -73,4 +73,31 @@ describe('config schema + loader', () => {
   it('rejects auth.mode=oidc without issuer/audience', () => {
     expect(() => loadConfig({ TESSERA_AUTH_MODE: 'oidc' })).toThrow(/invalid configuration/);
   });
+
+  it('defaults the api hardening section (rate limiting off, no CORS allowlist, no HSTS)', () => {
+    const config = loadConfig({});
+    expect(config.api.rateLimit).toMatchObject({ enabled: false, limit: 120, windowMs: 60_000 });
+    expect(config.api.cors.allowedOrigins).toEqual([]);
+    expect(config.api.security.hsts).toBe(false);
+  });
+
+  it('maps TESSERA_API_* overrides (rate limit, CORS allowlist, HSTS)', () => {
+    const config = loadConfig({
+      TESSERA_API_RATE_LIMIT_ENABLED: 'true',
+      TESSERA_API_RATE_LIMIT: '30',
+      TESSERA_API_RATE_LIMIT_WINDOW_MS: '1000',
+      TESSERA_API_CORS_ALLOWED_ORIGINS: 'https://app.example.com, https://admin.example.com',
+      TESSERA_API_HSTS: '1',
+    });
+    expect(config.api.rateLimit).toMatchObject({ enabled: true, limit: 30, windowMs: 1000 });
+    expect(config.api.cors.allowedOrigins).toEqual([
+      'https://app.example.com',
+      'https://admin.example.com',
+    ]);
+    expect(config.api.security.hsts).toBe(true);
+  });
+
+  it('rejects an invalid api rate-limit number', () => {
+    expect(() => loadConfig({ TESSERA_API_RATE_LIMIT: 'lots' })).toThrow(/invalid configuration/);
+  });
 });

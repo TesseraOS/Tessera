@@ -1423,7 +1423,7 @@
       "package": "@tessera/api",
       "release": "R3",
       "priority": "must",
-      "status": "backlog",
+      "status": "done",
       "blockedBy": [
         "F-025"
       ],
@@ -1443,7 +1443,8 @@
         "E-003",
         "E-014",
         "E-018"
-      ]
+      ],
+      "notes": "Done 2026-07-14: API hardening, all additive (no route/schema shape change → E-003 OpenAPI/SDK/dashboard untouched). NEW apps/api/src/security/*: (1) headers.ts — securityHeaders() map (CSP default-src 'none' + frame-ancestors 'none', X-Frame-Options DENY, nosniff, no-referrer; HSTS only behind a TLS flag) + registerSecurityHeaders onRequest hook (explicit hooks, NOT @fastify/helmet — JSON-only API, no new dep); default on. (2) rate-limit.ts — a RateLimiter port + createInMemoryRateLimiter (fixed-window per-key, mirrors the F-026 MCP QuotaLimiter; distributed store = seam) + registerRateLimit hook keyed on request.authContext principal (fallback per-IP: principal:tenant:id | ip:x), registered AFTER registerAuth inside /v1 → RATE_LIMITED 429 envelope + IETF RateLimit-Limit/Remaining/Reset + Retry-After; default OFF (F-026 precedent, preserves existing e2e). (3) request-id.ts — Fastify requestIdHeader:false + a sanitizing genReqId (honor inbound x-request-id matching /^[\\w.-]{1,128}$/ else req_<uuid>; blocks header/log injection), bound into logs (label requestId) + echoed via an onRequest hook. CORS: server.ts corsOriginDelegate — an explicit allowedOrigins allowlist (ADR-0035 app↔api) replaces the blanket policy; empty ⇒ loopback-permissive local default. SSE: GET /v1/events already sits inside the /v1 auth scope (onRequest auth runs before the handler hijacks) so it 401s under a non-none provider — locked by e2e (no bypass); its writeHead now also emits the security headers + request id. buildServer gains security?/cors?/rateLimit? options; exported the new surface. Config: @tessera/config gains a config.api section (rateLimit/cors/security) + TESSERA_API_* env (+ .env.example); apps/server maps runtime.config.api → buildServer and, when observability is wired, an onRequest hook calls the NEW @tessera/observability annotateRequestId(id) to tag the active OTel span (request-id → traces without api taking an OTel dep). +8 unit (headers 4, rate-limit 4) + 5 config schema + 11 e2e (headers present/HSTS-gated, 429 path + headers, request-id generate/honor/sanitize, CORS allowlist honored, SSE 401 under token mode + authenticated stream). Effects E-003/E-014/E-018 extended + NEW E-024 (hardening middleware seam). Gates green workspace-wide: verify-state · typecheck 33 · lint 19 · format · test 33 · build 19 · e2e 18. Deferred (documented seams): distributed/persistent rate limiter (Redis), API-key principals (F-055), OTLP-exported request-id spans, per-route rate tiers."
     },
     {
       "id": "F-045",

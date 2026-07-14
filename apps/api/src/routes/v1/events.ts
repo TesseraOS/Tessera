@@ -1,5 +1,7 @@
 import type { ZodFastify } from '../../app-types.js';
 import { API_EVENT_TYPES, sseComment, sseFrame, type ApiEventBus } from '../../events.js';
+import { securityHeaders, type SecurityHeadersOptions } from '../../security/headers.js';
+import { REQUEST_ID_HEADER } from '../../security/request-id.js';
 
 /** Heartbeat interval — keeps the connection (and intermediaries) alive on quiet streams. */
 const HEARTBEAT_MS = 15_000;
@@ -9,8 +11,17 @@ const HEARTBEAT_MS = 15_000;
  * memories. The handler `hijack`s the reply and owns the raw socket, writing framed events. It
  * **subscribes before** the opening comment so no event is lost between connect and subscribe,
  * heartbeats on an `unref`'d timer, and tears everything down when the client disconnects.
+ *
+ * Authentication is not special-cased here: the route lives inside the `/v1` auth scope, so the
+ * `onRequest` auth hook runs (and, under a non-none provider, 401s an unauthenticated request)
+ * before this handler hijacks the reply (F-044). Because hijacking bypasses the normal reply
+ * lifecycle, the security headers + the echoed request id are written into `writeHead` explicitly.
  */
-export function registerEventsRoutes(app: ZodFastify, events: ApiEventBus): void {
+export function registerEventsRoutes(
+  app: ZodFastify,
+  events: ApiEventBus,
+  security: SecurityHeadersOptions = {},
+): void {
   app.get(
     '/events',
     {
@@ -29,6 +40,8 @@ export function registerEventsRoutes(app: ZodFastify, events: ApiEventBus): void
         'cache-control': 'no-cache, no-transform',
         connection: 'keep-alive',
         'x-accel-buffering': 'no',
+        [REQUEST_ID_HEADER]: request.id,
+        ...securityHeaders(security),
       });
 
       const unsubscribes = API_EVENT_TYPES.map((type) =>

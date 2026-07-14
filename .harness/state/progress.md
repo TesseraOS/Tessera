@@ -3,6 +3,59 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-14 — F-044 DONE — API hardening: rate limiting, security headers, SSE auth, per-profile CORS, request-id
+
+**Harness-strict selection** (lowest-id eligible in the earliest open release R3; blocker F-025
+done; `must`). No stakeholder redirect this session, so followed the working loop straight down
+the list. Plan: [`.harness/plans/F-044-api-hardening.md`](../plans/F-044-api-hardening.md). All
+changes **additive** — no route/schema shape change, so E-003's OpenAPI doc / `@tessera/sdk` /
+dashboard are untouched; safe local defaults keep dev zero-friction.
+
+**What changed**
+- **New `apps/api/src/security/*`** (one Fastify plugin per concern, applied uniformly):
+  - `headers.ts` — `securityHeaders()` map (CSP `default-src 'none'; frame-ancestors 'none'`,
+    `X-Frame-Options: DENY`, `nosniff`, `no-referrer`; **HSTS only behind a TLS flag**) +
+    `registerSecurityHeaders` onRequest hook. **Explicit hooks, not `@fastify/helmet`** — the
+    JSON-only API needs a strict CSP and no new dep (the sanctioned non-deviating option).
+  - `rate-limit.ts` — a `RateLimiter` port + `createInMemoryRateLimiter` (fixed-window per key,
+    **mirrors the F-026 MCP `QuotaLimiter`**; distributed store = documented seam) +
+    `registerRateLimit` hook keyed on `request.authContext` principal (fallback per-IP), wired
+    **after** `registerAuth` inside `/v1` → `RATE_LIMITED` 429 envelope + IETF
+    `RateLimit-Limit/Remaining/Reset` + `Retry-After`. **Default off** (F-026 precedent; preserves
+    existing e2e).
+  - `request-id.ts` — Fastify `requestIdHeader:false` + a **sanitizing** `genReqId` (honor inbound
+    `x-request-id` matching `/^[\w.-]{1,128}$/`, else `req_<uuid>`; blocks header/log injection),
+    bound into logs (label `requestId`) + echoed via an onRequest hook.
+- **CORS** — `server.ts` `corsOriginDelegate`: an explicit `allowedOrigins` allowlist (ADR-0035
+  app↔api) replaces the blanket policy; empty ⇒ the loopback-permissive local default.
+- **SSE** — `GET /v1/events` already sits inside the `/v1` auth scope (the auth onRequest hook
+  runs before the handler hijacks), so under a non-none provider it **401s** — this was **not a
+  bypass**; the new e2e locks it. Its `writeHead` now also emits the security headers + request id.
+- **Config + wiring** — `@tessera/config` gains a `config.api` section (`rateLimit`/`cors`/
+  `security`) + `TESSERA_API_*` env + `.env.example`; `apps/server` maps `runtime.config.api` →
+  `buildServer` and, when observability is wired, an onRequest hook calls the **new**
+  `@tessera/observability` `annotateRequestId(id)` to tag the active OTel span (request-id →
+  traces without `@tessera/api` taking an OpenTelemetry dep). `buildServer` gains
+  `security?`/`cors?`/`rateLimit?`; the new surface is exported.
+
+**Evidence/verification** (all gates fresh, workspace-wide)
+- verify-state ok (24 effect-links) · typecheck **33** · lint **19** · format clean · test **33**
+  (api +8 unit: headers 4, rate-limit 4; config +5 schema) · build **19** · e2e **18** (api +11
+  `hardening.e2e.test.ts`: headers present + HSTS gating, 429 path + `RateLimit-*`/`Retry-After`,
+  request-id generate/honor/sanitize, CORS allowlist honored, **SSE 401 under token mode** +
+  authenticated stream over a real socket).
+
+**Decisions**
+- No ADR: security headers via explicit hooks and rate-limiting-off-by-default are the documented
+  non-deviating choices; CORS allowlist references ADR-0035. Effects E-003/E-014/E-018 extended +
+  **new E-024** (the hardening-middleware seam: distributed rate limiter, API-key principals F-055,
+  OTLP request-id spans are its documented follow-ups).
+
+**Next step**
+- Next eligible by id in R3 is **F-045** (dashboard auth & session + adopt `@tessera/sdk`, closes
+  ADR-0022) — now unblocked (F-044 done). Other open R3 items: F-046/F-047/F-048/F-049 and the
+  dashboard-data set F-060/F-061/F-062/F-063 (F-062/F-063 have no blockers).
+
 ## 2026-07-12 (v3) — F-070 DONE (absorbs F-068) — dashboard experience overhaul: 4-theme catalog, radial appearance propagation, signature illustration layer + Tess, executable WCAG-AA contrast gate
 
 **Stakeholder review of the dashboard: "too dull, lifeless, lacks design and creativity;

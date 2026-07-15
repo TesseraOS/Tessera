@@ -228,6 +228,9 @@ importers:
       '@tessera/mascot':
         specifier: workspace:*
         version: link:../../packages/mascot
+      '@tessera/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       '@xyflow/react':
         specifier: ^12.11.1
         version: 12.11.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(immer@11.1.8)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -292,6 +295,12 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.3.2
         version: 4.3.2
+      '@tessera/api':
+        specifier: workspace:*
+        version: link:../api
+      '@tessera/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1

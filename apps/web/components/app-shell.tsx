@@ -1,10 +1,20 @@
+'use client';
+
 import type { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppHeader } from '@/components/app-header';
 import { AppSidebar } from '@/components/app-sidebar';
 import { CommandPalette } from '@/components/command-palette';
 
+/** Routes rendered without the dashboard chrome (their own full-screen layout). */
+const CHROMELESS_PREFIXES = ['/signin'];
+
 export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  if (CHROMELESS_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    return <>{children}</>;
+  }
   return (
     <div className="overflow-hidden">
       <SidebarProvider className="relative h-svh">

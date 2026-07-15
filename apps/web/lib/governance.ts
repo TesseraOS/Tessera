@@ -26,13 +26,16 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   viewer: READ,
 };
 
-/** Human labels for audit actions. */
+/** Human labels for audit actions (mirrors AUDIT_ACTIONS in @tessera/api). */
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   search: 'Search',
   compile: 'Compile',
   'effects.read': 'Effects read',
   'memory.read': 'Memory read',
   'memory.write': 'Memory write',
+  'effects.write': 'Effects write',
+  'source.read': 'Source read',
+  'source.manage': 'Source manage',
   'billing.read': 'Billing read',
   'billing.manage': 'Billing manage',
   'audit.read': 'Audit read',

@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/fixtures';
 
 test.describe('Dashboard shell', () => {
   test('renders the overview with sidebar navigation', async ({ page }) => {

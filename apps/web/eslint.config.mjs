@@ -33,5 +33,17 @@ export default tseslint.config(
       'react-hooks/exhaustive-deps': 'warn',
     },
   },
+  {
+    // Node-run E2E support scripts (real test servers) use Node globals, not the browser env.
+    files: ['tests/e2e/support/**/*.mjs'],
+    languageOptions: {
+      globals: { console: 'readonly', process: 'readonly' },
+    },
+  },
+  {
+    // Playwright fixtures call `use(...)` — not a React hook; silence the false positive.
+    files: ['tests/e2e/**/*.ts'],
+    rules: { 'react-hooks/rules-of-hooks': 'off' },
+  },
   prettier,
 );

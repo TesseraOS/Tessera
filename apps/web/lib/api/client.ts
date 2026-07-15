@@ -1,3 +1,5 @@
+import { createTesseraClient, TesseraApiError } from '@tessera/sdk';
+import { PROXY_BASE } from '@/lib/auth/session';
 import type {
   AuditPage,
   AuditQuery,
@@ -7,8 +9,6 @@ import type {
   EditMemoryBody,
   EffectsQuery,
   EffectsResponse,
-  ErrorCode,
-  ErrorEnvelope,
   GraphQuery,
   GraphSnapshot,
   HealthStatus,
@@ -26,161 +26,61 @@ import type {
   Source,
   SourceListResponse,
 } from './types';
-
-/** Base URL of the Tessera REST API. Configurable; defaults to the Local profile (F-032). */
-const BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000/v1').replace(
-  /\/$/,
-  '',
-);
-
-/** Origin of the API (the base URL without its `/v1` suffix) — for the unversioned ops routes. */
-export const API_ORIGIN = BASE_URL.replace(/\/v1$/, '');
-
-/** Typed error carrying the API's `{ error: { code, message } }` envelope (NFR-6). */
-export class TesseraApiError extends Error {
-  readonly code: ErrorCode | 'NETWORK';
-  readonly status: number;
-  readonly details: unknown;
-
-  constructor(message: string, code: ErrorCode | 'NETWORK', status: number, details?: unknown) {
-    super(message);
-    this.name = 'TesseraApiError';
-    this.code = code;
-    this.status = status;
-    this.details = details;
-  }
-}
-
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const { headers, ...rest } = init ?? {};
-  // Only declare a JSON content-type when a body is actually sent — Fastify rejects a bodyless
-  // request that still advertises `application/json` (e.g. POST /sources/:id/scan, DELETE).
-  const jsonHeader = rest.body !== undefined ? { 'content-type': 'application/json' } : {};
-
-  let response: Response;
-  try {
-    response = await fetch(`${BASE_URL}${path}`, {
-      ...rest,
-      headers: { ...jsonHeader, ...headers },
-    });
-  } catch (cause) {
-    throw new TesseraApiError('Could not reach the Tessera API.', 'NETWORK', 0, cause);
-  }
-
-  const text = await response.text();
-  const data: unknown = text ? JSON.parse(text) : undefined;
-
-  if (!response.ok) {
-    const envelope = data as ErrorEnvelope | undefined;
-    throw new TesseraApiError(
-      envelope?.error?.message ?? response.statusText,
-      envelope?.error?.code ?? 'INTERNAL',
-      response.status,
-      envelope?.error?.details,
-    );
-  }
-
-  return data as T;
-}
+import type { Identity } from '@tessera/sdk';
 
 /**
- * Fetch an **unversioned** ops route (`/health`, `/ready`) off the API origin. `/ready` answers
- * `503` with a valid readiness body when a dependency is down, so those statuses are read as data
- * (via `okStatuses`) rather than raised as errors.
+ * The dashboard's data client (ADR-0048, closing ADR-0022). It is the generated **`@tessera/sdk`**
+ * pointed at the **same-origin proxy** (`/api/tessera`); the proxy injects the bearer from the
+ * httpOnly session cookie, so no token ever lives in client JS. The `api` surface + `TesseraApiError`
+ * are kept stable so the TanStack Query hooks and views are unchanged.
  */
-async function rootFetch<T>(path: string, okStatuses: readonly number[] = [200]): Promise<T> {
-  let response: Response;
-  try {
-    response = await fetch(`${API_ORIGIN}${path}`, {
-      headers: { 'content-type': 'application/json' },
-    });
-  } catch (cause) {
-    throw new TesseraApiError('Could not reach the Tessera API.', 'NETWORK', 0, cause);
-  }
+const sdk = createTesseraClient({ baseUrl: PROXY_BASE });
 
-  const text = await response.text();
-  const data: unknown = text ? JSON.parse(text) : undefined;
+export { TesseraApiError };
+export type { Identity };
 
-  if (!okStatuses.includes(response.status)) {
-    const envelope = data as ErrorEnvelope | undefined;
-    throw new TesseraApiError(
-      envelope?.error?.message ?? response.statusText,
-      envelope?.error?.code ?? 'INTERNAL',
-      response.status,
-      envelope?.error?.details,
-    );
-  }
+/** Label for the endpoint the dashboard talks to (the same-origin proxy). Shown in Settings. */
+export const API_ORIGIN = PROXY_BASE;
 
-  return data as T;
-}
-
-/** The dashboard's only data path (ADR-0022). Swapped for the generated @tessera/sdk at F-022. */
+/** The dashboard's only data path — the generated SDK over the auth-aware same-origin proxy. */
 export const api = {
-  search: (body: SearchBody): Promise<SearchResponse> =>
-    apiFetch<SearchResponse>('/search', { method: 'POST', body: JSON.stringify(body) }),
-  compile: (body: CompileBody): Promise<ContextPackage> =>
-    apiFetch<ContextPackage>('/compile', { method: 'POST', body: JSON.stringify(body) }),
-  captureMemory: (body: CaptureMemoryBody): Promise<Memory> =>
-    apiFetch<Memory>('/memory', { method: 'POST', body: JSON.stringify(body) }),
-  listMemories: (filter: MemoryListFilter = {}): Promise<MemoryListResponse> => {
-    const params = new URLSearchParams();
-    if (filter.kind) params.set('kind', filter.kind);
-    if (filter.scope) params.set('scope', filter.scope);
-    const qs = params.toString();
-    return apiFetch<MemoryListResponse>(`/memory${qs ? `?${qs}` : ''}`);
-  },
-  getMemory: (lineageId: string): Promise<Memory> =>
-    apiFetch<Memory>(`/memory/${encodeURIComponent(lineageId)}`),
+  /** The caller's resolved identity (401 when a token is required but absent/invalid). */
+  me: (): Promise<Identity> => sdk.me(),
+
+  search: (body: SearchBody): Promise<SearchResponse> => sdk.search(body),
+  compile: (body: CompileBody): Promise<ContextPackage> => sdk.compile(body),
+  captureMemory: (body: CaptureMemoryBody): Promise<Memory> => sdk.captureMemory(body),
+  listMemories: (filter: MemoryListFilter = {}): Promise<MemoryListResponse> =>
+    sdk.listMemories(filter),
+  getMemory: (lineageId: string): Promise<Memory> => sdk.getMemory(lineageId),
   memoryHistory: (lineageId: string): Promise<MemoryHistoryResponse> =>
-    apiFetch<MemoryHistoryResponse>(`/memory/${encodeURIComponent(lineageId)}/history`),
+    sdk.memoryHistory(lineageId),
   editMemory: (lineageId: string, body: EditMemoryBody): Promise<Memory> =>
-    apiFetch<Memory>(`/memory/${encodeURIComponent(lineageId)}`, {
-      method: 'PATCH',
-      body: JSON.stringify(body),
+    sdk.editMemory(lineageId, body),
+  getAudit: (query: AuditQuery = {}): Promise<AuditPage> => sdk.getAudit(query),
+
+  // --- sources (F-038/FR-62) ---
+  listSources: (): Promise<SourceListResponse> => sdk.listSources(),
+  registerSource: (body: RegisterSourceBody): Promise<Source> => sdk.registerSource(body),
+  removeSource: (id: string): Promise<{ id: string }> => sdk.removeSource(id),
+  scanSource: (id: string): Promise<ScanResult> => sdk.scanSource(id),
+  getScanStatus: (id: string): Promise<ScanStatus> => sdk.scanStatus(id),
+
+  // --- knowledge graph (F-043) — node/edge-kind arrays are sent comma-joined (the API query shape) ---
+  queryGraph: (query: GraphQuery = {}): Promise<GraphSnapshot> =>
+    sdk.queryGraph({
+      ...(query.limit !== undefined ? { limit: query.limit } : {}),
+      ...(query.nodeKinds && query.nodeKinds.length > 0
+        ? { nodeKinds: query.nodeKinds.join(',') }
+        : {}),
+      ...(query.edgeKinds && query.edgeKinds.length > 0
+        ? { edgeKinds: query.edgeKinds.join(',') }
+        : {}),
     }),
-  getAudit: (query: AuditQuery = {}): Promise<AuditPage> => {
-    const params = new URLSearchParams();
-    if (query.action) params.set('action', query.action);
-    if (query.outcome) params.set('outcome', query.outcome);
-    if (query.actor) params.set('actor', query.actor);
-    if (query.since) params.set('since', query.since);
-    if (query.until) params.set('until', query.until);
-    if (query.limit !== undefined) params.set('limit', String(query.limit));
-    if (query.cursor) params.set('cursor', query.cursor);
-    const qs = params.toString();
-    return apiFetch<AuditPage>(`/audit${qs ? `?${qs}` : ''}`);
-  },
-
-  // --- sources (F-038/FR-62): register + scan repositories through the ingestion pipeline ---
-  listSources: (): Promise<SourceListResponse> => apiFetch<SourceListResponse>('/sources'),
-  registerSource: (body: RegisterSourceBody): Promise<Source> =>
-    apiFetch<Source>('/sources', { method: 'POST', body: JSON.stringify(body) }),
-  removeSource: (id: string): Promise<{ id: string }> =>
-    apiFetch<{ id: string }>(`/sources/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-  scanSource: (id: string): Promise<ScanResult> =>
-    apiFetch<ScanResult>(`/sources/${encodeURIComponent(id)}/scan`, { method: 'POST' }),
-  getScanStatus: (id: string): Promise<ScanStatus> =>
-    apiFetch<ScanStatus>(`/sources/${encodeURIComponent(id)}/scan`),
-
-  // --- knowledge graph (F-043): explore the graph + ranked dependents (get_effects) ---
-  queryGraph: (query: GraphQuery = {}): Promise<GraphSnapshot> => {
-    const params = new URLSearchParams();
-    if (query.limit !== undefined) params.set('limit', String(query.limit));
-    if (query.nodeKinds && query.nodeKinds.length > 0)
-      params.set('nodeKinds', query.nodeKinds.join(','));
-    if (query.edgeKinds && query.edgeKinds.length > 0)
-      params.set('edgeKinds', query.edgeKinds.join(','));
-    const qs = params.toString();
-    return apiFetch<GraphSnapshot>(`/graph${qs ? `?${qs}` : ''}`);
-  },
-  getEffects: (query: EffectsQuery): Promise<EffectsResponse> => {
-    const params = new URLSearchParams({ kind: query.kind, key: query.key });
-    if (query.maxDepth !== undefined) params.set('maxDepth', String(query.maxDepth));
-    return apiFetch<EffectsResponse>(`/effects?${params.toString()}`);
-  },
+  getEffects: (query: EffectsQuery): Promise<EffectsResponse> => sdk.getEffects(query),
 
   // --- settings-facing reads (no config write surface; render read-only) ---
-  getPlans: (): Promise<PlansResponse> => apiFetch<PlansResponse>('/billing/plans'),
-  getHealth: (): Promise<HealthStatus> => rootFetch<HealthStatus>('/health'),
-  getReady: (): Promise<ReadyStatus> => rootFetch<ReadyStatus>('/ready', [200, 503]),
+  getPlans: (): Promise<PlansResponse> => sdk.getPlans(),
+  getHealth: (): Promise<HealthStatus> => sdk.getHealth(),
+  getReady: (): Promise<ReadyStatus> => sdk.getReady(),
 };

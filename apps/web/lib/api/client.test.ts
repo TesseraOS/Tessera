@@ -1,43 +1,63 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { api, TesseraApiError } from '@/lib/api/client';
+import { describe, expect, it, vi } from 'vitest';
 
-describe('api client', () => {
-  afterEach(() => vi.restoreAllMocks());
+/** Mock the generated SDK so we can assert the thin adapter's behavior (delegation + query shaping). */
+const sdkClient = {
+  search: vi.fn(),
+  queryGraph: vi.fn(),
+  me: vi.fn(),
+};
 
-  it('returns parsed JSON on success', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => new Response(JSON.stringify({ results: [] }), { status: 200 })),
-    );
-    await expect(api.search({ query: 'x' })).resolves.toEqual({ results: [] });
+vi.mock('@tessera/sdk', () => ({
+  createTesseraClient: () => sdkClient,
+  TesseraApiError: class TesseraApiError extends Error {
+    readonly code: string;
+    constructor(
+      readonly status: number,
+      body: { code: string; message: string },
+    ) {
+      super(body.message);
+      this.name = 'TesseraApiError';
+      this.code = body.code;
+    }
+  },
+}));
+
+// Imported after the mock so the module's `createTesseraClient` call resolves to the stub.
+const { api, API_ORIGIN, TesseraApiError } = await import('@/lib/api/client');
+
+describe('api client (SDK over the same-origin proxy)', () => {
+  it('talks to the same-origin proxy, not the API directly', () => {
+    expect(API_ORIGIN).toBe('/api/tessera');
   });
 
-  it('throws a TesseraApiError carrying the envelope code on a 4xx', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ error: { code: 'VALIDATION', message: 'bad input' } }), {
-            status: 400,
-          }),
-      ),
-    );
-    await expect(api.search({ query: '' })).rejects.toMatchObject({
-      code: 'VALIDATION',
-      status: 400,
-      message: 'bad input',
+  it('delegates a call to the generated SDK and returns its result', async () => {
+    sdkClient.search.mockResolvedValueOnce({ results: [] });
+    await expect(api.search({ query: 'x' })).resolves.toEqual({ results: [] });
+    expect(sdkClient.search).toHaveBeenCalledWith({ query: 'x' });
+  });
+
+  it('sends graph node/edge kinds comma-joined (the API query shape)', async () => {
+    sdkClient.queryGraph.mockResolvedValueOnce({ nodes: [], edges: [] });
+    await api.queryGraph({ nodeKinds: ['file', 'symbol'], edgeKinds: ['imports'], limit: 10 });
+    expect(sdkClient.queryGraph).toHaveBeenCalledWith({
+      limit: 10,
+      nodeKinds: 'file,symbol',
+      edgeKinds: 'imports',
     });
   });
 
-  it('throws a NETWORK TesseraApiError when fetch itself fails', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => {
-        throw new Error('connection refused');
-      }),
+  it('omits empty graph filters', async () => {
+    sdkClient.queryGraph.mockResolvedValueOnce({ nodes: [], edges: [] });
+    await api.queryGraph({});
+    expect(sdkClient.queryGraph).toHaveBeenLastCalledWith({});
+  });
+
+  it('propagates the SDK TesseraApiError (re-exported for `instanceof`)', async () => {
+    sdkClient.search.mockRejectedValueOnce(
+      new TesseraApiError(400, { code: 'VALIDATION', message: 'bad input' }),
     );
-    const error = await api.compile({ task: 't', budget: 1 }).catch((caught: unknown) => caught);
+    const error = await api.search({ query: '' }).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(TesseraApiError);
-    expect((error as TesseraApiError).code).toBe('NETWORK');
+    expect(error).toMatchObject({ code: 'VALIDATION', status: 400 });
   });
 });

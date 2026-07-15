@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/fixtures';
 
 // The app ships no mock data (ADR-0022); we stub the API at the network boundary for the e2e.
 test('search shows provenance-tagged results and passes a11y', async ({ page }) => {

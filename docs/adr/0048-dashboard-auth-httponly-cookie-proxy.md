@@ -83,4 +83,4 @@ the web app's own origin through a Next.js proxy; the proxy attaches the token s
 ## References
 - [ADR-0022](0022-interim-dashboard-data-client.md) (superseded by this + F-045),
   [ADR-0028](0028-api-auth-tenancy-rbac.md) (auth/tenancy/RBAC), [ADR-0035](0035-public-web-platform-three-surfaces.md)
-  (app↔api origins), [ADR-0025](0025-generated-typescript-sdk.md) (the SDK), effects **E-003**/**E-018**.
+  (app↔api origins), [ADR-0025](0025-generated-typescript-sdk-toolchain.md) (the SDK), effects **E-003**/**E-018**.

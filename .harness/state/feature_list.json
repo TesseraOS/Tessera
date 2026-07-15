@@ -1457,7 +1457,7 @@
       "package": "@tessera/web",
       "release": "R3",
       "priority": "must",
-      "status": "backlog",
+      "status": "done",
       "blockedBy": [
         "F-034",
         "F-044"
@@ -1477,8 +1477,10 @@
       "effects": [
         "E-003",
         "E-018",
-        "E-004"
-      ]
+        "E-004",
+        "E-025"
+      ],
+      "notes": "Done 2026-07-14 (ADR-0048): dashboard auth/session + closed ADR-0022 onto the generated SDK. Credentials live in an httpOnly cookie behind a same-origin Next proxy — never localStorage/JS. Shipped in 2 commits (API/SDK enablers, then web). (1) API: NEW GET /v1/me projects the resolved AuthContext {principal{id,kind,roles,displayName?},tenantId,permissions} (authenticated, no special permission; zero-auth⇒local principal, token-mode-no-token⇒401); regenerated OpenAPI + @tessera/sdk (added me/getPlans/getHealth/getReady, getReady returns the 503 body as data). (2) Web proxy: app/api/tessera/[...path] forwards /api/tessera/<path>→TESSERA_API_URL/<path> (server-only env), attaching Bearer from the cookie; SSRF-guarded, streams JSON+SSE, returns the upstream {error}/status verbatim; app/api/auth/session POST(validate via /v1/me→set httpOnly/SameSite=Lax/Secure cookie)/DELETE(clear). (3) Session UX: lib/auth SessionProvider+useSession (identity via SDK me(); status keyed off React Query isError so sign-out's failed refetch is detected despite retained data — the one real bug found in e2e; 401⇒signed-out⇒redirect /signin?return=; other failures⇒Local fallback so offline still works), signIn/signOut; identity-aware NavUser (kind local⇒unchanged 'Local mode', token⇒identity+tenant+sign-out); AppShell renders chromeless on /signin. (4) SDK adoption: lib/api/client is now a thin adapter over createTesseraClient({baseUrl:'/api/tessera'}); the TanStack Query hook surface + all views unchanged (ADR-0022 drop-in); re-exports the SDK TesseraApiError; API_ORIGIN=the proxy base so events.ts SSE (EventSource) routes through the proxy (cookie⇒server-side bearer — SSE auth for free). Fixed the stale web AuditAction union (added effects.write/source.read/source.manage) + governance labels. (5) Sign-in page redesign (stakeholder ask, enterprise-grade): full-height split-panel — brand panel (theme-tinted gradient + live Constellation art on the §11 onboarding budget + 'Your agents forget. Tessera remembers.' statement + trust line) beside a spacious, well-padded form panel; tokens-only, theme-true, reduced-motion-safe. e2e both modes: a REAL token-mode @tessera/api server (tests/e2e/support/token-api-server.mjs via createLocalRuntime :memory:+fake embeddings, issues a token on a test-only route) as a 2nd Playwright webServer; auth.spec drives unauth-redirect→bad-token→valid-token→identity→sign-out + a no-token-in-localStorage assertion; support/fixtures.ts stubs /v1/me=Local so the 10 view specs never redirect. Effects E-003/E-018/E-004 extended + NEW E-025 (web auth/proxy seam). Gates green workspace-wide: verify-state · typecheck 33 · lint 19 · format · test 33 · build 19 · e2e 18 (web 28: 26 view + 2 auth). Browser-verified sign-in→identity→account-menu (E2E User · acme · owner) in Monkai. Deferred: OIDC hosted sign-in (seam on the session route), double-submit CSRF (SameSite=Lax + same-origin suffices), migrating types.ts fully to SDK types (adapter casts remain)."
     },
     {
       "id": "F-046",

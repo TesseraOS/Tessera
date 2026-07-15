@@ -112,6 +112,14 @@
         {
           "kind": "module",
           "ref": "@tessera/api hardening (F-044): cross-cutting security applied via plugins — security headers (CSP default-src none + frame-ancestors none, X-Frame-Options DENY, nosniff, no-referrer; HSTS behind a TLS flag), per-principal (fallback per-IP) rate limiting on /v1 (RateLimiter port + in-memory fixed-window adapter → RATE_LIMITED 429 + RateLimit-Limit/Remaining/Reset + Retry-After), a per-profile CORS allowlist replacing the blanket loopback policy (ADR-0035), and request-id correlation (sanitized inbound x-request-id else req_<uuid>, echoed + bound into logs). ADDITIVE — no route/schema shape change, so the OpenAPI doc / @tessera/sdk / dashboard are unaffected; buildServer gains security?/cors?/rateLimit? options. GET /v1/events (SSE) now authenticates under a non-none provider (no bypass). See E-024"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api GET /v1/me (F-045): a new authenticated route projecting the resolved AuthContext to {principal:{id,kind,roles,displayName?},tenantId,permissions}; regenerated the OpenAPI doc + @tessera/sdk (openapi-typescript). ADDITIVE (no existing route/schema changed). The SDK gained me/getPlans/getHealth/getReady (getReady returns the 503 body as data)."
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web now consumes the GENERATED @tessera/sdk (F-045, closes ADR-0022): apps/web/lib/api is a thin adapter over createTesseraClient pointed at a same-origin Next proxy (/api/tessera); the TanStack Query hook surface + view components are unchanged (the ADR-0022 drop-in). A route/schema change ⇒ regenerate the SDK ⇒ the dashboard client updates."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -169,6 +177,10 @@
         {
           "kind": "artifact",
           "ref": "apps/web/tests/contrast.test.ts — the EXECUTABLE contrast gate (F-070, ADR-0047, rule .harness/rules/frontend/contrast.md + contrast-checker skill): zero-dep oklch/hex/rgb→sRGB→WCAG math asserts every registered token pair (incl. opacity-composited pairs) across all 4 themes × 2 modes in the test gate; vendored tweakcn AA failures + latent Monkai ones nudged in-place with CSS comments"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web sign-in + identity UI (F-045): a full-height split-panel /signin (brand panel = theme-tinted gradient + the Constellation art on the DESIGN-SYSTEM §11 onboarding budget + statement; form panel = token entry) and the identity-aware NavUser — tokens-only, theme-true across 4 themes × 2 modes, reduced-motion-safe, WCAG AA (axe-verified in auth.spec)."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -659,6 +671,10 @@
         {
           "kind": "module",
           "ref": "@tessera/api rate limiting keys on the resolved AuthContext (F-044): registerRateLimit runs AFTER registerAuth so the /v1 limiter meters per-principal (principal:tenant:id), falling back to per-IP for unauthenticated/public requests; GET /v1/events is now authenticated like every other /v1 route (locked by e2e). Reuses the RATE_LIMITED code; no change to the roles→permissions catalog. See E-024"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web is now an auth client (F-045, ADR-0048): it reads identity via GET /v1/me through the proxy; principal.kind===local ⇒ zero-auth Local mode (unchanged, no sign-in screen), a token/oidc principal ⇒ identity+tenant+sign-out; a 401 on /v1/me ⇒ redirect to /signin (mode discovery). The API token lives ONLY in an httpOnly cookie (never client JS); the proxy attaches it server-side."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -925,6 +941,43 @@
       ],
       "kind": "EFFECT_LINK",
       "rationale": "F-044 adds a cross-cutting hardening layer at the /v1 boundary: security headers (explicit hooks, no @fastify/helmet — the JSON API needs a strict CSP), a RateLimiter port + in-memory fixed-window adapter mirroring the F-026 MCP QuotaLimiter (a distributed/persistent limiter is the documented seam), a per-profile CORS allowlist (ADR-0035 app↔api cross-origin), and request-id correlation threaded into logs (Fastify reqId) + traces (observability span attribute). All additive and safe-by-default (headers on; rate limiting off; loopback CORS; no HSTS) so existing routes/tools/e2e are unchanged (advances E-003). Extending the header set, swapping in a distributed rate-limiter, adding API-key principals (F-055), or changing the request-id contract ripples through these modules + their config wiring (E-014) + the observability seam (E-015) + the auth keying (E-018).",
+      "confidence": 1,
+      "origin": "manual"
+    },
+    {
+      "id": "E-025",
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/web dashboard auth/session: a same-origin Next proxy + httpOnly session cookie + SessionProvider (F-045; ADR-0048) — the browser never holds the API token or talks to the API cross-origin"
+      },
+      "to": [
+        {
+          "kind": "module",
+          "ref": "apps/web/app/api/tessera/[...path]/route.ts — the same-origin proxy: forwards /api/tessera/<path> → TESSERA_API_URL/<path> (server-only env), attaching Authorization: Bearer from the httpOnly cookie; SSRF-guarded, streams the body (JSON + SSE), returns the upstream status/envelope verbatim"
+        },
+        {
+          "kind": "module",
+          "ref": "apps/web/app/api/auth/session/route.ts — the only cookie writer: POST {token} validates via /v1/me then sets the httpOnly/SameSite=Lax/Secure cookie; DELETE clears it"
+        },
+        {
+          "kind": "module",
+          "ref": "apps/web/lib/auth/* — session constants (SESSION_COOKIE, PROXY_BASE), SessionProvider + useSession (identity via the SDK me(); 401⇒signed-out⇒redirect, keyed off React Query isError so a failed refetch on sign-out is detected despite retained data), signIn/signOut; app/signin/page.tsx; identity-aware NavUser; AppShell renders chromeless on /signin"
+        },
+        {
+          "kind": "module",
+          "ref": "apps/web/lib/api/events.ts SSE (EventSource) now targets the same-origin proxy (/api/tessera/v1/events) — the cookie rides automatically, so the proxy authenticates the stream server-side (EventSource cannot send a bearer)"
+        },
+        {
+          "kind": "test",
+          "ref": "apps/web/tests/e2e/auth.spec.ts (real token-mode @tessera/api via support/token-api-server.mjs, :memory:+fake embeddings) — unauth redirect, bad/valid token, identity display, sign-out, no-token-in-localStorage; + support/fixtures.ts stubs /v1/me=Local so the view specs never redirect; playwright.config.ts adds the token-API webServer + TESSERA_API_URL"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0048-dashboard-auth-httponly-cookie-proxy.md"
+        }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "F-045 makes the dashboard a real auth client while keeping zero-auth Local mode byte-for-byte unchanged, and closes ADR-0022 onto the generated SDK. The credential contract (ADR-0048): the token lives only in an httpOnly cookie, the browser speaks only to a same-origin proxy, and the proxy attaches the bearer server-side — so XSS cannot exfiltrate the token and there is no credentialed cross-origin CORS. Changing the proxy path/base, the cookie name/attributes, the session route shape, or the identity contract ripples across the proxy, the session route, the SessionProvider, and the SDK baseUrl. Depends on GET /v1/me + the SDK (E-003) and the AuthContext projection/RBAC (E-018); the sign-in/identity UI is on the token + art system (E-004). OIDC hosted sign-in is a documented seam on the same session route.",
       "confidence": 1,
       "origin": "manual"
     }

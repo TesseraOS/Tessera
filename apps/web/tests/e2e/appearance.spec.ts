@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/fixtures';
 
 /**
  * Appearance system (F-070, ADR-0047): the 4-theme catalog × light/dark, its persistence,

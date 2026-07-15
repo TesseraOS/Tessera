@@ -3,6 +3,64 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-14 (v2) — F-045 DONE — dashboard auth & session + adopt @tessera/sdk (closes ADR-0022); enterprise sign-in redesign
+
+**Harness-strict selection** (next eligible R3, blockers F-034/F-044 done, `must`). Plan:
+[`.harness/plans/F-045-dashboard-auth-and-sdk.md`](../plans/F-045-dashboard-auth-and-sdk.md);
+decision recorded in **ADR-0048**. Shipped in 2 commits (API/SDK enablers, then web). Zero-auth
+Local mode stays **byte-for-byte unchanged**.
+
+**What changed**
+- **API — `GET /v1/me`** (new): projects the resolved `AuthContext` →
+  `{principal{id,kind,roles,displayName?},tenantId,permissions}`. Authenticated, no special
+  permission (a principal may see itself). Zero-auth ⇒ the local principal; token-mode-no-token ⇒
+  401 (mode discovery). Regenerated the OpenAPI doc + **`@tessera/sdk`** (added
+  `me`/`getPlans`/`getHealth`/`getReady`; `getReady` returns the 503 body as data).
+- **Credential handling (ADR-0048)** — the API token lives **only in an httpOnly cookie behind a
+  same-origin Next proxy**, never in client JS/localStorage. `app/api/tessera/[...path]` forwards
+  `/api/tessera/*` → `TESSERA_API_URL/*` (server-only env), attaching `Bearer` from the cookie;
+  SSRF-guarded, streams JSON **+ SSE**, returns the upstream `{error}`/status verbatim.
+  `app/api/auth/session` `POST` validates via `/v1/me` then sets the `HttpOnly`/`SameSite=Lax`/
+  `Secure` cookie; `DELETE` clears it.
+- **Session UX** — `lib/auth` `SessionProvider`/`useSession` (identity via the SDK `me()`);
+  status keys off React Query **`isError`** so sign-out's failed refetch is detected despite
+  retained `data` (the one real bug the e2e caught); a **401 ⇒ redirect to `/signin?return=`**,
+  other failures ⇒ Local fallback (offline-safe). Identity-aware **NavUser** (kind `local` ⇒
+  unchanged "Local mode"; token ⇒ identity + tenant + **Sign out**). `AppShell` renders chromeless
+  on `/signin`.
+- **SDK adoption (closes ADR-0022)** — `lib/api/client` is now a thin adapter over
+  `createTesseraClient({ baseUrl: '/api/tessera' })`; the TanStack Query **hook surface + every
+  view are unchanged** (the promised drop-in); `TesseraApiError` re-exported; `API_ORIGIN` = the
+  proxy base so `events.ts` SSE (EventSource) routes through the proxy → the cookie gives it
+  **server-side bearer auth for free**. Fixed the stale web `AuditAction` union
+  (+`effects.write`/`source.read`/`source.manage`) + governance labels.
+- **Sign-in redesign (stakeholder ask — enterprise-grade)** — retired the cramped centered card
+  for a full-height **split panel**: a living brand panel (theme-tinted gradient + the
+  **Constellation** art on the DESIGN-SYSTEM §11 onboarding budget + "Your agents forget. /
+  Tessera remembers." + a mono trust line) beside a spacious, well-padded form. Tokens-only,
+  theme-true, reduced-motion-safe, one `<h1>`.
+
+**Evidence/verification** (all gates fresh, workspace-wide)
+- verify-state ok (25 effect-links) · typecheck **33** · lint **19** · format clean · test **33**
+  (api +3 `/v1/me` e2e, sdk +2, web 238 unit) · build **19** · e2e **18** — **web 28** (26 view
+  specs green through the SDK swap + a Local `/v1/me` fixture; **2 auth-flow specs against a REAL
+  token-mode API** booted as a 2nd Playwright webServer: unauth→`/signin`, bad token error, valid
+  token→identity, sign-out, **token never in localStorage**; axe WCAG AA on `/signin` + the authed
+  shell).
+- Browser-verified (production build, token mode): sign-in → redirect to Overview → account menu
+  shows **"E2E User · acme · owner"** + Sign out; the split-panel `/signin` renders the brand art +
+  gradient with no horizontal overflow (DOM-measured 714px brand + 646px form).
+
+**Decisions**
+- **ADR-0048**: httpOnly-cookie same-origin proxy over token-in-JS/localStorage; closes ADR-0022
+  onto the SDK. New effect **E-025** (web auth/proxy seam); E-003/E-018/E-004 extended. No
+  golden-rule deviations; OIDC hosted sign-in + double-submit CSRF are documented seams.
+
+**Next step**
+- Next eligible by id in R3 is **F-046** (account & profile: profile page, API-token self-service,
+  admin user management) — now unblocked (F-045 done). Also open: F-047/F-048/F-049 and the
+  dashboard-data set F-060/F-061/F-062/F-063.
+
 ## 2026-07-14 — F-044 DONE — API hardening: rate limiting, security headers, SSE auth, per-profile CORS, request-id
 
 **Harness-strict selection** (lowest-id eligible in the earliest open release R3; blocker F-025

@@ -22,6 +22,8 @@ export interface ApiTokenRecord {
   readonly createdAt: string;
   /** ISO timestamp when revoked, else `null`. A revoked token never verifies. */
   readonly revokedAt?: string | null;
+  /** ISO expiry; a token past it never verifies. `null`/absent = no expiry. */
+  readonly expiresAt?: string | null;
 }
 
 export interface IssueTokenInput {
@@ -30,6 +32,8 @@ export interface IssueTokenInput {
   readonly roles: readonly Role[];
   readonly displayName?: string;
   readonly scopes?: readonly Permission[];
+  /** ISO expiry; the token stops verifying after this instant. Omit for a non-expiring token. */
+  readonly expiresAt?: string;
 }
 
 export interface IssuedToken {
@@ -64,6 +68,20 @@ export function hashApiTokenSecret(secret: string): string {
 /** Generate a fresh `tsk_`-prefixed token secret. Shared across {@link TokenStore} adapters. */
 export function newApiTokenSecret(): string {
   return `${TOKEN_PREFIX}${randomBytes(24).toString('base64url')}`;
+}
+
+/** Whether a record has been revoked. Shared verify predicate across {@link TokenStore} adapters. */
+export function isRevoked(record: ApiTokenRecord): boolean {
+  return record.revokedAt !== undefined && record.revokedAt !== null;
+}
+
+/** Whether a record is expired at `at`. Shared verify predicate across {@link TokenStore} adapters. */
+export function isExpired(record: ApiTokenRecord, at: Date): boolean {
+  return (
+    record.expiresAt !== undefined &&
+    record.expiresAt !== null &&
+    at.getTime() >= Date.parse(record.expiresAt)
+  );
 }
 
 export interface InMemoryTokenStoreOptions {
@@ -103,6 +121,7 @@ export function createInMemoryTokenStore(options: InMemoryTokenStoreOptions = {}
         ...(input.scopes !== undefined ? { scopes: input.scopes } : {}),
         createdAt: now().toISOString(),
         revokedAt: null,
+        expiresAt: input.expiresAt ?? null,
       };
       const hash = hashApiTokenSecret(secret);
       byHash.set(hash, record);
@@ -112,7 +131,7 @@ export function createInMemoryTokenStore(options: InMemoryTokenStoreOptions = {}
 
     verify(token) {
       const record = byHash.get(hashApiTokenSecret(token));
-      if (record === undefined || (record.revokedAt !== undefined && record.revokedAt !== null)) {
+      if (record === undefined || isRevoked(record) || isExpired(record, now())) {
         return Promise.resolve(null);
       }
       return Promise.resolve(record);

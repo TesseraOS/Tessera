@@ -1,6 +1,6 @@
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { ZodFastify } from '../../app-types.js';
-import { registerAuth, type AuthProvider } from '../../auth/index.js';
+import { registerAuth, type AuthProvider, type TokenStore } from '../../auth/index.js';
 import { recordAudit, type AuditLog } from '../../audit/index.js';
 import type { ApiEventBus } from '../../events.js';
 import { registerRateLimit, type RateLimiter } from '../../security/rate-limit.js';
@@ -16,6 +16,8 @@ import { registerEventsRoutes } from './events.js';
 import { registerBillingRoutes } from './billing.js';
 import { registerAuditRoutes } from './audit.js';
 import { registerMeRoutes } from './me.js';
+import { registerRbacRoutes } from './rbac.js';
+import { registerTokenRoutes } from './tokens.js';
 
 /** Cross-cutting hardening threaded into the `/v1` scope (F-044). */
 export interface V1HardeningOptions {
@@ -23,6 +25,8 @@ export interface V1HardeningOptions {
   readonly security: SecurityHeadersOptions;
   /** The rate limiter for `/v1`, or `undefined` when rate limiting is off. */
   readonly rateLimiter: RateLimiter | undefined;
+  /** The token store backing `/v1/tokens` (F-046), or `undefined` in zero-auth mode. */
+  readonly tokenStore: TokenStore | undefined;
 }
 
 /**
@@ -51,6 +55,8 @@ export function registerV1Routes(
       // Record an audit event per response for routes flagged with an `audit` action (FR-55).
       recordAudit(v1, audit);
       registerMeRoutes(v1);
+      registerRbacRoutes(v1);
+      registerTokenRoutes(v1, hardening.tokenStore);
       registerSearchRoutes(v1, services);
       registerCompileRoutes(v1, services);
       registerEffectsRoutes(v1, services);

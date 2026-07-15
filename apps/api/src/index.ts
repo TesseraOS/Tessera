@@ -111,6 +111,8 @@ export { mapError, type MappedError } from './errors/error-handler.js';
 
 export * from './schemas/common.js';
 export * from './schemas/identity.js';
+export * from './schemas/rbac.js';
+export * from './schemas/tokens.js';
 export * from './schemas/search.js';
 export * from './schemas/compile.js';
 export * from './schemas/effects.js';

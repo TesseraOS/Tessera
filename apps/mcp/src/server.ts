@@ -1,6 +1,21 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ApiServices, AuthContext } from '@tessera/api';
-import { DEFAULT_TENANT_ID, InternalError } from '@tessera/core';
+// Value imports from the Fastify-free `@tessera/api/auth` subpath (the F-012 invariant).
+import {
+  isExpired,
+  isRevoked,
+  permissionsForRoles,
+  type ApiTokenRecord,
+  type Permission,
+  type TokenStore,
+} from '@tessera/api/auth';
+import {
+  ConflictError,
+  DEFAULT_TENANT_ID,
+  ForbiddenError,
+  InternalError,
+  NotFoundError,
+} from '@tessera/core';
 import type { CompileRequest } from '@tessera/context-compiler';
 import type { GetEffectsOptions } from '@tessera/knowledge-graph';
 import type { RetrievalQuery } from '@tessera/retrieval';
@@ -14,11 +29,42 @@ import {
   compileShape,
   effectsShape,
   explainShape,
+  issueTokenShape,
   listSourcesShape,
+  listTokensShape,
   queryGraphShape,
+  revokeTokenShape,
   scanSourceShape,
   searchShape,
 } from './schemas.js';
+
+/** Project a stored token record to the wire — never the secret; `active` derived (mirrors REST). */
+function toWireToken(
+  record: ApiTokenRecord,
+  at: Date,
+): {
+  id: string;
+  principalId: string;
+  displayName?: string;
+  roles: readonly string[];
+  scopes?: readonly string[];
+  createdAt: string;
+  revokedAt: string | null;
+  expiresAt: string | null;
+  active: boolean;
+} {
+  return {
+    id: record.id,
+    principalId: record.principalId,
+    ...(record.displayName !== undefined ? { displayName: record.displayName } : {}),
+    roles: [...record.roles],
+    ...(record.scopes !== undefined ? { scopes: [...record.scopes] } : {}),
+    createdAt: record.createdAt,
+    revokedAt: record.revokedAt ?? null,
+    expiresAt: record.expiresAt ?? null,
+    active: !isRevoked(record) && !isExpired(record, at),
+  };
+}
 
 /** A registered source projected to the wire shape (tenancy stays off the wire — ADR-0033). */
 type SourceService = NonNullable<ApiServices['sources']>;
@@ -59,6 +105,12 @@ export interface BuildMcpServerOptions {
    * as before (the composition root injects a gateway for multi-client/hosted deployments).
    */
   readonly gateway?: McpGateway;
+  /**
+   * The token store backing the token-management tools (F-046; ADR-0036 parity with `/v1/tokens`).
+   * The composition root passes `runtime.auth.tokenStore` (present in `token` mode); without one the
+   * token tools answer a clean error. See {@link TokenStore}.
+   */
+  readonly tokenStore?: TokenStore;
 }
 
 /** Token budget used by `explain` when the caller does not specify one. */
@@ -95,7 +147,15 @@ export function buildMcpServer(
   options: BuildMcpServerOptions = {},
 ): McpServer {
   const server = new McpServer(SERVER_INFO);
-  const { gateway } = options;
+  const { gateway, tokenStore } = options;
+
+  /** The token store, or a clean error when the deployment wired none (mirrors the REST 409). */
+  const requireTokenStore = (): TokenStore => {
+    if (tokenStore === undefined) {
+      throw new ConflictError('token management requires token auth mode (no token store)');
+    }
+    return tokenStore;
+  };
 
   /**
    * Authenticate/authorize/meter a call when a gateway is configured; a no-op otherwise (back-compat).
@@ -268,6 +328,74 @@ export function buildMcpServer(
           budget: args.budget ?? DEFAULT_EXPLAIN_BUDGET,
         });
         return buildExplanation(await services.compiler.forTenant(tenantOf(ctx)).compile(request));
+      }),
+  );
+
+  // --- API-token self-service (F-046; ADR-0036 parity with REST /v1/tokens) ---
+
+  server.registerTool(
+    'list_tokens',
+    {
+      description: "List the calling tenant's API tokens (no secrets).",
+      inputSchema: listTokensShape,
+    },
+    (_args, extra) =>
+      runTool(async () => {
+        const ctx = await guard('list_tokens', extra);
+        const now = new Date();
+        const records = await requireTokenStore().list(tenantOf(ctx));
+        return { tokens: records.map((record) => toWireToken(record, now)) };
+      }),
+  );
+
+  server.registerTool(
+    'issue_token',
+    {
+      description: 'Issue a scoped API token; the plaintext secret is returned once.',
+      inputSchema: issueTokenShape,
+    },
+    (args, extra) =>
+      runTool(async () => {
+        const ctx = await guard('issue_token', extra);
+        // Least privilege: the new token must not exceed the caller (when gated).
+        if (ctx !== undefined) {
+          const fromRoles = permissionsForRoles(args.roles);
+          const scoped = args.scopes === undefined ? undefined : new Set<Permission>(args.scopes);
+          for (const permission of fromRoles) {
+            if (scoped !== undefined && !scoped.has(permission)) continue;
+            if (!ctx.permissions.has(permission)) {
+              throw new ForbiddenError('cannot issue a token exceeding your own permissions');
+            }
+          }
+        }
+        const { token, record } = await requireTokenStore().issue({
+          tenantId: tenantOf(ctx),
+          principalId: args.principalId,
+          roles: args.roles,
+          ...(args.displayName !== undefined ? { displayName: args.displayName } : {}),
+          ...(args.scopes !== undefined ? { scopes: args.scopes } : {}),
+          ...(args.expiresAt !== undefined ? { expiresAt: args.expiresAt } : {}),
+        });
+        return { token: toWireToken(record, new Date()), secret: token };
+      }),
+  );
+
+  server.registerTool(
+    'revoke_token',
+    {
+      description: 'Revoke an API token by id.',
+      inputSchema: revokeTokenShape,
+    },
+    (args, extra) =>
+      runTool(async () => {
+        const ctx = await guard('revoke_token', extra);
+        const store = requireTokenStore();
+        const owned = (await store.list(tenantOf(ctx))).some((record) => record.id === args.id);
+        if (!owned) {
+          throw new NotFoundError(`token not found: ${args.id}`);
+        }
+        await store.revoke(args.id);
+        return { id: args.id, revoked: true };
       }),
   );
 

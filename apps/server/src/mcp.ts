@@ -38,7 +38,11 @@ export async function startMcpServer(options: McpServerOptions = {}): Promise<Mc
       ? { quota: createInMemoryQuotaLimiter({ limit: quota.limit, windowMs: quota.windowMs }) }
       : {}),
   });
-  const server = await startMcpStdio(services, { gateway });
+  const server = await startMcpStdio(services, {
+    gateway,
+    // Back the token-management tools with the runtime's token store (F-046; present in token mode).
+    ...(runtime.auth.tokenStore !== undefined ? { tokenStore: runtime.auth.tokenStore } : {}),
+  });
 
   return {
     runtime,

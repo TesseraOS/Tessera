@@ -24,7 +24,10 @@ export type McpToolName =
   | 'assert_effect'
   | 'add_source'
   | 'list_sources'
-  | 'scan_source';
+  | 'scan_source'
+  | 'list_tokens'
+  | 'issue_token'
+  | 'revoke_token';
 
 export const TOOL_PERMISSIONS: Readonly<Record<McpToolName, Permission>> = {
   search: 'search:read',
@@ -37,6 +40,9 @@ export const TOOL_PERMISSIONS: Readonly<Record<McpToolName, Permission>> = {
   add_source: 'sources:manage',
   list_sources: 'sources:read',
   scan_source: 'sources:manage',
+  list_tokens: 'admin:manage',
+  issue_token: 'admin:manage',
+  revoke_token: 'admin:manage',
 };
 
 /**

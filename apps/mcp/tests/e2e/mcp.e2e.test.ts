@@ -41,8 +41,11 @@ describe('@tessera/mcp tools', () => {
       'compile_context',
       'explain',
       'get_effects',
+      'issue_token',
       'list_sources',
+      'list_tokens',
       'query_graph',
+      'revoke_token',
       'scan_source',
       'search',
     ]);

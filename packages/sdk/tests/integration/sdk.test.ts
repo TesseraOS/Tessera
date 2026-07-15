@@ -159,6 +159,17 @@ describe('@tessera/sdk round-trip against the real API (FR-39)', () => {
     expect(identity.permissions).toContain('admin:manage');
   });
 
+  it('getRbac returns the roles/permissions catalog', async () => {
+    const rbac = await client.getRbac();
+    expect(rbac.roles).toContain('owner');
+    expect(rbac.permissions).toContain('admin:manage');
+    expect(rbac.rolePermissions.viewer).toContain('search:read');
+  });
+
+  it('listTokens 409s when no token store is wired (zero-auth)', async () => {
+    await expect(client.listTokens()).rejects.toMatchObject({ code: 'CONFLICT', status: 409 });
+  });
+
   it('getPlans/getHealth/getReady read the ops + billing surfaces', async () => {
     const plans = await client.getPlans();
     expect(Array.isArray(plans.plans)).toBe(true);

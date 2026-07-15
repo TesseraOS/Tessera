@@ -23,6 +23,8 @@ export const AUDIT_ACTIONS = [
   'billing.read',
   'billing.manage',
   'audit.read',
+  'token.read',
+  'token.manage',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

@@ -26,6 +26,8 @@ export {
 export {
   createInMemoryTokenStore,
   hashApiTokenSecret,
+  isExpired,
+  isRevoked,
   newApiTokenSecret,
   type ApiTokenRecord,
   type InMemoryTokenStoreOptions,

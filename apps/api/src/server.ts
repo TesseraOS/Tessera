@@ -10,7 +10,7 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 import type { ZodFastify } from './app-types.js';
-import { createLocalAuthProvider, type AuthProvider } from './auth/index.js';
+import { createLocalAuthProvider, type AuthProvider, type TokenStore } from './auth/index.js';
 import { createInMemoryAuditLog, type AuditLog } from './audit/index.js';
 import { createApiEventBus, type ApiEventBus } from './events.js';
 import { registerErrorHandling } from './errors/error-handler.js';
@@ -126,6 +126,12 @@ export interface BuildServerOptions {
    */
   readonly audit?: AuditLog;
   /**
+   * The token store backing `/v1/tokens` self-service (F-046; ADR-0036). The composition root passes
+   * `runtime.auth.tokenStore` (present in `token` mode); in zero-auth Local mode there is none and the
+   * `/v1/tokens` routes answer a clean `409`. See {@link TokenStore}.
+   */
+  readonly tokenStore?: TokenStore;
+  /**
    * Security-header hardening (F-044; NFR-2). Headers are on by default; `security.hsts` adds HSTS
    * for TLS-terminated profiles. See {@link SecurityHeadersOptions}.
    */
@@ -208,7 +214,11 @@ export function buildServer(services: ApiServices, options: BuildServerOptions =
     options.events ?? createApiEventBus(),
     options.auth ?? createLocalAuthProvider(),
     options.audit ?? createInMemoryAuditLog(),
-    { security: options.security ?? {}, rateLimiter: resolveRateLimiter(options.rateLimit) },
+    {
+      security: options.security ?? {},
+      rateLimiter: resolveRateLimiter(options.rateLimit),
+      tokenStore: options.tokenStore,
+    },
   );
 
   return app;

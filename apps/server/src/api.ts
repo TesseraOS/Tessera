@@ -44,6 +44,8 @@ export async function startApiServer(options: ApiServerOptions = {}): Promise<Ap
     events: runtime.events,
     // Record the audit trail into the runtime's persistent sink when enabled (F-027; else in-memory).
     ...(runtime.audit !== undefined ? { audit: runtime.audit } : {}),
+    // Back /v1/tokens self-service with the runtime's token store (F-046; present in token mode).
+    ...(runtime.auth.tokenStore !== undefined ? { tokenStore: runtime.auth.tokenStore } : {}),
     // API hardening from config (F-044): security headers/HSTS, per-profile CORS, rate limiting.
     security: { hsts: api.security.hsts },
     cors: { allowedOrigins: api.cors.allowedOrigins },

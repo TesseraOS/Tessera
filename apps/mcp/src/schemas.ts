@@ -1,3 +1,6 @@
+// Value import from the Fastify-free `@tessera/api/auth` subpath — the MCP runtime must never pull
+// Fastify (the F-012 invariant); this subpath carries only the pure auth model.
+import { PERMISSIONS, ROLES } from '@tessera/api/auth';
 import { EDGE_KINDS, NODE_KINDS } from '@tessera/knowledge-graph';
 import { MEMORY_KINDS } from '@tessera/memory';
 import { z } from 'zod';
@@ -87,4 +90,28 @@ export const listSourcesShape = {};
 
 export const scanSourceShape = {
   id: z.string().min(1).describe('The source id returned by add_source.'),
+};
+
+// --- API-token self-service (F-046; ADR-0036 parity with REST /v1/tokens) ---
+
+/** `list_tokens` takes no arguments. */
+export const listTokensShape = {};
+
+export const issueTokenShape = {
+  principalId: z.string().min(1).max(200).describe('The principal the token acts as.'),
+  roles: z.array(z.enum(ROLES)).min(1).describe('Roles granting the token its permissions.'),
+  scopes: z
+    .array(z.enum(PERMISSIONS))
+    .optional()
+    .describe('Cap the token to these permissions (least privilege).'),
+  displayName: z.string().min(1).max(200).optional().describe('Human-readable label.'),
+  expiresAt: z
+    .string()
+    .datetime()
+    .optional()
+    .describe('ISO expiry; omit for a non-expiring token.'),
+};
+
+export const revokeTokenShape = {
+  id: z.string().min(1).describe('The token id to revoke.'),
 };

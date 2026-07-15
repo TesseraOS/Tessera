@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import {
   hashApiTokenSecret,
+  isExpired,
   newApiTokenSecret,
   type ApiTokenRecord,
   type IssueTokenInput,
@@ -29,6 +30,7 @@ const apiTokens = sqliteTable('api_tokens', {
   scopes: text('scopes', { mode: 'json' }).$type<Permission[]>(),
   createdAt: text('created_at').notNull(),
   revokedAt: text('revoked_at'),
+  expiresAt: text('expires_at'),
 });
 
 const CREATE_TABLE = sql`
@@ -41,9 +43,13 @@ const CREATE_TABLE = sql`
     roles TEXT NOT NULL,
     scopes TEXT,
     created_at TEXT NOT NULL,
-    revoked_at TEXT
+    revoked_at TEXT,
+    expires_at TEXT
   )
 `;
+
+/** Add `expires_at` to a table created before F-046 (pre-launch; F-024 owns real migrations). */
+const ADD_EXPIRES_AT = sql`ALTER TABLE api_tokens ADD COLUMN expires_at TEXT`;
 
 type TokenRow = typeof apiTokens.$inferSelect;
 
@@ -57,6 +63,7 @@ function toRecord(row: TokenRow): ApiTokenRecord {
     ...(row.scopes !== null ? { scopes: row.scopes } : {}),
     createdAt: row.createdAt,
     revokedAt: row.revokedAt,
+    expiresAt: row.expiresAt,
   };
 }
 
@@ -78,6 +85,12 @@ export function createSqliteTokenStore(
   const now = options.now ?? (() => new Date());
 
   db.run(CREATE_TABLE);
+  // Backfill the F-046 expiry column on a pre-existing table (idempotent — ignore "duplicate column").
+  try {
+    db.run(ADD_EXPIRES_AT);
+  } catch {
+    // column already present
+  }
   db.run(sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_api_tokens_hash ON api_tokens (secret_hash)`);
   db.run(sql`CREATE INDEX IF NOT EXISTS idx_api_tokens_tenant ON api_tokens (tenant_id)`);
 
@@ -94,6 +107,7 @@ export function createSqliteTokenStore(
         ...(input.scopes !== undefined ? { scopes: input.scopes } : {}),
         createdAt: now().toISOString(),
         revokedAt: null,
+        expiresAt: input.expiresAt ?? null,
       };
       db.insert(apiTokens)
         .values({
@@ -106,6 +120,7 @@ export function createSqliteTokenStore(
           scopes: input.scopes !== undefined ? [...input.scopes] : null,
           createdAt: record.createdAt,
           revokedAt: null,
+          expiresAt: input.expiresAt ?? null,
         })
         .run();
       return Promise.resolve({ token: secret, record });
@@ -120,7 +135,9 @@ export function createSqliteTokenStore(
         )
         .all();
       const row = rows[0];
-      return Promise.resolve(row === undefined ? null : toRecord(row));
+      if (row === undefined) return Promise.resolve(null);
+      const record = toRecord(row);
+      return Promise.resolve(isExpired(record, now()) ? null : record);
     },
 
     revoke(id: string) {

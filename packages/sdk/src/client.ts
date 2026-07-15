@@ -32,6 +32,10 @@ export type SourceList = paths['/v1/sources']['get']['responses'][200]['content'
 export type ScanResult = paths['/v1/sources/{id}/scan']['post']['responses'][200]['content'][Json];
 export type ScanStatus = paths['/v1/sources/{id}/scan']['get']['responses'][200]['content'][Json];
 export type Identity = paths['/v1/me']['get']['responses'][200]['content'][Json];
+export type RbacCatalog = paths['/v1/rbac']['get']['responses'][200]['content'][Json];
+export type TokenList = paths['/v1/tokens']['get']['responses'][200]['content'][Json];
+export type CreateTokenRequest = paths['/v1/tokens']['post']['requestBody']['content'][Json];
+export type CreatedToken = paths['/v1/tokens']['post']['responses'][201]['content'][Json];
 export type Plans = paths['/v1/billing/plans']['get']['responses'][200]['content'][Json];
 export type HealthStatus = paths['/health']['get']['responses'][200]['content'][Json];
 export type ReadyStatus = paths['/ready']['get']['responses'][200]['content'][Json];
@@ -49,6 +53,14 @@ export interface TesseraClientOptions {
 export interface TesseraClient {
   /** The caller's resolved identity, tenant, and effective permissions (401 when unauthenticated). */
   me(): Promise<Identity>;
+  /** The RBAC catalog: roles, permissions, and role → permissions. */
+  getRbac(): Promise<RbacCatalog>;
+  /** List the calling tenant's API tokens (no secrets; `admin:manage`). */
+  listTokens(): Promise<TokenList>;
+  /** Issue a scoped API token — the plaintext `secret` is returned once (`admin:manage`). */
+  createToken(request: CreateTokenRequest): Promise<CreatedToken>;
+  /** Revoke an API token by id (`admin:manage`). */
+  revokeToken(id: string): Promise<{ id: string; revoked: true }>;
   /** Hybrid search across code, memory, and the knowledge graph. */
   search(request: SearchRequest): Promise<SearchResults>;
   /** Compile a provenance-tagged, budget-bounded Context Package for a task. */
@@ -115,6 +127,18 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
   return {
     async me() {
       return unwrap(await client.GET('/v1/me', {}));
+    },
+    async getRbac() {
+      return unwrap(await client.GET('/v1/rbac', {}));
+    },
+    async listTokens() {
+      return unwrap(await client.GET('/v1/tokens', {}));
+    },
+    async createToken(request) {
+      return unwrap(await client.POST('/v1/tokens', { body: request }));
+    },
+    async revokeToken(id) {
+      return unwrap(await client.DELETE('/v1/tokens/{id}', { params: { path: { id } } }));
     },
     async search(request) {
       return unwrap(await client.POST('/v1/search', { body: request }));

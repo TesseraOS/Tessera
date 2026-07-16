@@ -92,6 +92,9 @@ export const scanSourceShape = {
   id: z.string().min(1).describe('The source id returned by add_source.'),
 };
 
+/** `get_stats` takes no arguments — the workspace is the caller's tenant (F-060). */
+export const getStatsShape = {};
+
 // --- API-token self-service (F-046; ADR-0036 parity with REST /v1/tokens) ---
 
 /** `list_tokens` takes no arguments. */

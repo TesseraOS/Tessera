@@ -38,6 +38,7 @@ describe('TOOL_PERMISSIONS', () => {
       'compile_context',
       'explain',
       'get_effects',
+      'get_stats',
       'issue_token',
       'list_sources',
       'list_tokens',

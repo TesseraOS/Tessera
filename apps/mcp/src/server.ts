@@ -9,6 +9,8 @@ import {
   type Permission,
   type TokenStore,
 } from '@tessera/api/auth';
+// Likewise Fastify-free: the one workspace-summary implementation REST also serves (ADR-0036).
+import { computeWorkspaceStats } from '@tessera/api/stats';
 import {
   ConflictError,
   DEFAULT_TENANT_ID,
@@ -29,6 +31,7 @@ import {
   compileShape,
   effectsShape,
   explainShape,
+  getStatsShape,
   issueTokenShape,
   listSourcesShape,
   listTokensShape,
@@ -296,6 +299,22 @@ export function buildMcpServer(
         const ctx = await guard('list_sources', extra);
         const sources = await requireSources(services).forTenant(tenantOf(ctx)).list();
         return { sources: sources.map(toWireSource) };
+      }),
+  );
+
+  server.registerTool(
+    'get_stats',
+    {
+      description:
+        'The workspace summary: indexed documents, memories, graph nodes + effect-links, sources, last scan.',
+      inputSchema: getStatsShape,
+    },
+    (_args, extra) =>
+      runTool(async () => {
+        const ctx = await guard('get_stats', extra);
+        // The SAME function GET /v1/stats calls (ADR-0036 parity) — the two surfaces cannot report
+        // different numbers for one tenant, because there is only one implementation.
+        return computeWorkspaceStats(services, tenantOf(ctx));
       }),
   );
 

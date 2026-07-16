@@ -11,6 +11,10 @@
     "./auth": {
       "types": "./dist/auth/core.d.ts",
       "import": "./dist/auth/core.js"
+    },
+    "./stats": {
+      "types": "./dist/stats/core.d.ts",
+      "import": "./dist/stats/core.js"
     }
   },
   "main": "./dist/index.js",

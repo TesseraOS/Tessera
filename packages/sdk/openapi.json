@@ -210,6 +210,7 @@
                           "effects:write",
                           "sources:read",
                           "sources:manage",
+                          "stats:read",
                           "admin:manage"
                         ]
                       }
@@ -267,6 +268,7 @@
                           "effects:write",
                           "sources:read",
                           "sources:manage",
+                          "stats:read",
                           "admin:manage"
                         ]
                       }
@@ -295,6 +297,7 @@
                             "effects:write",
                             "sources:read",
                             "sources:manage",
+                            "stats:read",
                             "admin:manage"
                           ]
                         }
@@ -367,6 +370,7 @@
                                 "effects:write",
                                 "sources:read",
                                 "sources:manage",
+                                "stats:read",
                                 "admin:manage"
                               ]
                             }
@@ -468,6 +472,7 @@
                         "effects:write",
                         "sources:read",
                         "sources:manage",
+                        "stats:read",
                         "admin:manage"
                       ]
                     }
@@ -531,6 +536,7 @@
                               "effects:write",
                               "sources:read",
                               "sources:manage",
+                              "stats:read",
                               "admin:manage"
                             ]
                           }
@@ -2746,6 +2752,81 @@
                   },
                   "required": [
                     "state"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stats": {
+      "get": {
+        "summary": "The workspace summary: indexed documents, memories, graph size, sources, last scan.",
+        "tags": [
+          "stats"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "documents": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "memories": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "graph": {
+                      "type": "object",
+                      "properties": {
+                        "nodes": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "effectLinks": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "nodes",
+                        "effectLinks"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "sources": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "lastScanAt": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "documents",
+                    "memories",
+                    "graph",
+                    "sources",
+                    "lastScanAt"
                   ],
                   "additionalProperties": false
                 }

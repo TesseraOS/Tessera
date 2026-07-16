@@ -135,7 +135,7 @@ export interface paths {
                                 roles: ("owner" | "admin" | "member" | "viewer")[];
                             };
                             tenantId: string;
-                            permissions: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "admin:manage")[];
+                            permissions: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "stats:read" | "admin:manage")[];
                         };
                     };
                 };
@@ -174,9 +174,9 @@ export interface paths {
                     content: {
                         "application/json": {
                             roles: ("owner" | "admin" | "member" | "viewer")[];
-                            permissions: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "admin:manage")[];
+                            permissions: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "stats:read" | "admin:manage")[];
                             rolePermissions: {
-                                [key: string]: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "admin:manage")[];
+                                [key: string]: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "stats:read" | "admin:manage")[];
                             };
                         };
                     };
@@ -220,7 +220,7 @@ export interface paths {
                                 principalId: string;
                                 displayName?: string;
                                 roles: ("owner" | "admin" | "member" | "viewer")[];
-                                scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "admin:manage")[];
+                                scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "stats:read" | "admin:manage")[];
                                 createdAt: string;
                                 revokedAt: string | null;
                                 expiresAt: string | null;
@@ -246,7 +246,7 @@ export interface paths {
                         principalId: string;
                         displayName?: string;
                         roles: ("owner" | "admin" | "member" | "viewer")[];
-                        scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "admin:manage")[];
+                        scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "stats:read" | "admin:manage")[];
                         /** Format: date-time */
                         expiresAt?: string;
                     };
@@ -265,7 +265,7 @@ export interface paths {
                                 principalId: string;
                                 displayName?: string;
                                 roles: ("owner" | "admin" | "member" | "viewer")[];
-                                scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "admin:manage")[];
+                                scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "stats:read" | "admin:manage")[];
                                 createdAt: string;
                                 revokedAt: string | null;
                                 expiresAt: string | null;
@@ -1176,6 +1176,51 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The workspace summary: indexed documents, memories, graph size, sources, last scan. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            documents: number;
+                            memories: number;
+                            graph: {
+                                nodes: number;
+                                effectLinks: number;
+                            };
+                            sources: number;
+                            lastScanAt: string | null;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;

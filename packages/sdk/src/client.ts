@@ -31,6 +31,7 @@ export type Source = paths['/v1/sources']['post']['responses'][201]['content'][J
 export type SourceList = paths['/v1/sources']['get']['responses'][200]['content'][Json];
 export type ScanResult = paths['/v1/sources/{id}/scan']['post']['responses'][200]['content'][Json];
 export type ScanStatus = paths['/v1/sources/{id}/scan']['get']['responses'][200]['content'][Json];
+export type WorkspaceStats = paths['/v1/stats']['get']['responses'][200]['content'][Json];
 export type Identity = paths['/v1/me']['get']['responses'][200]['content'][Json];
 export type RbacCatalog = paths['/v1/rbac']['get']['responses'][200]['content'][Json];
 export type TokenList = paths['/v1/tokens']['get']['responses'][200]['content'][Json];
@@ -108,6 +109,11 @@ export interface TesseraClient {
   removeSource(id: string): Promise<{ id: string }>;
   /** Scan a source (incremental + idempotent); returns what changed. */
   scanSource(id: string): Promise<ScanResult>;
+  /**
+   * The workspace summary: indexed documents, memories, graph nodes + effect-links, sources, and
+   * when a source last completed a scan (F-060). Scoped to the caller's tenant.
+   */
+  getStats(): Promise<WorkspaceStats>;
   /** A source's most recent scan status. */
   scanStatus(id: string): Promise<ScanStatus>;
   /** The subscription plan catalog + entitlements (public). */
@@ -225,6 +231,9 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
     },
     async scanSource(id) {
       return unwrap(await client.POST('/v1/sources/{id}/scan', { params: { path: { id } } }));
+    },
+    async getStats() {
+      return unwrap(await client.GET('/v1/stats', {}));
     },
     async scanStatus(id) {
       return unwrap(await client.GET('/v1/sources/{id}/scan', { params: { path: { id } } }));

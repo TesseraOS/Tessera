@@ -1,3 +1,4 @@
+import type { MemoryRetentionPolicy } from '@tessera/memory';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { ZodFastify } from '../../app-types.js';
 import { registerAuth, type AuthProvider, type TokenStore } from '../../auth/index.js';
@@ -15,8 +16,10 @@ import { registerSourceRoutes } from './sources.js';
 import { registerEventsRoutes } from './events.js';
 import { registerBillingRoutes } from './billing.js';
 import { registerAuditRoutes } from './audit.js';
+import { registerDsrRoutes } from './dsr.js';
 import { registerMeRoutes } from './me.js';
 import { registerRbacRoutes } from './rbac.js';
+import { registerRetentionRoutes } from './retention.js';
 import { registerTokenRoutes } from './tokens.js';
 
 /** Cross-cutting hardening threaded into the `/v1` scope (F-044). */
@@ -27,6 +30,8 @@ export interface V1HardeningOptions {
   readonly rateLimiter: RateLimiter | undefined;
   /** The token store backing `/v1/tokens` (F-046), or `undefined` in zero-auth mode. */
   readonly tokenStore: TokenStore | undefined;
+  /** The effective memory retention policy backing `/v1/retention` (F-047); empty ⇒ retention off. */
+  readonly memoryRetention: MemoryRetentionPolicy;
 }
 
 /**
@@ -66,6 +71,8 @@ export function registerV1Routes(
       registerEventsRoutes(v1, events, hardening.security);
       registerBillingRoutes(v1, services);
       registerAuditRoutes(v1, audit);
+      registerRetentionRoutes(v1, services, hardening.memoryRetention);
+      registerDsrRoutes(v1, services, audit);
 
       v1.get(
         '/openapi.json',

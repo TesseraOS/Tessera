@@ -25,6 +25,12 @@ export const AUDIT_ACTIONS = [
   'audit.read',
   'token.read',
   'token.manage',
+  // Data governance (F-047): retention policy reads + prune runs, and data-subject-rights
+  // export/erasure. All admin-only and always audited (NFR-13).
+  'retention.read',
+  'retention.manage',
+  'dsr.export',
+  'dsr.delete',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

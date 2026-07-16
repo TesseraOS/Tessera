@@ -105,6 +105,16 @@ export {
 } from './audit/index.js';
 export { API_VERSION } from './plugins/openapi.js';
 
+// Data-subject rights (NFR-13; F-047, ADR-0049) — Fastify-free export/erasure over the injected
+// services + audit log, surfaced by the admin-only, audited `/v1/dsr/*` routes.
+export {
+  buildDsrBundle,
+  purgeTenant,
+  type DsrBundle,
+  type DsrPurgeSummary,
+  type DsrSource,
+} from './dsr/index.js';
+
 export type { ErrorEnvelope } from './errors/envelope.js';
 export { codeForStatus, envelope, statusForCode } from './errors/envelope.js';
 export { mapError, type MappedError } from './errors/error-handler.js';
@@ -121,3 +131,5 @@ export * from './schemas/memory.js';
 export * from './schemas/sources.js';
 export * from './schemas/billing.js';
 export * from './schemas/audit.js';
+export * from './schemas/retention.js';
+export * from './schemas/dsr.js';

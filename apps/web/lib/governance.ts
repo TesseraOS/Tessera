@@ -24,6 +24,10 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   'audit.read': 'Audit read',
   'token.read': 'Token read',
   'token.manage': 'Token manage',
+  'retention.read': 'Retention read',
+  'retention.manage': 'Retention prune',
+  'dsr.export': 'Data export',
+  'dsr.delete': 'Data erasure',
 };
 
 export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS) as AuditAction[];

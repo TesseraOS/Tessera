@@ -1373,7 +1373,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Filter by action. */
-                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage";
+                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete";
                     /** @description Filter by actor principal id. */
                     actor?: string;
                     /** @description Filter by outcome. */
@@ -1408,7 +1408,7 @@ export interface paths {
                                     kind: "local" | "user" | "token";
                                 };
                                 /** @enum {string} */
-                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage";
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete";
                                 target?: string;
                                 /** @enum {string} */
                                 outcome: "success" | "denied";
@@ -1425,6 +1425,255 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/retention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The deployment's effective memory retention policy (empty rules ⇒ retention off). */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            rules: {
+                                /** @enum {string} */
+                                kind?: "decision" | "lesson" | "incident" | "failure" | "architecture" | "glossary" | "task";
+                                scope?: string;
+                                /** @description Expire a lineage whose current version is older than this. */
+                                maxAgeMs?: number;
+                                /** @description Keep at most this many superseded versions per lineage. */
+                                maxSupersededVersions?: number;
+                                /** @description Prune superseded versions older than this. */
+                                maxSupersededAgeMs?: number;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/retention/prune": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply the retention policy to the calling tenant's memories; returns what was pruned. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Whole lineages deleted by an age-based expiry. */
+                            expiredLineages: number;
+                            /** @description Superseded versions compacted away. */
+                            prunedVersions: number;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/dsr/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export everything held for the calling tenant (memories, graph, sources, audit). */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            tenantId: string;
+                            /** @description ISO-8601 time the bundle was assembled. */
+                            exportedAt: string;
+                            /** @description Every memory version across every lineage. */
+                            memories: {
+                                id: string;
+                                lineageId: string;
+                                /** @enum {string} */
+                                kind: "decision" | "lesson" | "incident" | "failure" | "architecture" | "glossary" | "task";
+                                title: string;
+                                body: string;
+                                scope: string;
+                                confidence: number;
+                                metadata: {
+                                    source?: string;
+                                    author?: string;
+                                    links?: string[];
+                                    tags?: string[];
+                                };
+                                version: number;
+                                supersedes: string | null;
+                                supersededBy: string | null;
+                                createdAt: string;
+                            }[];
+                            graph: {
+                                nodes: {
+                                    id: string;
+                                    /** @enum {string} */
+                                    kind: "file" | "symbol" | "module" | "person" | "decision" | "memory";
+                                    key: string;
+                                    label: string;
+                                    metadata: {
+                                        [key: string]: unknown;
+                                    };
+                                }[];
+                                edges: {
+                                    id: string;
+                                    from: string;
+                                    to: string;
+                                    /** @enum {string} */
+                                    kind: "imports" | "calls" | "references" | "contains" | "owns" | "defines" | "supersedes" | "EFFECT_LINK";
+                                    rationale: string | null;
+                                    confidence: number | null;
+                                    origin: string | null;
+                                    metadata: {
+                                        [key: string]: unknown;
+                                    };
+                                }[];
+                            };
+                            sources: {
+                                id: string;
+                                kind: string;
+                                label: string;
+                                config: {
+                                    [key: string]: unknown;
+                                };
+                                createdAt: string;
+                            }[];
+                            /** @description The tenant's complete audit trail. */
+                            audit: {
+                                id: string;
+                                tenantId: string;
+                                actor: {
+                                    principalId: string;
+                                    /** @enum {string} */
+                                    kind: "local" | "user" | "token";
+                                };
+                                /** @enum {string} */
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete";
+                                target?: string;
+                                /** @enum {string} */
+                                outcome: "success" | "denied";
+                                at: string;
+                                metadata?: {
+                                    [key: string]: string | number | boolean;
+                                };
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/dsr/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Erase the calling tenant's data plane (the audit trail is retained). */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            tenantId: string;
+                            deletedAt: string;
+                            /** @description Memory lineages deleted (all versions). */
+                            memories: number;
+                            graph: {
+                                nodes: number;
+                                edges: number;
+                            };
+                            sources: number;
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;

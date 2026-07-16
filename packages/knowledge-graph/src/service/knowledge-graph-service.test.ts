@@ -96,4 +96,40 @@ describe('createKnowledgeGraphService', () => {
     expect(capped.nodes).toHaveLength(1);
     expect(capped.edges).toHaveLength(0);
   });
+
+  it('exportAll returns the complete graph, unbounded by the queryGraph display limit (F-047)', async () => {
+    const subject = service();
+    await subject.upsertNode({ kind: 'file', key: 'a.ts', label: 'a' });
+    await subject.upsertNode({ kind: 'file', key: 'b.ts', label: 'b' });
+    await subject.upsertEdge({
+      from: { kind: 'file', key: 'a.ts' },
+      to: { kind: 'file', key: 'b.ts' },
+      kind: 'imports',
+    });
+
+    // queryGraph caps at the requested limit; an export must be exhaustive (NFR-13).
+    expect((await subject.queryGraph({ limit: 1 })).nodes).toHaveLength(1);
+    const exported = await subject.exportAll();
+    expect(exported.nodes).toHaveLength(2);
+    expect(exported.edges).toHaveLength(1);
+  });
+
+  it('purge empties the graph, reports counts, and is tenant-scoped (F-047)', async () => {
+    const subject = service();
+    const acme = subject.forTenant('acme');
+    const globex = subject.forTenant('globex');
+    await acme.upsertNode({ kind: 'file', key: 'a.ts', label: 'a' });
+    await acme.upsertNode({ kind: 'file', key: 'b.ts', label: 'b' });
+    await acme.upsertEdge({
+      from: { kind: 'file', key: 'a.ts' },
+      to: { kind: 'file', key: 'b.ts' },
+      kind: 'imports',
+    });
+    await globex.upsertNode({ kind: 'file', key: 'keep.ts', label: 'keep' });
+
+    expect(await acme.purge()).toEqual({ nodes: 2, edges: 1 });
+    expect(await acme.exportAll()).toEqual({ nodes: [], edges: [] });
+    // Another tenant's graph is untouched by the erasure.
+    expect((await globex.exportAll()).nodes).toHaveLength(1);
+  });
 });

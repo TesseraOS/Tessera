@@ -67,6 +67,17 @@ export interface KnowledgeGraphService {
    */
   queryGraph(filter?: GraphQuery): Promise<GraphSnapshot>;
   /**
+   * The **complete** tenant-scoped graph — every node and edge, unbounded. Unlike
+   * {@link KnowledgeGraphService.queryGraph} (capped at a display limit) this is exhaustive, because it
+   * backs data-subject-rights export (NFR-13, F-047), where a partial answer would be wrong.
+   */
+  exportAll(): Promise<GraphSnapshot>;
+  /**
+   * Delete the tenant's entire graph — every edge, then every node (idempotent). Backs DSR erasure
+   * (NFR-13, F-047). Returns what was removed.
+   */
+  purge(): Promise<{ readonly nodes: number; readonly edges: number }>;
+  /**
    * A view of this service confined to `tenantId` (FR-52, ADR-0033). The base service operates in
    * {@link DEFAULT_TENANT_ID}.
    */
@@ -181,6 +192,23 @@ export function createKnowledgeGraphService(store: GraphStore): KnowledgeGraphSe
       );
 
       return { nodes: selected, edges };
+    },
+
+    async exportAll() {
+      // Unbounded by design — an export must be complete (NFR-13), never display-capped.
+      const [nodes, edges] = await Promise.all([store.listNodes(), store.listEdges()]);
+      return { nodes, edges };
+    },
+
+    async purge() {
+      const [nodes, edges] = await Promise.all([store.listNodes(), store.listEdges()]);
+      // Edges first, then nodes: removeNode already drops incident edges, but clearing edges up front
+      // keeps the counts honest and leaves no dangling edge if a node id repeats.
+      await store.removeEdges();
+      for (const node of nodes) {
+        await store.removeNode(node.id);
+      }
+      return { nodes: nodes.length, edges: edges.length };
     },
 
     forTenant(tenantId) {

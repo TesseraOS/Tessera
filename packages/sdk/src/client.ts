@@ -36,6 +36,11 @@ export type RbacCatalog = paths['/v1/rbac']['get']['responses'][200]['content'][
 export type TokenList = paths['/v1/tokens']['get']['responses'][200]['content'][Json];
 export type CreateTokenRequest = paths['/v1/tokens']['post']['requestBody']['content'][Json];
 export type CreatedToken = paths['/v1/tokens']['post']['responses'][201]['content'][Json];
+export type RetentionPolicy = paths['/v1/retention']['get']['responses'][200]['content'][Json];
+export type RetentionPruneResult =
+  paths['/v1/retention/prune']['post']['responses'][200]['content'][Json];
+export type DsrBundle = paths['/v1/dsr/export']['get']['responses'][200]['content'][Json];
+export type DsrDeleteResult = paths['/v1/dsr/delete']['post']['responses'][200]['content'][Json];
 export type Plans = paths['/v1/billing/plans']['get']['responses'][200]['content'][Json];
 export type Subscription =
   paths['/v1/billing/subscription']['get']['responses'][200]['content'][Json];
@@ -85,6 +90,14 @@ export interface TesseraClient {
   memoryHistory(lineageId: string): Promise<MemoryHistory>;
   /** Query this tenant's audit trail (admin only), newest-first + paginated. */
   getAudit(query?: AuditQuery): Promise<AuditPage>;
+  /** The deployment's effective memory retention policy (admin only); empty rules ⇒ retention off. */
+  getRetention(): Promise<RetentionPolicy>;
+  /** Apply the retention policy to this tenant's memories (admin only); returns what was pruned. */
+  pruneRetention(): Promise<RetentionPruneResult>;
+  /** Export everything held for this tenant — memories, graph, sources, audit (admin only; NFR-13). */
+  exportTenantData(): Promise<DsrBundle>;
+  /** Erase this tenant's data plane; the audit trail is retained by design (admin only; NFR-13). */
+  deleteTenantData(): Promise<DsrDeleteResult>;
   /** List the registered ingestion sources. */
   listSources(): Promise<SourceList>;
   /** Register a filesystem/git source for ingestion. */
@@ -185,6 +198,18 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
     },
     async getAudit(query = {}) {
       return unwrap(await client.GET('/v1/audit', { params: { query } }));
+    },
+    async getRetention() {
+      return unwrap(await client.GET('/v1/retention', {}));
+    },
+    async pruneRetention() {
+      return unwrap(await client.POST('/v1/retention/prune', {}));
+    },
+    async exportTenantData() {
+      return unwrap(await client.GET('/v1/dsr/export', {}));
+    },
+    async deleteTenantData() {
+      return unwrap(await client.POST('/v1/dsr/delete', {}));
     },
     async listSources() {
       return unwrap(await client.GET('/v1/sources', {}));

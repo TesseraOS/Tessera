@@ -46,6 +46,8 @@ export async function startApiServer(options: ApiServerOptions = {}): Promise<Ap
     ...(runtime.audit !== undefined ? { audit: runtime.audit } : {}),
     // Back /v1/tokens self-service with the runtime's token store (F-046; present in token mode).
     ...(runtime.auth.tokenStore !== undefined ? { tokenStore: runtime.auth.tokenStore } : {}),
+    // The effective memory retention policy backing /v1/retention (F-047); empty ⇒ retention off.
+    memoryRetention: runtime.memoryRetention,
     // API hardening from config (F-044): security headers/HSTS, per-profile CORS, rate limiting.
     security: { hsts: api.security.hsts },
     cors: { allowedOrigins: api.cors.allowedOrigins },

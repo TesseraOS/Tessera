@@ -4,6 +4,7 @@ import Fastify, {
   type FastifyServerOptions,
 } from 'fastify';
 import cors from '@fastify/cors';
+import { EMPTY_RETENTION_POLICY, type MemoryRetentionPolicy } from '@tessera/memory';
 import {
   serializerCompiler,
   validatorCompiler,
@@ -132,6 +133,12 @@ export interface BuildServerOptions {
    */
   readonly tokenStore?: TokenStore;
   /**
+   * The effective memory retention policy backing `/v1/retention` (F-047; FR-15). The composition root
+   * passes `runtime.memoryRetention` (resolved from `config.memory.retention`). Omitted ⇒ the empty
+   * policy: retention is off and the prune pass is a no-op.
+   */
+  readonly memoryRetention?: MemoryRetentionPolicy;
+  /**
    * Security-header hardening (F-044; NFR-2). Headers are on by default; `security.hsts` adds HSTS
    * for TLS-terminated profiles. See {@link SecurityHeadersOptions}.
    */
@@ -218,6 +225,7 @@ export function buildServer(services: ApiServices, options: BuildServerOptions =
       security: options.security ?? {},
       rateLimiter: resolveRateLimiter(options.rateLimit),
       tokenStore: options.tokenStore,
+      memoryRetention: options.memoryRetention ?? EMPTY_RETENTION_POLICY,
     },
   );
 

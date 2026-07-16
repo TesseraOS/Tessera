@@ -39,6 +39,14 @@ function memoryStub() {
     history: (lineageId: string) =>
       Promise.resolve(byLineage.has(lineageId) ? [byLineage.get(lineageId)] : []),
     list: () => Promise.resolve([...byLineage.values()]),
+    // Retention + DSR surface (F-047): the stub keeps one version per lineage, so exportAll is the
+    // same set and prune has nothing to compact.
+    exportAll: () => Promise.resolve([...byLineage.values()]),
+    prune: () => Promise.resolve({ expiredLineages: 0, prunedVersions: 0 }),
+    deleteLineage: (lineageId: string) => {
+      byLineage.delete(lineageId);
+      return Promise.resolve();
+    },
     // Tenant scoping (FR-52) is a no-op for the canned stub — return the same store.
     forTenant() {
       return this;
@@ -79,6 +87,8 @@ function stubServices(): ApiServices {
     },
     graph: {
       getEffects: () => Promise.resolve({ effects: [] }),
+      exportAll: () => Promise.resolve({ nodes: [], edges: [] }),
+      purge: () => Promise.resolve({ nodes: 0, edges: 0 }),
       forTenant() {
         return this;
       },
@@ -180,5 +190,27 @@ describe('@tessera/sdk round-trip against the real API (FR-39)', () => {
     // No readiness probe wired on the stub ⇒ ready (200 body returned as data).
     const ready = await client.getReady();
     expect(ready.status).toBe('ready');
+  });
+
+  it('getRetention/pruneRetention read + apply the retention surface (F-047)', async () => {
+    // No policy wired on this server ⇒ retention is off and the pass is a no-op.
+    expect(await client.getRetention()).toEqual({ rules: [] });
+    expect(await client.pruneRetention()).toEqual({ expiredLineages: 0, prunedVersions: 0 });
+  });
+
+  // Erasure runs last: it empties the shared stub's data plane.
+  it('exportTenantData then deleteTenantData round-trip the DSR surface (NFR-13)', async () => {
+    await client.captureMemory({ kind: 'lesson', title: 'To export', body: 'body' });
+
+    const bundle = await client.exportTenantData();
+    expect(bundle.tenantId).toBe('default');
+    expect(bundle.memories.some((memory) => memory.title === 'To export')).toBe(true);
+    expect(Array.isArray(bundle.audit)).toBe(true);
+    expect(bundle.graph).toMatchObject({ nodes: [], edges: [] });
+
+    const deleted = await client.deleteTenantData();
+    expect(deleted.tenantId).toBe('default');
+    expect(deleted.memories).toBeGreaterThan(0);
+    expect((await client.exportTenantData()).memories).toEqual([]);
   });
 });

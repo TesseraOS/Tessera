@@ -187,7 +187,11 @@ export type AuditAction =
   | 'billing.manage'
   | 'audit.read'
   | 'token.read'
-  | 'token.manage';
+  | 'token.manage'
+  | 'retention.read'
+  | 'retention.manage'
+  | 'dsr.export'
+  | 'dsr.delete';
 
 export type AuditOutcome = 'success' | 'denied';
 

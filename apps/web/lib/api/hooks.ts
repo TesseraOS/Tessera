@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
+import { useApiEvent } from './events';
 import type {
   AuditQuery,
   CaptureMemoryBody,
@@ -78,6 +80,43 @@ export function useAudit(query: AuditQuery = {}) {
     queryKey: ['audit', query],
     queryFn: () => api.getAudit(query),
     staleTime: 15_000,
+  });
+}
+
+// --- workspace stats (F-060/FR-38) ---
+
+/** Coalescing window for SSE-triggered stat refetches — one scan can emit hundreds of events. */
+const STATS_INVALIDATE_DEBOUNCE_MS = 500;
+
+/**
+ * The workspace summary — GET /v1/stats (F-060).
+ *
+ * Kept live by the **event stream, not polling**: any event that can change a number invalidates the
+ * query, debounced so a 300-file scan triggers one refetch rather than 300. `staleTime` then covers
+ * ordinary navigation back to the Overview.
+ */
+export function useStats() {
+  const queryClient = useQueryClient();
+  const pending = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const invalidate = () => {
+    if (pending.current !== undefined) clearTimeout(pending.current);
+    pending.current = setTimeout(() => {
+      void queryClient.invalidateQueries({ queryKey: ['stats'] });
+    }, STATS_INVALIDATE_DEBOUNCE_MS);
+  };
+
+  useApiEvent('document.ingested', invalidate);
+  useApiEvent('document.removed', invalidate);
+  useApiEvent('memory.captured', invalidate);
+  useApiEvent('source.scan.completed', invalidate);
+
+  useEffect(() => () => clearTimeout(pending.current), []);
+
+  return useQuery({
+    queryKey: ['stats'],
+    queryFn: () => api.getStats(),
+    staleTime: 30_000,
   });
 }
 

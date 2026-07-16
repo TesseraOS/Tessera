@@ -1,7 +1,9 @@
+'use client';
+
 import { ArrowRight, BookText, Boxes, GitBranch, Network, Search, Sparkles } from 'lucide-react';
-import { Mascot } from '@tessera/mascot';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ActivityFeed, useFeedIngest } from '@/components/activity-feed';
 import { Constellation } from '@/components/art';
 import { DashboardStats } from '@/components/stats';
 
@@ -28,8 +30,12 @@ const steps = [
   },
 ];
 
-/** Overview — greeting hero + Tessera stat cards + honest empty activity + onboarding (no fabricated data). */
+/** Overview — greeting hero + live stat cards + live activity feed + onboarding (no fabricated data). */
 export function Dashboard() {
+  // Pump the live stream into the shared store here, at the Overview root: the feed and the header's
+  // notifications bell both read it, so exactly one component owns the ingest.
+  useFeedIngest();
+
   return (
     <div className="space-y-4">
       <HeroBand />
@@ -44,36 +50,13 @@ export function Dashboard() {
             <div className="space-y-0.5">
               <CardTitle className="text-sm font-semibold">Recent activity</CardTitle>
               <CardDescription className="text-xs">
-                Changes and compilations across your connected sources.
+                Changes and compilations across your connected sources, live this session.
               </CardDescription>
             </div>
             <GitBranch className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
           </CardHeader>
           <CardContent className="p-0">
-            <div className="border-border/70 bg-background/40 flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed px-6 py-12 text-center">
-              <Mascot mood="watching" size={92} />
-              <div className="space-y-1.5">
-                <p className="text-sm font-semibold">No activity yet</p>
-                <p className="text-muted-foreground mx-auto max-w-sm text-xs leading-relaxed">
-                  Connect a filesystem or Git source and Tessera will ingest, index, and record
-                  changes, compilations, and effect-link updates here in real time.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                <Button asChild size="sm">
-                  <a href="/sources">
-                    <Boxes className="size-4" />
-                    Connect a source
-                  </a>
-                </Button>
-                <Button asChild size="sm" variant="outline">
-                  <a href="/inspector">
-                    Compile context
-                    <ArrowRight className="size-4" />
-                  </a>
-                </Button>
-              </div>
-            </div>
+            <ActivityFeed />
           </CardContent>
         </Card>
 

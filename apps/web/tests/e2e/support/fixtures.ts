@@ -18,6 +18,7 @@ export const LOCAL_IDENTITY = {
     'effects:write',
     'sources:read',
     'sources:manage',
+    'stats:read',
     'admin:manage',
   ],
 };
@@ -34,6 +35,7 @@ export const LOCAL_RBAC = {
     'effects:write',
     'sources:read',
     'sources:manage',
+    'stats:read',
     'admin:manage',
   ],
   rolePermissions: {
@@ -46,6 +48,7 @@ export const LOCAL_RBAC = {
       'effects:write',
       'sources:read',
       'sources:manage',
+      'stats:read',
       'admin:manage',
     ],
     admin: [
@@ -57,6 +60,7 @@ export const LOCAL_RBAC = {
       'effects:write',
       'sources:read',
       'sources:manage',
+      'stats:read',
       'admin:manage',
     ],
     member: [
@@ -64,11 +68,20 @@ export const LOCAL_RBAC = {
       'compile:read',
       'effects:read',
       'memory:read',
+      'sources:read',
+      'stats:read',
       'memory:write',
       'effects:write',
       'sources:manage',
     ],
-    viewer: ['search:read', 'compile:read', 'effects:read', 'memory:read', 'sources:read'],
+    viewer: [
+      'search:read',
+      'compile:read',
+      'effects:read',
+      'memory:read',
+      'sources:read',
+      'stats:read',
+    ],
   },
 };
 

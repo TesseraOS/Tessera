@@ -7,6 +7,7 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { TesseraApiError } from '@/lib/api/client';
+import { EventsProvider } from '@/lib/api/events';
 import { SessionProvider } from '@/lib/auth/use-session';
 
 /** App-wide client providers: server-state (TanStack Query), session, theming, motion, tooltips, toasts. */
@@ -29,14 +30,22 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <SessionProvider>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <MotionConfig reducedMotion="user">
-            <TooltipProvider delayDuration={200}>
-              {children}
-              <Toaster />
-            </TooltipProvider>
-          </MotionConfig>
-        </ThemeProvider>
+        {/* Inside the session: the live stream opens only once someone is signed in (F-060). */}
+        <EventsProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <MotionConfig reducedMotion="user">
+              <TooltipProvider delayDuration={200}>
+                {children}
+                <Toaster />
+              </TooltipProvider>
+            </MotionConfig>
+          </ThemeProvider>
+        </EventsProvider>
       </SessionProvider>
     </QueryClientProvider>
   );

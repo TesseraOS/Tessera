@@ -33,6 +33,7 @@ import type {
   RbacCatalog,
   Subscription,
   TokenList,
+  WorkspaceStats,
 } from '@tessera/sdk';
 
 /**
@@ -44,7 +45,15 @@ import type {
 const sdk = createTesseraClient({ baseUrl: PROXY_BASE });
 
 export { TesseraApiError };
-export type { Identity, RbacCatalog, TokenList, CreatedToken, CreateTokenRequest, Subscription };
+export type {
+  Identity,
+  RbacCatalog,
+  TokenList,
+  CreatedToken,
+  CreateTokenRequest,
+  Subscription,
+  WorkspaceStats,
+};
 
 /** Label for the endpoint the dashboard talks to (the same-origin proxy). Shown in Settings. */
 export const API_ORIGIN = PROXY_BASE;
@@ -79,6 +88,9 @@ export const api = {
   getAudit: (query: AuditQuery = {}): Promise<AuditPage> => sdk.getAudit(query),
 
   // --- sources (F-038/FR-62) ---
+  /** The workspace summary: documents, memories, graph, sources, last scan (F-060; stats:read). */
+  getStats: (): Promise<WorkspaceStats> => sdk.getStats(),
+
   listSources: (): Promise<SourceListResponse> => sdk.listSources(),
   registerSource: (body: RegisterSourceBody): Promise<Source> => sdk.registerSource(body),
   removeSource: (id: string): Promise<{ id: string }> => sdk.removeSource(id),

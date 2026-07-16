@@ -30,6 +30,7 @@ export {
   type SourceList,
   type ScanResult,
   type ScanStatus,
+  type WorkspaceStats,
   type GraphQuery,
   type GraphSnapshot,
   type AssertEffectRequest,

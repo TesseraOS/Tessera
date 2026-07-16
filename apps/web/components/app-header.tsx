@@ -15,7 +15,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { describeEntry, relativeTime } from '@/components/activity-feed';
 import { useCommandMenu } from '@/lib/store/command';
+import { useNotifications } from '@/lib/store/notifications';
 
 export function AppHeader() {
   const pathname = usePathname();
@@ -53,27 +55,77 @@ export function AppHeader() {
   );
 }
 
-/** Notifications surface — functional shell with an honest empty state (feed wired when events land). */
+/**
+ * Notifications (F-060) — the live event stream with an unread count, reading the same store as the
+ * Overview's activity feed.
+ *
+ * **Live-session only** (see `lib/store/notifications`): the list is what arrived while this tab has
+ * been open, and the copy says "this session" so the bell never implies a history it does not have.
+ * F-065 makes it persistent and per-user.
+ */
 function NotificationsMenu() {
+  const entries = useNotifications((state) => state.entries);
+  const unread = useNotifications((state) => state.unread);
+  const markRead = useNotifications((state) => state.markRead);
+
   return (
-    <DropdownMenu>
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open) markRead();
+      }}
+    >
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label="Notifications">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="relative"
+          aria-label={unread > 0 ? `Notifications (${unread} unread)` : 'Notifications'}
+        >
           <Bell className="size-4" />
+          {unread > 0 ? (
+            <span
+              data-testid="notifications-badge"
+              className="bg-primary text-primary-foreground absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full px-1 text-[10px] leading-4 font-semibold tabular-nums"
+            >
+              {unread > 9 ? '9+' : unread}
+            </span>
+          ) : null}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-72">
+      <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="text-xs font-medium">Notifications</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <div className="flex flex-col items-center gap-1.5 px-4 py-8 text-center">
-          <span className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-full">
-            <Bell className="size-4" />
-          </span>
-          <p className="text-sm font-medium">You&rsquo;re all caught up</p>
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            Ingestion, compilation, and system alerts will appear here.
-          </p>
-        </div>
+        {entries.length === 0 ? (
+          <div className="flex flex-col items-center gap-1.5 px-4 py-8 text-center">
+            <span className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-full">
+              <Bell className="size-4" />
+            </span>
+            <p className="text-sm font-medium">You&rsquo;re all caught up</p>
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              Ingestion, scans, and captured memories appear here as they happen this session.
+            </p>
+          </div>
+        ) : (
+          <ul className="max-h-80 overflow-y-auto py-1" aria-label="Recent notifications">
+            {entries.map((entry) => {
+              const { icon: Icon, title, detail } = describeEntry(entry);
+              return (
+                <li key={entry.id} className="flex items-start gap-2.5 px-2 py-2">
+                  <span className="bg-muted text-muted-foreground mt-0.5 grid size-6 shrink-0 place-items-center rounded-md">
+                    <Icon className="size-3" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-medium">{title}</span>
+                    <span className="text-muted-foreground block truncate text-xs">{detail}</span>
+                  </span>
+                  <span className="text-muted-foreground shrink-0 text-[10px] tabular-nums">
+                    {relativeTime(entry.at)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

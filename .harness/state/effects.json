@@ -136,6 +136,14 @@
         {
           "kind": "test",
           "ref": "tests/e2e-full (F-048) — the FIRST consumer that exercises BOTH surfaces against ONE live deployment: the human journey drives the real apps/web (production build, proxied at the live API) and the agent journey drives the real `tessera-mcp` stdio binary over the same SQLite files. A breaking REST route or MCP tool change now fails here — this is the only gate that would catch a cross-surface regression, since api/mcp e2e each test their own surface in isolation."
+        },
+        {
+          "kind": "module",
+          "ref": "GET /v1/stats + the get_stats MCP tool (F-060) — the workspace summary, tenant-scoped, token-lean (flat numbers, no labels), NOT audited (a per-page-load aggregate read would flood the F-027 trail; get_stats reuses source.read so the two surfaces do not disagree). Parity is STRUCTURAL: both call computeWorkspaceStats behind the new Fastify-free \"@tessera/api/stats\" subpath (mirroring /auth), because MCP must never pull Fastify in (F-012) and two copies of the aggregation could silently disagree about a tenant numbers. OpenAPI + regenerated @tessera/sdk (getStats, WorkspaceStats) → @tessera/web lib/api. NO delta/trend field: nothing stores a prior-period snapshot and a createdAt-derived trend would lie wherever retention (F-047) deletes"
+        },
+        {
+          "kind": "contract",
+          "ref": "The /v1/events SSE stream is now TENANT-SCOPED (F-060/ADR-0050): ApiEventMap payloads carry a REQUIRED server-side tenantId and the route filters per connection on tenantOf(request), closing a cross-tenant leak (every authenticated client received every tenant path/title/label — F-021 predated multi-tenancy; F-044 added authentication, never authorization). sseFrame STRIPS tenantId, so the WIRE SHAPE IS UNCHANGED (ADR-0033) and existing consumers keep working. Any new event MUST carry a tenant — the required field makes the typechecker ask. document.* stay default-tenant-attributed until F-071"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -201,6 +209,10 @@
         {
           "kind": "module",
           "ref": "Account & profile UI (F-046): a professional /profile page (identity, access/roles/permissions, enterprise Plan & usage card, agent-connectivity hint) + API-token self-service panel (create-with-copy-once dialog, revoke) + members-from-tokens card — tokens-only, theme-true (verified fonts follow the per-theme stacks), WCAG AA (axe in profile.spec). governance-view now derives the RBAC matrix from /v1/rbac."
+        },
+        {
+          "kind": "module",
+          "ref": "Overview live surfaces (F-060): real stat cards (components/stats.tsx — was hardcoded), the activity feed (components/activity-feed.tsx) and the notifications bell (app-header) — tokens-only, verified by screenshot across all 4 themes x light/dark, axe WCAG A/AA clean on the POPULATED feed + bell. NOTE: components/delta.tsx is now UNCONSUMED — stats.tsx was its only caller and F-060 renders no trends (no prior-period data exists). Kept for a real trend source (F-057 analytics); delete it if that never lands"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -330,6 +342,10 @@
         {
           "kind": "decision",
           "ref": "docs/adr/0015-ingestion-connector-contracts-and-git-cli.md"
+        },
+        {
+          "kind": "module",
+          "ref": "SourceService.summary() → { sources, documents, lastScanAt } (F-060, service-level; IngestionManifest port UNCHANGED by design). Sums the manifest over the tenant OWN registry, so it is tenant-correct by construction. lastScanAt is process-lifetime only (scan status is an in-memory Map) — the type says so and callers must render \"no scan this session\", never \"never scanned\". ALSO (ADR-0050): IngestionEvents source.scan.started/completed now carry tenantId (from SourceRecord); document.* deliberately do NOT — the worker has no tenant (the same gap as F-071), so the type encodes the asymmetry rather than inventing an attribution"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -379,6 +395,10 @@
         {
           "kind": "module",
           "ref": "@tessera/config indexing MemoryService decorator (sources/memory-indexing.ts) — prune/deleteLineage de-index the erased lineage from the retrieval corpus (blob+keyword+temporal+vector), so erasure leaves no searchable remanence"
+        },
+        {
+          "kind": "module",
+          "ref": "MemoryStore.countCurrent (F-060, additive on port + BOTH adapters + conformance) + MemoryService.count(). Counts LINEAGES not versions — mirrors listCurrent, so a supersede never inflates it (a conformance case pins this). createIndexingMemoryService (@tessera/config) delegates it, found by the typechecker because the port method is required, not optional. Consumed by GET /v1/stats + get_stats"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -424,6 +444,10 @@
         {
           "kind": "module",
           "ref": "KnowledgeGraphService.queryGraph(filter?) → { nodes, edges } (F-043, additive — the store already had listNodes/listEdges): up to `limit` nodes (default 500 LOD cap), optionally kind-filtered, edges confined to the returned nodes (a coherent subgraph). Surfaced as GET /v1/graph (effects:read, tenant-scoped, audited) + the query_graph MCP tool (ADR-0036 parity) → OpenAPI + regenerated @tessera/sdk (queryGraph). Consumed by the @tessera/web graph explorer (E-002) via lib/api. Advances E-003"
+        },
+        {
+          "kind": "module",
+          "ref": "GraphStore.countNodes/countEdges (F-060, additive on port + BOTH adapters + conformance incl. cross-tenant counts) + KnowledgeGraphService.counts() → { nodes, effectLinks }. Counted at the store (sqlite COUNT(*)), never list().length: GET /v1/stats runs on every dashboard load and materializing the graph to read .length would put that on the hot path. Consumed by GET /v1/stats + the get_stats MCP tool via computeWorkspaceStats"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -551,6 +575,10 @@
         {
           "kind": "module",
           "ref": "@tessera/config api hardening wiring (F-044): a config.api section (rateLimit {enabled,limit,windowMs}, cors {allowedOrigins}, security {hsts}) + TESSERA_API_* env → apps/server maps runtime.config.api onto buildServer security/cors/rateLimit options and, when observability is wired, an onRequest hook calls annotateRequestId(request.id) to tag the active span. Safe local defaults (rate limiting off, loopback-permissive CORS, no HSTS)."
+        },
+        {
+          "kind": "module",
+          "ref": "createLocalRuntime SSE bridge attributes tenants (F-060/ADR-0050): source.scan.* forward the event own tenantId; document.* are pinned to INGESTION_TENANT = DEFAULT_TENANT_ID — an HONEST attribution of where ingestion really writes (F-071), not where the scan was requested. When F-071 carries the tenant onto the queue job, replace INGESTION_TENANT with the event tenantId; nothing else changes"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -719,6 +747,10 @@
         {
           "kind": "module",
           "ref": "API-token self-service over the TokenStore port (F-046): REST /v1/tokens (list/create-secret-once/revoke) + MCP parity tools (list_tokens/issue_token/revoke_token, ADR-0036) — admin:manage, tenant-scoped, audited (token.read/token.manage), least-privilege create (a caller cannot mint a token exceeding its own permissions). The TokenStore port gained optional expiry (expiresAt) with a shared isRevoked/isExpired verify predicate across the in-memory + sqlite adapters. GET /v1/rbac exposes the roles/permissions/rolePermissions catalog so the dashboard derives RBAC from the API (kills the hand-mirrored apps/web/lib/governance.ts copy). buildServer/buildMcpServer take a tokenStore; apps/server wires runtime.auth.tokenStore."
+        },
+        {
+          "kind": "module",
+          "ref": "stats:read added to PERMISSIONS + READ_PERMISSIONS (F-060) → ROLE_PERMISSIONS, GET /v1/rbac, and the MCP gateway TOOL_PERMISSIONS all derive automatically. Its own permission rather than reusing an existing read: the summary aggregates across documents/memory/graph/sources, so a token scoped to only memory:read must not learn the other counts through it (scopes are a least-privilege upper bound). Web e2e permission fixtures (LOCAL_IDENTITY/LOCAL_RBAC) hardcode the catalog and MUST be updated with it or the Overview 403s"
         }
       ],
       "kind": "EFFECT_LINK",

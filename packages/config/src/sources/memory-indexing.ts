@@ -58,6 +58,9 @@ export function createIndexingMemoryService(
     list(filter) {
       return inner.list(filter);
     },
+    count(filter) {
+      return inner.count(filter);
+    },
     exportAll() {
       return inner.exportAll();
     },

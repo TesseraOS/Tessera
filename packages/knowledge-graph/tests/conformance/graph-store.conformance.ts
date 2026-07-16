@@ -201,6 +201,70 @@ export function runGraphStoreConformance(name: string, makeStore: GraphStoreFact
       }
     });
 
+    it('counts nodes and edges, honouring filters and agreeing with the listings', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const a = node('file', 'a');
+        const b = node('file', 'b');
+        const m = node('module', 'm');
+        for (const n of [a, b, m]) await store.addNode(n);
+        await store.addEdge(structural(a, m, 'imports'));
+        await store.addEdge(effectLink(a, b, 0.8));
+
+        expect(await store.countNodes()).toBe(3);
+        expect(await store.countNodes({ kind: 'file' })).toBe(2);
+        expect(await store.countNodes({ kind: 'person' })).toBe(0);
+
+        expect(await store.countEdges()).toBe(2);
+        expect(await store.countEdges({ kind: EFFECT_LINK_KIND })).toBe(1);
+        expect(await store.countEdges({ from: a.id })).toBe(2);
+        expect(await store.countEdges({ to: a.id })).toBe(0);
+
+        // A count must never disagree with the listing it summarises.
+        expect(await store.countNodes({ kind: 'file' })).toBe(
+          (await store.listNodes({ kind: 'file' })).length,
+        );
+        expect(await store.countEdges({ kind: EFFECT_LINK_KIND })).toBe(
+          (await store.listEdges({ kind: EFFECT_LINK_KIND })).length,
+        );
+      } finally {
+        await cleanup?.();
+      }
+    });
+
+    it('counts are empty for an empty store', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        expect(await store.countNodes()).toBe(0);
+        expect(await store.countEdges()).toBe(0);
+      } finally {
+        await cleanup?.();
+      }
+    });
+
+    it('scopes counts by tenant (a count never sees another tenant rows)', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const a = store.forTenant('tenant-a');
+        const b = store.forTenant('tenant-b');
+        const x = node('symbol', 'x');
+        const y = node('symbol', 'y');
+        await a.addNode(x);
+        await a.addNode(y);
+        await a.addEdge(effectLink(x, y, 0.9));
+        await b.addNode({ ...x, label: 'b-label' });
+
+        expect(await a.countNodes()).toBe(2);
+        expect(await a.countEdges({ kind: EFFECT_LINK_KIND })).toBe(1);
+        // Tenant B holds the SAME deterministic node id and must still count only its own row.
+        expect(await b.countNodes()).toBe(1);
+        expect(await b.countEdges()).toBe(0);
+        expect(await store.countNodes()).toBe(0); // the default view is a distinct tenant
+      } finally {
+        await cleanup?.();
+      }
+    });
+
     it('isolates nodes/edges and effects by tenant (forTenant)', async () => {
       const { store, cleanup } = await makeStore();
       try {

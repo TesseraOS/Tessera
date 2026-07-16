@@ -30,6 +30,13 @@ export interface MemoryStore {
   /** The current version of every lineage, optionally filtered by kind/scope. */
   listCurrent(filter?: MemoryListFilter): Promise<readonly Memory[]>;
   /**
+   * How many lineages have a current version matching `filter`, without materializing them. Counts
+   * lineages, not versions — it mirrors {@link MemoryStore.listCurrent}, so superseded versions are
+   * excluded. Backs the workspace summary (`GET /v1/stats`, F-060), requested on every dashboard
+   * load; listing every memory to read `.length` would read the whole store in on the hot path.
+   */
+  countCurrent(filter?: MemoryListFilter): Promise<number>;
+  /**
    * Every stored version across every lineage (ascending `createdAt`, then `id`) — the complete,
    * tenant-scoped memory record. Backs data-subject-rights export (NFR-13, F-047) and the retention
    * pass. Unlike {@link MemoryStore.listCurrent} it includes superseded versions.

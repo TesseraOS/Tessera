@@ -77,6 +77,20 @@ export function createInMemoryMemoryStore(): MemoryStore {
         return Promise.resolve(current);
       },
 
+      countCurrent(filter?: MemoryListFilter) {
+        let total = 0;
+        for (const memory of byId.values()) {
+          if (
+            memory.supersededBy === null &&
+            (filter?.kind === undefined || memory.kind === filter.kind) &&
+            (filter?.scope === undefined || memory.scope === filter.scope)
+          ) {
+            total += 1;
+          }
+        }
+        return Promise.resolve(total);
+      },
+
       exportAll() {
         return Promise.resolve([...byId.values()].sort(byCreatedThenId));
       },

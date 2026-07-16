@@ -47,6 +47,14 @@ export interface GraphStore {
   getNodeByKey(kind: NodeKind, key: string): Promise<GraphNode | undefined>;
   listNodes(filter?: NodeFilter): Promise<readonly GraphNode[]>;
   listEdges(filter?: EdgeFilter): Promise<readonly GraphEdge[]>;
+  /**
+   * How many nodes match `filter`, without materializing them. Backs the workspace summary
+   * (`GET /v1/stats`, F-060), which is requested on every dashboard load — listing every node to
+   * read `.length` would read the whole graph into memory on the hot path.
+   */
+  countNodes(filter?: NodeFilter): Promise<number>;
+  /** How many edges match `filter`, without materializing them. See {@link GraphStore.countNodes}. */
+  countEdges(filter?: EdgeFilter): Promise<number>;
   getEffects(source: NodeId, options?: GetEffectsOptions): Promise<readonly EffectHit[]>;
   /** A view of this store confined to `tenantId` (FR-52). */
   forTenant(tenantId: TenantId): GraphStore;

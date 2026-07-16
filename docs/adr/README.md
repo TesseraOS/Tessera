@@ -65,6 +65,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0047](0047-dashboard-multi-theme-illustration-layer-contrast-gate.md) | Dashboard 4-theme system (Monkai/Amber/Claude/Notebook × light/dark), radial appearance propagation, illustration layer + Tess, executable WCAG-AA contrast gate | Accepted |
 | [0048](0048-dashboard-auth-httponly-cookie-proxy.md) | Dashboard auth: httpOnly-cookie session behind a same-origin Next proxy (closes 0022 onto the SDK) | Accepted |
 | [0049](0049-data-governance-retention-dsr-mcp-audit.md) | Data governance: memory retention (delete-only), DSR export/erasure retaining the audit trail, MCP-surface audit on the existing taxonomy | Accepted |
+| [0050](0050-sse-tenant-scoped-event-stream.md) | Tenant-scope the `/v1/events` SSE stream via a server-side `tenantId` stripped before the wire (closes a cross-tenant leak; `document.*` stays default-attributed until F-071) | Accepted |
 
 ## Conventions
 

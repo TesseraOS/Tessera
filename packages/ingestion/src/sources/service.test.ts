@@ -112,6 +112,70 @@ describe('createSourceService', () => {
     expect(status?.lastScan?.summary.added).toBe(2);
   });
 
+  it('summary counts this tenant sources + documents and the latest scan time', async () => {
+    const { service } = harness(
+      new Map([
+        [
+          '/repo',
+          new Map([
+            ['a.md', '# A'],
+            ['b.ts', 'const b = 1;'],
+          ]),
+        ],
+        ['/other', new Map([['c.md', '# C']])],
+      ]),
+    );
+
+    // An empty workspace is honestly empty — not "unknown".
+    expect(await service.summary()).toEqual({ sources: 0, documents: 0, lastScanAt: null });
+
+    const first = await service.register({ kind: 'fake', config: { root: '/repo' } });
+    // Registered but never scanned: the source counts, its documents do not yet exist.
+    expect(await service.summary()).toEqual({ sources: 1, documents: 0, lastScanAt: null });
+
+    await service.scan(first.id);
+    const afterFirst = await service.summary();
+    expect(afterFirst.sources).toBe(1);
+    expect(afterFirst.documents).toBe(2);
+    expect(afterFirst.lastScanAt).not.toBeNull();
+
+    const second = await service.register({ kind: 'fake', config: { root: '/other' } });
+    await service.scan(second.id);
+    const afterSecond = await service.summary();
+    expect(afterSecond.sources).toBe(2);
+    expect(afterSecond.documents).toBe(3); // summed across both sources' manifests
+    // The latest scan across the tenant's sources wins.
+    expect(afterSecond.lastScanAt).not.toBeNull();
+    expect(afterSecond.lastScanAt! >= afterFirst.lastScanAt!).toBe(true);
+  });
+
+  it('summary is tenant-scoped — one tenant never counts another documents', async () => {
+    const { service } = harness(
+      new Map([
+        [
+          '/repo',
+          new Map([
+            ['a.md', '# A'],
+            ['b.ts', 'const b = 1;'],
+          ]),
+        ],
+        ['/other', new Map([['c.md', '# C']])],
+      ]),
+    );
+    const a = service.forTenant('tenant-a');
+    const b = service.forTenant('tenant-b');
+
+    const ownedByA = await a.register({ kind: 'fake', config: { root: '/repo' } });
+    await a.scan(ownedByA.id);
+    const ownedByB = await b.register({ kind: 'fake', config: { root: '/other' } });
+    await b.scan(ownedByB.id);
+
+    expect(await a.summary()).toMatchObject({ sources: 1, documents: 2 });
+    expect(await b.summary()).toMatchObject({ sources: 1, documents: 1 });
+    // The default view is a distinct tenant and owns nothing.
+    expect(await service.summary()).toEqual({ sources: 0, documents: 0, lastScanAt: null });
+  });
+
   it('is incremental + idempotent on re-scan (no changes → no re-index)', async () => {
     const files = new Map([['a.md', '# A']]);
     const { service, sink } = harness(new Map([['/repo', files]]));

@@ -61,6 +61,12 @@ export interface MemoryService {
    */
   exportAll(): Promise<readonly Memory[]>;
   /**
+   * How many memories this tenant currently holds (superseded versions excluded), optionally
+   * filtered. Backs the workspace summary (`GET /v1/stats`, F-060) — counted at the store, never by
+   * listing.
+   */
+  count(filter?: MemoryListFilter): Promise<number>;
+  /**
    * Apply a retention policy (FR-15): expire aged lineages and compact superseded versions. Deletion
    * only — never mutates content or the current version of a kept lineage. Returns what was removed.
    */
@@ -132,6 +138,10 @@ export function createMemoryService(store: MemoryStore): MemoryService {
 
     list(filter) {
       return store.listCurrent(filter);
+    },
+
+    count(filter) {
+      return store.countCurrent(filter);
     },
 
     exportAll() {

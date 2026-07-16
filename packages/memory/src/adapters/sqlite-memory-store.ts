@@ -153,6 +153,18 @@ export function createSqliteMemoryStore(db: BetterSQLite3Database): MemoryStore 
         return Promise.resolve(rows.map(toMemory));
       },
 
+      countCurrent(filter?: MemoryListFilter) {
+        const conditions: SQL[] = [isNull(memories.supersededBy), inTenant];
+        if (filter?.kind !== undefined) conditions.push(eq(memories.kind, filter.kind));
+        if (filter?.scope !== undefined) conditions.push(eq(memories.scope, filter.scope));
+        const row = db
+          .select({ value: sql<number>`count(*)` })
+          .from(memories)
+          .where(and(...conditions))
+          .get();
+        return Promise.resolve(row?.value ?? 0);
+      },
+
       exportAll() {
         const rows = db
           .select()

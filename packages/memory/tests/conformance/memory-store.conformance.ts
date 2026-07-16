@@ -114,6 +114,62 @@ export function runMemoryStoreConformance(name: string, makeStore: MemoryStoreFa
       }
     });
 
+    it('counts current memories, honouring filters and agreeing with listCurrent', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        expect(await store.countCurrent()).toBe(0);
+
+        const decision = memory({ kind: 'decision', scope: 'global' });
+        const lesson = memory({ kind: 'lesson', scope: 'api' });
+        await store.add(decision);
+        await store.add(lesson);
+
+        expect(await store.countCurrent()).toBe(2);
+        expect(await store.countCurrent({ kind: 'lesson' })).toBe(1);
+        expect(await store.countCurrent({ scope: 'global' })).toBe(1);
+        expect(await store.countCurrent({ kind: 'incident' })).toBe(0);
+        // A count must never disagree with the listing it summarises.
+        expect(await store.countCurrent()).toBe((await store.listCurrent()).length);
+      } finally {
+        await cleanup?.();
+      }
+    });
+
+    it('counts lineages, not versions — superseding never inflates the count', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const v1 = memory();
+        await store.add(v1);
+        expect(await store.countCurrent()).toBe(1);
+
+        const v2 = memory({ lineageId: v1.lineageId, version: 2, supersedes: v1.id });
+        await store.supersede(v1.id, v2);
+
+        // Two versions are stored, but only one is current — the count follows listCurrent.
+        expect(await store.listVersions(v1.lineageId)).toHaveLength(2);
+        expect(await store.countCurrent()).toBe(1);
+      } finally {
+        await cleanup?.();
+      }
+    });
+
+    it('scopes countCurrent by tenant', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const a = store.forTenant('tenant-a');
+        const b = store.forTenant('tenant-b');
+        await a.add(memory());
+        await a.add(memory());
+        await b.add(memory());
+
+        expect(await a.countCurrent()).toBe(2);
+        expect(await b.countCurrent()).toBe(1);
+        expect(await store.countCurrent()).toBe(0); // the default view is a distinct tenant
+      } finally {
+        await cleanup?.();
+      }
+    });
+
     it('returns undefined for an unknown id or lineage', async () => {
       const { store, cleanup } = await makeStore();
       try {

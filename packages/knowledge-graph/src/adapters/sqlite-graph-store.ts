@@ -224,6 +224,30 @@ export function createSqliteGraphStore(db: BetterSQLite3Database): GraphStore {
         );
       },
 
+      countNodes(filter?: NodeFilter) {
+        const conditions: SQL[] = [nodeInTenant];
+        if (filter?.kind !== undefined) conditions.push(eq(nodes.kind, filter.kind));
+        const row = db
+          .select({ value: sql<number>`count(*)` })
+          .from(nodes)
+          .where(and(...conditions))
+          .get();
+        return Promise.resolve(row?.value ?? 0);
+      },
+
+      countEdges(filter?: EdgeFilter) {
+        const conditions: SQL[] = [edgeInTenant];
+        if (filter?.kind !== undefined) conditions.push(eq(edges.kind, filter.kind));
+        if (filter?.from !== undefined) conditions.push(eq(edges.from, filter.from));
+        if (filter?.to !== undefined) conditions.push(eq(edges.to, filter.to));
+        const row = db
+          .select({ value: sql<number>`count(*)` })
+          .from(edges)
+          .where(and(...conditions))
+          .get();
+        return Promise.resolve(row?.value ?? 0);
+      },
+
       getEffects(source: NodeId, options?: GetEffectsOptions) {
         const maxDepth = options?.maxDepth ?? DEFAULT_EFFECT_DEPTH;
         const rows = db.all<{ target: NodeId; depth: number; score: number; path: string }>(sql`

@@ -24,6 +24,21 @@ export interface SourceScanResult {
   readonly summary: ScanSummary;
 }
 
+/** Aggregate numbers across one tenant's sources — backs the workspace summary (F-060). */
+export interface SourceSummary {
+  /** Sources registered to this tenant. */
+  readonly sources: number;
+  /** Distinct documents indexed across those sources (the manifest's `path → hash` entries). */
+  readonly documents: number;
+  /**
+   * When any of this tenant's sources last completed a scan, or `null` if none has **in this
+   * process**. Scan status is in-memory (see {@link SourceScanStatus}), so a restart resets this to
+   * `null` even though scans happened — nothing persists a scan timestamp today. Callers must
+   * present it as "no scan this session", never as "never scanned".
+   */
+  readonly lastScanAt: string | null;
+}
+
 /**
  * Builds a {@link Connector} for a registered source. The composition root supplies this (it knows the
  * available connector kinds — filesystem/git); it **throws** a validation error for an unsupported kind,
@@ -57,6 +72,12 @@ export interface SourceService {
   remove(id: SourceId): Promise<void>;
   scan(id: SourceId): Promise<SourceScanResult>;
   scanStatus(id: SourceId): Promise<SourceScanStatus | undefined>;
+  /**
+   * Aggregate numbers for this tenant's sources (F-060). Counts documents from the manifest rather
+   * than the corpus, so it is tenant-correct by construction: the *registry* is tenant-scoped, and
+   * only this tenant's sources are summed.
+   */
+  summary(): Promise<SourceSummary>;
   /**
    * Resolve the connector for a source seen on the queue — the seam the runtime wires into
    * {@link import('../pipeline/worker.js').IngestionWorkerOptions.connectorFor}. Returns `undefined`
@@ -170,6 +191,20 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
         const record = await registry.get(id);
         if (record === undefined) return undefined;
         return statuses.get(id) ?? { state: 'idle' };
+      },
+
+      async summary() {
+        const records = await registry.list();
+        const snapshots = await Promise.all(records.map((record) => manifest.snapshot(record.id)));
+        const documents = snapshots.reduce((total, snapshot) => total + snapshot.size, 0);
+
+        let lastScanAt: string | null = null;
+        for (const record of records) {
+          const at = statuses.get(record.id)?.lastScan?.at;
+          if (at !== undefined && (lastScanAt === null || at > lastScanAt)) lastScanAt = at;
+        }
+
+        return { sources: records.length, documents, lastScanAt };
       },
 
       connectorFor(source) {

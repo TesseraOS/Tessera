@@ -78,6 +78,11 @@ export interface KnowledgeGraphService {
    */
   purge(): Promise<{ readonly nodes: number; readonly edges: number }>;
   /**
+   * How much graph this tenant has: total nodes, and effect-links specifically (FR-18). Backs the
+   * workspace summary (`GET /v1/stats`, F-060) — counted at the store, never by listing.
+   */
+  counts(): Promise<{ readonly nodes: number; readonly effectLinks: number }>;
+  /**
    * A view of this service confined to `tenantId` (FR-52, ADR-0033). The base service operates in
    * {@link DEFAULT_TENANT_ID}.
    */
@@ -209,6 +214,14 @@ export function createKnowledgeGraphService(store: GraphStore): KnowledgeGraphSe
         await store.removeNode(node.id);
       }
       return { nodes: nodes.length, edges: edges.length };
+    },
+
+    async counts() {
+      const [nodes, effectLinks] = await Promise.all([
+        store.countNodes(),
+        store.countEdges({ kind: EFFECT_LINK_KIND }),
+      ]);
+      return { nodes, effectLinks };
     },
 
     forTenant(tenantId) {

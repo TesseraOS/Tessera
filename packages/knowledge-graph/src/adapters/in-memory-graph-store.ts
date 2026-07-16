@@ -113,6 +113,28 @@ export function createInMemoryGraphStore(): GraphStore {
         return Promise.resolve(result);
       },
 
+      countNodes(filter?: NodeFilter) {
+        let total = 0;
+        for (const node of nodes.values()) {
+          if (filter?.kind === undefined || node.kind === filter.kind) total += 1;
+        }
+        return Promise.resolve(total);
+      },
+
+      countEdges(filter?: EdgeFilter) {
+        let total = 0;
+        for (const edge of edges.values()) {
+          if (
+            (filter?.kind === undefined || edge.kind === filter.kind) &&
+            (filter?.from === undefined || edge.from === filter.from) &&
+            (filter?.to === undefined || edge.to === filter.to)
+          ) {
+            total += 1;
+          }
+        }
+        return Promise.resolve(total);
+      },
+
       getEffects(source: NodeId, options?: GetEffectsOptions) {
         const maxDepth = options?.maxDepth ?? DEFAULT_EFFECT_DEPTH;
         const candidates: RawEffectHit[] = [];

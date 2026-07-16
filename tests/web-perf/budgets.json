@@ -1,0 +1,31 @@
+{
+  "$note": "Frontend budgets for the `web-perf` gate (F-049). ADR-0021 asked for these in F-028 and they were never enforced — documentation, not a gate. Now they fail. A miss is a code-splitting job or a registered work item; it is never a raised number here.",
+  "$firstLoadNote": "Measured OVER THE WIRE and gzipped by the harness itself (zlib), not read from the build output: Next 16/Turbopack stopped printing first-load JS in the route table (see the turbopack-route-table-no-first-load-js lesson), and server-side compression settings must not change what we claim. Captured at the `load` event and NOT at networkidle — 'First Load JS' is what the route needs to render; chunks pulled in by dynamic import after hydration are excluded, because deferring them is the point of code-splitting. Measuring at networkidle counts the lazy shader chunk and reports ~260KB, failing the app for succeeding.",
+  "$vitalsNote": "CWV are NOT gated here — see F-074 and the header of web-perf.mjs. Lighthouse could not produce a number worth gating on for pages with continuous rAF/WebGL animation: simulated throttling extrapolated a 71,670ms TBT inside a ~10s trace, and throttlingMethod:'provided' returned TBT NaN / performance score 0. The per-app `vitals` block below is retained as the DECLARED target (from the marketing manifest, with inpMs mapped to TBT — its lab proxy, since Lighthouse cannot measure INP, a field metric) so F-074 has its acceptance ready. Declared, not enforced: NFR-17's CWV clause is not yet satisfied by a gate, and this file does not pretend otherwise.",
+  "apps": [
+    {
+      "name": "marketing",
+      "packageName": "@tessera/marketing",
+      "port": 3310,
+      "path": "/",
+      "public": true,
+      "firstLoadJsGzipKb": 240,
+      "$firstLoadSource": "docs/design/marketing-design.manifest.json budgets.firstLoadJsGzipKb — the manifest is the source of truth; this mirrors it, and the harness asserts the two agree so they cannot drift.",
+      "vitals": {
+        "lcpMs": 2000,
+        "cls": 0.05,
+        "tbtMs": 200,
+        "$source": "marketing-design.manifest.json budgets.webVitals (inpMs 200 → TBT, its lab proxy)."
+      }
+    },
+    {
+      "name": "web",
+      "packageName": "@tessera/web",
+      "port": 3311,
+      "path": "/signin",
+      "public": false,
+      "firstLoadJsGzipKb": 300,
+      "$firstLoadSource": "Established by measurement (F-049), not inherited: the dashboard legitimately ships more than the marketing site (React Query, the app shell, next-themes). /signin is the measured route because it is the only dashboard page reachable unauthenticated, and it is the real first paint for every user. Heavy views (Monaco, React Flow) are code-split and must never reach this number — if they do, the split regressed, which is precisely what ADR-0021 asked to be caught."
+    }
+  ]
+}

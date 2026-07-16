@@ -3,6 +3,71 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-16 (v4) — F-049 DONE — `perf` + `web-perf` gates ACTIVE; **NFR-4 measured for the first time**; no `planned` gates remain
+
+**Harness-strict selection** (next by id in R3; blocker F-039 done). Plan:
+[`.harness/plans/F-049-perf-benchmarks-and-budgets.md`](../plans/F-049-perf-benchmarks-and-budgets.md).
+**No product code changed.** Two commits (bench/perf, then web-perf + close-out).
+
+**NFR-4 was an R0 exit criterion that was never measured** (flagged 2026-07-04) — "search p95 < 300 ms",
+"compile p95 < 2 s", "token-lean" were claims with no evidence. They are now facts:
+
+| metric (REAL Transformers.js) | measured | NFR-4 ceiling |
+|---|---|---|
+| search p95 | **10.8 ms** | 300 ms |
+| compile p95 (default budget) | **14.2 ms** | 2 s |
+| incremental ingest p95 | **104 ms** | "near-real-time" |
+
+**What changed**
+- **`tests/bench` (`@tessera/bench`) — the `perf` gate.** A **versioned deterministic corpus** (seeded
+  mulberry32, 150 files with real import chains; *generated, not committed* — the generator+seed+version
+  is the thing that must stay stable) drives the **real Local runtime in-process**. Measures search/
+  compile/incremental-ingest p95 and **tokens-per-answer for REST *and* MCP separately** (ADR-0036
+  parity), counted with `estimateTokens` — the same counter the budget itself is enforced with.
+  Thresholds are **absolute** (committed `thresholds.json`), never baseline deltas: CI hardware varies,
+  and a delta gate would flake until someone disabled it. The gate runs **fake embeddings** so it
+  measures *our engine* and stays machine-comparable; the real-provider number is recorded, not gated.
+  `--record` updates the committed baseline **deliberately** — a baseline that rewrites itself records
+  nothing and would ratify a regression as the new normal.
+- **`tests/web-perf` (`@tessera/web-perf`) — the `web-perf` gate** (ADR-0021: asked for in F-028, never
+  turned on). First-load JS measured over the wire, gzipped by the harness: **marketing 203.9 KB**
+  (budget 240) · **web `/signin` 253.1 KB** (budget 300). Marketing's budget is cross-checked against
+  `marketing-design.manifest.json` so the two cannot drift.
+- **gates.json now has no `planned` entries.** Both gates have CI steps (the ci-mirror guard enforced it).
+
+**Three measurement bugs I found in my own harness** — each would have shipped a gate that lies
+- **Token counts weren't deterministic** until mtimes were pinned: ingestion records mtime → the
+  temporal retriever ranks on it → rank-based fusion reshuffles the result set. **Content-identical is
+  not corpus-identical**; tokens moved ~10% run to run.
+- **The bundle measurement undercounted 4.6×** (46 KB vs 214 KB real): `await response.body()` inside an
+  async `page.on('response')` handler races context teardown, the rejections were swallowed by a catch.
+  It would have happily passed a bundle that had already blown its budget.
+- **networkidle counted the lazy shader chunk** (260 KB), failing the app *for successfully
+  code-splitting*. "First Load JS" is the `load` event — that IS the budget's definition. 203.9 KB then
+  cross-validated against the historically recorded ~208 KB.
+
+**Scope limit — stated, not hidden**
+The acceptance's **Lighthouse CI half was implemented and removed.** On pages running a WebGL shader +
+canvas constellation on continuous rAF loops, Lighthouse extrapolated a **71,670 ms TBT inside a ~10 s
+trace** (simulated throttling), and `throttlingMethod: 'provided'` returned **TBT NaN / score 0**.
+Gating on either is gating on noise. So **CWV is declared-but-unenforced, NFR-17's CWV clause is NOT
+satisfied by a gate**, and **F-074** carries it with the evidence and its acceptance pre-written. The
+gate description and `budgets.json` say so plainly rather than implying coverage.
+
+Also corrected an assumption the data disproved: the compile envelope is ×1.61, but the **trace is only
+166 of ~1275 overhead tokens (13%)** — the bulk is JSON escaping + the provenance FR-32 requires. No
+"trim the trace" work item was invented, because the measurement didn't support one.
+
+**Evidence** — verify-state ok · typecheck **39** · lint **22** · format clean · test **36** · build
+**19** · e2e **20** · e2e-full **2/2** · **bench** every NFR-4 threshold met · **web-perf** both budgets
+met. Effects **E-005** (two gates + CI; no `planned` left) and **E-013** (the compiler now has a measured
+latency + token contract) extended.
+
+**Next step**
+- R3 remaining, by id: **F-060** (live Overview: real stats + SSE feed), **F-061** (search depth —
+  note F-073 belongs here), **F-062** (Inspector v2), **F-063** (data tables + Audit v2). All
+  unblocked. **F-071 (must)** still outstanding from F-048 — multi-tenant ingestion is silently broken.
+
 ## 2026-07-16 (v3) — F-048 DONE — full-stack e2e (`e2e-full` gate ACTIVE): real server + fixture repo + real web + real MCP client — **found 3 real defects on first run**
 
 **Harness-strict selection** (next eligible by id in R3; blockers F-038/F-039/F-041/F-045 done; tree

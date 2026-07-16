@@ -226,10 +226,14 @@
         {
           "kind": "test",
           "ref": "tests/e2e-full (@tessera/e2e-full) — the e2e-full gate (F-048; NFR-16), ACTIVE: `pnpm -w test:e2e:full` -> turbo `test:e2e:full` (dependsOn ^build) -> playwright. Mirrored by the \"Full-stack E2E (gate 9)\" CI step (verify-state enforces the mirror). Added a `tests/*` glob to pnpm-workspace.yaml — the workspace is no longer just apps/* + packages/*."
+        },
+        {
+          "kind": "test",
+          "ref": "tests/bench (@tessera/bench) — the `perf` gate (F-049; NFR-4), ACTIVE: `pnpm -w bench`. tests/web-perf (@tessera/web-perf) — the `web-perf` gate (ADR-0021), ACTIVE: `pnpm -w test:perf`. Both mirrored by CI steps (verify-state enforces it). web-perf gates the BUNDLE budget only; CWV is F-074 — the gate description states that scope limit rather than implying NFR-17 is covered."
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "CI runs the verification gates; the workflow steps and the verification protocol table must mirror gates.json. Adding/removing/renaming a gate requires updating the CI workflow and the protocol. F-048 activated the e2e-full gate: gates.json `planned`->`active` REQUIRES a matching CI step in the same change or verify-state fails (that guard did its job here). The gate boots two real servers + a browser + an MCP process on ports 3200/3201, chosen so it can run back-to-back with gate 6 (3000/3100) in one CI job; CI must install the Playwright browser for @tessera/e2e-full too (it pins the same @playwright/test, so it is one shared browser build).",
+      "rationale": "CI runs the verification gates; the workflow steps and the verification protocol table must mirror gates.json. Adding/removing/renaming a gate requires updating the CI workflow and the protocol. F-048 activated the e2e-full gate: gates.json `planned`->`active` REQUIRES a matching CI step in the same change or verify-state fails (that guard did its job here). The gate boots two real servers + a browser + an MCP process on ports 3200/3201, chosen so it can run back-to-back with gate 6 (3000/3100) in one CI job; CI must install the Playwright browser for @tessera/e2e-full too (it pins the same @playwright/test, so it is one shared browser build). F-049 activated the last two planned gates (perf + web-perf), so gates.json now has no `planned` entries left. Both were designed against CI hardware variance: perf asserts ABSOLUTE NFR-4 thresholds (never baseline deltas) with fake embeddings so the engine sits orders of magnitude under the ceiling, and web-perf asserts a byte count, which carries no timing variance at all.",
       "confidence": 1,
       "origin": "manual"
     },
@@ -486,10 +490,14 @@
         {
           "kind": "package",
           "ref": "depends on: @tessera/retrieval (E-012), @tessera/knowledge-graph get_effects (E-011); corpus via the FragmentSource seam (ingestion)"
+        },
+        {
+          "kind": "test",
+          "ref": "tests/bench (F-049) — the compiler now has a MEASURED latency + token contract: compile p95 at the default budget, the compile envelope ratio (response tokens / package totalTokens), and FR-30 budget adherence are all asserted per run. A change that slows compilation or fattens the package fails the perf gate."
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "The ContextPackage shape (sections/provenance/whyIncluded), the CompilationTrace, and the CompileRequest are the contract REST/MCP `compile_context` returns and the web Package Inspector renders (concretely advances E-003); changing them ripples to API/MCP/web. The compiler consumes the retrieval + graph contracts. CQS (PRD §9) is the regression guard that compilation beats naive top-k. FragmentSource is the corpus seam ingestion fills. F-037 (ADR-0033) added ContextCompiler.forTenant (scopes the retriever + graph store) and folded a non-default tenantId into the CompilationKey fingerprint so a shared cache stays tenant-isolated — no ContextPackage/CompileRequest/API shape change (tenancy stays off the wire).",
+      "rationale": "The ContextPackage shape (sections/provenance/whyIncluded), the CompilationTrace, and the CompileRequest are the contract REST/MCP `compile_context` returns and the web Package Inspector renders (concretely advances E-003); changing them ripples to API/MCP/web. The compiler consumes the retrieval + graph contracts. CQS (PRD §9) is the regression guard that compilation beats naive top-k. FragmentSource is the corpus seam ingestion fills. F-037 (ADR-0033) added ContextCompiler.forTenant (scopes the retriever + graph store) and folded a non-default tenantId into the CompilationKey fingerprint so a shared cache stays tenant-isolated — no ContextPackage/CompileRequest/API shape change (tenancy stays off the wire). F-049 put numbers on it: compile p95 8.7ms (fake embeddings) / 14.2ms (real Transformers.js) against NFR-4 2000ms, and an envelope of x1.61 over the package — of which the trace is only 13%, disproving the assumption that the trace is the token cost; the bulk is JSON escaping + the provenance FR-32 requires.",
       "confidence": 1,
       "origin": "manual"
     },

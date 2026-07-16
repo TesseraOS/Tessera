@@ -71,10 +71,10 @@
     {
       "id": "web-perf",
       "order": 8,
-      "status": "planned",
+      "status": "active",
       "command": "pnpm -w test:perf",
       "requiredFor": ["web"],
-      "description": "Frontend performance budget (bundle size / Lighthouse CI) for every web app (dashboard + marketing + docs). Planned (ADR-0021); ACTIVATES WITH F-049 (drift fix: originally 'activates with F-028' but was never turned on). Enforces code-split of heavy views, a lean initial bundle, and Core Web Vitals budgets on public surfaces (NFR-17)."
+      "description": "Frontend performance budget (ADR-0021) — ACTIVE since F-049; lives in tests/web-perf (@tessera/web-perf). Enforces the first-load JS budget for every web app, measured over the wire and gzipped by the harness (Next 16/Turbopack no longer prints first-load JS, and server compression must not change what we claim), captured at the `load` event so lazily-imported chunks are correctly excluded — that IS the definition of the budget. Marketing's number is cross-checked against docs/design/marketing-design.manifest.json so the two cannot drift. **Scope limit, stated plainly:** Core Web Vitals are NOT gated. Lighthouse was implemented and removed — on pages with continuous rAF/WebGL animation it extrapolated a 71,670ms TBT inside a ~10s trace under simulated throttling, and returned TBT NaN / score 0 under 'provided'. Gating on that would be gating on noise, so NFR-17's CWV clause remains declared-but-unenforced and is tracked as F-074. This gate does not claim to satisfy it."
     },
     {
       "id": "e2e-full",

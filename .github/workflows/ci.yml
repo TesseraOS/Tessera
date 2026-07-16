@@ -71,6 +71,11 @@ jobs:
       - name: Full-stack E2E (gate 9)
         run: pnpm test:e2e:full
 
+      # Frontend budget (gate 8, ADR-0021): first-load JS measured over the wire. Deterministic — it is
+      # a byte count, not a timing — so it is safe on shared CI hardware.
+      - name: Web performance budgets (gate 8)
+        run: pnpm test:perf
+
       # Backend perf (gate 10, NFR-4): thresholds are absolute and sit orders of magnitude above the
       # measured engine, so this is stable on shared CI hardware rather than a coin flip.
       - name: Performance benchmarks (gate 10)

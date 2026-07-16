@@ -1,3 +1,5 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+  # Cross-surface test suites (F-048): neither an app nor a library — the full-stack e2e harness.
+  - 'tests/*'

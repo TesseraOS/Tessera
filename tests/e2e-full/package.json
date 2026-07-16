@@ -1,0 +1,21 @@
+{
+  "name": "@tessera/e2e-full",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Full-stack end-to-end suite (F-048, NFR-16): a real server over real adapters with an ingested fixture repo, driven by the real dashboard (human journey) and a real MCP client (agent journey).",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test:e2e:full": "playwright test"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@playwright/test": "^1.61.1",
+    "@tessera/api": "workspace:*",
+    "@tessera/config": "workspace:*",
+    "@tessera/server": "workspace:*",
+    "@types/node": "^22",
+    "typescript": "^5"
+  }
+}

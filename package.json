@@ -14,6 +14,7 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
+    "test:e2e:full": "turbo run test:e2e:full",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

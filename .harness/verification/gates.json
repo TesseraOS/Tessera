@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updated": "2026-07-04",
-  "description": "Ordered verification gates. Run in order; stop at first failure. Code gates went 'active' with the F-001 scaffold. 'e2e' went 'active' with F-011 (the REST API — first user-facing surface). 'a11y' active since F-028 (ADR-0021). 'web-perf' now activates with F-049 (it was slated for F-028 and never activated — drift caught in the 2026-07-04 launch-readiness review). 'e2e-full' (NFR-16) activates with F-048; 'perf' (NFR-4) activates with F-049.",
+  "updated": "2026-07-16",
+  "description": "Ordered verification gates. Run in order; stop at first failure. Code gates went 'active' with the F-001 scaffold. 'e2e' went 'active' with F-011 (the REST API — first user-facing surface). 'a11y' active since F-028 (ADR-0021). 'e2e-full' (NFR-16) went 'active' with F-048 — the first gate that exercises the product as ONE deployment rather than a slice. 'web-perf' now activates with F-049 (it was slated for F-028 and never activated — drift caught in the 2026-07-04 launch-readiness review); 'perf' (NFR-4) activates with F-049.",
   "gates": [
     {
       "id": "state",
@@ -79,10 +79,10 @@
     {
       "id": "e2e-full",
       "order": 9,
-      "status": "planned",
+      "status": "active",
       "command": "pnpm -w test:e2e:full",
       "requiredFor": ["release"],
-      "description": "Full-stack end-to-end (NFR-16): boot the REAL server (Local profile) → register a fixture repo source → indexed → Playwright drives the real dashboard against that live API (sign-in, sources, search, inspector, memory, audit) AND a real MCP client session exercises the tools. Mimics an actual user + environment. Activates with F-048; exact command finalized there."
+      "description": "Full-stack end-to-end (NFR-16) — ACTIVE since F-048; lives in tests/e2e-full (@tessera/e2e-full). Boots the REAL server via startApiServer (Local profile, file-backed SQLite in a temp dir, fake embeddings by default; real Transformers.js behind TESSERA_E2E_REAL_EMBEDDINGS=1), registers a fixture repo + scans it before reporting healthy, then runs two journeys against that ONE live deployment: the HUMAN journey (Playwright drives the real apps/web — production build, proxied at the live API, not its own stub — sign-in → sources → search → inspector → capture a memory in the real Monaco editor → audit) and the AGENT journey (a real MCP client spawns the real tessera-mcp binary over stdio against the same database, exercising search/compile_context/get_effects/capture_memory/add_source with budget-bounded + token-lean assertions, cross-verified through REST). Serialized (workers:1) and retries:0 — a flaky full-stack gate is a lie. Ports 3200/3201 so it can run back-to-back with the e2e gate."
     },
     {
       "id": "perf",

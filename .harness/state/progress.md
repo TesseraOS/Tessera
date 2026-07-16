@@ -3,6 +3,78 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-16 (v3) — F-048 DONE — full-stack e2e (`e2e-full` gate ACTIVE): real server + fixture repo + real web + real MCP client — **found 3 real defects on first run**
+
+**Harness-strict selection** (next eligible by id in R3; blockers F-038/F-039/F-041/F-045 done; tree
+clean). Plan: [`.harness/plans/F-048-full-stack-e2e.md`](../plans/F-048-full-stack-e2e.md). **No product
+code changed** — this is a test feature, and every defect it found was *registered*, not patched into it.
+
+**What changed**
+- **New private suite `tests/e2e-full`** (`@tessera/e2e-full`) via a new **`tests/*` workspace glob** —
+  it is neither an app nor a library, and the location says so.
+- **The real deployment** (`support/full-stack-server.mjs`): boots **`startApiServer`** — the same entry
+  the shipped `tessera-api` binary uses — over the Local profile with **file-backed** SQLite in a fresh
+  `mkdtemp` dir (**not** `:memory:`: the agent journey is a *separate process* that must open the same
+  DB; SQLite is WAL, so that is safe), token auth, audit on, fake embeddings (real Transformers.js
+  behind `TESSERA_E2E_REAL_EMBEDDINGS=1`). It registers the fixture repo and **scans it, asserting
+  `added === 3` before reporting healthy**. Handoff is a **file**, not an `/e2e/*` route — the real
+  server keeps its real surface (an improvement on the F-045 precedent).
+- **Fixture** (3 files): the nonsense term **`quernstone`** so a search hit can never be incidental;
+  `reporting.ts` imports `ledger.ts` so `get_effects` has a real dependent to return.
+- **Human journey:** Playwright drives the **real `apps/web`** (production build, proxied at the live
+  API — *not* its own stub): sign-in → sources → search → inspector → capture a memory **in the real
+  Monaco editor** → audit.
+- **Agent journey:** a real MCP `Client` spawns the **real `tessera-mcp` binary over stdio** against the
+  **same data dir** — `search`/`compile_context`/`get_effects`/`capture_memory`/`add_source`, asserting
+  **budget-bounded** (`totalTokens <= budget`), **token-lean** (<20KB payload), that the compiled package
+  carries the fixture's **real prose**, and cross-verifying each write through REST. This is the first
+  test to prove ADR-0036's "one engine, two surfaces" over **real files**, not a shared in-process object.
+- **Gate:** `e2e-full` `planned` → **ACTIVE** (`pnpm -w test:e2e:full`) + turbo task + root script + a CI
+  step (verify-state's ci-mirror guard *enforced* that pairing). **`workers: 1`, `retries: 0`** — a flaky
+  full-stack gate is a lie. Ports 3200/3201 so it runs back-to-back with gate 6.
+
+**The three defects it found on first run** (all registered as features, none worked around silently)
+- **F-071 (must) — ingestion indexes into the DEFAULT tenant, always.** `createIndexingDocumentSink`
+  calls `indexDocument` with **no `tenantId`**, so it defaults to `DEFAULT_TENANT_ID` (its own comment
+  calls this "the F-038 boundary"). In any token/OIDC deployment a scan reports **`added: 3`** while the
+  registering tenant sees **nothing**. Proven against a real server: tenant `acme` → search `[]`, graph
+  empty, compile 0 sections; the identical run as `default` → 3 ranked hits, 6 graph nodes, a 533-token
+  package. **No existing gate could see this** — api/mcp e2e all run in the zero-auth default tenant.
+  The suite is pinned to the default tenant (the shipped single-tenant local shape, ADR-0003) with a
+  loud comment at the `TENANT` constant pointing at F-071.
+- **F-072 (should) — MCP over stdio has no credential channel.** `defaultCredentialResolver` reads the
+  SDK `authInfo` / `Authorization` header; **stdio has neither**, so token-mode MCP rejects every call
+  and nothing in `.env.example` offers a token. The gateway's own doc comment claims it "works over
+  stdio (one identity)" — true only in zero-auth mode. The agent journey therefore runs zero-auth (the
+  real local agent shape).
+- **F-073 (should) — search results have no label.** Hits are `{ref: <sha256>, score, signals}`, and the
+  dashboard's `label ?? ref` fallback renders a **64-char content hash** for real repository content.
+  The data exists (the corpus stores `path`; graph nodes carry `label: 'reporting.ts'`) — it just never
+  reaches the retrieval `Candidate`. Overlaps F-061.
+
+**Evidence/verification** (all gates fresh, workspace-wide)
+- verify-state ok (968 doc links, **11 gates CI-mirrored**) · typecheck **36** · lint **20** · format
+  clean · test **35** · build **19** · e2e **20** · **e2e-full 2/2 (~40s)**.
+- Two of my own assumptions were disproved by the real system and corrected in the specs (both now
+  carry the reasoning): refs are **content hashes, not paths**; and a semantic retriever has **no
+  relevance floor**, so a nonsense query still returns nearest neighbours — the **keyword/FTS** signal
+  is the load-bearing proof of a real hit. The real **Monaco** editor also had to be *focused and
+  typed into* (a contenteditable whose `.view-line` overlay eats clicks), not `fill`ed — unit tests
+  stub Monaco, so this suite is the only place it is ever exercised.
+
+**Decisions**
+- No ADR: the suite adds no product decision — it composes existing entry points. The *findings* may
+  each need one (F-071 likely does: the tenant must ride the queue job, since the sink is constructed
+  once per runtime, not per tenant).
+- Effects **E-005** (new active gate + CI mirror + the `tests/*` glob) and **E-003** (the first
+  cross-surface consumer; it now pins the real wire shapes) extended.
+
+**Next step**
+- Next eligible by id in R3 is **F-049** (perf benchmarks + `web-perf`/`perf` gate activation; blocker
+  F-039 done). Then the dashboard-data set F-060/F-061/F-062/F-063. **F-071 is a `must`** and is the
+  most consequential thing this session found — a multi-tenant deployment is silently broken until it
+  lands; it deserves priority over the R4 ordering if hosted/multi-tenant is near-term.
+
 ## 2026-07-16 (v2) — F-047 DONE — compliance completion: memory retention (FR-15), DSR export/erasure (NFR-13), MCP-surface audit (closes the F-027 seam)
 
 **Harness-strict selection** (ordering is *by release, then id* — not priority — so F-047 precedes the

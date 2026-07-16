@@ -2,7 +2,7 @@
   "$schemaRef": "./schemas/feature_list.schema.json",
   "version": 1,
   "project": "tessera",
-  "updated": "2026-07-12",
+  "updated": "2026-07-16",
   "policy": {
     "wip_limit": 1,
     "ordering": "by release, then id; respect blockedBy"
@@ -1564,7 +1564,7 @@
       "package": "—",
       "release": "R3",
       "priority": "must",
-      "status": "backlog",
+      "status": "done",
       "blockedBy": [
         "F-038",
         "F-039",
@@ -1587,7 +1587,8 @@
       "effects": [
         "E-003",
         "E-005"
-      ]
+      ],
+      "notes": "Done 2026-07-16 (plan .harness/plans/F-048-full-stack-e2e.md). New private workspace suite tests/e2e-full (@tessera/e2e-full) via a new `tests/*` pnpm-workspace glob — neither an app nor a library. NO product code changed. support/full-stack-server.mjs boots the REAL deployment through `startApiServer` (the same entry the shipped tessera-api binary uses): Local profile over FILE-backed SQLite in a fresh mkdtemp dir (not :memory: — the agent journey is a separate process that must open the same DB; SQLite is WAL so that is safe), token auth, audit on, fake embeddings by default (real Transformers.js behind TESSERA_E2E_REAL_EMBEDDINGS=1), port 3200. It registers the 3-file fixture repo (distinctive term 'quernstone' so a hit can never be incidental; src/reporting.ts imports src/ledger.ts to give get_effects a real dependent) and SCANS it, asserting added===3 BEFORE reporting healthy. Handoff is a FILE (.tmp/handoff.json), not an /e2e/* route, so the real server keeps its real surface. HUMAN journey: Playwright drives the real apps/web (production build, TESSERA_API_URL at the live API — not its own stub) sign-in -> sources -> search -> inspector -> capture a memory in the REAL Monaco editor -> audit. AGENT journey: a real MCP Client spawns the real tessera-mcp binary over StdioClientTransport against the SAME data dir — search/compile_context/get_effects/capture_memory/add_source, budget-bounded (totalTokens<=budget) + token-lean (payload<20KB) + the compiled package carries the fixture's real prose, each write cross-verified through REST. Serialized (workers:1, fullyParallel:false) and retries:0 — a flaky full-stack gate is a lie. Ports 3200/3201 so it runs back-to-back with gate 6 (3000/3100). Gate: gates.json e2e-full planned->ACTIVE (`pnpm -w test:e2e:full`) + turbo task (dependsOn ^build) + root script + a CI step (verify-state's ci-mirror guard enforced it). **THIS FEATURE PAID FOR ITSELF ON FIRST RUN — three real defects no other gate could see, all registered rather than papered over: F-071 (ingestion indexes into the DEFAULT tenant regardless of which tenant registered the source, so a multi-tenant scan reports `added: 3` while the tenant sees NOTHING — proven against a real server; the suite is pinned to the default tenant with a comment pointing at F-071), F-072 (stdio carries no credential channel, so token-mode MCP is unauthenticatable — the agent journey runs zero-auth, the real local shape), F-073 (search hits carry no label, so the dashboard renders 64-char content hashes for real repo content).** Also corrected two of my own wrong assumptions the real system disproved: refs are content hashes not paths, and a semantic retriever has no relevance floor so a nonsense query still returns nearest neighbours (the keyword/FTS signal is the load-bearing proof). Evidence: verify-state ok (968 doc links) - typecheck 36 - lint 20 - format clean - test 35 - build 19 - e2e 20 - **e2e-full 2/2 (~40s)**. Effects E-005 (gate+CI mirror, workspace glob) + E-003 (first cross-surface consumer; pins the real wire shapes). SEAMS: the suite is single-tenant until F-071; the agent is zero-auth until F-072; real-embeddings runs are env-guarded and unexercised in CI."
     },
     {
       "id": "F-049",
@@ -2324,6 +2325,101 @@
         "E-023"
       ],
       "notes": "Done 2026-07-12 (stakeholder dashboard overhaul; absorbs F-068). Plan: .harness/plans/F-070-dashboard-overhaul.md; ADR-0047 (supersedes ADR-0023's color clauses); DESIGN-SYSTEM v2 (+§0.1 catalog, §8.1 contrast, §11 illustrations/mascot) + manifest 2.0.0. Shipped in 6 verified increments: (1) governance — F-070 registration, ADR-0047, DESIGN-SYSTEM v2, contrast rule+skill(+.claude shim). (2) THEME SYSTEM — app/themes.css vendors amber/claude/notebook as :root[data-theme='X']/.dark blocks (full role set + charts + sidebar + radius + shadows + per-theme fonts) while the classless :root/.dark stay Monkai (byte-stable default); mode=.dark (next-themes) × theme=data-theme (lib/theme.tsx + lib/theme-script.ts pre-paint, no FOUC); @theme inline resolves fonts+shadows through runtime tokens so components stay token-only; next/font theme faces preload:false. EXECUTABLE contrast gate apps/web/tests/contrast.test.ts (zero-dep oklch/hex→sRGB→WCAG math, 4 themes×2 modes incl. opacity-composited pairs) — vendored tweakcn AA failures + latent Monkai ones nudged in-place with comments. (3) AppearanceSwitcher (header) + ⌘K commands + /settings AppearanceSettings card, all rippling radially via useAppearanceTransition (startViewTransition+clip-path; reduced-motion/no-API→instant); replaced the old ThemeToggle; tests/e2e/appearance.spec.ts (persist, no-FOUC, reduced-motion, axe across 4×2). (4) illustration layer components/art/* (Constellation/CompilerAssembly/SignalField/PipelineFlow/MemoryStrata/LedgerGate/TimeRiver — server SVG, tokens only, CSS motion frozen under reduced-motion, aria-hidden) adopted via EmptyState/ErrorState art+mascot slots under the §11 budget; @tessera/mascot dep + --mascot-* bound per theme + app/not-found.tsx (Tess lost). (5) overview greeting HeroBand (theme-tinted gradient + live Constellation, honest onboarding not metrics) + Tess watching on activity empty. Gates green workspace-wide: verify-state · typecheck 33 · lint 19 · format · test 33 (web 236 incl. 195 contrast) · build 19 · e2e 18 (web 26 incl. axe across 4 themes×2 modes; api 45; mcp 16; marketing 48). Effects E-004 (multi-theme+contrast) + E-023 (dashboard mascot consumer). Deferred (own features): live overview data F-060, search depth F-061, inspector v2 F-062, data tables F-063."
+    },
+    {
+      "id": "F-071",
+      "title": "Tenant-aware ingestion: scanned content must land in the tenant that registered the source",
+      "requirements": [
+        "FR-52",
+        "FR-62",
+        "FR-6"
+      ],
+      "service": "api",
+      "package": "@tessera/ingestion",
+      "release": "R4",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "Ingestion indexes into the tenant that OWNS the source, not DEFAULT_TENANT_ID: the tenant travels source -> queue job -> worker -> DocumentSink, and createIndexingDocumentSink/createGraphExtractionSink index through the tenant-scoped views (ADR-0033), replacing today's unconditional default-tenant write",
+        "A scan under tenant A makes the content searchable/compilable AS TENANT A, and invisible to tenant B (cross-tenant e2e over a real runtime, mirroring the F-048 full-stack suite)",
+        "A scan can no longer report success while indexing nothing the caller can see: the scan summary (or a follow-up status) reflects what was actually indexed FOR THAT TENANT — today `added: 3` is returned while the tenant sees zero results",
+        "The F-048 full-stack suite is switched off the default tenant onto a real tenant (its TENANT constant + the comment pointing here are removed); workspace gates green incl. e2e-full"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-009",
+        "E-018",
+        "E-003"
+      ],
+      "notes": "FOUND BY F-048 (2026-07-16), the first test to drive a real multi-tenant deployment end-to-end. `createIndexingDocumentSink` (packages/config/src/sources/ingestion-sink.ts) calls `indexer.indexDocument({...})` with NO tenantId, so corpus-indexer defaults it to DEFAULT_TENANT_ID; its own comment records this as the 'F-038 boundary'. Consequence: in ANY token/OIDC (multi-tenant) deployment, registering + scanning a source reports success (`added: N`) while the content is indexed into `default` and is INVISIBLE to the tenant that registered it — search/compile return nothing and the graph is empty for that tenant. Verified against a real Local-profile server: tenant `acme` -> search [] / graph empty / compile 0 sections; the identical run under `default` -> 3 ranked hits, 6 graph nodes, a 533-token package. No existing gate catches it because api/mcp e2e run in the zero-auth default tenant. F-048's suite therefore pins the deployment to the default tenant (single-tenant local, the shipped ADR-0003 shape) and documents why at the TENANT constant. Note the graph-extraction sink shares the flaw. Likely needs an ADR: the tenant must be carried on the queue job (the sink is constructed once per runtime, not per tenant)."
+    },
+    {
+      "id": "F-072",
+      "title": "MCP stdio credential channel: token/OIDC deployments cannot authenticate an agent over stdio",
+      "requirements": [
+        "FR-36",
+        "FR-52",
+        "NFR-2"
+      ],
+      "service": "api",
+      "package": "@tessera/mcp",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "An agent connecting over stdio to a token- (or OIDC-) mode deployment can present a credential and be authenticated into the right principal/tenant; the mechanism is documented for operators (an agent client launches tessera-mcp with a config it controls)",
+        "The credential never lands in a place a process listing or a shell history exposes casually; the choice (env var vs file vs handshake) is recorded with its threat model — an ADR if it deviates from a documented default",
+        "Gateway audit (F-047) attributes stdio calls to that principal; a missing/invalid credential is a clean UNAUTHORIZED, and zero-auth `none` mode is unchanged",
+        "MCP e2e covers the authenticated stdio path; the F-048 agent journey is switched onto it (its TESSERA_AUTH_MODE=none override + the note pointing here are removed)"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-018",
+        "E-020"
+      ],
+      "notes": "FOUND BY F-048 (2026-07-16). `defaultCredentialResolver` (apps/mcp/src/gateway.ts) reads the SDK `authInfo.token` or an `Authorization` header — both are populated only by an HTTP transport's auth middleware. Over **stdio** neither exists, so in token mode every tool call fails UNAUTHORIZED and there is no supported way to hand `tessera-mcp` a token; nothing in .env.example offers one. The gateway's own doc comment claims it 'works over stdio (one identity)', which is true only in zero-auth `none` mode. Today's real local shape is TESSERA_AUTH_MODE=none + TESSERA_AUTH_TENANT=<tenant>, which is what F-048's agent journey drives (documented at that override). This blocks a hosted/multi-client stdio deployment and interacts with F-055 (API-key principals). Options to weigh: a TESSERA_MCP_TOKEN env credential (simplest; note it lands in the agent client's config file), a token file path, or the `resolveCredential` seam the gateway already exposes."
+    },
+    {
+      "id": "F-073",
+      "title": "Search results are labelled by content hash — ingested documents carry no human-readable label",
+      "requirements": [
+        "FR-41",
+        "FR-26"
+      ],
+      "service": "api",
+      "package": "@tessera/retrieval",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "A search hit over ingested content carries a human-readable label/path (its source path), so the dashboard shows `src/ledger.ts` rather than a 64-char content hash — today the web falls back to `result.label ?? result.ref` and renders the hash",
+        "The label rides the existing Candidate/retrieval contract (the corpus already stores `path` + `sourceId` in fragment metadata); REST + MCP + SDK stay in parity (ADR-0036)",
+        "Covered by the F-048 full-stack suite: the human journey asserts a readable path in the search results (replacing its provenance-signal-only assertion)"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-012",
+        "E-003"
+      ],
+      "notes": "FOUND BY F-048 (2026-07-16). Verified against a real ingested corpus: `POST /v1/search` returns `{ ref: '<sha256>', score, signals }` with NO `label`, so apps/web's `{result.label ?? result.ref}` renders a bare content hash — the search surface is effectively unreadable for real repository content. The data exists (the corpus indexer already writes `path`/`sourceId` into the fragment metadata; compile fragments carry the text, and graph nodes carry `label: 'reporting.ts'` + `metadata.path`), it just never reaches the retrieval Candidate. Overlaps F-061 (search depth) — fold in there if F-061 is scheduled first. F-048's human journey asserts on provenance signal badges instead, with a comment pointing here."
     }
   ]
 }

@@ -132,10 +132,14 @@
         {
           "kind": "package",
           "ref": "@tessera/sdk regenerated for the 4 new paths + getRetention/pruneRetention/exportTenantData/deleteTenantData (F-047)"
+        },
+        {
+          "kind": "test",
+          "ref": "tests/e2e-full (F-048) — the FIRST consumer that exercises BOTH surfaces against ONE live deployment: the human journey drives the real apps/web (production build, proxied at the live API) and the agent journey drives the real `tessera-mcp` stdio binary over the same SQLite files. A breaking REST route or MCP tool change now fails here — this is the only gate that would catch a cross-surface regression, since api/mcp e2e each test their own surface in isolation."
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "BOTH surfaces now realized. REST (F-011): @tessera/api route Zod schemas (zod/v4, fastify-type-provider-zod) are the single source for validation + serialization + OpenAPI (GET /v1/openapi.json). MCP (F-012): @tessera/mcp tools wrap the SAME domain services (type-only ApiServices import, so no Fastify in the MCP runtime) with the same masked error-envelope policy. Changing a shared domain service, the error-envelope shape, or a route/tool contract must be reflected across REST + MCP + the regenerated OpenAPI + the SDK + the dashboard — additive/versioned (NFR-11). Both surfaces take injected services; deployment-profile wiring + the bootable processes are F-015. F-047 added the DSR + retention surface. Its response schemas REUSE memorySchema/graphNode/graphEdge/sourceSchema/auditEventSchema, so any change to those ripples into the DSR bundle contract too (that coupling is deliberate — the export must mirror what the surface serves). KnowledgeGraphService gained exportAll/purge (service-level only, over existing GraphStore methods — no port change), which the DSR bundle depends on being UNBOUNDED, unlike the display-capped queryGraph.",
+      "rationale": "BOTH surfaces now realized. REST (F-011): @tessera/api route Zod schemas (zod/v4, fastify-type-provider-zod) are the single source for validation + serialization + OpenAPI (GET /v1/openapi.json). MCP (F-012): @tessera/mcp tools wrap the SAME domain services (type-only ApiServices import, so no Fastify in the MCP runtime) with the same masked error-envelope policy. Changing a shared domain service, the error-envelope shape, or a route/tool contract must be reflected across REST + MCP + the regenerated OpenAPI + the SDK + the dashboard — additive/versioned (NFR-11). Both surfaces take injected services; deployment-profile wiring + the bootable processes are F-015. F-047 added the DSR + retention surface. Its response schemas REUSE memorySchema/graphNode/graphEdge/sourceSchema/auditEventSchema, so any change to those ripples into the DSR bundle contract too (that coupling is deliberate — the export must mirror what the surface serves). KnowledgeGraphService gained exportAll/purge (service-level only, over existing GraphStore methods — no port change), which the DSR bundle depends on being UNBOUNDED, unlike the display-capped queryGraph. F-048 made the contract observable end-to-end: the suite pins the real shapes rather than test doubles — search hits are `{ref: <sha256>, score, signals}` with NO label (F-073), compile fragments carry `text` + provenance, file graph nodes are keyed source-relative + extensionless (`src/ledger`). Those are contract facts the stubbed suites never asserted; changing them breaks e2e-full first.",
       "confidence": 1,
       "origin": "manual"
     },
@@ -218,10 +222,14 @@
         {
           "kind": "file",
           "ref": ".harness/protocols/verification.md"
+        },
+        {
+          "kind": "test",
+          "ref": "tests/e2e-full (@tessera/e2e-full) — the e2e-full gate (F-048; NFR-16), ACTIVE: `pnpm -w test:e2e:full` -> turbo `test:e2e:full` (dependsOn ^build) -> playwright. Mirrored by the \"Full-stack E2E (gate 9)\" CI step (verify-state enforces the mirror). Added a `tests/*` glob to pnpm-workspace.yaml — the workspace is no longer just apps/* + packages/*."
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "CI runs the verification gates; the workflow steps and the verification protocol table must mirror gates.json. Adding/removing/renaming a gate requires updating the CI workflow and the protocol.",
+      "rationale": "CI runs the verification gates; the workflow steps and the verification protocol table must mirror gates.json. Adding/removing/renaming a gate requires updating the CI workflow and the protocol. F-048 activated the e2e-full gate: gates.json `planned`->`active` REQUIRES a matching CI step in the same change or verify-state fails (that guard did its job here). The gate boots two real servers + a browser + an MCP process on ports 3200/3201, chosen so it can run back-to-back with gate 6 (3000/3100) in one CI job; CI must install the Playwright browser for @tessera/e2e-full too (it pins the same @playwright/test, so it is one shared browser build).",
       "confidence": 1,
       "origin": "manual"
     },

@@ -55,15 +55,21 @@ jobs:
       - name: Build (gate 5)
         run: pnpm build
 
-      # The web/marketing e2e (gate 6) drives a real browser via Playwright; install it
-      # before running (both apps pin the same @playwright/test — one browser build).
-      - name: Install Playwright browser (web e2e + a11y)
+      # The web/marketing/full-stack e2e (gates 6 + 9) drive a real browser via Playwright; install it
+      # before running (all three pin the same @playwright/test — one browser build).
+      - name: Install Playwright browser (web e2e + a11y + e2e-full)
         run: |
           pnpm --filter @tessera/web exec playwright install --with-deps chromium
           pnpm --filter @tessera/marketing exec playwright install chromium
+          pnpm --filter @tessera/e2e-full exec playwright install chromium
 
       - name: E2E + a11y (gate 6)
         run: pnpm test:e2e
+
+      # Full-stack (gate 9, NFR-16): the real server + an ingested fixture repo, driven by the real
+      # dashboard and a real MCP client. Uses ports 3200/3201, so it cannot collide with gate 6.
+      - name: Full-stack E2E (gate 9)
+        run: pnpm test:e2e:full
 
   security:
     runs-on: ubuntu-latest

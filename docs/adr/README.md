@@ -63,6 +63,8 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0045](0045-marketing-v4-constellation-shader-hero-theme-true-chapters.md) | Marketing v4 — shader-field hero, canvas constellation graph, theme-true chapter bands | Accepted |
 | [0046](0046-brand-mascot-tess.md) | Brand mascot "Tess" — shared tessera-built character (`@tessera/mascot`), data-driven moods, CSS motion, usage budget | Accepted |
 | [0047](0047-dashboard-multi-theme-illustration-layer-contrast-gate.md) | Dashboard 4-theme system (Monkai/Amber/Claude/Notebook × light/dark), radial appearance propagation, illustration layer + Tess, executable WCAG-AA contrast gate | Accepted |
+| [0048](0048-dashboard-auth-httponly-cookie-proxy.md) | Dashboard auth: httpOnly-cookie session behind a same-origin Next proxy (closes 0022 onto the SDK) | Accepted |
+| [0049](0049-data-governance-retention-dsr-mcp-audit.md) | Data governance: memory retention (delete-only), DSR export/erasure retaining the audit trail, MCP-surface audit on the existing taxonomy | Accepted |
 
 ## Conventions
 

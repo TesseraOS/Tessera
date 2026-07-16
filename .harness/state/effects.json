@@ -124,10 +124,18 @@
         {
           "kind": "module",
           "ref": "New REST routes GET /v1/rbac + GET/POST/DELETE /v1/tokens (F-046) ⇒ regenerated OpenAPI + @tessera/sdk (getRbac/listTokens/createToken/revokeToken + getSubscription); ADDITIVE (no existing route changed). The dashboard /profile page + token panel consume them through the same-origin proxy."
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api /v1/dsr/export + /v1/dsr/delete + /v1/retention + /v1/retention/prune (F-047; NFR-13/FR-15) — admin:manage-guarded, audited, tenant-of-the-caller only (never a tenant id off the wire). buildServer gains memoryRetention?; apps/server passes runtime.memoryRetention. The DSR bundle schema is COMPOSED from the existing memory/graph/sources/audit schemas, so an export can never drift from the live surface."
+        },
+        {
+          "kind": "package",
+          "ref": "@tessera/sdk regenerated for the 4 new paths + getRetention/pruneRetention/exportTenantData/deleteTenantData (F-047)"
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "BOTH surfaces now realized. REST (F-011): @tessera/api route Zod schemas (zod/v4, fastify-type-provider-zod) are the single source for validation + serialization + OpenAPI (GET /v1/openapi.json). MCP (F-012): @tessera/mcp tools wrap the SAME domain services (type-only ApiServices import, so no Fastify in the MCP runtime) with the same masked error-envelope policy. Changing a shared domain service, the error-envelope shape, or a route/tool contract must be reflected across REST + MCP + the regenerated OpenAPI + the SDK + the dashboard — additive/versioned (NFR-11). Both surfaces take injected services; deployment-profile wiring + the bootable processes are F-015.",
+      "rationale": "BOTH surfaces now realized. REST (F-011): @tessera/api route Zod schemas (zod/v4, fastify-type-provider-zod) are the single source for validation + serialization + OpenAPI (GET /v1/openapi.json). MCP (F-012): @tessera/mcp tools wrap the SAME domain services (type-only ApiServices import, so no Fastify in the MCP runtime) with the same masked error-envelope policy. Changing a shared domain service, the error-envelope shape, or a route/tool contract must be reflected across REST + MCP + the regenerated OpenAPI + the SDK + the dashboard — additive/versioned (NFR-11). Both surfaces take injected services; deployment-profile wiring + the bootable processes are F-015. F-047 added the DSR + retention surface. Its response schemas REUSE memorySchema/graphNode/graphEdge/sourceSchema/auditEventSchema, so any change to those ripples into the DSR bundle contract too (that coupling is deliberate — the export must mirror what the surface serves). KnowledgeGraphService gained exportAll/purge (service-level only, over existing GraphStore methods — no port change), which the DSR bundle depends on being UNBOUNDED, unlike the display-capped queryGraph.",
       "confidence": 1,
       "origin": "manual"
     },
@@ -351,10 +359,18 @@
         {
           "kind": "schema",
           "ref": "sqlite `memories` table DDL in the sqlite adapter (kept in lockstep with the Drizzle schema; migration tooling F-024)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/memory retention pass (service/retention.ts, F-047/FR-15): MemoryRetentionRule/Policy + pruneMemories(store, policy, {now}) — DELETE-only (expire aged lineages, compact superseded versions), injected clock"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/config indexing MemoryService decorator (sources/memory-indexing.ts) — prune/deleteLineage de-index the erased lineage from the retrieval corpus (blob+keyword+temporal+vector), so erasure leaves no searchable remanence"
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "MemoryStore is implemented by every adapter and validated by one conformance suite (E-001 instance); the Memory version model (immutable versions + supersede pointers, FR-12) is the contract the service and all consumers rely on. F-042 realizes the memory UI consumer — the version lineage (supersede chain) is rendered in the dashboard, so a change to the Memory version shape ripples to the web memory browser/detail/authoring + the timeline. Changing the port/model breaks adapters + suite + service; changing the sqlite DDL must track the Drizzle schema. The never-silently-mutated invariant must hold across adapters. F-037 (ADR-0033) added MemoryStore.forTenant + MemoryService.forTenant (a tenant_id column, additive migration, per-tenant filtering); the shared memory-store conformance gained a cross-tenant isolation case. Memory keeps no tenant field on the wire — tenancy is a storage concern.",
+      "rationale": "MemoryStore is implemented by every adapter and validated by one conformance suite (E-001 instance); the Memory version model (immutable versions + supersede pointers, FR-12) is the contract the service and all consumers rely on. F-042 realizes the memory UI consumer — the version lineage (supersede chain) is rendered in the dashboard, so a change to the Memory version shape ripples to the web memory browser/detail/authoring + the timeline. Changing the port/model breaks adapters + suite + service; changing the sqlite DDL must track the Drizzle schema. The never-silently-mutated invariant must hold across adapters. F-037 (ADR-0033) added MemoryStore.forTenant + MemoryService.forTenant (a tenant_id column, additive migration, per-tenant filtering); the shared memory-store conformance gained a cross-tenant isolation case. Memory keeps no tenant field on the wire — tenancy is a storage concern. F-047 (ADR-0049) added three port methods — exportAll (every version; backs DSR export), deleteVersion (compact one superseded version), deleteLineage (expiry/erasure) — so EVERY MemoryStore adapter must implement them (the shared conformance suite gained cases incl. cross-tenant isolation of erasure/export). Retention only DELETES: it never edits a version and never touches the current version of a kept lineage, so FR-12 never-silently-mutate is preserved by construction — any future adapter or retention change must hold that line. Deleting a memory MUST also de-index it (the config decorator does this); a store-only delete would leave the text searchable and served from the corpus.",
       "confidence": 1,
       "origin": "manual"
     },
@@ -777,10 +793,22 @@
         {
           "kind": "module",
           "ref": "Token operations are audited (F-046): new token.read (list) + token.manage (create/revoke) audit actions recorded by the existing onResponse hook; the web AuditAction union + governance labels were extended to match."
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/mcp gateway audit recording (F-047, closes the F-027 seam): an optional injected AuditLog records the AUTHORIZATION DECISION per guarded tool call (success once authorized+metered; denied on permission/quota refusal; unauthenticated records nothing — no identity ⇒ no tenant). MCP_AUDIT_ACTIONS maps every tool onto the EXISTING REST taxonomy (capture_memory→memory.write, …) + metadata.surface=\"mcp\". Audit types are TYPE-ONLY here (the F-012 no-Fastify invariant; verified against built dist). apps/server passes runtime.audit into createMcpGateway."
+        },
+        {
+          "kind": "contract",
+          "ref": "AUDIT_ACTIONS gained retention.read/retention.manage/dsr.export/dsr.delete (F-047) — the union is z.enum()d into the /v1/audit query + event schemas, so adding an action ripples: OpenAPI doc → @tessera/sdk regen → apps/web lib/api/types.ts AuditAction mirror + lib/governance.ts AUDIT_ACTION_LABELS (Record<AuditAction,string> — a missing label is a typecheck failure, which is the intended tripwire)"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/api DSR + retention routes are audited (dsr.export/dsr.delete/retention.read/retention.manage); DSR erasure RETAINS the trail by design (ADR-0049) — it is the compliance record of the erasure and holds no content (NFR-7)"
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "F-027 audit trail (FR-55/NFR-13): sensitive actions are recorded at the /v1 boundary into an append-only, tenant-scoped AuditLog and queried by admins (admin:manage). Changing the AuditEvent model, the AuditLog port, the recording hook's action catalog (config.audit), or the /v1/audit route/schema ripples to the adapters + shared conformance, the OpenAPI/regenerated SDK (E-003), the config wiring (E-014), and the governance UI (FR-48). Events are NON-SENSITIVE (NFR-7 — ids/actions/outcomes only); recording is failure-isolated; tenancy reuses forTenant (ADR-0033) with the actor/tenant from the AuthContext (E-018). Default is an in-memory sink so existing surfaces are unaffected. Increment 1a = in-memory end-to-end; 1b = persistent SQLite + config wiring; increment 2 = the web UI.",
+      "rationale": "F-027 audit trail (FR-55/NFR-13): sensitive actions are recorded at the /v1 boundary into an append-only, tenant-scoped AuditLog and queried by admins (admin:manage). Changing the AuditEvent model, the AuditLog port, the recording hook's action catalog (config.audit), or the /v1/audit route/schema ripples to the adapters + shared conformance, the OpenAPI/regenerated SDK (E-003), the config wiring (E-014), and the governance UI (FR-48). Events are NON-SENSITIVE (NFR-7 — ids/actions/outcomes only); recording is failure-isolated; tenancy reuses forTenant (ADR-0033) with the actor/tenant from the AuthContext (E-018). Default is an in-memory sink so existing surfaces are unaffected. Increment 1a = in-memory end-to-end; 1b = persistent SQLite + config wiring; increment 2 = the web UI. F-047 closes F-027's MCP seam: the trail now covers BOTH surfaces on ONE taxonomy, so a compliance query never has to union two vocabularies (ADR-0036 parity). Two invariants ride on this: (1) a new MCP tool MUST be added to MCP_AUDIT_ACTIONS (the Record<McpToolName,AuditAction> makes omission a typecheck error, and a unit test pins the key set against TOOL_PERMISSIONS); (2) a new AuditAction must be mirrored in apps/web (types + labels) or web typecheck fails. Recording is best-effort/failure-isolated on both surfaces — a sink error must never fail a request or a tool call.",
       "confidence": 0.9,
       "origin": "manual"
     },

@@ -3,6 +3,79 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-16 (v2) — F-047 DONE — compliance completion: memory retention (FR-15), DSR export/erasure (NFR-13), MCP-surface audit (closes the F-027 seam)
+
+**Harness-strict selection** (ordering is *by release, then id* — not priority — so F-047 precedes the
+`must` F-048/F-049; blocker F-027 done; tree clean, no WIP). Plan:
+[`.harness/plans/F-047-compliance-completion.md`](../plans/F-047-compliance-completion.md); decisions in
+**ADR-0049**. Shipped in **4 verified commits** (memory+config · api/sdk/web · mcp/server · docs/state).
+Everything additive and **off by default** — existing deployments are byte-stable.
+
+**What changed**
+- **Memory retention (FR-15 — flagged R2, never delivered).** `MemoryStore` gained
+  `exportAll`/`deleteVersion`/`deleteLineage` (both adapters + the shared conformance suite, incl.
+  cross-tenant isolation of erasure/export). New `service/retention.ts`: `MemoryRetentionRule`/`Policy`
+  (match by kind/scope; **most-specific rule wins**) + a pure `pruneMemories(store, policy, {now})`
+  with an injected clock. **Retention only DELETES** — expires whole aged lineages (age from the
+  *current* version's `createdAt`, so an actively-edited memory doesn't go stale) and compacts
+  already-superseded versions, never touching a kept lineage's current version ⇒ **FR-12
+  never-silently-mutate holds by construction**. `config.memory.retention` (days→ms) resolves onto
+  `Runtime.memoryRetention`; **empty by default**. Scheduling is a **seam** (the prune route is the
+  trigger); runtime policy mutation deliberately not offered (config is the source of truth).
+- **Erasure has no remanence.** The indexing `MemoryService` decorator de-indexes expired/erased
+  lineages from the retrieval corpus (blob+keyword+temporal+vector) — a store-only delete would leave
+  the text searchable and still served from the corpus.
+- **DSR (NFR-13).** Fastify-free `apps/api/src/dsr` (`buildDsrBundle` + `purgeTenant`) behind
+  `GET /v1/dsr/export` + `POST /v1/dsr/delete`. Exports are **exhaustive by design** (every memory
+  *version*, the whole graph, sources, the **fully-paged** trail) — hence the new **unbounded**
+  `KnowledgeGraphService.exportAll()` beside the display-capped `queryGraph`; `exportAll`/`purge` live
+  on the graph **service only**, over existing `GraphStore` methods (no port change). The bundle schema
+  is **composed from the existing** memory/graph/sources/audit schemas, so an export can't drift from
+  the live surface. Erasure removes the data plane but **retains the audit trail** (ADR-0049) and
+  records `dsr.delete` into it. `GET /v1/retention` + `POST /v1/retention/prune`. All four:
+  `admin:manage`, audited, **caller's own tenant only** (`tenantOf(request)` — never a tenant id off
+  the wire). +4 audit actions ⇒ OpenAPI + SDK regen (`getRetention`/`pruneRetention`/
+  `exportTenantData`/`deleteTenantData`) + the web `AuditAction` mirror/labels in lockstep.
+- **MCP-surface audit — the F-027 seam is CLOSED.** `McpGateway` takes an optional `AuditLog` and
+  records the **authorization decision** (`success` once authorized+metered; `denied` on a
+  permission/quota refusal; **unauthenticated records nothing** — no identity ⇒ no tenant, mirroring
+  the REST 401 rule). Recording lives **in the gateway** because that is the only place the identity is
+  known at refusal time (a `ForbiddenError` throws before an outer wrapper could learn the actor).
+  `MCP_AUDIT_ACTIONS` maps every tool onto the **existing REST taxonomy** (`capture_memory` →
+  `memory.write`) + `metadata.surface='mcp'` ⇒ **one trail, one vocabulary** across both surfaces
+  (ADR-0036). Best-effort/failure-isolated. `apps/server` wires `runtime.audit`. **F-012 no-Fastify
+  invariant verified against the built dist** (`gateway.js` imports `@tessera/core` alone).
+- **Docs.** New [`docs/compliance/data-governance.md`](../../docs/compliance/data-governance.md):
+  retention config, the DSR operator runbook, and the **encryption-at-rest posture** (SQLite FDE/
+  SQLCipher · Postgres TDE/encrypted volumes · keys via `SecretsProvider`, never the repo) — NFR-13
+  asks the posture be *documented*; it is a deployment concern, not app-level. ADR-0049 written; also
+  **indexed ADR-0048**, which F-045 left out of `docs/adr/README.md` (drift fixed).
+
+**Evidence/verification** (all gates fresh, workspace-wide)
+- verify-state ok (**963** doc links, 25 effect-links) · typecheck **34** · lint **19** · format clean ·
+  test **34** (memory **43**, config **41**, knowledge-graph **32** +2, mcp **20** +6, sdk **11** +2) ·
+  build **19** · e2e **19** — **api 76** (+11 `dsr.e2e`: complete bundle incl. *both* versions,
+  cross-tenant isolation on export **and** erasure, viewer 403 / unauth 401, the erasure event retained
+  in the trail, prune keeps the current version) · **mcp 21** (+3 audit assertions driving a **real MCP
+  client** over a linked transport).
+- Not browser-verifiable: this feature adds no UI (the web change is the `AuditAction` type/label
+  mirror, covered by typecheck + the existing governance view).
+
+**Decisions**
+- **ADR-0049**: (1) retention deletes, never mutates — a tombstone-version design was rejected as it
+  would grow the lineage it means to shrink and erase nothing; (2) DSR erasure **retains the trail** —
+  deleting it would destroy the proof of erasure while removing no content (it holds none, NFR-7);
+  config-gated audit erasure is a seam; (3) MCP audit reuses the **existing** taxonomy — `mcp.*`
+  actions were rejected as a taxonomy fork; (4) encryption-at-rest = deployment concern, documented.
+- Effects **E-010** (retention pass + 3 port methods + the de-index rule), **E-020** (MCP recording, the
+  4 new actions and their web-mirror tripwire), **E-003** (the 4 routes + SDK; the DSR schema's
+  deliberate coupling to the existing schemas) all extended.
+
+**Next step**
+- Next eligible by id in R3 is **F-048** (full-stack e2e: real server + fixture repo + real web + real
+  MCP client, new `e2e-full` gate) — all blockers (F-038/F-039/F-041/F-045) are done. Then **F-049**
+  (perf benchmarks + web-perf activation). Also open: the dashboard-data set F-060/F-061/F-062/F-063.
+
 ## 2026-07-16 — F-046 DONE — account & profile: professional /profile, API-token self-service (REST + MCP parity), RBAC-from-API
 
 **Harness-strict selection** (next eligible R3, blocker F-045 done, `should`). Plan:

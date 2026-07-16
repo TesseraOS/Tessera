@@ -1530,7 +1530,7 @@
       "package": "@tessera/api",
       "release": "R3",
       "priority": "should",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-027"
       ],
@@ -1550,7 +1550,8 @@
         "E-020",
         "E-010",
         "E-003"
-      ]
+      ],
+      "notes": "Done 2026-07-16 (ADR-0049; plan .harness/plans/F-047-compliance-completion.md). Shipped in 4 verified commits. (FR-15) MemoryStore gained exportAll/deleteVersion/deleteLineage (both adapters + shared conformance incl. cross-tenant isolation of erasure/export); new @tessera/memory service/retention.ts = MemoryRetentionRule/Policy (match by kind/scope, MOST-SPECIFIC rule wins) + pure pruneMemories(store, policy, {now}) with an injected clock. Retention DELETES ONLY — expires whole aged lineages (age from the CURRENT version's createdAt) and compacts already-superseded versions, never touching a kept lineage's current version, so FR-12 never-silently-mutate holds by construction. config.memory.retention (days -> ms) resolves onto Runtime.memoryRetention; EMPTY BY DEFAULT (retention off, existing deployments byte-stable). Scheduling is a seam (POST /v1/retention/prune is the trigger); runtime policy mutation deliberately not offered (config is the source of truth). The indexing MemoryService decorator de-indexes expired/erased lineages from the retrieval corpus — erasure leaves no searchable remanence. (NFR-13) New Fastify-free apps/api/src/dsr (buildDsrBundle + purgeTenant) behind GET /v1/dsr/export + POST /v1/dsr/delete; exports are EXHAUSTIVE by design (every memory version, whole graph via the new unbounded KnowledgeGraphService.exportAll, sources, fully-paged audit) — hence exportAll/purge on the graph SERVICE only (over existing GraphStore methods; no port change). Erasure removes the data plane but RETAINS the audit trail (ADR-0049: it is the compliance record of the erasure and holds no content, NFR-7) and records dsr.delete into it. Both DSR + retention routes are admin:manage, audited, and act on the CALLER'S OWN tenant only (tenantOf(request) — never a tenant id off the wire). +4 audit actions (retention.read/manage, dsr.export/delete) -> OpenAPI + SDK regen (getRetention/pruneRetention/exportTenantData/deleteTenantData) + the web AuditAction mirror/labels in lockstep. (F-027 seam CLOSED) The McpGateway takes an optional AuditLog and records the AUTHORIZATION DECISION per guarded call (success once authorized+metered; denied on permission/quota refusal; unauthenticated records nothing — no identity ⇒ no tenant, mirroring the REST 401 rule). Recording lives IN the gateway because that is the only place the identity is known at refusal time. MCP_AUDIT_ACTIONS maps every tool onto the EXISTING REST taxonomy (one trail, one vocabulary — ADR-0036) + metadata.surface='mcp'; best-effort/failure-isolated; apps/server wires runtime.audit. F-012 no-Fastify invariant verified against built dist (gateway.js imports @tessera/core alone). Docs: new docs/compliance/data-governance.md (retention config, DSR runbook, encryption-at-rest posture — SQLite/Postgres options + SecretsProvider key handling; NFR-13 asks the posture be DOCUMENTED, it is a deployment concern) + ADR-0049 (also indexed ADR-0048, which F-045 left unindexed). Evidence: verify-state ok (963 doc links) - typecheck 34 - lint 19 - format clean - test 34 (memory 43, config 41, knowledge-graph 32, mcp 20, sdk 11) - build 19 - e2e 19 (api 76 incl. +11 dsr/retention; mcp 21 incl. +3 audit over a REAL MCP client). SEAMS: prune scheduling; config-gated audit erasure; streaming export for very large tenants; per-project retention scope arrives with F-050."
     },
     {
       "id": "F-048",

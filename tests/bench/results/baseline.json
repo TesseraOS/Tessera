@@ -1,0 +1,93 @@
+{
+  "$note": "Committed performance record (F-049). `gate` = what CI enforces (fake embeddings: our engine, machine-comparable). `nfr4Validation` = the real-provider evidence for NFR-4, measured on demand via TESSERA_BENCH_REAL_EMBEDDINGS=1. Update deliberately with `pnpm --filter @tessera/bench bench -- --record`; never automatically.",
+  "gate": {
+    "corpus": {
+      "version": 1,
+      "shape": {
+        "modules": 120,
+        "docs": 30,
+        "importsPerModule": 2
+      },
+      "files": 150
+    },
+    "recordedAt": "2026-07-16T11:11:26.675Z",
+    "machine": {
+      "platform": "win32",
+      "arch": "x64",
+      "cpus": 8,
+      "node": "v22.16.0"
+    },
+    "provider": {
+      "embeddings": "fake"
+    },
+    "iterations": {
+      "search": 50,
+      "compile": 20,
+      "ingest": 10
+    },
+    "latencyMs": {
+      "searchP95": 5.56,
+      "searchMedian": 3.54,
+      "compileP95": 8.74,
+      "compileMedian": 7.21,
+      "incrementalIngestP95": 73.19,
+      "fullIngest": 5418.8
+    },
+    "tokensPerAnswer": {
+      "searchRest": 727,
+      "searchMcp": 727,
+      "compileRest": 3373,
+      "compileMcp": 3411,
+      "packageTokens": 2098,
+      "traceTokens": 166,
+      "compileEnvelopeRatioRest": 1.61,
+      "compileEnvelopeRatioMcp": 1.63
+    },
+    "budget": 8000
+  },
+  "nfr4Validation": {
+    "corpus": {
+      "version": 1,
+      "shape": {
+        "modules": 120,
+        "docs": 30,
+        "importsPerModule": 2
+      },
+      "files": 150
+    },
+    "recordedAt": "2026-07-16T11:11:39.904Z",
+    "machine": {
+      "platform": "win32",
+      "arch": "x64",
+      "cpus": 8,
+      "node": "v22.16.0"
+    },
+    "provider": {
+      "embeddings": "transformers"
+    },
+    "iterations": {
+      "search": 50,
+      "compile": 20,
+      "ingest": 10
+    },
+    "latencyMs": {
+      "searchP95": 10.76,
+      "searchMedian": 7.76,
+      "compileP95": 14.2,
+      "compileMedian": 13.01,
+      "incrementalIngestP95": 104.15,
+      "fullIngest": 8666.54
+    },
+    "tokensPerAnswer": {
+      "searchRest": 821,
+      "searchMcp": 821,
+      "compileRest": 3928,
+      "compileMcp": 3966,
+      "packageTokens": 2544,
+      "traceTokens": 142,
+      "compileEnvelopeRatioRest": 1.54,
+      "compileEnvelopeRatioMcp": 1.56
+    },
+    "budget": 8000
+  }
+}

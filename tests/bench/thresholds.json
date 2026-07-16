@@ -1,0 +1,37 @@
+{
+  "$schema": "./thresholds.schema.md",
+  "$note": "Thresholds for the `perf` gate (F-049, NFR-4). Where the PRD states a number, it IS the threshold and its source is cited. Where the PRD is qualitative ('near-real-time', 'token-lean'), the number was established by measuring first and adding documented headroom — establishing a bar, never lowering one. A miss is a tuning work item (a registered feature), not an edited number here: if you are reading this because a gate failed, the fix is in the code or a new feature, not in this file.",
+  "provider": {
+    "embeddings": "fake",
+    "$why": "The gate measures OUR engine, not Transformers.js's model: fake embeddings are deterministic and offline, so the numbers are comparable across machines and a regression is ours. The real-provider number is measured under TESSERA_BENCH_REAL_EMBEDDINGS=1 and recorded in the report for the NFR-4 claim — it is not gated on, because model load/inference time is the provider's, varies by hardware, and would make this gate flaky."
+  },
+  "latencyMs": {
+    "searchP95": {
+      "max": 300,
+      "source": "NFR-4 — 'search p95 < 300 ms local'"
+    },
+    "compileP95": {
+      "max": 2000,
+      "source": "NFR-4 — 'compile_context p95 < 2 s for a typical task at default budget'"
+    },
+    "incrementalIngestP95": {
+      "max": 1000,
+      "source": "NFR-4 — 'ingestion keeps up with incremental edits in near-real-time'; the PRD gives no number, so this bar was established from a measured baseline plus headroom. Re-scan of a corpus after ONE file changes."
+    }
+  },
+  "tokensPerAnswer": {
+    "$why": "NFR-4: 'MCP/REST responses stay token-lean — agents must not pay for prose'. Counted with estimateTokens (chars/4), the SAME counter the compiler enforces its budget with, so this measures what the product actually promises. REST and MCP are asserted separately: ADR-0036 parity means neither surface may quietly get fatter than the other.",
+    "searchRest": {
+      "max": 900,
+      "source": "Measured 727 on corpus v1 (deterministic: pinned mtimes + fake embeddings + a seeded corpus, so this carries no hardware variance and can be tight). ~24% headroom absorbs a float wobble in the temporal score; a real fattening of the ranked answer trips it, which is the point — adding a field to a search hit should be a deliberate decision, not a silent tax on every agent."
+    },
+    "searchMcp": {
+      "max": 900,
+      "source": "Measured 727; kept identical to REST — ADR-0036 parity means neither surface may quietly get fatter than the other."
+    },
+    "compileEnvelopeRatio": {
+      "max": 1.9,
+      "source": "Measured x1.61 REST / x1.63 MCP on corpus v1. The ratio is response tokens / package totalTokens: what an agent pays ON TOP of the content it asked for. Composition was measured, not assumed — the compilation trace is only ~166 of ~1275 overhead tokens (13%); the bulk is JSON escaping of the fragment text plus per-fragment provenance/whyIncluded, i.e. the price of a JSON protocol that explains its answers (FR-32). Measured-plus-headroom locks in TODAY behaviour so the envelope cannot silently worsen."
+    }
+  }
+}

@@ -87,10 +87,10 @@
     {
       "id": "perf",
       "order": 10,
-      "status": "planned",
+      "status": "active",
       "command": "pnpm -w bench",
       "requiredFor": ["release"],
-      "description": "Backend performance benchmarks (NFR-4): search p95 < 300 ms local, compile p95 < 2 s at default budget, incremental-ingest latency, and MCP/REST tokens-per-answer (ADR-0036 token-lean requirement) over a versioned fixture corpus; thresholds fail CI on regression. Activates with F-049; exact command finalized there."
+      "description": "Backend performance benchmarks (NFR-4) — ACTIVE since F-049; lives in tests/bench (@tessera/bench). Boots the REAL Local runtime in-process over a VERSIONED, deterministic corpus (seeded generator + pinned mtimes — content alone is not enough, since the temporal retriever ranks on mtime and rank-based fusion then shuffles the result set) and asserts committed thresholds (tests/bench/thresholds.json): search p95 < 300 ms and compile p95 < 2 s at the default budget (both NFR-4), incremental-ingest p95, tokens-per-answer for REST *and* MCP separately (ADR-0036 parity), the compile envelope ratio (response tokens / package tokens), and FR-30's budget promise. Thresholds are ABSOLUTE, never baseline deltas: CI hardware varies, so a delta gate would flake until it was disabled. Fake embeddings by default — it measures OUR engine, stays machine-comparable, and keeps the NFR-4 headroom that makes the gate stable; the real-provider number is measured under TESSERA_BENCH_REAL_EMBEDDINGS=1 and recorded in results/baseline.json (never gated on). A miss is a tuning work item, never an edited threshold."
     }
   ]
 }

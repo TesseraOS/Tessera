@@ -82,3 +82,6 @@ tmp/
 .tmp/
 *.tmp
 scratch/
+
+# Benchmark run output (F-049); the committed baseline.json is the tracked record.
+tests/bench/results/latest.json

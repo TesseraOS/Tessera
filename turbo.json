@@ -25,6 +25,14 @@
     "test:e2e:full": {
       "dependsOn": ["^build"],
       "cache": false
+    },
+    "bench": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "test:perf": {
+      "dependsOn": ["^build"],
+      "cache": false
     }
   }
 }

@@ -596,6 +596,33 @@ importers:
         specifier: ^8.20.0
         version: 8.20.0
 
+  tests/bench:
+    devDependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.29.0
+        version: 1.29.0(zod@3.25.76)
+      '@tessera/api':
+        specifier: workspace:*
+        version: link:../../apps/api
+      '@tessera/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@tessera/context-compiler':
+        specifier: workspace:*
+        version: link:../../packages/context-compiler
+      '@tessera/mcp':
+        specifier: workspace:*
+        version: link:../../apps/mcp
+      '@types/node':
+        specifier: ^22
+        version: 22.20.0
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^2
+        version: 2.1.9(@types/node@22.20.0)(jsdom@29.1.1)(lightningcss@1.32.0)
+
   tests/e2e-full:
     devDependencies:
       '@modelcontextprotocol/sdk':

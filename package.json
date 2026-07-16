@@ -15,6 +15,8 @@
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
     "test:e2e:full": "turbo run test:e2e:full",
+    "bench": "turbo run bench",
+    "test:perf": "turbo run test:perf",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

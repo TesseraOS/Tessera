@@ -1,0 +1,23 @@
+{
+  "name": "@tessera/bench",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Performance benchmark harness (F-049, NFR-4): search/compile latency, incremental ingest, and tokens-per-answer over a versioned deterministic corpus, asserted against committed thresholds.",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "bench": "node bench.mjs",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@tessera/api": "workspace:*",
+    "@tessera/config": "workspace:*",
+    "@tessera/context-compiler": "workspace:*",
+    "@tessera/mcp": "workspace:*",
+    "@types/node": "^22",
+    "typescript": "^5",
+    "vitest": "^2"
+  }
+}

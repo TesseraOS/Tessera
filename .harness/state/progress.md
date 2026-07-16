@@ -3,6 +3,124 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-16 (v5) — F-060 DONE — live Overview (real stats + SSE feed + bell); **closed a cross-tenant SSE leak** (ADR-0050)
+
+**Harness-strict selection**: ordering is *by release, then id*, and R3 still had open features, so
+F-060 was next (blockers F-038/F-039 done) — which also matched the operator's stated preference for
+finishing R3 before R4. **F-071 is a `must` but sits in R4**; the prior session's note that it
+"deserves priority over the R4 ordering" argues for it going first *within* R4, not for jumping R3.
+Plan: [`.harness/plans/F-060-live-overview.md`](../plans/F-060-live-overview.md). **5 verified commits.**
+
+### The thing that mattered most was not in the acceptance
+
+`GET /v1/events` streamed **every event on a process-wide bus to every authenticated client, with no
+tenant filter** — and the payloads carry `path`, `title`, `label`. In any token/OIDC deployment,
+tenant A's browser received tenant B's file paths and memory titles. Pre-existing and latent: F-021
+built the stream before multi-tenancy (F-025) existed; **F-044's "SSE auth" added authentication
+(401 the anonymous) but never authorization** (whose events may you see?). No gate could catch it —
+every api/mcp e2e runs in the zero-auth default tenant, *the same blind spot that hid F-071*.
+
+F-060 forced the issue: it pipes that stream into a notifications bell on every page, turning a
+latent leak into a continuously rendered one. Escalated to the operator with three options; the
+decision was **fix it here** → **ADR-0050**.
+
+- `ApiEventMap` payloads gain a **required** `tenantId` — required, not optional, because an optional
+  field is a filter that fails open, and requiring it makes the typechecker ask "whose event is
+  this?" at every emit site, including the next one someone adds. It found the `memory.captured`
+  site immediately.
+- `sseFrame` **strips** it → tenancy decides delivery without ever reaching the wire (ADR-0033), so
+  the **public event shape is unchanged** and F-038's `useScanEvents` / F-042's `useLiveActivity`
+  keep working untouched (golden rule 6).
+- **The regression test was verified to actually catch the leak**: with the filter removed both
+  isolation tests fail; with it, they pass. The globex assertions wait on globex's *own* event first,
+  so "nothing arrived yet" cannot masquerade as "acme's was withheld".
+
+**Stated gap, not hidden:** the worker has no tenant, so `document.*` is attributed to the tenant
+ingestion *really* writes to (default), not the one that asked for the scan. A non-default tenant
+therefore will not see `document.*` for its own scans **until F-071 lands**. Under-delivering beats
+leaking. `IngestionEvents` encodes the asymmetry in the types: `source.scan.*` carry a tenant,
+`document.*` do not, because the worker cannot know it. F-071 closes it by populating an existing
+field — no second migration.
+
+### What else changed
+
+- **Counts at the stores** (no production count path existed anywhere — both ports only listed).
+  `GraphStore.countNodes/countEdges` + `MemoryStore.countCurrent`, each additive on the port + **both**
+  adapters + conformance incl. cross-tenant cases. `countCurrent` counts **lineages, not versions** —
+  a supersede must never inflate it (pinned by a conformance case). `SourceService.summary()` is
+  service-level (the `IngestionManifest` port is untouched by design) and tenant-correct by
+  construction: it sums the manifest over the tenant's **own** registry.
+- **`GET /v1/stats`** + the **`get_stats`** MCP tool. Parity is **structural**: both call
+  `computeWorkspaceStats` behind a new Fastify-free `@tessera/api/stats` subpath (mirroring `/auth`),
+  because MCP must never pull Fastify in (F-012) and two copies of the aggregation could silently
+  disagree about a tenant's numbers. The parity e2e proves it over **one `ApiServices` behind a real
+  Fastify server and a real MCP client**, with content created through the *agent* surface, asserting
+  byte-identical results *and* the absolute numbers — so "both zero" can never pass for parity.
+- **New `stats:read` permission**: the summary aggregates across documents/memory/graph/sources, so a
+  token scoped to only `memory:read` must not learn the other counts through it. An e2e pins that.
+- **The dashboard**: real stat cards, a live activity feed, a notifications bell with unread state.
+  One `EventsProvider` owns a single `EventSource` with exponential backoff + full jitter (1s→30s);
+  `EventSource` auto-retries transient drops but **gives up permanently on a non-2xx** (a 401 once a
+  session expires), leaving a silently dead feed — the supervisor detects that and reconnects.
+
+### Three things the work disproved or fixed along the way
+
+1. **The acceptance's premise was stale.** "The dashboard gains its FIRST /v1/events consumer (none
+   exists today)" — two existed (F-038, F-042), each with its own socket; feed + bell would have made
+   **four**. So this **consolidates** them into one resilient client (net −1 socket), which is what
+   "resilient SSE client" should have meant.
+2. **Screenshot verification caught a real flaw the tests passed.** The first build flashed
+   "this feed may be behind" on *every* routine reconnect. A banner that cries wolf gets ignored
+   exactly when it matters → degradation is now reported only once a drop **outlives** a normal
+   auto-reconnect (5s > the server's 3s `retry` hint). Verified across 4 themes × light/dark.
+3. **A test assumption was wrong, not the code.** The "empty workspace" e2e expected zero graph
+   nodes; the fixture seeds 2 nodes + 1 effect-link for the effects route. Corrected to assert the
+   seed — a *stronger* test, because it proves the graph count is read live rather than defaulted.
+
+### Scope limits — stated, not hidden (the F-049 precedent)
+
+1. **No deltas.** Nothing stores a prior-period snapshot (the graph has no per-node `createdAt`; the
+   manifest holds only `path → contentHash`), and a `createdAt`-derived trend would be **wrong in
+   exactly the deployments that use retention** (F-047), which deletes. A test asserts the cards
+   render no `%` at all. Honest trends need a snapshot store — that is analytics (FR-47/F-057).
+2. **Feed + bell are live-session only** (SSE-fed, lost on reload) — the feature's stated scope; the
+   copy says "this session" so it never implies history it lacks. **F-065** persists it.
+3. **`lastScanAt` is process-lifetime only** — scan status is an in-memory `Map` (F-038), so a restart
+   reads `null` though scans happened. The type says so; callers must render "no scan this session",
+   never "never scanned". Persisting it is a registry/manifest schema change — out of scope.
+4. **No `scan.failed` event exists** (errors are status-only). "Scan lifecycle" = started + completed.
+   Not invented here; **F-065** owns it.
+5. **F-071 makes an honest stat confusing under multi-tenant**: `documents` counts the tenant's own
+   sources' manifests, so it can read `> 0` for content that tenant cannot search, because the corpus
+   rows landed in `default`. That is F-071's bug surfacing *through* a correct stat — not papered over.
+6. **`components/delta.tsx` is now unconsumed** (stats.tsx was its only caller). Kept for a real trend
+   source (F-057), not deleted — out of scope. Recorded on **E-004**.
+
+**Decisions** — **ADR-0050** (SSE tenant scoping). No ADR for stats itself: it composes existing
+services and adds no product decision. Deliberately **not audited** (a per-page-load aggregate read
+would flood the F-027 trail); `get_stats` reuses the `source.read` action so the two surfaces do not
+disagree. **No new `ApiServices` member** — `instrumentServices` (E-015) rebuilds that object and
+silently drops what it does not forward, which already caused a production 500 for `sources` once.
+
+**Evidence** (all gates, workspace-wide) — verify-state ok · typecheck **38** · lint **22** · format
+clean · test **36** (knowledge-graph 44, memory 55, ingestion 67, api 57, web 267) · build **19** ·
+e2e **20** (api **87**, mcp **25**, web **32** incl. axe WCAG A/AA on the *populated* feed + bell) ·
+**web-perf** both budgets met (web `/signin` **256.3 KB** gz, budget 300 — +3.2 KB) · **e2e-full 2/2**.
+SDK regeneration verified **idempotent** (committed artifacts match the live OpenAPI). UI verified by
+**screenshot** across 4 themes × light/dark plus the bell-open and empty states.
+
+Effects **E-003** (×2: the new REST+MCP surface; the SSE stream is now tenant-scoped), **E-004**,
+**E-009**, **E-010**, **E-011**, **E-014**, **E-018** extended.
+
+**Next step**
+- R3 remaining, by id: **F-061** (search depth — F-073 belongs with it), **F-062** (Inspector v2),
+  **F-063** (data tables + Audit v2). All unblocked.
+- **F-071 (`must`)** heads R4 and is now *more* worth doing: ADR-0050 left it a landing strip — when
+  the tenant travels source → queue → worker, `document.*` attribution becomes correct by populating
+  an existing field, and F-060's stated feed gap disappears with it.
+
+---
+
 ## 2026-07-16 (v4) — F-049 DONE — `perf` + `web-perf` gates ACTIVE; **NFR-4 measured for the first time**; no `planned` gates remain
 
 **Harness-strict selection** (next by id in R3; blocker F-039 done). Plan:

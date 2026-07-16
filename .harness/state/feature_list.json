@@ -1972,7 +1972,7 @@
       "package": "@tessera/web",
       "release": "R3",
       "priority": "should",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-038",
         "F-039"
@@ -1991,9 +1991,14 @@
       ],
       "effects": [
         "E-003",
-        "E-004"
+        "E-004",
+        "E-009",
+        "E-010",
+        "E-011",
+        "E-014",
+        "E-018"
       ],
-      "notes": "The bell/feed here is LIVE-SESSION only (SSE, lost on reload). The persistent, per-user notification service (store + read state + preferences + agent-readable surface) is F-065 and builds on this."
+      "notes": "Done 2026-07-16: the Overview is live. GET /v1/stats (Zod->OpenAPI->regenerated SDK) + a get_stats MCP tool; parity is STRUCTURAL, not asserted — both call computeWorkspaceStats behind a new Fastify-free `@tessera/api/stats` subpath (mirroring /auth), because MCP must never pull Fastify in (F-012) and two copies of the aggregation could silently disagree about a tenant’s numbers. Counts are added AT THE STORES (no production count path existed: GraphStore.countNodes/countEdges, MemoryStore.countCurrent — port + BOTH adapters + conformance incl. cross-tenant; countCurrent counts LINEAGES not versions so a supersede never inflates it) rather than list().length, because this endpoint runs on every dashboard load. SourceService.summary() is service-level (IngestionManifest untouched) and tenant-correct by construction. New stats:read permission — a memory:read-scoped token must not learn graph/document counts through the aggregate. NOT audited (a per-page-load aggregate read would flood the F-027 trail). NO new ApiServices member (instrumentServices/E-015 rebuilds it and silently drops what it does not forward — that already 500ed `sources` once). Web: real stat cards (were hardcoded \"—\"/\"0\" since F-014), a live activity feed, a notifications bell with unread state, over ONE EventsProvider connection with exponential backoff + full jitter (1s->30s) — the acceptance said \"first /v1/events consumer\" but TWO existed (F-038, F-042), so this CONSOLIDATES them (net -1 socket). THE HEADLINE: F-060 uncovered and closed a CROSS-TENANT LEAK — /v1/events streamed every event to every authenticated client with no tenant filter, and payloads carry path/title/label; F-044 had added authentication but never authorization. ADR-0050: a REQUIRED server-side tenantId (optional would fail open) + a per-connection filter; sseFrame STRIPS it so the wire shape is UNCHANGED and existing consumers keep working. The regression test was verified to actually catch the leak (remove the filter -> both isolation tests fail). SCOPE LIMITS, stated not hidden: (1) NO deltas — nothing stores a prior-period snapshot and a createdAt-derived trend would lie wherever retention (F-047) deletes; a test asserts no \"%\" renders at all (analytics = F-057). (2) feed/bell are LIVE-SESSION only, lost on reload; copy says \"this session\" (F-065 persists). (3) lastScanAt is process-lifetime only (scan status is an in-memory Map) — render \"no scan this session\", never \"never scanned\". (4) no scan.failed event exists; lifecycle = started+completed only (F-065 owns it). (5) document.* stay default-tenant-attributed until F-071, so a non-default tenant will not see them in its feed — under-delivering beats leaking; IngestionEvents encodes the asymmetry (scan.* carry a tenant, document.* cannot). (6) F-071 also makes `documents` honest-but-confusing under multi-tenant (counts the tenant’s own sources while the rows landed in default). (7) components/delta.tsx is now unconsumed (stats.tsx was its only caller) — kept for F-057, noted on E-004. Screenshot verification caught a real flaw the tests passed: the feed flashed \"may be behind\" on every routine reconnect, so degradation now surfaces only once a drop outlives a normal auto-reconnect (5s > the server’s 3s retry hint). Gates: verify-state ok - typecheck 38 - lint 22 - format - test 36 (web 267) - build 19 - e2e 20 (api 87, mcp 25, web 32 incl. axe AA on the populated feed+bell) - web-perf both budgets met (+3.2 KB) - e2e-full 2/2. SDK regeneration verified idempotent. ADR-0050."
     },
     {
       "id": "F-061",

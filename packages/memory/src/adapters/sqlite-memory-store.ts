@@ -153,6 +153,30 @@ export function createSqliteMemoryStore(db: BetterSQLite3Database): MemoryStore 
         return Promise.resolve(rows.map(toMemory));
       },
 
+      exportAll() {
+        const rows = db
+          .select()
+          .from(memories)
+          .where(inTenant)
+          .orderBy(asc(memories.createdAt), asc(memories.id))
+          .all();
+        return Promise.resolve(rows.map(toMemory));
+      },
+
+      deleteVersion(id: MemoryId) {
+        db.delete(memories)
+          .where(and(eq(memories.id, id), inTenant))
+          .run();
+        return Promise.resolve();
+      },
+
+      deleteLineage(lineageId: MemoryLineageId) {
+        db.delete(memories)
+          .where(and(eq(memories.lineageId, lineageId), inTenant))
+          .run();
+        return Promise.resolve();
+      },
+
       forTenant(next) {
         return storeFor(next);
       },

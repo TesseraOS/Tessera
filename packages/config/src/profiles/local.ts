@@ -36,7 +36,13 @@ import {
   type SourceRecord,
 } from '@tessera/ingestion';
 import { createKnowledgeGraphService, createSqliteGraphStore } from '@tessera/knowledge-graph';
-import { createMemoryService, createSqliteMemoryStore } from '@tessera/memory';
+import {
+  createMemoryService,
+  createSqliteMemoryStore,
+  type MemoryKind,
+  type MemoryRetentionPolicy,
+  type MemoryRetentionRule,
+} from '@tessera/memory';
 import {
   createGraphRetriever,
   createHybridRetriever,
@@ -163,6 +169,28 @@ async function createEmbeddings(config: TesseraConfig['embeddings']): Promise<Em
         config.model !== undefined ? { model: config.model } : {},
       );
   }
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Resolve `config.memory.retention` (days) into the ms-based {@link MemoryRetentionPolicy} (FR-15). */
+function toMemoryRetentionPolicy(
+  retention: TesseraConfig['memory']['retention'],
+): MemoryRetentionPolicy {
+  const rules = retention.rules.map((rule): MemoryRetentionRule => {
+    const resolved: {
+      -readonly [K in keyof MemoryRetentionRule]?: MemoryRetentionRule[K];
+    } = {};
+    if (rule.kind !== undefined) resolved.kind = rule.kind as MemoryKind;
+    if (rule.scope !== undefined) resolved.scope = rule.scope;
+    if (rule.maxAgeDays !== undefined) resolved.maxAgeMs = rule.maxAgeDays * MS_PER_DAY;
+    if (rule.maxSupersededVersions !== undefined)
+      resolved.maxSupersededVersions = rule.maxSupersededVersions;
+    if (rule.maxSupersededAgeDays !== undefined)
+      resolved.maxSupersededAgeMs = rule.maxSupersededAgeDays * MS_PER_DAY;
+    return resolved;
+  });
+  return { rules };
 }
 
 export interface LocalRuntimeOptions {
@@ -304,6 +332,8 @@ export async function createLocalRuntime(
     billing,
     // Persistent audit trail (F-027) when enabled; the surface falls back to its in-memory sink otherwise.
     ...(config.audit.enabled ? { audit: createSqliteAuditLog(relational.db) } : {}),
+    // Memory retention policy (F-047; FR-15) resolved from config; empty ⇒ retention off.
+    memoryRetention: toMemoryRetentionPolicy(config.memory.retention),
     sources,
     events,
     secrets,

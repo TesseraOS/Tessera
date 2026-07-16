@@ -1,4 +1,5 @@
 import { DEPLOYMENT_PROFILES } from '@tessera/core';
+import { MEMORY_KINDS } from '@tessera/memory';
 import { z } from 'zod';
 
 /** Embedding providers selectable by config. `transformers` is the local default (zero keys). */
@@ -138,6 +139,31 @@ const auditSchema = z
   .default({});
 
 /**
+ * One memory retention rule (FR-15). Matches memories by `kind` and/or `scope` (omit ⇒ match all); the
+ * most-specific matching rule wins. `maxAgeDays` **expires** a lineage whose current version is older;
+ * `maxSupersededVersions`/`maxSupersededAgeDays` **compact** already-superseded versions.
+ */
+const memoryRetentionRuleSchema = z.object({
+  kind: z.enum(MEMORY_KINDS as unknown as [string, ...string[]]).optional(),
+  scope: z.string().min(1).optional(),
+  maxAgeDays: z.number().positive().optional(),
+  maxSupersededVersions: z.number().int().nonnegative().optional(),
+  maxSupersededAgeDays: z.number().positive().optional(),
+});
+
+/**
+ * Memory retention/expiry (FR-15, NFR-13). `retention.rules` prune aged lineages + compact superseded
+ * versions per kind/scope. **Empty (default) ⇒ retention off** — nothing is pruned and local behavior is
+ * byte-stable. Applied by an admin-triggered prune pass (`POST /v1/retention/prune`); a scheduler is a
+ * documented seam. Deletion only — the never-silently-mutate contract (FR-12) is never touched.
+ */
+const memorySchema = z
+  .object({
+    retention: z.object({ rules: z.array(memoryRetentionRuleSchema).default([]) }).default({}),
+  })
+  .default({});
+
+/**
  * Runtime source-management wiring (F-038; FR-62). Sources are registered at runtime via the API/MCP
  * surface, not statically in config; this section holds ingestion behavior. `autoScanOnRegister`
  * triggers a scan immediately when a source is registered (off by default — an agent decides when).
@@ -211,6 +237,7 @@ export const configSchema = z.object({
   auth: authSchema,
   billing: billingSchema,
   audit: auditSchema,
+  memory: memorySchema,
   sources: sourcesSchema,
   api: apiSchema,
 });

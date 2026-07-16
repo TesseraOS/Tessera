@@ -100,4 +100,34 @@ describe('config schema + loader', () => {
   it('rejects an invalid api rate-limit number', () => {
     expect(() => loadConfig({ TESSERA_API_RATE_LIMIT: 'lots' })).toThrow(/invalid configuration/);
   });
+
+  it('defaults memory retention to no rules (retention off, byte-stable)', () => {
+    expect(loadConfig({}).memory.retention.rules).toEqual([]);
+  });
+
+  it('accepts memory retention rules (kind/scope + age/count thresholds) via overrides', () => {
+    const config = loadConfig(
+      {},
+      {
+        memory: {
+          retention: {
+            rules: [
+              { kind: 'task', maxAgeDays: 7 },
+              { scope: 'api', maxSupersededVersions: 2, maxSupersededAgeDays: 30 },
+            ],
+          },
+        },
+      },
+    );
+    expect(config.memory.retention.rules).toEqual([
+      { kind: 'task', maxAgeDays: 7 },
+      { scope: 'api', maxSupersededVersions: 2, maxSupersededAgeDays: 30 },
+    ]);
+  });
+
+  it('rejects an unknown memory kind in a retention rule', () => {
+    expect(() =>
+      loadConfig({}, { memory: { retention: { rules: [{ kind: 'bogus' }] } } } as never),
+    ).toThrow(/invalid configuration/);
+  });
 });

@@ -124,6 +124,86 @@ export function runMemoryStoreConformance(name: string, makeStore: MemoryStoreFa
       }
     });
 
+    it('exportAll returns every version (superseded included) in createdAt order', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const v1 = memory();
+        await store.add(v1);
+        const v2 = memory({ lineageId: v1.lineageId, version: 2, supersedes: v1.id });
+        await store.supersede(v1.id, v2);
+        const other = memory();
+        await store.add(other);
+
+        const all = await store.exportAll();
+        expect(all.map((m) => m.id).sort()).toEqual([v1.id, v2.id, other.id].sort());
+        // listCurrent excludes the superseded v1; exportAll includes it.
+        expect((await store.listCurrent()).map((m) => m.id).sort()).toEqual(
+          [v2.id, other.id].sort(),
+        );
+      } finally {
+        await cleanup?.();
+      }
+    });
+
+    it('deleteVersion removes one version idempotently without touching others', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const v1 = memory();
+        await store.add(v1);
+        const v2 = memory({ lineageId: v1.lineageId, version: 2, supersedes: v1.id });
+        await store.supersede(v1.id, v2);
+
+        await store.deleteVersion(v1.id);
+        expect(await store.getById(v1.id)).toBeUndefined();
+        expect((await store.listVersions(v1.lineageId)).map((m) => m.id)).toEqual([v2.id]);
+        // The current version is untouched and idempotent re-delete is a no-op.
+        expect((await store.getCurrent(v1.lineageId))?.id).toBe(v2.id);
+        await store.deleteVersion(v1.id);
+      } finally {
+        await cleanup?.();
+      }
+    });
+
+    it('deleteLineage removes every version of the lineage only', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const v1 = memory();
+        await store.add(v1);
+        const v2 = memory({ lineageId: v1.lineageId, version: 2, supersedes: v1.id });
+        await store.supersede(v1.id, v2);
+        const other = memory();
+        await store.add(other);
+
+        await store.deleteLineage(v1.lineageId);
+        expect(await store.listVersions(v1.lineageId)).toEqual([]);
+        expect(await store.getCurrent(v1.lineageId)).toBeUndefined();
+        // A different lineage survives; re-delete is idempotent.
+        expect((await store.listCurrent()).map((m) => m.id)).toEqual([other.id]);
+        await store.deleteLineage(v1.lineageId);
+      } finally {
+        await cleanup?.();
+      }
+    });
+
+    it('deleteLineage / exportAll are tenant-scoped — one tenant never affects another', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const a = store.forTenant('tenant-a');
+        const b = store.forTenant('tenant-b');
+        const ma = memory();
+        const mb = memory();
+        await a.add(ma);
+        await b.add(mb);
+
+        await a.deleteLineage(ma.lineageId);
+        expect(await a.exportAll()).toEqual([]);
+        // Tenant B is untouched by tenant A's erasure.
+        expect((await b.exportAll()).map((m) => m.id)).toEqual([mb.id]);
+      } finally {
+        await cleanup?.();
+      }
+    });
+
     it('isolates memories by tenant (forTenant) — no cross-tenant reads', async () => {
       const { store, cleanup } = await makeStore();
       try {

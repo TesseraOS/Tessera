@@ -58,6 +58,26 @@ export function createIndexingMemoryService(
     list(filter) {
       return inner.list(filter);
     },
+    exportAll() {
+      return inner.exportAll();
+    },
+    async prune(policy, options) {
+      // De-index whatever the pass expires (retention FR-15 / DSR): compare the current lineage set
+      // before/after so an erased memory is also removed from the retrieval corpus (no remanence).
+      const before = new Set((await inner.list()).map((memory) => memory.lineageId));
+      const result = await inner.prune(policy, options);
+      const after = new Set((await inner.list()).map((memory) => memory.lineageId));
+      for (const lineageId of before) {
+        if (!after.has(lineageId)) {
+          await indexer.removeDocument({ ref: memoryRef(lineageId), tenantId });
+        }
+      }
+      return result;
+    },
+    async deleteLineage(lineageId) {
+      await inner.deleteLineage(lineageId);
+      await indexer.removeDocument({ ref: memoryRef(lineageId), tenantId });
+    },
     forTenant(next) {
       return createIndexingMemoryService(inner.forTenant(next), indexer, next);
     },

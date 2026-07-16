@@ -3,6 +3,12 @@ import type { z } from 'zod';
 import type { Memory, MemoryLineageId, MemoryMetadata } from '../domain.js';
 import type { MemoryListFilter, MemoryStore } from '../ports/memory-store.js';
 import {
+  pruneMemories,
+  type MemoryRetentionPolicy,
+  type PruneOptions,
+  type PruneResult,
+} from './retention.js';
+import {
   captureMemorySchema,
   editMemorySchema,
   type CaptureMemoryInput,
@@ -49,6 +55,18 @@ export interface MemoryService {
   history(lineageId: MemoryLineageId): Promise<readonly Memory[]>;
   /** Current memories, optionally filtered. */
   list(filter?: MemoryListFilter): Promise<readonly Memory[]>;
+  /**
+   * Every stored version across every lineage (all versions, superseded included) — the complete
+   * tenant-scoped record backing DSR export (NFR-13, F-047).
+   */
+  exportAll(): Promise<readonly Memory[]>;
+  /**
+   * Apply a retention policy (FR-15): expire aged lineages and compact superseded versions. Deletion
+   * only — never mutates content or the current version of a kept lineage. Returns what was removed.
+   */
+  prune(policy: MemoryRetentionPolicy, options?: PruneOptions): Promise<PruneResult>;
+  /** Delete every version of a lineage (retention expiry / DSR erasure). Idempotent. */
+  deleteLineage(lineageId: MemoryLineageId): Promise<void>;
   /**
    * A view of this service confined to `tenantId` (FR-52, ADR-0033) — every operation runs against
    * that tenant's rows. The base service operates in {@link DEFAULT_TENANT_ID}.
@@ -114,6 +132,18 @@ export function createMemoryService(store: MemoryStore): MemoryService {
 
     list(filter) {
       return store.listCurrent(filter);
+    },
+
+    exportAll() {
+      return store.exportAll();
+    },
+
+    prune(policy, options) {
+      return pruneMemories(store, policy, options);
+    },
+
+    deleteLineage(lineageId) {
+      return store.deleteLineage(lineageId);
     },
 
     forTenant(tenantId) {

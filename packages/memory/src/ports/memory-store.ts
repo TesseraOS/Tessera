@@ -30,6 +30,24 @@ export interface MemoryStore {
   /** The current version of every lineage, optionally filtered by kind/scope. */
   listCurrent(filter?: MemoryListFilter): Promise<readonly Memory[]>;
   /**
+   * Every stored version across every lineage (ascending `createdAt`, then `id`) — the complete,
+   * tenant-scoped memory record. Backs data-subject-rights export (NFR-13, F-047) and the retention
+   * pass. Unlike {@link MemoryStore.listCurrent} it includes superseded versions.
+   */
+  exportAll(): Promise<readonly Memory[]>;
+  /**
+   * Delete a single version by id (idempotent — no error if absent). Used by the retention pass to
+   * **compact already-superseded versions**; deleting the current version of a lineage is the caller's
+   * responsibility to avoid (it would orphan the lineage) — expiry uses {@link MemoryStore.deleteLineage}.
+   */
+  deleteVersion(id: MemoryId): Promise<void>;
+  /**
+   * Delete every version of a lineage (idempotent). Used by retention **expiry** (FR-15) and DSR
+   * **erasure** (NFR-13). This removes the memory outright — it is not a supersede, so the
+   * never-silently-mutate contract (FR-12) is untouched.
+   */
+  deleteLineage(lineageId: MemoryLineageId): Promise<void>;
+  /**
    * A view of this store confined to `tenantId` (FR-52, ADR-0033). The base store operates in
    * {@link DEFAULT_TENANT_ID}; memories written under one tenant are never visible to another.
    */

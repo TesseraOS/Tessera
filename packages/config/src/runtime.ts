@@ -5,6 +5,7 @@ import type { ApiEventBus, ApiServices, AuditLog } from '@tessera/api';
 import type { AuthProvider, TokenStore } from '@tessera/api/auth';
 import type { BillingProvider } from '@tessera/billing';
 import type { SourceService } from '@tessera/ingestion';
+import type { MemoryRetentionPolicy } from '@tessera/memory';
 import type { KeywordRetriever, TemporalRetriever } from '@tessera/retrieval';
 import type { BlobStore, Queue, SqliteStore, VectorStore } from '@tessera/storage';
 import type { TesseraConfig } from './schema.js';
@@ -47,6 +48,12 @@ export interface Runtime {
    * present when `config.audit.enabled`. `undefined` → the surface falls back to its in-memory sink.
    */
   readonly audit?: AuditLog;
+  /**
+   * The resolved memory retention policy (FR-15; from `config.memory.retention`, days → ms). Empty by
+   * default (retention off). `apps/server` passes it to `buildServer` so `POST /v1/retention/prune`
+   * applies it; a scheduler running the pass periodically is a documented seam.
+   */
+  readonly memoryRetention: MemoryRetentionPolicy;
   /**
    * Runtime source management (F-038; FR-62): register/scan filesystem+git sources through the
    * ingestion pipeline. The same instance is exposed on {@link ApiServices.sources} for REST/MCP.

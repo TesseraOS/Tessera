@@ -9,5 +9,6 @@ export * from './domain.js';
 export * from './validation.js';
 export * from './ports/index.js';
 export * from './service/memory-service.js';
+export * from './service/retention.js';
 export * from './adapters/in-memory-memory-store.js';
 export * from './adapters/sqlite-memory-store.js';

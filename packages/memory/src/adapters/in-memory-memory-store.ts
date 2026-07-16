@@ -77,6 +77,22 @@ export function createInMemoryMemoryStore(): MemoryStore {
         return Promise.resolve(current);
       },
 
+      exportAll() {
+        return Promise.resolve([...byId.values()].sort(byCreatedThenId));
+      },
+
+      deleteVersion(id) {
+        byId.delete(id);
+        return Promise.resolve();
+      },
+
+      deleteLineage(lineageId) {
+        for (const [id, memory] of byId) {
+          if (memory.lineageId === lineageId) byId.delete(id);
+        }
+        return Promise.resolve();
+      },
+
       forTenant(next) {
         return storeFor(next);
       },

@@ -1530,7 +1530,7 @@
       "package": "@tessera/api",
       "release": "R3",
       "priority": "should",
-      "status": "backlog",
+      "status": "in_progress",
       "blockedBy": [
         "F-027"
       ],

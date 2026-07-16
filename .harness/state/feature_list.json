@@ -2011,7 +2011,7 @@
       "package": "@tessera/web",
       "release": "R3",
       "priority": "should",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-039"
       ],
@@ -2030,8 +2030,11 @@
       "effects": [
         "E-003",
         "E-012",
-        "E-004"
-      ]
+        "E-004",
+        "E-014",
+        "E-005"
+      ],
+      "notes": "Done 2026-07-16 (delivers F-073). Search is an investigation surface, not a list of hashes. THE MECHANISM IS ONE LOOKUP: every corpus fragment already carried metadata.path (ingestion) / metadata.title (memory) and FragmentSource.get already existed, so label+kind+node+excerpt all fall out of a call the feature had to make anyway — which is why folding F-073 in cost ~3 lines and why F-061 could not meet its own acceptance without it (GET /v1/effects is keyed by {kind,key} and a file key IS its path, so \"show effects\" on a file result is impossible with only a hash; and seeding a compile task — which IS the retrieval query — with a sha256 is actively harmful). createEnrichedRetriever is a composition-root decorator over HybridRetriever: the only layer holding both the retriever and the corpus; REST + MCP both call the one services.search so both surfaces are enriched by ONE implementation (ADR-0036, structural); @tessera/retrieval stays pure; no ApiServices member (the E-015 trap). THE PERF GATE FAILED AT 918/900 AND THAT SHAPED THE DESIGN: thresholds.json was NOT touched; measuring per-field disproved my own arithmetic (I blamed the label at ~90; `node` cost 135 and RESTATED the label — node.key is the path minus the extension, so the shape shipped the same path twice per hit). Operator chose label-only by default => `include { kind?, node?, snippet? }`, each with its measured cost in the OpenAPI/MCP description. Re-measured 783/900 (117 spare). F-073 fixed by DEFAULT on both surfaces. Highlighting rides OFFSETS never HTML (the excerpt is ingested repo content — attacker-influenceable; the client slices and renders its own <mark>, so XSS is structurally impossible, pinned by a regression test). Snippet extractor is deliberately NOT the compiler compressToFit (non-contiguous segments + no offsets + wrong layering) but DOES reuse extractTerms — the same tokenizer the keyword retriever matched with, so a highlight is provenance-honest. Detail = a Radix Sheet not a /search/[ref] route, on correctness: provenance exists only RELATIVE TO A QUERY, so a ref route cannot render rank/score/weight without re-running the search; the Sheet also preserves list+scroll+virtualizer+active index for the keyboard flow. THREE REAL DEFECTS FOUND BY VERIFICATION, NOT BY TESTS: (1) focus was dropped on <body> after closing the Sheet — a controlled Radix Sheet has no trigger to restore to; fixed via onCloseAutoFocus (onOpenChange loses the race). (2) the Card base sets `dark:ring-0`, which beats an unprefixed `ring-2` — the active-row cue was invisible in ALL FOUR dark themes while correct in light (caught by screenshot; the a11y state was right the whole time). (3) `aria-controls` dangled at a listbox that does not exist until there are results — a CRITICAL axe violation on the empty search page, caught by the AUTH e2e (which lands on /search with no query) because my own axe test always had results; now pinned by an empty-state axe test. PLAN CORRECTION: fuse.ts needs NO change — the decorator wraps HybridRetriever so it decorates FUSED candidates; Candidate is untouched and E-012 stays purely type-only. Gates: verify-state ok - typecheck 38 - lint 22 - format - test 36 (config 31, web 278) - build 19 - e2e 20 (api 90, mcp 25, web 39 incl. axe AA on empty/no-results/populated/Sheet-open) - bench 783/900 PASSES - web-perf both budgets met (web /signin 255.8 KB) - e2e-full 2/2 (the human journey now asserts a READABLE PATH and zero 64-char hashes; the agent journey asserts a label, the lean default, AND keeps the keyword-signal proof). SCOPE LIMITS, stated not hidden: (SL-2) file BODIES are not served — the blob corpus has no forTenant and refs are derivable, so GET /v1/fragments/:ref would be a cross-tenant IDOR (the ADR-0050 class); memory bodies ARE rendered in full via the existing tenant-scoped route, file results get the excerpt. Registered as F-075. (SL-3) \"show effects\" is FILE-only; symbol results need {kind,key} carried from the graph/symbolic retrievers through fusion (~6 lines) — deferred to keep E-012 type-only; the action is ABSENT, never disabled-with-a-lie. (SL-4) one file has TWO refs (documentIdFor vs nodeIdFor) and fusion cannot merge them — labelling both makes the duplicate VISIBLE rather than hidden behind a hash; unifying the ref spaces needs its own feature + ADR. Registered as F-076. (SL-5) acceptance criterion 3 \"first real FR-49 virtualization\" is FALSE — F-041 shipped one in memory-view; this is the second and the first KEYBOARD-NAVIGABLE one. (SL-6) kind filters + counts are client-side over the returned set and labelled \"for this query\", never a corpus-wide claim. (SL-7) no deep-link to /graph (no URL state + a 500-node ceiling would resolve to nothing) — effects render inline. (SL-8) the Inspector seed PREFILLS and never auto-compiles (compile spends budget and is entitlement-clamped)."
     },
     {
       "id": "F-062",
@@ -2408,7 +2411,7 @@
       "package": "@tessera/retrieval",
       "release": "R4",
       "priority": "should",
-      "status": "backlog",
+      "status": "done",
       "blockedBy": [],
       "acceptance": [
         "A search hit over ingested content carries a human-readable label/path (its source path), so the dashboard shows `src/ledger.ts` rather than a 64-char content hash — today the web falls back to `result.label ?? result.ref` and renders the hash",
@@ -2425,7 +2428,7 @@
         "E-012",
         "E-003"
       ],
-      "notes": "FOUND BY F-048 (2026-07-16). Verified against a real ingested corpus: `POST /v1/search` returns `{ ref: '<sha256>', score, signals }` with NO `label`, so apps/web's `{result.label ?? result.ref}` renders a bare content hash — the search surface is effectively unreadable for real repository content. The data exists (the corpus indexer already writes `path`/`sourceId` into the fragment metadata; compile fragments carry the text, and graph nodes carry `label: 'reporting.ts'` + `metadata.path`), it just never reaches the retrieval Candidate. Overlaps F-061 (search depth) — fold in there if F-061 is scheduled first. F-048's human journey asserts on provenance signal badges instead, with a comment pointing here."
+      "notes": "Done 2026-07-16 — DELIVERED BY F-061 (operator-approved fold; see the OQ-1 section of .harness/plans/F-061-search-depth.md). Not a contract problem: `Candidate.label` already existed (packages/retrieval/src/domain.ts:25, comment \"Optional human-readable label/snippet\"), fusion already carried it first-wins, the Zod schema already declared it, and the COMMITTED SDK already typed it — only keyword/semantic/temporal (the three that index ingested content) never populated it. The fix is createEnrichedRetriever reading metadata.path off the corpus fragment F-061 fetches anyway: ~3 lines, zero wire change, no ADR (it populates a field the contract already declares). Labels are ALWAYS on, so this is fixed by default for the dashboard AND for agents — the perf cost (56 tokens measured on a 10-result answer) was a deliberate, escalated decision, not a silent one. Proven end-to-end: the F-048 human journey now asserts a readable path and ZERO 64-char hashes, and the agent journey asserts `label` while KEEPING its keyword-signal proof (a prettier assertion is not a better one). Its own acceptance clause — \"the F-048 suite asserts a readable label\" — is satisfied. NOTE (F-061 SL-4): labelling both ref spaces makes the pre-existing duplicate-row wart VISIBLE (one file has a documentIdFor ref and a nodeIdFor ref, unmergeable by fusion) — surfaced rather than papered over, and registered as F-076."
     },
     {
       "id": "F-074",
@@ -2457,6 +2460,70 @@
         "E-022"
       ],
       "notes": "FOUND BY F-049 (2026-07-16), which activated the web-perf gate on bundle budgets but could NOT deliver the CWV half of its acceptance honestly. Lighthouse 13.4 was implemented against the real production build and removed again, with evidence: under its DEFAULT simulated throttling it reported a **TBT of 71,670 ms inside a ~10 s trace** (the marketing hero runs a WebGL ShaderField + a Canvas Constellation on continuous rAF loops, so the trace is wall-to-wall long tasks and the simulation model extrapolates from noise); switching to throttlingMethod:'provided' produced **TBT NaN and performance score 0**, with an unthrottled localhost LCP of 136 ms that represents nothing. Neither number is gateable, and shipping a gate on either would be gating on noise — so CWV was left declared-but-unenforced rather than faked, and NFR-17's CWV clause is NOT yet satisfied. The declared targets and the reasoning are already committed in tests/web-perf/budgets.json ($vitalsNote + the per-app vitals blocks) so this feature starts with its acceptance written. Related lesson: [[playwright-a11y-assertions-avoid-framework-overlays]] already records that these infinite art animations break screenshot capture — the same root cause, a second time, which is itself an argument for option (a)."
+    },
+    {
+      "id": "F-075",
+      "title": "Tenant-key the blob corpus so file bodies can be served safely (unblocks fragment reads)",
+      "requirements": [
+        "FR-52",
+        "NFR-13",
+        "FR-41"
+      ],
+      "service": "api",
+      "package": "@tessera/storage",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "The corpus is tenant-partitioned: `putFragment`/`createBlobFragmentSource` key blobs per tenant (e.g. `{tenantId}/{ref}`) and the compiler + search enrichment read through a tenant-scoped FragmentSource; a migration moves existing unprefixed keys",
+        "A `GET /v1/fragments/:ref` (or equivalent) can then serve a file BODY without a cross-tenant IDOR: tenant A presenting tenant B ref gets 404, proven by an api e2e",
+        "The F-061 search detail Sheet renders full file bodies (today it shows only the excerpt — its stated SL-2 limit); memory bodies already render via the tenant-scoped memory route",
+        "Workspace gates green incl. e2e-full"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-007",
+        "E-013",
+        "E-003"
+      ],
+      "notes": "FOUND BY F-061 (2026-07-16). `BlobStore` (packages/storage/src/ports/blob.ts) has NO `forTenant`, and `putFragment` writes an UNPREFIXED key = the ref (packages/config/src/fragment-source.ts). Today that is safe BY CONSTRUCTION — every ref reaching the corpus came from an already-`forTenant`-scoped retriever, which is exactly why F-061 enrichment is safe — but it means ANY by-ref read endpoint would be a cross-tenant IDOR, and refs are DERIVABLE (`sha256(sourceId:path)`), not secret. That is the ADR-0050 class of defect: a surface that authenticates but does not authorize. F-061 therefore ships the detail Sheet with an excerpt for file results rather than a body, and says so (SL-2). F-071 compounds this: ingestion writes to DEFAULT_TENANT_ID, so registry-derived ownership would not even agree with what search returns — sequence F-071 first. Likely needs an ADR (key layout + migration)."
+    },
+    {
+      "id": "F-076",
+      "title": "One file, one ref: unify the document and graph-node ref spaces so fusion can merge them",
+      "requirements": [
+        "FR-26",
+        "FR-41"
+      ],
+      "service": "api",
+      "package": "@tessera/retrieval",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "A single file is ONE row in a fused result set: the keyword/semantic/temporal hit and the graph/symbolic hit for the same file share a ref (or are reconciled before fusion), so their signals combine into one candidate with full attribution instead of two competing rows",
+        "Ranking stays honest: the reconciliation must not silently re-score or re-rank (the fusion tests are the regression guard and must pass unmodified)",
+        "A test proves a file matched by BOTH a keyword hit and a graph hit yields one candidate carrying both signals",
+        "Workspace gates green incl. the perf gate (fewer duplicate rows changes the token count)"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test"
+      ],
+      "effects": [
+        "E-012",
+        "E-002",
+        "E-003"
+      ],
+      "notes": "FOUND BY F-061 (2026-07-16), and MADE VISIBLE by it. The same file has two refs: the document ref `documentIdFor(sourceId, path) = sha256(sourceId:path)` (packages/ingestion/src/domain.ts) used by keyword/semantic/temporal, and the graph node id `nodeIdFor(kind, key) = sha256(kind:key)` (packages/knowledge-graph/src/domain.ts) used by graph/symbolic. `fuse()` keys on `ref` and therefore CANNOT merge them, so one file can occupy two rows of one result set with its signals split across them — which also understates the fused score of a file that genuinely matched on several signals. Before F-061 this was invisible (one row rendered a hash, the other a node label, so they looked like different things); labelling both makes the duplicate obvious. F-061 deliberately SURFACED the wart rather than papering over it: deduping post-fusion would corrupt ranks/scores, and unifying the ref spaces is a retrieval-architecture change. Needs an ADR (which space wins, or a reconciliation layer, and what it does to the fusion contract)."
     }
   ]
 }

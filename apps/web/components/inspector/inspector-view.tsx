@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -19,7 +20,11 @@ const DEFAULT_BUDGET = 2000;
 
 /** Context Package Inspector (FR-44) — the provenance-first flagship: what was chosen, why, how. */
 export function InspectorView() {
-  const [task, setTask] = useState('');
+  // Seeded from `?task=` when arriving from a search result (F-061). PREFILL ONLY — it deliberately
+  // does not auto-compile: a compile spends budget and is entitlement-clamped, so firing one from a
+  // navigation would surprise the user and burn quota they never chose to spend.
+  const searchParams = useSearchParams();
+  const [task, setTask] = useState(() => searchParams.get('task') ?? '');
   const [budget, setBudget] = useState(DEFAULT_BUDGET);
   const compile = useCompile();
 

@@ -35,11 +35,20 @@ test('sign in → sources → search → inspector → capture memory → audit,
   // **keyword** signal is the load-bearing one — an FTS hit on a term that appears in no other
   // document can only have come from the scanned fixture. (Semantic alone would prove less: vector
   // search has no relevance floor, so it returns nearest neighbours for any query at all.)
-  // Results are labelled by content-hash ref today — the ingested corpus sets no label; see F-073.
   await page.goto('/search');
   await page.getByLabel('Search query').fill(FIXTURE_TERM);
   await expect(page.getByText('keyword').first()).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText('semantic').first()).toBeVisible();
+
+  // Results are labelled by their real source path (F-061/F-073). This assertion is the point of
+  // F-073: before it, this spec could only check the signals, because every hit rendered as a
+  // 64-char content hash. A path is only here if the ref reached the corpus and came back with its
+  // metadata — over a real scan, through the real proxy, in a real browser.
+  await expect(page.getByText('ledger.ts').first()).toBeVisible();
+  await expect(page.getByText(/^[0-9a-f]{64}$/)).toHaveCount(0);
+
+  // And the excerpt is real fixture prose with the queried term marked, not a placeholder.
+  await expect(page.locator('mark').first()).toHaveText(new RegExp(FIXTURE_TERM, 'i'));
 
   // ---- 4. Inspector compiles a cited, budget-bounded package ---------------------------------
   await page.goto('/inspector');

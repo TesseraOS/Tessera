@@ -15,12 +15,27 @@ import type {
   RegisterSourceBody,
 } from './types';
 
+/**
+ * What the dashboard asks `/v1/search` to attach to each hit (F-061).
+ *
+ * All three are opt-in because a ranked answer is billed to every caller on every call (NFR-4) — but
+ * that budget is an *agent's* concern. A human looking at a search page pays nothing per token, and
+ * needs all of it: `kind` for the filters and counts, `snippet` for the excerpt, `node` for "show
+ * effects". So the dashboard opts in deliberately, and agents stay lean by default.
+ */
+const DASHBOARD_INCLUDE = { kind: true, node: true, snippet: {} } as const;
+
 /** Debounced global search (FR-41). The caller debounces `query`; the hook runs when non-empty. */
 export function useSearch(query: string, limit?: number) {
   const trimmed = query.trim();
   return useQuery({
     queryKey: ['search', trimmed, limit ?? null],
-    queryFn: () => api.search(limit === undefined ? { query: trimmed } : { query: trimmed, limit }),
+    queryFn: () =>
+      api.search({
+        query: trimmed,
+        ...(limit === undefined ? {} : { limit }),
+        include: DASHBOARD_INCLUDE,
+      }),
     enabled: trimmed.length > 0,
     staleTime: 30_000,
   });

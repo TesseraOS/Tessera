@@ -3,6 +3,128 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-16 (v6) — F-061 DONE (**delivers F-073**) — search is an investigation surface; the **perf gate failed and shaped the design**
+
+**Harness-strict selection** (next by id in R3; blocker F-039 done). Plan:
+[`.harness/plans/F-061-search-depth.md`](../plans/F-061-search-depth.md). One backend commit + one web
+commit. **Operator decisions: fold F-073 in; label-only by default.**
+
+### F-073 folded in — because F-061 could not meet its own acceptance without it
+
+Escalated rather than assumed: F-061 is R3 and F-073 is R4, so folding forward is a scope decision.
+Two of F-061's own acceptance clauses are **unsatisfiable** while every hit is titled by a sha256 —
+`GET /v1/effects` is keyed `{kind, key}` and a file's key **is its path**, so "show effects" on a file
+result is literally impossible; and the compile task **is** the retrieval query, so seeding it with a
+hash is not merely useless but actively harmful.
+
+**It was not a contract problem.** `Candidate.label` already existed (its own comment reads *"Optional
+human-readable label/snippet"*), fusion already carried it first-wins, the Zod schema declared it, and
+**the committed SDK already typed it**. Only keyword/semantic/temporal — the three that index ingested
+content — never populated it. **Marginal cost inside F-061: ~3 lines**, because the enrichment fetches
+the fragment anyway.
+
+### The perf gate failed, and that is the story
+
+`918 > 900`. `thresholds.json:3` says the fix is code or a feature, **never the number** — so it was
+measured per-field and escalated, not rebaselined:
+
+| default fields | tokens |
+|---|---|
+| `ref` `score` `signals` | 734 |
+| `+ label` | 824 |
+| `+ kind` | 859 |
+| `+ node` | **994** |
+
+**The measurement disproved my own plan.** D7 blamed the label (~90). The real culprit was **`node` at
+135 — and it *restates* the label** (`node.key` is the path minus the extension), so the shape was
+shipping the same path twice per hit. Operator chose **label-only by default**, which yields a
+coherent contract: *the default is what makes a hit an **answer**; `kind`/`node`/`snippet` are
+**depth** you ask for* via `include`, each carrying its **measured token cost in the OpenAPI + MCP
+description** so a caller chooses knowingly. A human dashboard pays no token budget and opts into all
+three; agents stay lean.
+
+**Re-measured: 783/900 — passes, 117 spare (13%).** The real corpus's label costs **56** tokens, not
+the synthetic's 90. F-073 is fixed **by default on both surfaces**, no threshold moved. Search p95 rose
+~60% (5.6 → ~8.9 ms) from the per-hit corpus lookup — still **~34× under** the 300 ms NFR-4 ceiling.
+
+### Three real defects that verification found and tests did not
+
+1. **Focus was dropped on `<body>` after closing the detail Sheet.** A *controlled* Radix Sheet has no
+   trigger to restore to, so a keyboard user who opened a result and pressed Escape silently lost their
+   place. Fixed with `onCloseAutoFocus`; doing it in `onOpenChange` loses the race against Radix's own
+   restoration. **Found by an e2e assertion I nearly did not write.**
+2. **The active-row cue was invisible in all four dark themes.** The `Card` base sets `dark:ring-0`,
+   which **beats** an unprefixed `ring-2`. The a11y state was correct the whole time —
+   `aria-activedescendant` tracked perfectly — so only a **screenshot** could catch it. `dark:ring-2`
+   is load-bearing, not redundant.
+3. **`aria-controls` dangled at a listbox that does not exist until there are results** — a *critical*
+   axe violation on the empty search page. Caught by the **auth e2e**, which lands on `/search` with no
+   query; my own axe test always had results. Same rule as `aria-activedescendant`: an ARIA reference
+   must point at a live element. Now pinned by an empty-state axe test.
+
+### Design decisions worth keeping
+
+- **Enrichment is a composition-root decorator** over `HybridRetriever` — the only layer holding both
+  the retriever and the corpus. REST and MCP both call the one `services.search`, so **both surfaces
+  are enriched by one implementation** and cannot drift (ADR-0036; the F-060 `computeWorkspaceStats`
+  lesson). `@tessera/retrieval` stays pure; **no `ApiServices` member** (the E-015 trap).
+- **Offsets, never HTML.** The excerpt is ingested repository content — attacker-influenceable — so the
+  API returns `{text, matches:[{start,end}]}` and the client renders its own `<mark>`. The XSS is
+  **structurally impossible**, not sanitized. Pinned by a regression test.
+- **Not `compressToFit`** (F-019): it returns *non-contiguous* segments rejoined (right for a compile
+  budget, a jumble as an excerpt), no offsets, and reusing it inverts the layering. **But do reuse
+  `extractTerms`** — the same tokenizer the keyword retriever matched with, so a highlight marks what
+  actually contributed to the hit rather than a client-side guess.
+- **A Sheet, not `/search/[ref]`** — on correctness, not taste: provenance exists only **relative to a
+  query**, so a ref route would have to re-run the search to render rank/score/weight. The Sheet also
+  preserves list + scroll + virtualizer + active index, which is what makes ↓↓ Enter Esc ↓ Enter work.
+
+**Plan correction found while implementing:** `fuse.ts` needs **no change**. The decorator wraps
+`HybridRetriever`, so it decorates **fused** candidates — fusion never sees the new fields. `Candidate`
+is untouched and **E-012 stays purely type-only**, leaving the code that is load-bearing for both
+search *and* compile alone.
+
+### Scope limits — stated, not hidden
+
+1. **SL-2 — file BODIES are not served** (the Sheet shows the excerpt; memory bodies render in full via
+   the existing tenant-scoped route). The blob corpus has **no `forTenant`** and refs are **derivable**,
+   so a by-ref endpoint would be a cross-tenant IDOR — the ADR-0050 class. **Registered as F-075.**
+2. **SL-3 — "show effects" is file-only.** Symbol results need `{kind,key}` carried from the
+   graph/symbolic retrievers through fusion (~6 lines) — deferred to keep E-012 type-only. The action
+   is **absent**, never disabled-with-a-lie.
+3. **SL-4 — one file has TWO refs** (`documentIdFor` vs `nodeIdFor`) and fusion cannot merge them.
+   Labelling both makes the pre-existing duplicate **visible** rather than hidden behind a hash.
+   **Registered as F-076.**
+4. **SL-5 — acceptance criterion 3's "first real FR-49 virtualization" is FALSE.** F-041 shipped one in
+   `memory-view`. This is the **second**, and the first **keyboard-navigable** one. (Same staleness
+   class as F-060's "first `/v1/events` consumer", which was the third.)
+5. **SL-6** kind filters + counts are client-side over the returned set and labelled *"for this query"*
+   — never a corpus-wide claim. **SL-7** no `/graph` deep-link (no URL state + a 500-node ceiling would
+   resolve to nothing) — effects render inline. **SL-8** the Inspector seed **prefills, never
+   auto-compiles** (compile spends budget and is entitlement-clamped).
+
+**Decisions** — no ADR: F-073 populates a field the contract already declares, and the enrichment
+deviates from no documented default. The `include` contract and the label-only default are recorded
+here and in the plan's resolved OQ-1/OQ-2.
+
+**Evidence** (all gates, workspace-wide) — verify-state ok · typecheck **38** · lint **22** · format
+clean · test **36** (config 31: +14 snippet +13 enrichment; web 278) · build **19** · e2e **20** (api
+**90**, mcp **25**, web **39** incl. axe WCAG A/AA on the **empty**, **no-results**, **populated** and
+**Sheet-open** states) · **bench 783/900 PASSES** · **web-perf** both budgets met (web `/signin`
+**255.8 KB** gz) · **e2e-full 2/2** — the human journey now asserts a **readable path** and **zero
+64-char hashes**; the agent journey asserts a label, the lean default, *and* keeps its keyword-signal
+proof. SDK regenerated + committed. UI verified by **screenshot** across 4 themes × light/dark.
+
+Effects **E-003**, **E-004**, **E-005**, **E-012**, **E-014** extended.
+
+**Next step**
+- R3 remaining, by id: **F-062** (Inspector v2), **F-063** (data tables + Audit v2). Both unblocked.
+- R4 head: **F-071** (`must`, tenant-aware ingestion) — now blocking *three* things: ADR-0050's
+  `document.*` feed gap, and **F-075** (registry-derived ownership would not agree with what search
+  returns until it lands).
+
+---
+
 ## 2026-07-16 (v5) — F-060 DONE — live Overview (real stats + SSE feed + bell); **closed a cross-tenant SSE leak** (ADR-0050)
 
 **Harness-strict selection**: ordering is *by release, then id*, and R3 still had open features, so

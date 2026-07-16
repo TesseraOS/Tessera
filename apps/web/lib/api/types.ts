@@ -18,8 +18,16 @@ export interface ErrorEnvelope {
 export interface SearchBody {
   query: string;
   limit?: number;
-  /** Ask for a query-relevant excerpt per hit (F-061). Opt-in — see `snippetRequestSchema`. */
-  snippet?: { maxChars?: number };
+  /**
+   * Extras to attach per hit (F-061). All opt-in: every hit already carries a `label`, and a ranked
+   * answer is billed to every caller on every call (NFR-4), so depth is asked for. Measured on 10
+   * results: `kind` +35, `node` +135, `snippet` ~+200 tokens.
+   */
+  include?: {
+    kind?: boolean;
+    node?: boolean;
+    snippet?: { maxChars?: number };
+  };
 }
 
 export interface SignalContribution {

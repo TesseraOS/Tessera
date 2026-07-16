@@ -67,16 +67,37 @@ test('a real MCP agent works the same deployment: search → compile → effects
       name: 'search',
       arguments: { query: `${FIXTURE_TERM} ledger`, limit: 5 },
     })) as ToolResult;
-    const { results } = structured<{ results: { ref: string; signals: { signal: string }[] }[] }>(
-      search,
-    );
+    const { results } = structured<{
+      results: { ref: string; label?: string; snippet?: unknown; signals: { signal: string }[] }[];
+    }>(search);
     expect(results.length).toBeGreaterThan(0);
-    // Refs are content hashes, not paths — so assert on the SIGNAL. A keyword (FTS) hit on a term
-    // that exists in no other document can only come from the fixture the API server scanned.
+    // Assert on the SIGNAL, not merely on a hit: a keyword (FTS) hit on a term that exists in no
+    // other document can only come from the fixture the API server scanned. (Kept from before
+    // F-073 — it is the strongest proof here, and a prettier assertion is not a better one.)
     expect(results.some((hit) => hit.signals.some((s) => s.signal === 'keyword'))).toBe(true);
 
-    // Token-lean (ADR-0036): a ranked answer is refs + scores, never a dump of the corpus.
+    // An agent gets a READABLE hit, not a hash (F-073). Before this, an agent had to compile just to
+    // learn what a result was.
+    expect(results.some((hit) => hit.label?.endsWith('ledger.ts') === true)).toBe(true);
+
+    // ...and the lean default still holds: no snippet unless asked for. A ranked answer is billed to
+    // every agent on every call, so depth must be opt-in (NFR-4, measured by the `perf` gate).
+    expect(results.every((hit) => hit.snippet === undefined)).toBe(true);
+
+    // Token-lean (ADR-0036): a ranked answer is refs + labels + scores, never a dump of the corpus.
     expect(payloadOf(search).length).toBeLessThan(20_000);
+
+    // An agent that DOES want prose can ask — and then gets it, on the same tool (ADR-0036 parity).
+    const withSnippets = (await client.callTool({
+      name: 'search',
+      arguments: {
+        query: `${FIXTURE_TERM} ledger`,
+        limit: 5,
+        include: { snippet: { maxChars: 160 } },
+      },
+    })) as ToolResult;
+    const enriched = structured<{ results: { snippet?: { text: string } }[] }>(withSnippets);
+    expect(enriched.results.some((hit) => (hit.snippet?.text.length ?? 0) > 0)).toBe(true);
 
     // ---- compile_context is budget-bounded ------------------------------------------------------
     const budget = 1500;

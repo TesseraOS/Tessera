@@ -33,3 +33,12 @@ background (with focusables still in the tree until the overlay closes).
    Browser-pane screenshot tool on a slow disk; freeze with an injected
    `*{animation:none!important}` style, or screenshot the production build (faster than `next dev`).
    The accessibility/functional proof is the axe + Playwright e2e, not the screenshot.
+
+**Corollary (F-046) — `browser.newContext()` bypasses the fixture's `page.route` mocks.** Our view
+specs import a custom `test` whose `page` fixture stubs `/v1/me` (+`/v1/rbac`) so the app resolves a
+Local session and never hits the F-045 redirect-on-401. A test that creates its OWN context/page
+(`const ctx = await browser.newContext(...)`) gets a **fresh, unmocked** page — its `/v1/me` 401s
+through the proxy and redirects to `/signin` mid-test (a timeout, or a race the test *used* to win).
+Re-apply the session stubs on that page before `goto` (export the mock payloads from the fixture and
+`await page.route('**/v1/me', …)`). Any auth-gated app with fixture-scoped mocks + a per-test context
+hits this.

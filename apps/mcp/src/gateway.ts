@@ -1,7 +1,16 @@
 import { ForbiddenError, RateLimitedError } from '@tessera/core';
 // Type-only: the MCP runtime must not pull Fastify (the F-012 invariant). We reuse the F-025 auth
-// MODEL (identity + permissions) but construct providers at the composition root, not here.
-import type { AuthContext, AuthInput, AuthProvider, Permission } from '@tessera/api';
+// MODEL (identity + permissions) and the F-027 audit MODEL, but construct providers/sinks at the
+// composition root, not here.
+import type {
+  AuditAction,
+  AuditLog,
+  AuditOutcome,
+  AuthContext,
+  AuthInput,
+  AuthProvider,
+  Permission,
+} from '@tessera/api';
 import type { QuotaLimiter } from './quota.js';
 
 /**
@@ -46,6 +55,27 @@ export const TOOL_PERMISSIONS: Readonly<Record<McpToolName, Permission>> = {
 };
 
 /**
+ * Each tool's audit action (F-047, closing the F-027 seam). Reuses the **existing** REST taxonomy — an
+ * agent capturing a memory over MCP and a user capturing one over REST are the same `memory.write` in
+ * one trail, so compliance reporting never has to union two vocabularies (ADR-0036 parity).
+ */
+export const MCP_AUDIT_ACTIONS: Readonly<Record<McpToolName, AuditAction>> = {
+  search: 'search',
+  compile_context: 'compile',
+  explain: 'compile',
+  get_effects: 'effects.read',
+  query_graph: 'effects.read',
+  capture_memory: 'memory.write',
+  assert_effect: 'effects.write',
+  add_source: 'source.manage',
+  list_sources: 'source.read',
+  scan_source: 'source.manage',
+  list_tokens: 'token.read',
+  issue_token: 'token.manage',
+  revoke_token: 'token.manage',
+};
+
+/**
  * The subset of the MCP SDK's per-request `extra` the gateway reads to find a credential. Structural,
  * so the SDK's `RequestHandlerExtra` is assignable to it.
  */
@@ -80,6 +110,16 @@ export interface McpGatewayOptions {
   readonly quota?: QuotaLimiter;
   /** Optional credential extractor (default {@link defaultCredentialResolver}). */
   readonly resolveCredential?: CredentialResolver;
+  /**
+   * Optional audit sink (F-047, closing the F-027 seam). When set, every guarded call records the
+   * **authorization decision** — `success` once the caller is authorized + metered, `denied` on a
+   * permission or quota refusal — with the actor/tenant from the resolved {@link AuthContext} and the
+   * tool name as the target. Unauthenticated calls are **not** recorded: without an identity there is
+   * no tenant to attribute them to (the same rule the REST recorder applies to 401s).
+   *
+   * Recording is best-effort and failure-isolated: a sink error never fails a tool call.
+   */
+  readonly audit?: AuditLog;
 }
 
 export interface McpGateway {
@@ -94,21 +134,49 @@ export interface McpGateway {
 
 export function createMcpGateway(options: McpGatewayOptions): McpGateway {
   const resolveCredential = options.resolveCredential ?? defaultCredentialResolver;
+  const { audit } = options;
+
+  /** Record one decision. Best-effort: a sink failure must never turn a good tool call into an error. */
+  const record = async (
+    authContext: AuthContext,
+    tool: McpToolName,
+    outcome: AuditOutcome,
+  ): Promise<void> => {
+    if (audit === undefined) return;
+    try {
+      await audit.forTenant(authContext.tenantId).record({
+        tenantId: authContext.tenantId,
+        actor: { principalId: authContext.principal.id, kind: authContext.principal.kind },
+        action: MCP_AUDIT_ACTIONS[tool],
+        target: tool,
+        outcome,
+        metadata: { surface: 'mcp' },
+      });
+    } catch {
+      // Swallowed by contract (see McpGatewayOptions.audit).
+    }
+  };
+
   return {
     async guard(tool, context) {
+      // A failure here is unauthenticated — no identity, so nothing attributable to audit.
       const authContext = await options.auth.authenticate(resolveCredential(context));
+
       const permission = TOOL_PERMISSIONS[tool];
       if (!authContext.permissions.has(permission)) {
+        await record(authContext, tool, 'denied');
         throw new ForbiddenError(`Missing required permission: ${permission}.`);
       }
       if (options.quota !== undefined) {
         const decision = options.quota.consume(authContext.principal.id);
         if (!decision.allowed) {
+          await record(authContext, tool, 'denied');
           throw new RateLimitedError('Quota exceeded; retry after the window resets.', {
             details: { limit: decision.limit, resetAt: decision.resetAt },
           });
         }
       }
+      await record(authContext, tool, 'success');
       return authContext;
     },
   };

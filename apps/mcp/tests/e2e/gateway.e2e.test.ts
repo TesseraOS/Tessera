@@ -1,7 +1,13 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createInMemoryTokenStore, createTokenAuthProvider, type Role } from '@tessera/api';
+import {
+  createInMemoryAuditLog,
+  createInMemoryTokenStore,
+  createTokenAuthProvider,
+  type AuditLog,
+  type Role,
+} from '@tessera/api';
 import {
   buildMcpServer,
   createInMemoryQuotaLimiter,
@@ -36,7 +42,11 @@ describe('@tessera/mcp gateway (auth + quotas)', () => {
     return client;
   }
 
-  async function gatedClient(opts: { roles: Role[]; quota?: QuotaLimiter }): Promise<Client> {
+  async function gatedClient(opts: {
+    roles: Role[];
+    quota?: QuotaLimiter;
+    audit?: AuditLog;
+  }): Promise<Client> {
     const services = await createInMemoryServices();
     const tokenStore = createInMemoryTokenStore();
     const { token } = await tokenStore.issue({
@@ -47,6 +57,7 @@ describe('@tessera/mcp gateway (auth + quotas)', () => {
     const gateway = createMcpGateway({
       auth: createTokenAuthProvider({ tokenStore }),
       ...(opts.quota !== undefined ? { quota: opts.quota } : {}),
+      ...(opts.audit !== undefined ? { audit: opts.audit } : {}),
       resolveCredential: () => ({ authorization: `Bearer ${token}`, headers: {} }),
     });
     return connect(buildMcpServer(services, { gateway }));
@@ -100,5 +111,48 @@ describe('@tessera/mcp gateway (auth + quotas)', () => {
     const client = await connect(buildMcpServer(services));
     const result = await client.callTool({ name: 'capture_memory', arguments: MEMORY_ARGS });
     expect(result.isError).toBeFalsy();
+  });
+
+  describe('audit recording (F-047 — closes the F-027 seam)', () => {
+    it('records a real agent tool call into the same trail REST records into', async () => {
+      const audit = createInMemoryAuditLog();
+      const client = await gatedClient({ roles: ['member'], audit });
+
+      const result = await client.callTool({ name: 'capture_memory', arguments: MEMORY_ARGS });
+      expect(result.isError).toBeFalsy();
+
+      const { events } = await audit.forTenant('acme').query();
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        tenantId: 'acme',
+        actor: { principalId: 'client', kind: 'token' },
+        action: 'memory.write',
+        target: 'capture_memory',
+        outcome: 'success',
+        metadata: { surface: 'mcp' },
+      });
+    });
+
+    it('records a denied tool call from a real client as `denied`', async () => {
+      const audit = createInMemoryAuditLog();
+      const client = await gatedClient({ roles: ['viewer'], audit });
+
+      const denied = await client.callTool({ name: 'capture_memory', arguments: MEMORY_ARGS });
+      expect(errorCode(denied)).toBe('FORBIDDEN');
+
+      const { events } = await audit.forTenant('acme').query();
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        action: 'memory.write',
+        target: 'capture_memory',
+        outcome: 'denied',
+      });
+    });
+
+    it('records nothing when no audit sink is wired (back-compat)', async () => {
+      const client = await gatedClient({ roles: ['member'] });
+      const result = await client.callTool({ name: 'capture_memory', arguments: MEMORY_ARGS });
+      expect(result.isError).toBeFalsy(); // unchanged behavior without a sink
+    });
   });
 });

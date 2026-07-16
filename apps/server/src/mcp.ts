@@ -37,6 +37,9 @@ export async function startMcpServer(options: McpServerOptions = {}): Promise<Mc
     ...(quota.enabled
       ? { quota: createInMemoryQuotaLimiter({ limit: quota.limit, windowMs: quota.windowMs }) }
       : {}),
+    // Record agent tool calls into the runtime's trail (F-047, closes the F-027 seam) — the SAME sink
+    // and taxonomy the REST surface records into, so one trail covers both surfaces (ADR-0036).
+    ...(runtime.audit !== undefined ? { audit: runtime.audit } : {}),
   });
   const server = await startMcpStdio(services, {
     gateway,

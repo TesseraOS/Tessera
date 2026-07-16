@@ -14,8 +14,10 @@ export { buildExplanation } from './explain.js';
 export type { Explanation, FragmentExplanation, StageExplanation } from './explain.js';
 export { toolOk, toolErr, runTool } from './result.js';
 
-// MCP gateway — multi-client auth + quotas (F-026; FR-36). Reuses the F-025 auth model (type-only).
+// MCP gateway — multi-client auth + quotas (F-026; FR-36) + audit recording (F-047, closing the F-027
+// seam). Reuses the F-025 auth + F-027 audit models (type-only).
 export {
+  MCP_AUDIT_ACTIONS,
   TOOL_PERMISSIONS,
   createMcpGateway,
   defaultCredentialResolver,

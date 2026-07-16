@@ -1,32 +1,15 @@
-// A thin, hand-maintained mirror of the @tessera/api RBAC catalog + audit actions (ADR-0022), so the
-// governance UI can render roles/permissions and action labels without bundling the API package.
+// Governance UI helpers (F-046). The RBAC catalog (roles/permissions/role→permissions) is NO LONGER
+// hand-mirrored here — it is derived from the API's `GET /v1/rbac` (the `useRbac` hook), killing the
+// drift flagged in the 2026-07-04 review. Only the UI-presentation bits (audit action labels) live here.
 
+import type { RbacCatalog } from '@/lib/api/client';
 import type { AuditAction, AuditOutcome } from './api/types';
 
-export const ROLES = ['owner', 'admin', 'member', 'viewer'] as const;
-export type Role = (typeof ROLES)[number];
+/** Role/Permission types are the API's — sourced from the generated SDK, never re-declared. */
+export type Role = RbacCatalog['roles'][number];
+export type Permission = RbacCatalog['permissions'][number];
 
-export const PERMISSIONS = [
-  'search:read',
-  'compile:read',
-  'effects:read',
-  'memory:read',
-  'memory:write',
-  'admin:manage',
-] as const;
-export type Permission = (typeof PERMISSIONS)[number];
-
-const READ: readonly Permission[] = ['search:read', 'compile:read', 'effects:read', 'memory:read'];
-
-/** Role → granted permissions (mirrors ROLE_PERMISSIONS in @tessera/api). */
-export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  owner: PERMISSIONS,
-  admin: PERMISSIONS,
-  member: [...READ, 'memory:write'],
-  viewer: READ,
-};
-
-/** Human labels for audit actions (mirrors AUDIT_ACTIONS in @tessera/api). */
+/** Human labels for audit actions (presentation only; the action set is the API's — F-027/F-046). */
 export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   search: 'Search',
   compile: 'Compile',
@@ -39,6 +22,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   'billing.read': 'Billing read',
   'billing.manage': 'Billing manage',
   'audit.read': 'Audit read',
+  'token.read': 'Token read',
+  'token.manage': 'Token manage',
 };
 
 export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS) as AuditAction[];

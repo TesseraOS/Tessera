@@ -185,7 +185,9 @@ export type AuditAction =
   | 'source.manage'
   | 'billing.read'
   | 'billing.manage'
-  | 'audit.read';
+  | 'audit.read'
+  | 'token.read'
+  | 'token.manage';
 
 export type AuditOutcome = 'success' | 'denied';
 

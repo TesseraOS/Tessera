@@ -37,6 +37,8 @@ export type TokenList = paths['/v1/tokens']['get']['responses'][200]['content'][
 export type CreateTokenRequest = paths['/v1/tokens']['post']['requestBody']['content'][Json];
 export type CreatedToken = paths['/v1/tokens']['post']['responses'][201]['content'][Json];
 export type Plans = paths['/v1/billing/plans']['get']['responses'][200]['content'][Json];
+export type Subscription =
+  paths['/v1/billing/subscription']['get']['responses'][200]['content'][Json];
 export type HealthStatus = paths['/health']['get']['responses'][200]['content'][Json];
 export type ReadyStatus = paths['/ready']['get']['responses'][200]['content'][Json];
 
@@ -97,6 +99,8 @@ export interface TesseraClient {
   scanStatus(id: string): Promise<ScanStatus>;
   /** The subscription plan catalog + entitlements (public). */
   getPlans(): Promise<Plans>;
+  /** The calling tenant's current subscription (`admin:manage`). */
+  getSubscription(): Promise<Subscription>;
   /** Liveness — `GET /health`. */
   getHealth(): Promise<HealthStatus>;
   /**
@@ -202,6 +206,9 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
     },
     async getPlans() {
       return unwrap(await client.GET('/v1/billing/plans', {}));
+    },
+    async getSubscription() {
+      return unwrap(await client.GET('/v1/billing/subscription', {}));
     },
     async getHealth() {
       return unwrap(await client.GET('/health', {}));

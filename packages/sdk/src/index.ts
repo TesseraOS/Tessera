@@ -40,6 +40,7 @@ export {
   type CreateTokenRequest,
   type CreatedToken,
   type Plans,
+  type Subscription,
   type HealthStatus,
   type ReadyStatus,
 } from './client.js';

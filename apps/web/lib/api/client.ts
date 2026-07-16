@@ -26,7 +26,14 @@ import type {
   Source,
   SourceListResponse,
 } from './types';
-import type { Identity } from '@tessera/sdk';
+import type {
+  CreatedToken,
+  CreateTokenRequest,
+  Identity,
+  RbacCatalog,
+  Subscription,
+  TokenList,
+} from '@tessera/sdk';
 
 /**
  * The dashboard's data client (ADR-0048, closing ADR-0022). It is the generated **`@tessera/sdk`**
@@ -37,7 +44,7 @@ import type { Identity } from '@tessera/sdk';
 const sdk = createTesseraClient({ baseUrl: PROXY_BASE });
 
 export { TesseraApiError };
-export type { Identity };
+export type { Identity, RbacCatalog, TokenList, CreatedToken, CreateTokenRequest, Subscription };
 
 /** Label for the endpoint the dashboard talks to (the same-origin proxy). Shown in Settings. */
 export const API_ORIGIN = PROXY_BASE;
@@ -46,6 +53,18 @@ export const API_ORIGIN = PROXY_BASE;
 export const api = {
   /** The caller's resolved identity (401 when a token is required but absent/invalid). */
   me: (): Promise<Identity> => sdk.me(),
+
+  // --- account & access (F-046) ---
+  /** The RBAC catalog (roles/permissions/role→permissions), derived from the API. */
+  getRbac: (): Promise<RbacCatalog> => sdk.getRbac(),
+  /** List the tenant's API tokens (admin:manage; 409 in zero-auth mode). */
+  listTokens: (): Promise<TokenList> => sdk.listTokens(),
+  /** Issue a scoped token — the secret is returned once (admin:manage). */
+  createToken: (body: CreateTokenRequest): Promise<CreatedToken> => sdk.createToken(body),
+  /** Revoke a token by id (admin:manage). */
+  revokeToken: (id: string): Promise<{ id: string; revoked: true }> => sdk.revokeToken(id),
+  /** The tenant's current subscription (admin:manage). */
+  getSubscription: (): Promise<Subscription> => sdk.getSubscription(),
 
   search: (body: SearchBody): Promise<SearchResponse> => sdk.search(body),
   compile: (body: CompileBody): Promise<ContextPackage> => sdk.compile(body),

@@ -169,3 +169,50 @@ export function useEffects(query: EffectsQuery | null) {
     staleTime: 15_000,
   });
 }
+
+// --- account & access (F-046) ---
+
+/** The RBAC catalog — static data, cached long; the dashboard derives roles/permissions from it. */
+export function useRbac() {
+  return useQuery({ queryKey: ['rbac'], queryFn: () => api.getRbac(), staleTime: Infinity });
+}
+
+/** The tenant's API tokens — GET /v1/tokens (admin:manage). `enabled` gates it to admins/token mode. */
+export function useTokens(enabled = true) {
+  return useQuery({
+    queryKey: ['tokens'],
+    queryFn: () => api.listTokens(),
+    enabled,
+    retry: false,
+    staleTime: 5_000,
+  });
+}
+
+/** Issue a token — POST /v1/tokens. Refreshes the token list on success. */
+export function useCreateToken() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Parameters<typeof api.createToken>[0]) => api.createToken(body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tokens'] }),
+  });
+}
+
+/** Revoke a token — DELETE /v1/tokens/:id. Refreshes the token list on success. */
+export function useRevokeToken() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.revokeToken(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tokens'] }),
+  });
+}
+
+/** The tenant's current subscription — GET /v1/billing/subscription (admin:manage). */
+export function useSubscription(enabled = true) {
+  return useQuery({
+    queryKey: ['subscription'],
+    queryFn: () => api.getSubscription(),
+    enabled,
+    retry: false,
+    staleTime: 30_000,
+  });
+}

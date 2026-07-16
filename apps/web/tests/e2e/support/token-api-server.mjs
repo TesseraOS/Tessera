@@ -35,6 +35,8 @@ const { token } = await runtime.auth.tokenStore.issue({
 const app = buildServer(runtime.services, {
   auth: runtime.auth.provider,
   events: runtime.events,
+  // Back /v1/tokens self-service (F-046) so the profile's token panel + the e2e work in token mode.
+  tokenStore: runtime.auth.tokenStore,
 });
 
 // Test-only channel so the spec can read the issued token. NOT a production route.

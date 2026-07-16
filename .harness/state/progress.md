@@ -3,6 +3,60 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-16 — F-046 DONE — account & profile: professional /profile, API-token self-service (REST + MCP parity), RBAC-from-API
+
+**Harness-strict selection** (next eligible R3, blocker F-045 done, `should`). Plan:
+[`.harness/plans/F-046-account-profile-tokens.md`](../plans/F-046-account-profile-tokens.md);
+governed by **ADR-0036** (the API/MCP parity rule — every op is REST **+** MCP). Shipped in 2
+commits (API/MCP/SDK enablers, then web). All operations over the existing `TokenStore`; no fake
+data.
+
+**What changed**
+- **`TokenStore` port + expiry** — added optional `expiresAt` (record + issue input) with a shared
+  `isRevoked`/`isExpired` verify predicate across the in-memory + sqlite adapters (sqlite `ADD
+  COLUMN` backfill; F-024 owns real migrations).
+- **REST `/v1/tokens`** — `GET` list (no secrets) · `POST` create (**secret returned once**) ·
+  `DELETE :id` revoke. `admin:manage`, tenant-scoped, **audited** (new `token.read`/`token.manage`),
+  **least-privilege create** (a caller can't mint a token exceeding its own permissions —
+  server-enforced + e2e); `409` when no token store (zero-auth). **`GET /v1/rbac`** exposes the
+  roles/permissions catalog so the dashboard **derives RBAC from the API** — the hand-mirrored
+  `lib/governance.ts` catalog is gone (`governance-view` uses a `useRbac` hook; drift killed).
+- **MCP parity (ADR-0036)** — `list_tokens`/`issue_token`/`revoke_token` tools over the same store
+  (Fastify-free `@tessera/api/auth` value imports), gateway `admin:manage`; `buildMcpServer` +
+  `apps/server` wire `runtime.auth.tokenStore`.
+- **SDK** — `getRbac`/`listTokens`/`createToken`/`revokeToken`/`getSubscription`; OpenAPI + types
+  regenerated.
+- **Web `/profile`** — identity card, access card (roles + effective-permission chips), an
+  **enterprise "Plan & usage" card** (plan + status badge + price + renewal + entitlement stat
+  tiles), an agent-connectivity hint, the **API-tokens panel** (create dialog with role/expiry +
+  **copy-once secret reveal**, revoke), and a **members-from-tokens** card; Profile in the account
+  menu. Admin user management = token principals grouped from the token list (role assignment =
+  issuing a scoped token; a first-class user directory + OIDC-user listing are documented seams).
+- **Stakeholder polish** (mid-feature): dropped the sparkle icon (→ `CreditCard`), fixed the avatar
+  initials (`Local (no auth)` → `LO`, not `L(`), redesigned the Plan card, and **confirmed fonts
+  follow the theme** (`font-sans`/`font-mono` map to per-theme stacks — verified in Notebook:
+  Architects Daughter + Fira Code across the page). Browser-verified in Monkai + Notebook.
+
+**Evidence/verification** (all gates fresh, workspace-wide)
+- verify-state ok · typecheck **34** · lint **19** · format clean · test **34** (api +6 token/rbac
+  e2e, mcp +3 token tools + list assertions, sdk +4) · build **19** · e2e **18** — **web 29** (26
+  view + 2 auth + **1 `profile.spec`**: renders identity/access/plan + axe AA, then **issues a token
+  in the UI whose secret authenticates `/v1/me` as the new principal**). The `/v1/rbac`+`/v1/me`
+  stubs were added to the shared fixture (+ the appearance custom-context test) so view specs don't
+  401-redirect.
+- Browser-verified: profile identity (`EU` avatar), access chips, Plan & usage tiles, the
+  create→copy-once dialog, and the token + members tables, in both Monkai and Notebook themes.
+
+**Decisions**
+- No new ADR — thin routes/tools over the existing `TokenStore` (the one-engine/two-surfaces pattern
+  under ADR-0036). Effects E-018/E-003/E-020/E-004 extended. Least-privilege create + tenant-scoped
+  revoke + copy-once are the security invariants (all e2e-covered).
+
+**Next step**
+- Next eligible by id in R3 is **F-047** (compliance completion: memory retention policies, DSR
+  export/delete, MCP-surface audit). Also open: F-048/F-049 and the dashboard-data set
+  F-060/F-061/F-062/F-063.
+
 ## 2026-07-14 (v2) — F-045 DONE — dashboard auth & session + adopt @tessera/sdk (closes ADR-0022); enterprise sign-in redesign
 
 **Harness-strict selection** (next eligible R3, blockers F-034/F-044 done, `must`). Plan:

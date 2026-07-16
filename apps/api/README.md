@@ -16,6 +16,9 @@ wraps the **same** services: one engine, two surfaces.
 | `POST` | `/v1/compile` | context compilation (F-010) |
 | `GET`  | `/v1/effects?kind&key&maxDepth` | `get_effects` (F-008) |
 | `POST` `GET` `PATCH` | `/v1/memory`, `/v1/memory/:lineageId`, `/v1/memory/:lineageId/history` | versioned memory (F-007) |
+| `GET`  | `/v1/me` | the caller's resolved identity, tenant, and effective permissions (F-045) |
+| `GET`  | `/v1/rbac` | the RBAC catalog: roles, permissions, role→permissions (F-046) |
+| `GET` `POST` `DELETE` | `/v1/tokens`, `/v1/tokens/:id` | API-token self-service — list / create (secret once) / revoke; `admin:manage`, least-privilege (F-046) |
 
 All data routes live under `/v1`; changes are **additive** (NFR-11). Every failure uses one
 envelope: `{ "error": { "code", "message", "details"? } }` (NFR-6), with `code` a stable

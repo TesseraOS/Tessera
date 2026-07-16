@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-07-14",
+  "updated": "2026-07-16",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -120,6 +120,10 @@
         {
           "kind": "module",
           "ref": "@tessera/web now consumes the GENERATED @tessera/sdk (F-045, closes ADR-0022): apps/web/lib/api is a thin adapter over createTesseraClient pointed at a same-origin Next proxy (/api/tessera); the TanStack Query hook surface + view components are unchanged (the ADR-0022 drop-in). A route/schema change ⇒ regenerate the SDK ⇒ the dashboard client updates."
+        },
+        {
+          "kind": "module",
+          "ref": "New REST routes GET /v1/rbac + GET/POST/DELETE /v1/tokens (F-046) ⇒ regenerated OpenAPI + @tessera/sdk (getRbac/listTokens/createToken/revokeToken + getSubscription); ADDITIVE (no existing route changed). The dashboard /profile page + token panel consume them through the same-origin proxy."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -181,6 +185,10 @@
         {
           "kind": "module",
           "ref": "@tessera/web sign-in + identity UI (F-045): a full-height split-panel /signin (brand panel = theme-tinted gradient + the Constellation art on the DESIGN-SYSTEM §11 onboarding budget + statement; form panel = token entry) and the identity-aware NavUser — tokens-only, theme-true across 4 themes × 2 modes, reduced-motion-safe, WCAG AA (axe-verified in auth.spec)."
+        },
+        {
+          "kind": "module",
+          "ref": "Account & profile UI (F-046): a professional /profile page (identity, access/roles/permissions, enterprise Plan & usage card, agent-connectivity hint) + API-token self-service panel (create-with-copy-once dialog, revoke) + members-from-tokens card — tokens-only, theme-true (verified fonts follow the per-theme stacks), WCAG AA (axe in profile.spec). governance-view now derives the RBAC matrix from /v1/rbac."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -675,6 +683,10 @@
         {
           "kind": "module",
           "ref": "@tessera/web is now an auth client (F-045, ADR-0048): it reads identity via GET /v1/me through the proxy; principal.kind===local ⇒ zero-auth Local mode (unchanged, no sign-in screen), a token/oidc principal ⇒ identity+tenant+sign-out; a 401 on /v1/me ⇒ redirect to /signin (mode discovery). The API token lives ONLY in an httpOnly cookie (never client JS); the proxy attaches it server-side."
+        },
+        {
+          "kind": "module",
+          "ref": "API-token self-service over the TokenStore port (F-046): REST /v1/tokens (list/create-secret-once/revoke) + MCP parity tools (list_tokens/issue_token/revoke_token, ADR-0036) — admin:manage, tenant-scoped, audited (token.read/token.manage), least-privilege create (a caller cannot mint a token exceeding its own permissions). The TokenStore port gained optional expiry (expiresAt) with a shared isRevoked/isExpired verify predicate across the in-memory + sqlite adapters. GET /v1/rbac exposes the roles/permissions/rolePermissions catalog so the dashboard derives RBAC from the API (kills the hand-mirrored apps/web/lib/governance.ts copy). buildServer/buildMcpServer take a tokenStore; apps/server wires runtime.auth.tokenStore."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -761,6 +773,10 @@
         {
           "kind": "decision",
           "ref": "docs/adr/0034-audit-trail-and-governance.md"
+        },
+        {
+          "kind": "module",
+          "ref": "Token operations are audited (F-046): new token.read (list) + token.manage (create/revoke) audit actions recorded by the existing onResponse hook; the web AuditAction union + governance labels were extended to match."
         }
       ],
       "kind": "EFFECT_LINK",

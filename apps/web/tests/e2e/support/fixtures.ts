@@ -22,9 +22,60 @@ export const LOCAL_IDENTITY = {
   ],
 };
 
+/** The RBAC catalog the governance view derives from `/v1/rbac` (F-046). */
+export const LOCAL_RBAC = {
+  roles: ['owner', 'admin', 'member', 'viewer'],
+  permissions: [
+    'search:read',
+    'compile:read',
+    'effects:read',
+    'memory:read',
+    'memory:write',
+    'effects:write',
+    'sources:read',
+    'sources:manage',
+    'admin:manage',
+  ],
+  rolePermissions: {
+    owner: [
+      'search:read',
+      'compile:read',
+      'effects:read',
+      'memory:read',
+      'memory:write',
+      'effects:write',
+      'sources:read',
+      'sources:manage',
+      'admin:manage',
+    ],
+    admin: [
+      'search:read',
+      'compile:read',
+      'effects:read',
+      'memory:read',
+      'memory:write',
+      'effects:write',
+      'sources:read',
+      'sources:manage',
+      'admin:manage',
+    ],
+    member: [
+      'search:read',
+      'compile:read',
+      'effects:read',
+      'memory:read',
+      'memory:write',
+      'effects:write',
+      'sources:manage',
+    ],
+    viewer: ['search:read', 'compile:read', 'effects:read', 'memory:read', 'sources:read'],
+  },
+};
+
 export const test = base.extend({
   page: async ({ page }, use) => {
     await page.route('**/v1/me', (route) => route.fulfill({ json: LOCAL_IDENTITY }));
+    await page.route('**/v1/rbac', (route) => route.fulfill({ json: LOCAL_RBAC }));
     await use(page);
   },
 });

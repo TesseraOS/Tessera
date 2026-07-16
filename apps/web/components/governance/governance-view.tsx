@@ -1,5 +1,8 @@
+'use client';
+
 import { Check, Minus, Timer } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -8,13 +11,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PERMISSIONS, ROLE_PERMISSIONS, ROLES } from '@/lib/governance';
+import { ErrorState } from '@/components/error-state';
+import { useRbac } from '@/lib/api/hooks';
 
 /**
- * Governance (FR-48) — the org's access model at a glance: the RBAC roles → permissions matrix, and
- * the audit retention posture (NFR-13). Roles/permissions mirror the API's catalog (ADR-0022).
+ * Governance (FR-48) — the org's access model at a glance: the RBAC roles → permissions matrix
+ * (derived from the API's `/v1/rbac`, F-046 — no hand-mirrored catalog), and the audit retention
+ * posture (NFR-13).
  */
 export function GovernanceView() {
+  const { data: rbac, isPending, isError, refetch } = useRbac();
+
   return (
     <div className="space-y-4">
       <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
@@ -26,45 +33,59 @@ export function GovernanceView() {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0 pt-2">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[180px]">Permission</TableHead>
-                {ROLES.map((role) => (
-                  <TableHead key={role} className="text-center capitalize">
-                    {role}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {PERMISSIONS.map((permission) => (
-                <TableRow key={permission}>
-                  <TableCell className="text-foreground font-mono text-xs font-medium">
-                    {permission}
-                  </TableCell>
-                  {ROLES.map((role) => {
-                    const granted = ROLE_PERMISSIONS[role].includes(permission);
-                    return (
-                      <TableCell key={role} className="text-center">
-                        {granted ? (
-                          <Check
-                            className="text-foreground mx-auto size-4"
-                            aria-label={`${role} has ${permission}`}
-                          />
-                        ) : (
-                          <Minus
-                            className="text-muted-foreground/40 mx-auto size-4"
-                            aria-label={`${role} lacks ${permission}`}
-                          />
-                        )}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
+          {isPending ? (
+            <div className="space-y-2" aria-hidden="true">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" />
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          ) : isError || rbac === undefined ? (
+            <ErrorState
+              title="Couldn't load the access model"
+              description="The RBAC catalog is served by the API."
+              onRetry={() => void refetch()}
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[180px]">Permission</TableHead>
+                  {rbac.roles.map((role) => (
+                    <TableHead key={role} className="text-center capitalize">
+                      {role}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rbac.permissions.map((permission) => (
+                  <TableRow key={permission}>
+                    <TableCell className="text-foreground font-mono text-xs font-medium">
+                      {permission}
+                    </TableCell>
+                    {rbac.roles.map((role) => {
+                      const granted = (rbac.rolePermissions[role] ?? []).includes(permission);
+                      return (
+                        <TableCell key={role} className="text-center">
+                          {granted ? (
+                            <Check
+                              className="text-foreground mx-auto size-4"
+                              aria-label={`${role} has ${permission}`}
+                            />
+                          ) : (
+                            <Minus
+                              className="text-muted-foreground/40 mx-auto size-4"
+                              aria-label={`${role} lacks ${permission}`}
+                            />
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 

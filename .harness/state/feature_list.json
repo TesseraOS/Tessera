@@ -1494,7 +1494,7 @@
       "package": "@tessera/web",
       "release": "R3",
       "priority": "should",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-045"
       ],
@@ -1515,7 +1515,8 @@
         "E-003",
         "E-004",
         "E-020"
-      ]
+      ],
+      "notes": "Done 2026-07-16 (ADR-0036 parity). Account/profile built over the existing TokenStore, all API-backed (no fake data). Shipped in 2 commits (API/MCP/SDK enablers, then web). (1) TokenStore port gained optional EXPIRY (expiresAt on ApiTokenRecord/IssueTokenInput + a shared isRevoked/isExpired verify predicate across the in-memory + sqlite adapters; sqlite ADD COLUMN backfill). (2) REST /v1/tokens: GET list (no secrets) · POST create (secret returned ONCE) · DELETE :id revoke — admin:manage, tenant-scoped, audited (new token.read/token.manage actions), LEAST-PRIVILEGE create (a caller cannot mint a token exceeding its own effective permissions; server-enforced + e2e), 409 when no token store (zero-auth). (3) REST GET /v1/rbac exposes {roles,permissions,rolePermissions} → the dashboard derives RBAC from the API, replacing the hand-mirrored apps/web/lib/governance.ts catalog (governance-view now uses a useRbac hook; drift killed). (4) MCP parity (ADR-0036): list_tokens/issue_token/revoke_token tools over the same store (Fastify-free @tessera/api/auth value imports), gateway-authorized admin:manage; buildMcpServer + apps/server wire runtime.auth.tokenStore. (5) SDK: getRbac/listTokens/createToken/revokeToken/getSubscription; OpenAPI + types regenerated. (6) Web /profile: identity card (avatar initials — fixed to strip parentheticals so Local shows 'LO' not 'L('), access card (roles + effective-permission chips), enterprise 'Plan & usage' card (plan name + status badge + price + renewal + entitlement stat tiles; CreditCard icon, NOT sparkle — stakeholder feedback), agent-connectivity hint, API-tokens panel (create dialog with role/expiry + copy-once secret reveal, revoke), members-from-tokens card; Profile in the account menu. Admin user management = token principals grouped from the token list (role assignment = issuing a scoped token; a first-class user directory + OIDC-user listing are documented seams). Fonts confirmed theme-following (font-sans/mono map to per-theme stacks — verified in Notebook: Architects Daughter + Fira Code). e2e profile.spec (token mode, real server): renders identity/access/plan + axe AA, then ISSUES A TOKEN IN THE UI whose secret then authenticates /v1/me as the new principal; the /v1/rbac + /v1/me stubs were added to the shared fixture (+ the appearance custom-context test) so the view specs don't 401-redirect. Browser-verified the profile, create→copy-once, and the token/members tables in Monkai + Notebook. Effects E-018/E-003/E-020/E-004 extended. Gates green workspace-wide: verify-state · typecheck 34 · lint 19 · format · test 34 · build 19 · e2e 18 (web 29: 26 view + 2 auth + 1 profile; api +6 token/rbac e2e; mcp +3 token tools; sdk +4). Deferred (documented seams): scope-restriction UI on create (role-based today; fine-grained scopes via API/MCP), first-class user directory + OIDC-user listing, token expiry background pruning."
     },
     {
       "id": "F-047",

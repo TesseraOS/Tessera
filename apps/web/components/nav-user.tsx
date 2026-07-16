@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, Settings } from 'lucide-react';
+import { LogOut, Settings, UserRound } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,6 +45,12 @@ export function NavUser() {
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <a href="/profile">
+            <UserRound />
+            Profile
+          </a>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <a href="/settings">
             <Settings />

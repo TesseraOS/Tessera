@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from './support/fixtures';
+import { expect, LOCAL_IDENTITY, LOCAL_RBAC, test } from './support/fixtures';
 
 /**
  * Appearance system (F-070, ADR-0047): the 4-theme catalog × light/dark, its persistence,
@@ -53,6 +53,10 @@ test.describe('Appearance — theme catalog', () => {
   test('reduced motion switches instantly (no view transition needed)', async ({ browser }) => {
     const context = await browser.newContext({ reducedMotion: 'reduce' });
     const page = await context.newPage();
+    // This custom context bypasses the fixture's `page`, so re-apply the session stubs (F-045/F-046)
+    // — otherwise the unmocked /v1/me 401s and redirects to /signin before the theme toggle.
+    await page.route('**/v1/me', (route) => route.fulfill({ json: LOCAL_IDENTITY }));
+    await page.route('**/v1/rbac', (route) => route.fulfill({ json: LOCAL_RBAC }));
     await page.goto('/');
 
     await page.getByRole('button', { name: /change appearance/i }).click();

@@ -33,6 +33,7 @@ export const PERMISSIONS = [
   'effects:write',
   'sources:read',
   'sources:manage',
+  'stats:read',
   'admin:manage',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
@@ -44,6 +45,10 @@ const READ_PERMISSIONS: readonly Permission[] = [
   'effects:read',
   'memory:read',
   'sources:read',
+  // The workspace summary aggregates across documents, memory, graph and sources (F-060), so it is
+  // its own permission rather than an existing read: a token scoped to only `memory:read` must not
+  // learn graph/document counts through it (scopes are a least-privilege upper bound).
+  'stats:read',
 ];
 
 /**

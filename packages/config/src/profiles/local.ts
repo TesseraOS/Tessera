@@ -20,7 +20,7 @@ import {
   type BillingProvider,
 } from '@tessera/billing';
 import { createContextCompiler } from '@tessera/context-compiler';
-import { createEventBus, InternalError, ValidationError } from '@tessera/core';
+import { createEventBus, DEFAULT_TENANT_ID, InternalError, ValidationError } from '@tessera/core';
 import {
   createFilesystemConnector,
   createGitConnector,
@@ -256,21 +256,37 @@ export async function createLocalRuntime(
   // The ingestion domain bus the worker (document.*) + source service (source.scan.*) emit onto; bridged
   // to the SSE bus below as small, non-sensitive summaries.
   const ingestionEvents = createEventBus<IngestionEvents>();
+  // Tenant attribution for the bridged SSE events (ADR-0050) — the SSE route delivers an event only
+  // to the tenant named here. `source.scan.*` carry the owning tenant from the registry record. The
+  // `document.*` events do NOT: they come off the queue, which carries no tenant, which is exactly
+  // why `createIndexingDocumentSink` below indexes into DEFAULT_TENANT_ID (F-071). So they are
+  // attributed to the tenant ingestion REALLY wrote to, not the one that asked for the scan —
+  // an honest attribution of a known-wrong write. Consequence, accepted in ADR-0050: until F-071
+  // lands, a non-default tenant does not see `document.*` for its own scans. Under-delivering beats
+  // leaking — these events are otherwise indistinguishable from another tenant's. When F-071 carries
+  // the tenant to the worker, replace INGESTION_TENANT with the event's own tenantId.
+  const INGESTION_TENANT = DEFAULT_TENANT_ID;
   const bridge = [
     ingestionEvents.on('document.ingested', ({ document }) =>
       events.emit('document.ingested', {
+        tenantId: INGESTION_TENANT,
         ref: document.id,
         path: document.path,
         kind: document.kind,
       }),
     ),
     ingestionEvents.on('document.removed', ({ sourceId, path }) =>
-      events.emit('document.removed', { ref: documentIdFor(sourceId, path), path }),
+      events.emit('document.removed', {
+        tenantId: INGESTION_TENANT,
+        ref: documentIdFor(sourceId, path),
+        path,
+      }),
     ),
     ingestionEvents.on('source.scan.started', (event) => events.emit('source.scan.started', event)),
     ingestionEvents.on('source.scan.completed', (event) =>
       events.emit('source.scan.completed', {
         sourceId: event.sourceId,
+        tenantId: event.tenantId,
         kind: event.kind,
         label: event.label,
         summary: event.summary,

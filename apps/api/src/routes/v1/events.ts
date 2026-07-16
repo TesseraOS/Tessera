@@ -1,4 +1,5 @@
 import type { ZodFastify } from '../../app-types.js';
+import { tenantOf } from '../../auth/index.js';
 import { API_EVENT_TYPES, sseComment, sseFrame, type ApiEventBus } from '../../events.js';
 import { securityHeaders, type SecurityHeadersOptions } from '../../security/headers.js';
 import { REQUEST_ID_HEADER } from '../../security/request-id.js';
@@ -16,6 +17,16 @@ const HEARTBEAT_MS = 15_000;
  * `onRequest` auth hook runs (and, under a non-none provider, 401s an unauthenticated request)
  * before this handler hijacks the reply (F-044). Because hijacking bypasses the normal reply
  * lifecycle, the security headers + the echoed request id are written into `writeHead` explicitly.
+ *
+ * **Authorization (ADR-0050).** Authentication alone is not enough: the bus is process-wide, so
+ * without a filter every authenticated client would receive every tenant's events — and the payloads
+ * carry `path`/`title`/`label`. Each connection therefore writes only events matching its own
+ * tenant. F-044 hardened *who may connect*; this is *what they may then see*.
+ *
+ * Known gap, deliberate (ADR-0050 + F-071): ingestion writes to the default tenant unconditionally,
+ * so `document.*` events are attributed there. A non-default tenant will not see them for its own
+ * scans until F-071 lands. Under-delivering beats leaking — the events are otherwise
+ * indistinguishable from another tenant's. Scan lifecycle + memory capture are per-tenant correct.
  */
 export function registerEventsRoutes(
   app: ZodFastify,
@@ -44,8 +55,12 @@ export function registerEventsRoutes(
         ...securityHeaders(security),
       });
 
+      const tenantId = tenantOf(request);
       const unsubscribes = API_EVENT_TYPES.map((type) =>
         events.on(type, (payload) => {
+          // The authorization boundary for the event plane (ADR-0050). `sseFrame` then strips
+          // `tenantId`, so it decides delivery without ever reaching the client.
+          if (payload.tenantId !== tenantId) return;
           raw.write(sseFrame(type, payload));
         }),
       );

@@ -120,6 +120,9 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
     });
     await events?.emit('source.scan.started', {
       sourceId: id,
+      // The owning tenant, so the SSE bridge can deliver this only to them (ADR-0050): the label is
+      // a repository name, which is one org's business and not another's.
+      tenantId: record.tenantId,
       kind: record.kind,
       label: record.label,
     });
@@ -135,6 +138,7 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
       statuses.set(id, { state: 'idle', lastScan: { summary, at } });
       await events?.emit('source.scan.completed', {
         sourceId: id,
+        tenantId: record.tenantId,
         kind: record.kind,
         label: record.label,
         summary,

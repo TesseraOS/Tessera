@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { Id } from '@tessera/core';
+import type { Id, TenantId } from '@tessera/core';
 
 /** Identifies a configured ingestion source (one connector instance). */
 export type SourceId = Id<'Source'>;
@@ -87,17 +87,26 @@ export interface ScanSummary {
  * Typed domain events emitted by the ingestion worker + source service (consumed by SSE/dashboards).
  * The composition root bridges these to the API's SSE stream (`document.*` from the worker;
  * `source.scan.*` lifecycle from the source service). Payloads stay JSON-safe and non-sensitive.
+ *
+ * **Tenancy (ADR-0050).** The scan-lifecycle events carry the tenant that owns the source, because
+ * the source service resolves it from the registry record. The `document.*` events do **not**: they
+ * come off the queue in the worker, which has no tenant — the same gap that makes ingestion write to
+ * the default tenant (F-071). Rather than invent an attribution the worker cannot know, the type
+ * says so, and the composition root's SSE bridge attributes them to the tenant ingestion actually
+ * wrote to. When F-071 carries the tenant onto the queue job, the field belongs here too.
  */
 export interface IngestionEvents extends Record<string, unknown> {
   readonly 'document.ingested': { readonly document: ProcessedDocument };
   readonly 'document.removed': { readonly sourceId: SourceId; readonly path: string };
   readonly 'source.scan.started': {
     readonly sourceId: SourceId;
+    readonly tenantId: TenantId;
     readonly kind: string;
     readonly label: string;
   };
   readonly 'source.scan.completed': {
     readonly sourceId: SourceId;
+    readonly tenantId: TenantId;
     readonly kind: string;
     readonly label: string;
     readonly summary: ScanSummary;

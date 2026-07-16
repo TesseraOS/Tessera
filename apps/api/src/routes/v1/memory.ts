@@ -41,9 +41,13 @@ export function registerMemoryRoutes(
       config: { audit: 'memory.write' },
     },
     async (request, reply) => {
-      const memory = await services.memory.forTenant(tenantOf(request)).capture(request.body);
+      const tenantId = tenantOf(request);
+      const memory = await services.memory.forTenant(tenantId).capture(request.body);
       // Live update (FR-38): notify SSE subscribers of the new memory (non-sensitive summary only).
+      // Attributed to the capturing tenant so only their stream receives it (ADR-0050) — the title
+      // alone is enough to leak what another org is working on.
       await events.emit('memory.captured', {
+        tenantId,
         lineageId: memory.lineageId,
         kind: memory.kind,
         title: memory.title,

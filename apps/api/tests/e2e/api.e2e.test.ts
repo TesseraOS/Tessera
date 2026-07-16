@@ -88,6 +88,67 @@ describe('@tessera/api REST /v1', () => {
       expect(res.statusCode).toBe(400);
       expect(res.json().error.code).toBe('VALIDATION');
     });
+
+    it('threads `include` through to the retriever, and omits it entirely by default', async () => {
+      // What this route OWNS is validation + threading; the enrichment itself is a composition-root
+      // decorator (@tessera/config) with its own tests, and the wiring is proven end-to-end in
+      // tests/e2e-full against a real runtime. A spy is the honest unit of proof here.
+      const seen: unknown[] = [];
+      const spy = {
+        search(query: { text: string; include?: unknown }) {
+          seen.push(query.include);
+          return Promise.resolve([]);
+        },
+        forTenant() {
+          return spy;
+        },
+      };
+      const spied = buildServer({ ...services, search: spy as unknown as ApiServices['search'] });
+      await spied.ready();
+      try {
+        await spied.inject({ method: 'POST', url: '/v1/search', payload: { query: 'a' } });
+        // A ranked answer is billed to every caller on every call — the default must stay lean.
+        expect(seen[0]).toBeUndefined();
+
+        await spied.inject({
+          method: 'POST',
+          url: '/v1/search',
+          payload: { query: 'a', include: { kind: true, node: true, snippet: { maxChars: 80 } } },
+        });
+        expect(seen[1]).toEqual({ kind: true, node: true, snippet: { maxChars: 80 } });
+
+        // An asked-for snippet with no options still reaches the retriever as a request, not as
+        // `undefined` — otherwise "give me a default-sized excerpt" would silently mean "no excerpt".
+        await spied.inject({
+          method: 'POST',
+          url: '/v1/search',
+          payload: { query: 'a', include: { snippet: {} } },
+        });
+        expect(seen[2]).toEqual({ snippet: {} });
+      } finally {
+        await spied.close();
+      }
+    });
+
+    it('rejects a malformed `include` rather than silently ignoring it', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/search',
+        payload: { query: 'a', include: { snippet: { maxChars: -5 } } },
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error.code).toBe('VALIDATION');
+    });
+
+    it('documents the include contract in the OpenAPI spec', async () => {
+      const res = await app.inject({ method: 'GET', url: '/v1/openapi.json' });
+      const spec = res.json() as { paths: Record<string, unknown> };
+      const body = JSON.stringify(spec.paths['/v1/search']);
+      // The token cost of each extra is on the wire contract, so a caller can choose knowingly.
+      expect(body).toContain('include');
+      expect(body).toContain('snippet');
+      expect(body).toContain('node');
+    });
   });
 
   describe('POST /v1/compile', () => {

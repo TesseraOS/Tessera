@@ -20,7 +20,8 @@ import {
 } from '@tessera/core';
 import type { CompileRequest } from '@tessera/context-compiler';
 import type { GetEffectsOptions } from '@tessera/knowledge-graph';
-import type { RetrievalQuery } from '@tessera/retrieval';
+// The SAME mapper the REST route uses (ADR-0036 parity, structurally) — see @tessera/retrieval.
+import { toRetrievalInclude, type RetrievalQuery } from '@tessera/retrieval';
 import { buildExplanation } from './explain.js';
 import type { McpCallContext, McpGateway, McpToolName } from './gateway.js';
 import { runTool } from './result.js';
@@ -180,8 +181,15 @@ export function buildMcpServer(
     (args, extra) =>
       runTool(async () => {
         const ctx = await guard('search', extra);
-        const query: RetrievalQuery =
-          args.limit === undefined ? { text: args.query } : { text: args.query, limit: args.limit };
+        const query: RetrievalQuery = {
+          text: args.query,
+          ...(args.limit === undefined ? {} : { limit: args.limit }),
+          // Rebuilt key-by-key: Zod's `.optional()` infers `| undefined`, the domain type is
+          // exact-optional (the zod-exactoptional-bridge lesson) — same seam as the REST route.
+          ...(args.include === undefined ? {} : { include: toRetrievalInclude(args.include) }),
+        };
+        // The SAME enriched service REST calls (ADR-0036): labels/kinds/nodes come from the one
+        // composition-root decorator, so the two surfaces cannot disagree about a hit.
         return { results: await services.search.forTenant(tenantOf(ctx)).search(query) };
       }),
   );

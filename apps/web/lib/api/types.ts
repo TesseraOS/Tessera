@@ -18,6 +18,8 @@ export interface ErrorEnvelope {
 export interface SearchBody {
   query: string;
   limit?: number;
+  /** Ask for a query-relevant excerpt per hit (F-061). Opt-in — see `snippetRequestSchema`. */
+  snippet?: { maxChars?: number };
 }
 
 export interface SignalContribution {
@@ -28,11 +30,41 @@ export interface SignalContribution {
   contribution: number;
 }
 
+/** A matched span, as `[start, end)` offsets into `Snippet.text`. Offsets, never HTML — see below. */
+export interface SnippetMatch {
+  start: number;
+  end: number;
+}
+
+/**
+ * A query-relevant excerpt with its matched spans **located, not marked up**. The client slices the
+ * plain string and renders its own `<mark>` elements: the excerpt is ingested repository content, so
+ * server-rendered HTML here would be the classic search-snippet XSS.
+ */
+export interface Snippet {
+  text: string;
+  matches: SnippetMatch[];
+  truncatedStart: boolean;
+  truncatedEnd: boolean;
+}
+
+/** The graph node a hit corresponds to — what `GET /v1/effects` is keyed by. */
+export interface CandidateNode {
+  kind: string;
+  key: string;
+}
+
 export interface FusedCandidate {
   ref: string;
   score: number;
   signals: SignalContribution[];
+  /** A source path, a memory title, or a symbol name. */
   label?: string;
+  /** `file` | `memory` | `symbol`. */
+  kind?: string;
+  snippet?: Snippet;
+  /** Absent when the hit has no graph node (e.g. a memory) — omit the action, never fake it. */
+  node?: CandidateNode;
 }
 
 export interface SearchResponse {

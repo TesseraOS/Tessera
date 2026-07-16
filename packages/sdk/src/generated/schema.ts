@@ -349,6 +349,18 @@ export interface paths {
                         query: string;
                         /** @description Max candidates to return. */
                         limit?: number;
+                        /** @description Extras to attach per hit. Ask only for what you will use — each costs tokens. */
+                        include?: {
+                            /** @description Classify each hit as `file`, `memory`, or `symbol` (+35). */
+                            kind?: boolean;
+                            /** @description Attach the graph node to pass to `GET /v1/effects`, when the hit has one (+135). */
+                            node?: boolean;
+                            /** @description Attach a query-relevant excerpt (~+200). */
+                            snippet?: {
+                                /** @description Ceiling on the excerpt length (default 240). */
+                                maxChars?: number;
+                            };
+                        };
                     };
                 };
             };
@@ -371,7 +383,27 @@ export interface paths {
                                     weight: number;
                                     contribution: number;
                                 }[];
+                                /** @description Human-readable title — a source path, a memory title, or a symbol name. */
                                 label?: string;
+                                /** @description What this is: `file`, `memory`, or `symbol`. */
+                                kind?: string;
+                                snippet?: {
+                                    text: string;
+                                    /** @description Spans of `text` that matched a query term. */
+                                    matches: {
+                                        start: number;
+                                        end: number;
+                                    }[];
+                                    /** @description `text` starts mid-document. */
+                                    truncatedStart: boolean;
+                                    /** @description `text` stops before the end of the document. */
+                                    truncatedEnd: boolean;
+                                };
+                                /** @description The graph node this hit is, when it has one — pass it to `GET /v1/effects` to see what a change here would affect. Absent for items with no node (e.g. a memory). */
+                                node?: {
+                                    kind: string;
+                                    key: string;
+                                };
                             }[];
                         };
                     };

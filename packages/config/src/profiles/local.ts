@@ -64,6 +64,7 @@ import { createBlobFragmentSource } from '../fragment-source.js';
 import { createCorpusIndexer } from '../sources/corpus-indexer.js';
 import { createIndexingDocumentSink } from '../sources/ingestion-sink.js';
 import { createIndexingMemoryService } from '../sources/memory-indexing.js';
+import { createEnrichedRetriever } from '../sources/search-enrichment.js';
 import { createSqliteManifest } from '../sources/sqlite-manifest.js';
 import { createSqliteSourceRegistry } from '../sources/sqlite-source-registry.js';
 import { createTreeSitterSymbolExtractor } from '../symbols/tree-sitter-extractor.js';
@@ -241,11 +242,20 @@ export async function createLocalRuntime(
     temporal,
   ]);
 
+  // The corpus read path, shared by the compiler's resolve stage and search enrichment (F-061) —
+  // one blob-backed source, so a snippet and a compiled fragment can never disagree about a ref.
+  const fragmentSource = createBlobFragmentSource(blob);
+
   const compiler = createContextCompiler({
     retriever: search,
-    fragmentSource: createBlobFragmentSource(blob),
+    fragmentSource,
     graphStore,
   });
+
+  // What REST + MCP expose for search (F-061/F-073): labels, kinds, graph nodes, opt-in snippets.
+  // The COMPILER deliberately keeps the raw `search` — it resolves fragments itself in its own stage,
+  // so enriching its retriever would buy nothing and pay for a second corpus read per candidate.
+  const enrichedSearch = createEnrichedRetriever(search, fragmentSource);
 
   const billing = await createRuntimeBilling(config.billing, secrets);
   const memory = createMemoryService(memoryStore);
@@ -328,7 +338,7 @@ export async function createLocalRuntime(
   });
 
   const services: ApiServices = {
-    search,
+    search: enrichedSearch,
     compiler,
     graph,
     memory: indexedMemory,

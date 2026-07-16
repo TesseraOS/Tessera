@@ -15,6 +15,35 @@ import { z } from 'zod';
 export const searchShape = {
   query: z.string().min(1).describe('Natural-language or symbol query.'),
   limit: z.number().int().positive().max(100).optional().describe('Max candidates to return.'),
+  // Parity with REST (ADR-0036) without a token tax: the agent surface must be no less CAPABLE than
+  // the dashboard, but NFR-4 says it must not be more EXPENSIVE by default. Opt-in satisfies both.
+  // Every hit already carries ref/score/signals/label — the label always, because a hash is not an
+  // answer. These are depth, and the per-hit token cost is stated so an agent can choose knowingly.
+  include: z
+    .object({
+      kind: z
+        .boolean()
+        .optional()
+        .describe('Classify each hit as `file`, `memory`, or `symbol` (+35 tokens / 10 hits).'),
+      node: z
+        .boolean()
+        .optional()
+        .describe('Attach the graph node to pass to `get_effects`, when the hit has one (+135).'),
+      snippet: z
+        .object({
+          maxChars: z
+            .number()
+            .int()
+            .positive()
+            .max(2000)
+            .optional()
+            .describe('Ceiling on the excerpt length (default 240).'),
+        })
+        .optional()
+        .describe('Attach a query-relevant excerpt (~+200).'),
+    })
+    .optional()
+    .describe('Extras to attach per hit. Ask only for what you will use — each costs tokens.'),
 };
 
 const filtersShape = z

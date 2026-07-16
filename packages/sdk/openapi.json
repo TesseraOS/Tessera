@@ -664,6 +664,32 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 100
+                  },
+                  "include": {
+                    "description": "Extras to attach per hit. Ask only for what you will use — each costs tokens.",
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "description": "Classify each hit as `file`, `memory`, or `symbol` (+35).",
+                        "type": "boolean"
+                      },
+                      "node": {
+                        "description": "Attach the graph node to pass to `GET /v1/effects`, when the hit has one (+135).",
+                        "type": "boolean"
+                      },
+                      "snippet": {
+                        "description": "Attach a query-relevant excerpt (~+200).",
+                        "type": "object",
+                        "properties": {
+                          "maxChars": {
+                            "description": "Ceiling on the excerpt length (default 240).",
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 2000
+                          }
+                        }
+                      }
+                    }
                   }
                 },
                 "required": [
@@ -733,7 +759,76 @@
                             }
                           },
                           "label": {
+                            "description": "Human-readable title — a source path, a memory title, or a symbol name.",
                             "type": "string"
+                          },
+                          "kind": {
+                            "description": "What this is: `file`, `memory`, or `symbol`.",
+                            "type": "string"
+                          },
+                          "snippet": {
+                            "type": "object",
+                            "properties": {
+                              "text": {
+                                "type": "string"
+                              },
+                              "matches": {
+                                "description": "Spans of `text` that matched a query term.",
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "start": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "end": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "start",
+                                    "end"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "truncatedStart": {
+                                "description": "`text` starts mid-document.",
+                                "type": "boolean"
+                              },
+                              "truncatedEnd": {
+                                "description": "`text` stops before the end of the document.",
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "text",
+                              "matches",
+                              "truncatedStart",
+                              "truncatedEnd"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "node": {
+                            "description": "The graph node this hit is, when it has one — pass it to `GET /v1/effects` to see what a change here would affect. Absent for items with no node (e.g. a memory).",
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string"
+                              },
+                              "key": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "key"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "required": [

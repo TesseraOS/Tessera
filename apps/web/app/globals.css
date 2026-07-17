@@ -292,3 +292,37 @@
   animation: none;
   mix-blend-mode: normal;
 }
+
+/*
+ * React Flow attribution (F-082) — kept, made quiet.
+ *
+ * The maintainer's call (2026-07-17): @xyflow/react is MIT, so hiding the mark is legally
+ * permitted, but xyflow asks that you subscribe to React Flow Pro if you do — and this repo keeps
+ * its attributions (NOTICE.md; ADR-0013/0021/0038). So `hideAttribution` stays `false` and the
+ * credit is simply made to behave like a credit: no white badge, muted, low-contrast, out of the
+ * way — it should be findable, not announced.
+ *
+ * This lives in CSS because the element is rendered by the library, not by us. Deliberately NOT
+ * `display: none` by another name: it stays legible on hover and is never removed from the DOM.
+ */
+/*
+ * Note the `.react-flow` prefix — it is load-bearing, not decoration. `@xyflow/react/dist/style.css`
+ * is imported by the canvas component, so it lands AFTER this file: at equal specificity the library
+ * wins every property it declares. A screenshot caught exactly that — `font-size`/`opacity` (which
+ * the library does not set) applied, while `background` and `color` silently did not, leaving the
+ * grey badge in place. The extra class outranks it regardless of order.
+ */
+.react-flow .react-flow__attribution {
+  background: transparent;
+  padding: 0 4px;
+}
+.react-flow .react-flow__attribution a {
+  color: var(--muted-foreground);
+  font-size: 9px;
+  opacity: 0.45;
+  transition: opacity 150ms ease;
+}
+.react-flow .react-flow__attribution a:hover,
+.react-flow .react-flow__attribution a:focus-visible {
+  opacity: 1;
+}

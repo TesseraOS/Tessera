@@ -285,7 +285,14 @@ function ResultsList({
       onKeyDown={onKeyDown}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
-      className="max-h-[65vh] overflow-y-auto rounded-xl pr-1 outline-none"
+      /*
+       * `px-1`, not `pr-1` (F-082). The active row draws a 2px `ring`, which paints OUTSIDE its
+       * border box — and `overflow-y: auto` forces the x-axis to clip as well, so a gutter on only
+       * one side shaved the ring off the LEFT edge of every result while the right looked fine.
+       * That is the "cards cut off on the left" report: the cards were never wrong, the scroll
+       * container was. Both sides now clear the ring.
+       */
+      className="max-h-[65vh] overflow-y-auto rounded-xl px-1 outline-none"
     >
       <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
         {virtualizer.getVirtualItems().map((row) => {

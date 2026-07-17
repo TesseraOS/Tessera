@@ -45,7 +45,23 @@ export function GraphSidePanel({
   const connections = edges.filter((edge) => edge.from === node.id || edge.to === node.id);
 
   return (
-    <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
+    /*
+     * Bounded, and scrolls itself (F-082). The canvas beside it is a fixed `h-[65vh]`, but this
+     * panel had no cap at all — and the effects list below is UNCAPPED (unlike Connections, which
+     * slices to 20). So a high-degree node simply grew the grid row past the canvas and pushed the
+     * whole page into scrolling, which is exactly what was reported.
+     *
+     * `role="region"` + `tabIndex` because a scrollable region must be keyboard-reachable (axe
+     * `scrollable-region-focusable`, WCAG 2.1.1): in Explore mode the panel happens to contain a
+     * button, but in Effects mode it contains nothing focusable at all, so without this a keyboard
+     * user could not reach the overflow that motivated the fix.
+     */
+    <Card
+      className="bg-sidebar border-none p-4 shadow-none lg:max-h-[65vh] lg:overflow-y-auto dark:ring-0"
+      role="region"
+      aria-label="Node details"
+      tabIndex={0}
+    >
       <CardContent className="space-y-4 p-0">
         <header className="space-y-1.5">
           <Badge variant="secondary" className="h-4 text-[10px] capitalize">

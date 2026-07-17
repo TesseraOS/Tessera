@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Activity, ArrowUpRight, Check, Server, Wallet, X } from 'lucide-react';
+import { ArrowUpRight, Check, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -60,14 +60,9 @@ function DeploymentCard() {
 
   return (
     <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
-      <CardHeader className="flex-row items-center gap-2 space-y-0 p-0 pb-3">
-        <Server className="text-muted-foreground size-4" aria-hidden="true" />
-        <div className="space-y-1">
-          <CardTitle className="text-sm">Deployment</CardTitle>
-          <CardDescription>
-            Live connection and dependency health for this workspace.
-          </CardDescription>
-        </div>
+      <CardHeader className="space-y-1 p-0 pb-3">
+        <CardTitle className="text-sm">Deployment</CardTitle>
+        <CardDescription>Live connection and dependency health for this workspace.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 p-0">
         <dl className="grid gap-3 sm:grid-cols-3">
@@ -138,15 +133,16 @@ function PlansCard() {
 
   return (
     <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
-      <CardHeader className="flex-row items-center gap-2 space-y-0 p-0 pb-3">
-        <Wallet className="text-muted-foreground size-4" aria-hidden="true" />
-        <div className="space-y-1">
-          <CardTitle className="text-sm">Plans &amp; budgets</CardTitle>
-          <CardDescription>
-            Entitlements that bound compilation. The compile-token budget is enforced server-side
-            per plan.
-          </CardDescription>
-        </div>
+      <CardHeader className="space-y-1 p-0 pb-3">
+        <CardTitle className="text-sm">Plans &amp; budgets</CardTitle>
+        <CardDescription>
+          Entitlements that bound compilation, enforced server-side per plan. This is the catalog —
+          the plan this workspace is on is shown under{' '}
+          <Link href="/profile" className="text-foreground font-medium hover:underline">
+            Profile
+          </Link>
+          .
+        </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         {isError ? (
@@ -201,18 +197,33 @@ function PlansCard() {
 function GovernanceCard() {
   return (
     <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
-      <CardHeader className="flex-row items-center gap-2 space-y-0 p-0 pb-2">
-        <Activity className="text-muted-foreground size-4" aria-hidden="true" />
+      <CardHeader className="space-y-1 p-0 pb-3">
         <CardTitle className="text-sm">Governance &amp; retention</CardTitle>
+        <CardDescription>
+          How access and history are controlled. Set by server configuration — read-only here.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="text-muted-foreground space-y-3 p-0 text-xs leading-relaxed">
-        <p>
-          Access is enforced by role-based permissions (least privilege), and every sensitive action
-          is recorded in an <span className="text-foreground font-medium">append-only</span>,
-          per-tenant audit trail with a server-side retention policy (max age / max entries,
-          NFR-13). These are managed server-side by configuration — there are no client-side
-          controls.
-        </p>
+      <CardContent className="space-y-3 p-0">
+        {/*
+          Was a paragraph of prose that leaked an internal requirement id ("NFR-13") at the user and
+          buried three separate facts in one sentence. Same facts, scannable, in the definition-list
+          grammar the Deployment card above already uses — a settings page states posture, it does
+          not narrate it.
+        */}
+        <dl className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1">
+            <dt className="text-muted-foreground text-[11px]">Access control</dt>
+            <dd className="text-foreground text-xs">Role-based, least privilege</dd>
+          </div>
+          <div className="space-y-1">
+            <dt className="text-muted-foreground text-[11px]">Audit trail</dt>
+            <dd className="text-foreground text-xs">Append-only, per tenant</dd>
+          </div>
+          <div className="space-y-1">
+            <dt className="text-muted-foreground text-[11px]">Retention</dt>
+            <dd className="text-foreground text-xs">By max age &amp; max entries</dd>
+          </div>
+        </dl>
         <Link
           href="/governance"
           className="text-foreground inline-flex items-center gap-1 text-xs font-medium hover:underline"

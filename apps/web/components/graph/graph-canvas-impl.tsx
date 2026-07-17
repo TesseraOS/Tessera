@@ -3,9 +3,7 @@
 import { useMemo } from 'react';
 import {
   Background,
-  Controls,
   Handle,
-  MiniMap,
   Position,
   ReactFlow,
   type NodeProps,
@@ -91,11 +89,16 @@ export default function GraphCanvasImpl({
         minZoom={0.1}
         onNodeClick={(_event, node) => onSelect(node.id)}
         onPaneClick={() => onSelect(null)}
+        /*
+         * Attribution stays (maintainer decision, 2026-07-17). @xyflow/react is MIT, so hiding it is
+         * legally permitted — but xyflow asks that you subscribe to React Flow Pro if you do, and
+         * this repo keeps its attributions (NOTICE.md; ADR-0013/0021/0038). F-082 makes it read as a
+         * discreet credit rather than a badge; it is styled in `globals.css`, since the element is
+         * rendered by the library and not by us.
+         */
         proOptions={{ hideAttribution: false }}
       >
         <Background gap={16} />
-        <Controls showInteractive={false} />
-        <MiniMap pannable zoomable className="!bg-sidebar" />
       </ReactFlow>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { MouseEvent } from 'react';
-import { Check, Monitor, Moon, Palette, Sun } from 'lucide-react';
+import { Check, Monitor, Moon, Sun } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAppearanceTransition } from '@/lib/theme';
 import {
@@ -39,14 +39,11 @@ export function AppearanceSettings() {
 
   return (
     <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
-      <CardHeader className="flex-row items-center gap-2 space-y-0 p-0 pb-3">
-        <Palette className="text-muted-foreground size-4" aria-hidden="true" />
-        <div className="space-y-1">
-          <CardTitle className="text-sm">Appearance</CardTitle>
-          <CardDescription>
-            Theme and mode for this browser. Switching ripples out from the control you press.
-          </CardDescription>
-        </div>
+      <CardHeader className="space-y-1 p-0 pb-3">
+        <CardTitle className="text-sm">Appearance</CardTitle>
+        <CardDescription>
+          Theme and mode for this browser. Switching ripples out from the control you press.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5 p-0">
         <fieldset className="space-y-2.5">

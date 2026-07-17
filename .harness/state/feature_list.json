@@ -2689,7 +2689,7 @@
     },
     {
       "id": "F-082",
-      "title": "Dashboard surface professionalization: graph chrome, search clipping, inspector, settings, signin",
+      "title": "Dashboard surface fixes: graph chrome + panel overflow, search clipping, settings, signin",
       "requirements": [
         "FR-49",
         "NFR-14"
@@ -2698,16 +2698,15 @@
       "package": "apps/web",
       "release": "R4",
       "priority": "should",
-      "status": "backlog",
+      "status": "done",
       "blockedBy": [],
       "acceptance": [
-        "Graph: MiniMap and Controls removed; the React Flow attribution is RETAINED (hideAttribution stays false) but restyled as a discreet muted credit, not a badge",
-        "Graph: the right side panel scrolls internally within the viewport — a node with many effects must not overflow and force the page to scroll",
-        "Search: result cards are no longer clipped on the left; the border renders in full (a focus-ring/overflow clip on the scroll container, not a card defect)",
-        "Inspector: rebuilt to enterprise grade under DESIGN-SYSTEM.md",
-        "Settings: section-header icons removed; every section except Appearance brought to the same bar as Appearance",
+        "Graph: MiniMap and Controls removed; the React Flow attribution is RETAINED (hideAttribution stays false) but restyled as a discreet muted credit, legible on hover and never removed from the DOM",
+        "Graph: the node panel is bounded to the canvas height and scrolls internally — a node with many effects must not grow the page — and the scroll region is keyboard-reachable",
+        "Search: result cards are no longer clipped on the left; the active row ring renders in full on both edges",
+        "Settings: section-header icons removed from every card; Governance stops leaking an internal requirement id at users and gains the description every other card has",
         "Signin: the \"Context & Memory OS\" badge is removed from the left pane",
-        "apps/web gates green; design-review + contrast gates pass across 4 themes x light/dark; screenshot evidence per the frontend quality bar"
+        "apps/web gates green; axe WCAG A/AA clean on the touched routes; screenshot evidence"
       ],
       "verification": [
         "typecheck",
@@ -2717,7 +2716,7 @@
         "build"
       ],
       "effects": [],
-      "notes": "REPORTED BY THE USER (2026-07-17), items 6/7/8/9/10/16. ATTRIBUTION DECISION (user, 2026-07-17, via AskUserQuestion): KEEP IT, restyle it. This was surfaced rather than silently flipped because proOptions={{ hideAttribution: false }} in graph-canvas-impl.tsx is deliberate, not an oversight, and the question is ethical rather than technical: @xyflow/react is MIT, so hiding the mark is LEGALLY permitted, but xyflow explicitly asks that you subscribe to React Flow Pro if you do. The repo already has a NOTICE.md attribution culture (ADR-0013/0021/0038) and the user chose to stay consistent with it — the mark stays, it just stops shouting. MiniMap/Controls are pure UI chrome and go. Item 7 (side panel overflow) is confirmed: graph-side-panel.tsx has no overflow/max-height constraint at all, so a high-degree node simply grows the document. Item 8 (\"border being cut off\" on the left) is almost certainly a clipped focus-ring/shadow on an overflow container rather than the cards themselves — diagnose before restyling; the fix is on the scroll parent. Items 9/10 are judgment work against DESIGN-SYSTEM.md, not bug fixes: the user singled out Appearance as the section that already meets the bar, so it is the in-repo reference to match, not a section to touch. Note F-064 (Dashboard: UX-baseline completion + i18n readiness) is adjacent — keep this feature to the reported surfaces and do not absorb it (golden rule 2)."
+      "notes": "REPORTED BY THE USER (2026-07-17), items 6/7/8/9/10/16. ATTRIBUTION DECISION (user, 2026-07-17, via AskUserQuestion): KEEP IT, restyle it. This was surfaced rather than silently flipped because proOptions={{ hideAttribution: false }} in graph-canvas-impl.tsx is deliberate, not an oversight, and the question is ethical rather than technical: @xyflow/react is MIT, so hiding the mark is LEGALLY permitted, but xyflow explicitly asks that you subscribe to React Flow Pro if you do. The repo already has a NOTICE.md attribution culture (ADR-0013/0021/0038) and the user chose to stay consistent with it — the mark stays, it just stops shouting. MiniMap/Controls are pure UI chrome and go. Item 7 (side panel overflow) is confirmed: graph-side-panel.tsx has no overflow/max-height constraint at all, so a high-degree node simply grows the document. Item 8 (\"border being cut off\" on the left) is almost certainly a clipped focus-ring/shadow on an overflow container rather than the cards themselves — diagnose before restyling; the fix is on the scroll parent. Items 9/10 are judgment work against DESIGN-SYSTEM.md, not bug fixes: the user singled out Appearance as the section that already meets the bar, so it is the in-repo reference to match, not a section to touch. Note F-064 (Dashboard: UX-baseline completion + i18n readiness) is adjacent — keep this feature to the reported surfaces and do not absorb it (golden rule 2). SCOPE SPLIT 2026-07-17: the inspector rebuild (user item 9) moved to F-086. Reason: it is ~1022 lines across six components and was ALREADY rebuilt three commits ago by F-062 (\"Inspector v2\") — the user looking at that result and still calling it unprofessional means the gap is design judgment, not a missing pass, and a rushed edit tacked onto a batch of one-line fixes would be F-062 again. It needs its own plan, its own screenshot iteration, and the design-review skill. The other five items here are diagnosed defects with mechanical fixes and land now. DONE 2026-07-17: MiniMap/Controls removed; attribution KEPT and restyled to a muted 9px 0.45-opacity credit (legible on hover, never display:none) — and the first attempt SILENTLY HALF-FAILED: @xyflow/react/dist/style.css is imported by the component so it lands after globals.css, and at equal specificity the library wins every property IT declares (font-size/opacity applied, background/color did not, leaving the grey badge). A screenshot caught it; fixed by prefixing .react-flow; verified by computed style (rgba(150,150,150,0.25)/#999 -> transparent/#a1a1a1). Panel bounded lg:max-h-[65vh] + role=region + tabIndex (Effects mode contains nothing focusable); MEASURED: 25-effect hub node -> 0px page overflow. Search pr-1 -> px-1 (the container clipped the active rows 2px ring on the left; overflow-y:auto forces x-axis clipping). Settings icons removed on all 4 cards; Governance prose -> dl, dropping the leaked NFR-13. Gates green (typecheck 40-40/lint 23-23/format/test 38-38/build 20-20) + e2e 12/12 with axe AA across graph/search/settings/auth + screenshots."
     },
     {
       "id": "F-083",
@@ -2822,6 +2821,36 @@
         "E-014"
       ],
       "notes": "SPLIT OUT OF F-081 (2026-07-17) — user item 13 (\"use multi-threading, handle parallel requests\"). THE USER WAS RIGHT, AND MY FIRST MEASUREMENT SAID OTHERWISE — recorded because the near-miss is the lesson. @huggingface/transformers runs ONNX via onnxruntime-node, whose async run() is widely assumed to offload to the libuv threadpool. Take 1 measured MAX event-loop lag (68.7ms) and concluded \"not blocking\" — WRONG: max lag cannot separate \"inference offloads, the lag is JS tokenization\" from \"inference runs on-thread in 36ms chunks\", because both peak the same. Take 2 (cumulative lag) and take 3 (monitorEventLoopDelay) both read a KNOWN busy-loop control as 0% blocked — while the thread is held, no sample is ever taken, so the instrument goes blind exactly when the answer matters. The control caught the instrument three times; that is what controls are for. Take 4 calibrated against BOTH hypotheses in the real SHAPE of the work (24 x 36ms with await boundaries): mean loop delay — offloaded control 16.7ms, EMBEDDING 32.9ms, on-thread control 36.1ms. Embedding reads as ON-THREAD: onnxruntime-node does NOT give us a free thread here, and every concurrent request eats a ~36ms stall per embedded chunk for the whole scan. So the pool is warranted on evidence. WATCH THE COST, it is real and cuts against a big default: a worker cannot share the loaded model, so N workers = N model loads (~3s each, measured) and N copies resident (~90MB each). Multi-PROCESS clustering remains OUT (F-081 notes + ADR: in-process bus + scan-status map; F-056 is the prerequisite). Re-run the calibrated harness to prove the fix — do not assert it."
+    },
+    {
+      "id": "F-086",
+      "title": "Inspector v3: the context package needs to read like an instrument, not a stack of cards",
+      "requirements": [
+        "FR-49",
+        "NFR-14"
+      ],
+      "service": "web",
+      "package": "apps/web",
+      "release": "R4",
+      "priority": "should",
+      "status": "todo",
+      "blockedBy": [],
+      "acceptance": [
+        "The inspector reads as one instrument with a clear primary read, not four sibling cards of equal weight competing for attention",
+        "The compile trace and package scores are legible at a glance — a user can answer \"what did the compiler pick, and why\" without reading every card",
+        "Judged against DESIGN-SYSTEM.md via the design-review skill, with before/after screenshots across 4 themes x light/dark",
+        "No fabricated data; empty/error/loading states stay honest (F-062 got this right — do not regress it)",
+        "apps/web gates green; axe WCAG A/AA clean; contrast gate passes"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "format",
+        "test",
+        "build"
+      ],
+      "effects": [],
+      "notes": "SPLIT OUT OF F-082 (2026-07-17) — user item 9: \"The UI/UX of the inspector page is not professional. Make it professional and enterprise grade, ready for production.\" THE IMPORTANT CONTEXT: F-062 rebuilt this page as \"Inspector v2\" only three commits before the report (1469b6e), and the user is looking at THAT and still calling it unprofessional. So this is not a missing pass — another quick pass would produce F-062 again. Treat the ask as a design problem: 1022 lines across inspector-view/compile-form/fragment-card/package-export/package-guidance/recent-compiles, currently a vertical stack of same-weight `bg-sidebar` cards (scores, sections, trace) with no visual hierarchy, so nothing leads and the eye has no entry point. Start from what the page is FOR — answering \"what context did the compiler select, and why\" — and let the layout say that, rather than restyling the existing cards. Use the design-review + frontend-craft skills, and screenshot BEFORE deciding (the F-061 lesson: a screenshot caught a dark-theme ring bug no test could see). Do NOT regress F-062 honest empty guidance or the agent-ready export — those were the point of v2 and they work."
     }
   ]
 }

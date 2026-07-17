@@ -3,6 +3,70 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-17 (v8) — F-082: four surface reports, four specific causes (and a screenshot that caught the fifth)
+
+User items 6/7/8/10/16. Plan:
+[`F-082-dashboard-surface-fixes.md`](../plans/F-082-dashboard-surface-fixes.md). Item 9 (inspector)
+split to **F-086** — see below.
+
+### Each report had a mechanical cause, found by reading rather than restyling
+
+- **#7 "the right pane overflows the page."** The canvas is a fixed `h-[65vh]`; the panel Card had
+  **no cap at all**, and its effects list is **uncapped** (`effects.map`) where Connections slices to
+  20 — so a high-degree node grew the grid row past the canvas and pushed the page, and only ever in
+  Effects mode. Now `lg:max-h-[65vh] lg:overflow-y-auto`. **Measured, not eyeballed:** with a 25-effect
+  hub node, page vertical overflow = **0px**.
+- **#8 "cards cut off on the left."** The cards were never wrong — the **scroll container** was.
+  `search-view.tsx:288` had `overflow-y-auto … pr-1`: a gutter on the right only. `overflow-y: auto`
+  forces the x-axis to clip too, and the active row paints a 2px `ring` **outside** its border box,
+  so the left edge got shaved while the right looked fine. `pr-1` → `px-1`.
+- **#10 settings.** Icons removed (asked). But the icon was **not** what separated Appearance from
+  the rest — Appearance used the *same* icon+title header; its *content* is what differs. The real
+  weakness was **Governance**: a prose paragraph burying three facts in one sentence and leaking an
+  internal requirement id (**"NFR-13"**) at the user, with no `CardDescription` where every sibling
+  had one. Rewritten into the definition-list grammar Deployment already uses. Plans now says it is
+  the *catalog* and points at Profile, which already owns "your plan".
+- **#6 / #16.** MiniMap + Controls gone; signin badge gone.
+
+### The attribution: kept, and the screenshot caught it silently not applying
+
+Attribution **stays** (maintainer decision): `@xyflow/react` is MIT so hiding it is legal, but xyflow
+asks you to subscribe to Pro if you do, and this repo keeps its attributions (NOTICE.md,
+ADR-0013/0021/0038). It is now a muted 9px credit at 0.45 opacity, legible on hover, never removed
+from the DOM.
+
+**The first attempt silently half-failed, and only a screenshot showed it.** `@xyflow/react/dist/style.css`
+is imported by the canvas component, so it lands *after* `globals.css`: at equal specificity the
+library wins every property **it** declares. `font-size`/`opacity` (which it does not set) applied;
+`background` and `color` did not — leaving the grey badge exactly as before while the CSS looked
+correct in the diff. Confirmed by reading computed style, not by squinting:
+`rgba(150,150,150,0.25)` / `#999` before, `transparent` / `#a1a1a1` (= `--muted-foreground`) after
+prefixing `.react-flow`. Same lesson the repo already recorded at F-061: a screenshot catches what no
+test would.
+
+**Evidence/verification** — gates green: `state` (86 features), `typecheck` (40/40), `lint` (23/23),
+`format`, `test` (38/38), `build` (20/20). **e2e 12/12** across `graph`/`search`/`settings`/`auth`,
+including the axe WCAG A/AA sweeps — which is what *proves* the panel's `tabIndex` rather than
+asserting it (in Effects mode the panel contains nothing focusable, so without it a keyboard user
+could not reach the very overflow being fixed). Graph + settings screenshotted.
+
+`eslint.config.mjs` gains a second narrow `no-noninteractive-tabindex` allowance (`region`, for the
+graph panel) beside F-080's `ul` (the activity feed). Both are the same standoff: axe requires the
+attribute jsx-a11y forbids, and the WCAG-backed rule wins.
+
+### Item 9 split to F-086, deliberately
+
+The inspector is ~1022 lines across six components and was rebuilt by **F-062 ("Inspector v2") three
+commits before this report** (1469b6e) — the maintainer is looking at *that* and still calling it
+unprofessional. So the gap is design judgment, not a missing pass, and a rushed restyle appended to a
+batch of one-line fixes would simply reproduce F-062. It needs its own plan, the design-review skill,
+and screenshot iteration.
+
+**Next step**
+- **F-086** (inspector) or **F-081** (async scans, plan ready). F-084/F-085 also unblocked.
+
+---
+
 ## 2026-07-17 (v7) — F-083: one mark, defined once — the dashboard had been shipping a different logo
 
 User item 15. Plan:

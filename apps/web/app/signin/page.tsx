@@ -2,7 +2,7 @@
 
 import { Suspense, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { KeyRound, Loader2, ShieldCheck, Sparkles } from 'lucide-react';
+import { KeyRound, Loader2, ShieldCheck } from 'lucide-react';
 import { Constellation } from '@/components/art';
 import { Logo } from '@tessera/brand';
 import { Button } from '@/components/ui/button';
@@ -63,10 +63,6 @@ function SignInForm() {
           <Logo emberId="ember-signin-brand" iconClassName="size-7" textClassName="text-xl" />
 
           <div className="max-w-md space-y-5">
-            <span className="text-muted-foreground bg-background/40 inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] tracking-wide backdrop-blur">
-              <Sparkles className="size-3" aria-hidden="true" />
-              Context &amp; Memory OS
-            </span>
             <p className="text-3xl leading-tight font-semibold tracking-tight text-balance xl:text-4xl">
               Your agents forget.
               <br />

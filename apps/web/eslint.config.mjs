@@ -52,16 +52,19 @@ export default tseslint.config(
     // e2e a11y gate runs it. jsx-a11y's heuristic forbids the same attribute, so the two genuinely
     // conflict; the WCAG-backed one wins.
     //
-    // Narrowed to the `ul` TAG on purpose: this does NOT open tabIndex up to arbitrary
-    // non-interactive elements, which is what the rule is actually there to prevent. (Allowing it
-    // via `roles: ['list']` instead does not work — the rule does not resolve a `ul`'s implicit
-    // role, and stating `role="list"` explicitly to satisfy it trips `no-redundant-roles`. The two
-    // jsx-a11y rules cannot both be satisfied on this element; the tag allowance is the way out.)
+    // Narrowed on purpose — this does NOT open tabIndex up to arbitrary non-interactive elements,
+    // which is what the rule is actually there to prevent. Two allowances, both scrollable regions:
+    //   `ul`     — the Overview's activity feed (F-080). Allowed by TAG because `roles: ['list']`
+    //              does not work: the rule will not resolve a `ul`'s implicit role, and stating
+    //              `role="list"` to satisfy it then trips `no-redundant-roles`. The two jsx-a11y
+    //              rules cannot both be satisfied on that element.
+    //   `region` — the graph's node panel (F-082), whose Effects mode contains nothing focusable.
+    //              An explicit `role="region"` on a `div` is not redundant, so this one resolves.
     files: ['**/*.tsx'],
     rules: {
       'jsx-a11y/no-noninteractive-tabindex': [
         'error',
-        { tags: ['ul'], roles: ['tabpanel'], allowExpressionValues: true },
+        { tags: ['ul'], roles: ['tabpanel', 'region'], allowExpressionValues: true },
       ],
     },
   },

@@ -3,6 +3,141 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-17 (v2) — F-063 DONE — **R3 IS COMPLETE**. Audit v2: real pagination, actor/date filters, an audited export; the data-table pattern
+
+**Harness-strict selection** (the last open R3 feature; no blockers). Plan:
+[`.harness/plans/F-063-data-tables-audit-v2.md`](../plans/F-063-data-tables-audit-v2.md). Decisions in
+**ADR-0051**. Two commits (api/sdk, then web + close-out).
+
+### Three acceptance clauses were NOT delivered — on the merits, and recorded
+
+The operator was given the evidence and returned the call with the brief *"decide what is more
+professional and enterprise grade and ready for production."* **ADR-0051** carries the reasoning.
+
+1. **No sorting.** "Sortable columns" and "cursor pagination" are **mutually exclusive as specified**.
+   `auditQuerySchema` has no sort parameter, both adapters hardcode `desc(seq)`, and `AuditQuery`'s own
+   doc comment says *"newest-first; `cursor` paginates forward."* **The cursor IS the sort order** —
+   `seq < cursor` is only a valid page boundary in `seq` order. Client-sorting the 50 loaded rows of
+   2,000 would present "sorted by actor" over page 1 of 40: **the same dishonesty this feature
+   deletes**, in a better suit, on a compliance surface. An audit trail is chronological by nature;
+   "what did this actor do?" and "what happened Tuesday?" are **filters**, and acceptance 2 adds them.
+2. **No `@tanstack/react-table`.** It is **headless** — it renders no DOM and no ARIA, so the hard part
+   is hand-built either way — and every row model it exists to provide (sort, filter, paginate) is
+   bypassed by a server that does all three. What would remain is a **dependency for `.map()`**, plus a
+   permanent second table abstraction beside `components/ui/table.tsx`. `web-perf` measures only
+   `/signin`, so the gate would neither punish nor bless it: the decision had to be on merit.
+3. **"The memory/sources tables build on it" — verified FALSE.** `memory-view.tsx:180` is a
+   `role="list"` **card list**; a grep across `components/sources/**` finds **no table at all**. The
+   fourth feature running whose acceptance carried a stale premise.
+
+### What shipped instead
+
+**`components/ui/data-table.tsx`** — a virtualized grid that **cannot be a `<table>`** (absolutely
+positioned rows leave the table row-box algorithm; `display: block` strips the implicit roles), so the
+semantics are **declared**. Two structural collapses, each killing a predicted bug:
+
+- **The `role="table"` element IS the scroll container.** A `<div>` between it and the rowgroups breaks
+  `aria-required-children` — and it is also what makes `sticky top-0` work. **The clean ownership chain
+  and the sticky header are the same structure.**
+- **The virtualizer's height spacer IS the body rowgroup**, so rows are direct children. No
+  `role="presentation"` gymnastics, no `aria-owns`.
+
+**`aria-rowcount={-1}` is load-bearing.** Cursor pagination means the total is *genuinely unknown* —
+`AuditPage` is `{events, nextCursor?}`, and no count exists in the model, the schema, or either
+adapter. Announcing the **loaded** count would say "row 50 of 50" while `nextCursor` proves otherwise:
+the same lie, whispered to the users least able to detect it. And `aria-rowindex` is **absolute** —
+which **axe cannot check**, because a window-relative index (1..10 repeating) is structurally valid
+ARIA and totally broken for AT. It gets an explicit RTL assertion at a scrolled window.
+
+**Audit v2.** `useAuditInfinite` finally uses the keyset cursor the component always held in its hand.
+Actor + date-range filters (long supported on the wire, never surfaced) — with `until` forced to
+**end-of-day**, because the API compares **lexicographically**, so a bare `2026-07-17` silently drops
+the 17th. An explicit **"Load older events"** rather than infinite scroll: compliance means
+reproducibility ("I am looking at 150 events"), and a load-trigger inside a virtual window may not be
+in the DOM when a keyboard user reaches the end.
+
+### The export refines the F-062 lesson rather than contradicting it
+
+F-062 established that formatting belongs in the client. Its test — *"could client and server disagree
+about what is TRUE, or only about style?"* — is **three questions here**, and the trap is asking it
+once:
+
+| sub-question | disagree about truth? | verdict |
+|---|---|---|
+| the CSV/JSON bytes | no, only style | **client** — the server never emits a byte of CSV |
+| "an admin exported the trail at T" | the client cannot make this claim at all; a self-asserted one is forgeable | **server** |
+| "these are ALL the rows matching these filters" | **yes** — a client holding 2 of 40 pages is *wrong about what the filtered view is* | **server** |
+
+F-062's Markdown was **purely** a re-encoding; this is a re-encoding **wrapped around two server-only
+facts**. And FR-55 names "**exports**" as an audited category *in its own text* — a requirement, not an
+inference. The rejected alternative matters: a client looping `/v1/audit` would record N `audit.read`
+events, **indistinguishable from an admin scrolling** — "who took a copy of the trail?" would be
+unanswerable.
+
+**CSV formula injection is this export's fence-injection.** A cell starting `=`/`+`/`-`/`@` is executed
+by Excel and Google Sheets, and audit cells are **not trusted**: `principalId` comes from an OIDC or
+token identity, `target` from a route URL. RFC-4180 quoting **plus** `'` neutralization, tested with
+`=HYPERLINK(...)` and `=1+1`. Same discipline as F-061's offsets and F-062's longest-backtick-run.
+
+### A real divergence, found because the export walks the port
+
+`sqlite-audit-log` had `query.limit ?? 50` with **no clamp**, while the in-memory adapter did
+`Math.min(query.limit ?? DEFAULT_AUDIT_PAGE_SIZE, MAX_AUDIT_PAGE_SIZE)`. Unreachable over HTTP (the
+route schema caps it) — but the export walks the **port** directly, below that schema, which is exactly
+where it lived. **A port contract only the reference adapter honours is not a contract.**
+
+**Root cause registered as F-078, not fixed here:** the shared `AuditLog` conformance suite is run by
+exactly **one** caller — the in-memory adapter. The **shipped** SQLite one has never run it. That is
+why the drift went unseen and why it would recur. Wiring the suite across the package boundary (port in
+`@tessera/api`, adapter in `@tessera/config`) is a test-architecture change, not a dashboard story.
+
+**Evidence** — verify-state ok · typecheck **38** · lint **22** · format · test **36** (web **368**:
++10 csv, +9 query, +8 data-table, +11 audit-view — the **first** `audit-view.test.tsx`) · build **19** ·
+e2e **20** (api **96** = +8 export incl. cross-tenant; web **50**, incl. **axe AA on both the populated
+and the empty grid**) · **web-perf** both budgets (web `/signin` **256.9 KB** gz) · **e2e-full 2/2** —
+the human journey now **exports the real trail and then finds its own `audit.export` event in it**, the
+compliance loop closing against real SQLite in a real browser. SDK regenerated + committed.
+Screenshot-verified across 4 themes × light/dark.
+
+Effects **E-020** (×2), **E-003**, **E-004** extended. **ADR-0051**.
+
+### Scope limits — stated, not hidden
+
+1. **SL-1/2/5** — the three undelivered acceptance clauses above (ADR-0051).
+2. **SL-3** — the export is capped at `MAX_AUDIT_EXPORT_ROWS` with a truthful `truncated` flag and a UI
+   warning. DSR stays **unbounded** (`cap: undefined`): a right-of-access answer must be complete or it
+   is not an answer, whereas an export **button** is one click from an OOM.
+3. **SL-4** — `AuditEvent.metadata` is a **write-dead field** (nothing in the product populates it), so
+   the `audit.export` event records **who and when, but not which filters**. That satisfies the
+   acceptance as written; per-request metadata is an E-020 infra change across every audited route.
+
+Also fixed in passing: a `**/` glob inside a JSDoc block **terminates the comment** (the same family as
+the `--`-in-an-XML-comment lesson), and Playwright's `getByLabel('To')` substring-matches
+"Filter by ac**to**r" — RTL's is exact by default, so the unit test could not have caught it.
+
+---
+
+## 🏁 R3 COMPLETE
+
+Every R3 feature is `done`. The dashboard's four flagship surfaces now tell the truth: the Overview
+shows real numbers and a live feed (F-060), search returns readable, excerpted, actionable results
+(F-061/F-073), the Inspector explains an empty package instead of celebrating it (F-062), and the audit
+trail is fully reachable, filterable and exportable — with the export in the trail (F-063).
+
+**Next step — R4, by id.** The two `must` heads are both defects this run surfaced and registered
+rather than folded:
+- **F-071** (`must`) — tenant-aware ingestion. Now blocking three things: ADR-0050's `document.*` feed
+  gap, F-075's ownership question, and its own silent multi-tenant breakage.
+- **F-077** (`must`) — the MCP compile surface bypasses the F-035 entitlement clamp (with an ADR
+  question attached: silent clamp, or reject?).
+- Then F-050 (multi-project workspaces), F-052 (CLI), and the rest of R4 by id.
+
+Also registered this run and awaiting their turn: **F-075** (tenant-key the blob corpus so file bodies
+can be served without an IDOR), **F-076** (one file, one ref — fusion cannot merge the two ref spaces),
+**F-078** (the shipped SQLite audit adapter never runs its conformance suite).
+
+---
+
 ## 2026-07-17 — F-062 DONE — Inspector v2: honest empty guidance, agent-ready export, compile controls. **Zero server code.**
 
 **Harness-strict selection** (next by id in R3; no blockers). Plan:

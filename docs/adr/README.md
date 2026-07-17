@@ -66,6 +66,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0048](0048-dashboard-auth-httponly-cookie-proxy.md) | Dashboard auth: httpOnly-cookie session behind a same-origin Next proxy (closes 0022 onto the SDK) | Accepted |
 | [0049](0049-data-governance-retention-dsr-mcp-audit.md) | Data governance: memory retention (delete-only), DSR export/erasure retaining the audit trail, MCP-surface audit on the existing taxonomy | Accepted |
 | [0050](0050-sse-tenant-scoped-event-stream.md) | Tenant-scope the `/v1/events` SSE stream via a server-side `tenantId` stripped before the wire (closes a cross-tenant leak; `document.*` stays default-attributed until F-071) | Accepted |
+| [0051](0051-audit-trail-is-chronological-no-column-sorting.md) | The audit trail is chronological: cursor pagination instead of column sorting, and no table library — the cursor *is* the sort order, so client-side sorting would lie; `aria-rowcount={-1}` because the total is genuinely unknown | Accepted |
 
 ## Conventions
 

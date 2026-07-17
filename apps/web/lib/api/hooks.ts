@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
 import { useApiEvent } from './events';
 import type {
+  AuditExportQuery,
   AuditQuery,
   CaptureMemoryBody,
   CompileBody,
@@ -95,6 +96,36 @@ export function useAudit(query: AuditQuery = {}) {
     queryKey: ['audit', query],
     queryFn: () => api.getAudit(query),
     staleTime: 15_000,
+  });
+}
+
+/**
+ * The audit trail, paged for real (F-063). The API has always returned a keyset `nextCursor`; the
+ * view held one and told the user to "narrow the filters to see older entries" instead of using it.
+ *
+ * The cursor is a stable keyset (`seq < cursor`), so new events arriving mid-read never shift a page
+ * under the reader — which is what makes paging a compliance trail trustworthy rather than merely
+ * possible.
+ */
+export function useAuditInfinite(query: AuditExportQuery = {}) {
+  return useInfiniteQuery({
+    queryKey: ['audit', 'infinite', query],
+    queryFn: ({ pageParam }) =>
+      api.getAudit({ ...query, ...(pageParam === undefined ? {} : { cursor: pageParam }) }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor,
+    staleTime: 15_000,
+  });
+}
+
+/**
+ * Export every audit event matching the filters (F-063) — a **mutation**, not a query: it has a
+ * server-side effect (it writes an `audit.export` event to the trail), so it must never be
+ * speculatively refetched, retried, or fired on mount.
+ */
+export function useAuditExport() {
+  return useMutation({
+    mutationFn: (query: AuditExportQuery) => api.exportAudit(query),
   });
 }
 

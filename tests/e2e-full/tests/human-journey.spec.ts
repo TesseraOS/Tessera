@@ -94,4 +94,26 @@ test('sign in → sources → search → inspector → capture memory → audit,
   // The capture above is a real recorded action by the real principal.
   await expect(page.getByText('e2e-user').first()).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText('Memory write').first()).toBeVisible();
+
+  // The trail renders as an accessible grid whose total is honestly unknown: the API pages by keyset
+  // cursor and reports no count, so announcing one would be a number we do not have (F-063).
+  await expect(page.getByRole('table', { name: 'Audit events' })).toHaveAttribute(
+    'aria-rowcount',
+    '-1',
+  );
+
+  // ---- 7. Exporting the trail is itself recorded in the trail ---------------------------------
+  // The only place this can be PROVEN: a real browser, the real server, the real SQLite audit log.
+  // The api e2e proves the route; this proves the whole chain, including that the export appears in
+  // the very trail it exported — which is what FR-55's "exports" clause is actually asking for.
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: /export/i }).click();
+  await page.getByText('Download CSV').click();
+  expect((await download).suggestedFilename()).toMatch(/^tessera-audit-.*\.csv$/);
+
+  // Filter the real trail to the export action. Before F-063 there was no such action to find, and
+  // a client-side export would have been indistinguishable from an admin scrolling the page.
+  await page.getByLabel('Filter by action').click();
+  await page.getByRole('option', { name: 'Audit export' }).click();
+  await expect(page.getByText('Audit export').first()).toBeVisible({ timeout: 20_000 });
 });

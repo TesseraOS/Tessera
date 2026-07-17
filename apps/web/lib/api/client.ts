@@ -1,6 +1,8 @@
 import { createTesseraClient, TesseraApiError } from '@tessera/sdk';
 import { PROXY_BASE } from '@/lib/auth/session';
 import type {
+  AuditExport,
+  AuditExportQuery,
   AuditPage,
   AuditQuery,
   CaptureMemoryBody,
@@ -86,6 +88,8 @@ export const api = {
   editMemory: (lineageId: string, body: EditMemoryBody): Promise<Memory> =>
     sdk.editMemory(lineageId, body),
   getAudit: (query: AuditQuery = {}): Promise<AuditPage> => sdk.getAudit(query),
+  /** Every audit event matching the filters — the server pages to completeness and audits the export. */
+  exportAudit: (query: AuditExportQuery = {}): Promise<AuditExport> => sdk.exportAudit(query),
 
   // --- sources (F-038/FR-62) ---
   /** The workspace summary: documents, memories, graph, sources, last scan (F-060; stats:read). */

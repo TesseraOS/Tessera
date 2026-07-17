@@ -291,6 +291,18 @@ export interface AuditPage {
   nextCursor?: string;
 }
 
+/** `GET /v1/audit/export` — the same filters, minus paging: an export is defined by its filters. */
+export type AuditExportQuery = Omit<AuditQuery, 'limit' | 'cursor'>;
+
+/** `GET /v1/audit/export` — every matching event. Data, not bytes; the client formats it (F-063). */
+export interface AuditExport {
+  exportedAt: string;
+  count: number;
+  /** True when the row cap applied, so this is a PREFIX of the matching trail. Say so; never imply. */
+  truncated: boolean;
+  events: AuditEvent[];
+}
+
 // --- sources (/v1/sources*) — mirrors the @tessera/api sources schemas (F-038/FR-62) ---
 
 /**

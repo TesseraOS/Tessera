@@ -31,6 +31,11 @@ export const AUDIT_ACTIONS = [
   'retention.manage',
   'dsr.export',
   'dsr.delete',
+  // Taking the trail away is itself a sensitive action — FR-55 names "exports" in its own text, and
+  // a compliance officer asking "who took a copy of the trail?" must be able to answer from the
+  // trail. Distinct from `audit.read` (F-063): paging the view and exfiltrating the whole filtered
+  // set are different facts, and one recorded as the other is indistinguishable from scrolling.
+  'audit.export',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
@@ -99,6 +104,17 @@ export interface RetentionPolicy {
 
 export const DEFAULT_AUDIT_PAGE_SIZE = 50;
 export const MAX_AUDIT_PAGE_SIZE = 200;
+
+/**
+ * Hard bound on how many events one export materializes (F-063).
+ *
+ * The DSR bundle's trail walk is unbounded, which is defensible there: a right-of-access request is a
+ * rare, deliberate act. An export **button** on an admin screen is neither, so an unbounded walk is a
+ * latent OOM one click away. A truncated export that **says** it is truncated is honest; a silent one
+ * is the trap this feature exists to remove — so the response carries a `truncated` flag and the UI
+ * states it.
+ */
+export const MAX_AUDIT_EXPORT_ROWS = 50_000;
 
 /** True if `value` is a known {@link AuditAction}. */
 export function isAuditAction(value: unknown): value is AuditAction {

@@ -1,4 +1,5 @@
 import { DEFAULT_TENANT_ID, newId, type TenantId } from '@tessera/core';
+import { DEFAULT_AUDIT_PAGE_SIZE, MAX_AUDIT_PAGE_SIZE } from '@tessera/api';
 import type {
   AuditAction,
   AuditEvent,
@@ -93,7 +94,10 @@ export function createSqliteAuditLog(db: BetterSQLite3Database): AuditLog {
       },
 
       query(query = {}) {
-        const limit = query.limit ?? 50;
+        // Clamp, and use the shared default rather than a hardcoded 50 — the in-memory adapter has
+        // always done both and this one did neither, so the two disagreed for any caller reaching the
+        // port directly (below the route schema that clamps). The conformance suite now covers it.
+        const limit = Math.min(query.limit ?? DEFAULT_AUDIT_PAGE_SIZE, MAX_AUDIT_PAGE_SIZE);
         const conditions: SQL[] = [inTenant];
         if (query.action !== undefined) conditions.push(eq(auditEvents.action, query.action));
         if (query.actor !== undefined) {

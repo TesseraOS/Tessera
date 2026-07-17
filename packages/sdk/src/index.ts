@@ -25,6 +25,8 @@ export {
   type MemoryHistory,
   type AuditQuery,
   type AuditPage,
+  type AuditExportQuery,
+  type AuditExport,
   type RegisterSourceRequest,
   type Source,
   type SourceList,

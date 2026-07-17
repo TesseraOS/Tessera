@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { AuditEventInput } from '@tessera/api';
+import { MAX_AUDIT_PAGE_SIZE, type AuditEventInput } from '@tessera/api';
 import { createSqliteStore } from '@tessera/storage';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createSqliteAuditLog } from './sqlite-audit-log.js';
@@ -25,6 +25,26 @@ describe('createSqliteAuditLog', () => {
   afterEach(async () => {
     if (dir !== undefined) await rm(dir, { recursive: true, force: true });
     dir = undefined;
+  });
+
+  it('clamps an over-large limit and defaults when absent (port contract parity)', async () => {
+    // This adapter had `query.limit ?? 50` with NO clamp while the in-memory one clamped to
+    // MAX_AUDIT_PAGE_SIZE — a port contract only one adapter honoured. Unreachable over HTTP (the
+    // route schema caps it), but the audit-export trail walk calls the PORT directly, below that
+    // schema, which is exactly where the divergence lived.
+    //
+    // NOTE: this assertion duplicates a case in the shared `audit-log.conformance` suite because this
+    // adapter does not run it — the port + conformance live in `@tessera/api` and the adapter lives
+    // here. That gap is WHY the drift went unseen, and it is registered as its own feature (F-078).
+    const store = createSqliteStore({ path: ':memory:' });
+    const audit = createSqliteAuditLog(store.db).forTenant('acme');
+    for (let i = 0; i < 3; i += 1) await audit.record(event({ target: `c${i}` }));
+
+    const clamped = await audit.query({ limit: MAX_AUDIT_PAGE_SIZE + 500 });
+    expect(clamped.events).toHaveLength(3);
+    expect(clamped.nextCursor).toBeUndefined();
+
+    expect((await audit.query({})).events).toHaveLength(3);
   });
 
   it('records newest-first, filters, and isolates by tenant', async () => {

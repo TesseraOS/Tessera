@@ -37,4 +37,32 @@ export const auditPageResponseSchema = z.object({
   nextCursor: z.string().optional(),
 });
 
+/**
+ * `GET /v1/audit/export` querystring — the same filters as the page query, **minus the paging
+ * controls**: an export is defined by its filters, not by where you happened to have scrolled to.
+ * The server follows the cursor to completeness itself.
+ */
+export const auditExportQuerySchema = auditQuerySchema.omit({ limit: true, cursor: true });
+
+/**
+ * `GET /v1/audit/export` response — **data, not bytes**.
+ *
+ * The server never emits CSV. It owns the two things a client cannot know or assert honestly: that
+ * these are *all* the rows matching the filters (completeness is a fact about the data), and that an
+ * export happened at all (an audit event a client asserted about itself would be forgeable). Turning
+ * rows into CSV is a re-formatting of data the caller now holds — no truth to disagree about — so it
+ * stays in the client.
+ */
+export const auditExportResponseSchema = z.object({
+  exportedAt: z.string().describe('When the server assembled this export (ISO-8601).'),
+  count: z.number().int().nonnegative(),
+  truncated: z
+    .boolean()
+    .describe(
+      'True when the export hit its row cap and is a PREFIX of the matching trail, not all of it. Narrow the date range for the rest.',
+    ),
+  events: z.array(auditEventSchema),
+});
+
 export type AuditQueryParams = z.infer<typeof auditQuerySchema>;
+export type AuditExportQueryParams = z.infer<typeof auditExportQuerySchema>;

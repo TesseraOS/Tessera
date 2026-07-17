@@ -3201,7 +3201,8 @@
                 "retention.read",
                 "retention.manage",
                 "dsr.export",
-                "dsr.delete"
+                "dsr.delete",
+                "audit.export"
               ]
             },
             "in": "query",
@@ -3332,7 +3333,8 @@
                               "retention.read",
                               "retention.manage",
                               "dsr.export",
-                              "dsr.delete"
+                              "dsr.delete",
+                              "audit.export"
                             ]
                           },
                           "target": {
@@ -3384,6 +3386,221 @@
                     }
                   },
                   "required": [
+                    "events"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/audit/export": {
+      "get": {
+        "summary": "Export every audit event matching the filters (admin only); the export is audited.",
+        "tags": [
+          "audit"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "search",
+                "compile",
+                "effects.read",
+                "memory.read",
+                "memory.write",
+                "effects.write",
+                "source.read",
+                "source.manage",
+                "billing.read",
+                "billing.manage",
+                "audit.read",
+                "token.read",
+                "token.manage",
+                "retention.read",
+                "retention.manage",
+                "dsr.export",
+                "dsr.delete",
+                "audit.export"
+              ]
+            },
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "description": "Filter by action."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "query",
+            "name": "actor",
+            "required": false,
+            "description": "Filter by actor principal id."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "success",
+                "denied"
+              ]
+            },
+            "in": "query",
+            "name": "outcome",
+            "required": false,
+            "description": "Filter by outcome."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "description": "Inclusive lower time bound (ISO-8601)."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "description": "Inclusive upper time bound (ISO-8601)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "exportedAt": {
+                      "description": "When the server assembled this export (ISO-8601).",
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "truncated": {
+                      "description": "True when the export hit its row cap and is a PREFIX of the matching trail, not all of it. Narrow the date range for the rest.",
+                      "type": "boolean"
+                    },
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "tenantId": {
+                            "type": "string"
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "principalId": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "local",
+                                  "user",
+                                  "token"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "principalId",
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "search",
+                              "compile",
+                              "effects.read",
+                              "memory.read",
+                              "memory.write",
+                              "effects.write",
+                              "source.read",
+                              "source.manage",
+                              "billing.read",
+                              "billing.manage",
+                              "audit.read",
+                              "token.read",
+                              "token.manage",
+                              "retention.read",
+                              "retention.manage",
+                              "dsr.export",
+                              "dsr.delete",
+                              "audit.export"
+                            ]
+                          },
+                          "target": {
+                            "type": "string"
+                          },
+                          "outcome": {
+                            "type": "string",
+                            "enum": [
+                              "success",
+                              "denied"
+                            ]
+                          },
+                          "at": {
+                            "type": "string"
+                          },
+                          "metadata": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "boolean"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "tenantId",
+                          "actor",
+                          "action",
+                          "outcome",
+                          "at"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "exportedAt",
+                    "count",
+                    "truncated",
                     "events"
                   ],
                   "additionalProperties": false
@@ -3846,7 +4063,8 @@
                               "retention.read",
                               "retention.manage",
                               "dsr.export",
-                              "dsr.delete"
+                              "dsr.delete",
+                              "audit.export"
                             ]
                           },
                           "target": {

@@ -2081,7 +2081,7 @@
       "package": "@tessera/web",
       "release": "R3",
       "priority": "should",
-      "status": "backlog",
+      "status": "in_progress",
       "blockedBy": [],
       "acceptance": [
         "A reusable data-table pattern (TanStack Table + virtualization; sortable columns, sticky header, cursor pagination, truncation with tooltips) established once and adopted by the audit view first; the memory/sources tables (F-041/F-042) build on it",
@@ -2556,6 +2556,35 @@
         "E-013"
       ],
       "notes": "FOUND BY F-062 (2026-07-17), verified against the tree, NOT folded in — deliberately, and the reasoning is the point. apps/api/src/routes/v1/compile.ts:41 clamps via clampBudgetToPlan(entitlements, budget) over `services.billing ?? createLocalBilling()`, so free-tier caps (packages/billing/src/domain.ts: free 8000 / pro 32000 / enterprise 128000) apply by default. apps/mcp/src/server.ts has ZERO references to billing or clampBudget, and toCompileRequest (:123-138) forwards `budget: args.budget` verbatim to BOTH compile_context (:206) and explain (:357). So NFR-12's per-plan cap is enforced on the surface humans use and unenforced on the surface AGENTS use — which is the population it exists to meter. Structurally this is the F-060 defect again (one surface hardened, its twin walked past) and the F-061 lesson (one rule, two implementations, inevitable drift). WHY NOT FOLDED (unlike F-060's SSE leak): F-062 does not AMPLIFY it — F-060 was about to pipe leaked data onto every page, whereas F-062 renders a claim about the REST surface that is true of the surface it describes. Golden rule 2 + the F-048 precedent (which registered F-071/072/073 rather than fixing them) therefore apply. Consequence F-062 respects: its clamp copy is scoped to the OBSERVED compile ('Capped to 8,000 — you requested 20,000'), never a claim of system-wide enforcement, which would be false while this stands. NEEDS AN ADR: silent clamp vs explicit rejection — an agent that is quietly downgraded cannot distinguish a clamp from a thin corpus, and REST has the same problem; decide it once, for both."
+    },
+    {
+      "id": "F-078",
+      "title": "The shipped SQLite audit adapter never runs the shared AuditLog conformance suite",
+      "requirements": [
+        "FR-55",
+        "NFR-11"
+      ],
+      "service": "api",
+      "package": "@tessera/config",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "createSqliteAuditLog runs `runAuditLogConformance` — the SAME suite the in-memory adapter runs — so the port contract is proven against the adapter that actually ships, not only against the reference one",
+        "The plumbing is decided and recorded: the port + conformance live in `@tessera/api` and the adapter in `@tessera/config`, so either the suite is exported from `@tessera/api` (a legitimate public artifact for adapter authors — the pattern @tessera/memory and @tessera/knowledge-graph already use INSIDE their packages) or the adapter moves. Do not solve it by duplicating assertions",
+        "The duplicated clamp assertion in packages/config/src/audit/sqlite-audit-log.test.ts is deleted once the suite covers it",
+        "Workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test"
+      ],
+      "effects": [
+        "E-020"
+      ],
+      "notes": "FOUND BY F-063 (2026-07-17) — and it is the ROOT CAUSE of a real divergence F-063 had to fix. `apps/api/src/audit/audit-log.conformance.ts` exists and is good, but `runAuditLogConformance` is called from exactly ONE place: `apps/api/src/audit/in-memory-audit-log.test.ts`. The SQLite adapter — the one every real deployment uses (ADR-0034) — has only its own 4 hand-written tests and has never run the shared suite. The predictable result: `sqlite-audit-log.ts` had `const limit = query.limit ?? 50` with NO clamp and a hardcoded default, while the in-memory adapter did `Math.min(query.limit ?? DEFAULT_AUDIT_PAGE_SIZE, MAX_AUDIT_PAGE_SIZE)`. A port contract only the REFERENCE adapter honours is not a contract — it is a suggestion, and the divergence sat undetected because nothing could see it. Not reachable over HTTP (the route schema caps `limit` at MAX_AUDIT_PAGE_SIZE), but F-063's audit-export trail walk calls the PORT directly, below that schema, which is exactly where it lived. F-063 fixed the clamp, added the missing case to the shared suite (covering in-memory), and DUPLICATED the assertion into the SQLite adapter's own test with a comment pointing here — because wiring the suite across a package boundary is a test-architecture change, not a dashboard story (golden rule 2; the F-048/F-062 precedent of registering rather than folding). Contrast with @tessera/memory and @tessera/knowledge-graph, whose sqlite adapters DO run their conformance suites — because port and adapter live in the same package there. This is the cross-package case nobody wired up."
     }
   ]
 }

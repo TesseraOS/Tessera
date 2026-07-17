@@ -26,6 +26,8 @@ export type MemoryHistory =
   paths['/v1/memory/{lineageId}/history']['get']['responses'][200]['content'][Json];
 export type AuditQuery = NonNullable<paths['/v1/audit']['get']['parameters']['query']>;
 export type AuditPage = paths['/v1/audit']['get']['responses'][200]['content'][Json];
+export type AuditExportQuery = NonNullable<paths['/v1/audit/export']['get']['parameters']['query']>;
+export type AuditExport = paths['/v1/audit/export']['get']['responses'][200]['content'][Json];
 export type RegisterSourceRequest = paths['/v1/sources']['post']['requestBody']['content'][Json];
 export type Source = paths['/v1/sources']['post']['responses'][201]['content'][Json];
 export type SourceList = paths['/v1/sources']['get']['responses'][200]['content'][Json];
@@ -91,6 +93,13 @@ export interface TesseraClient {
   memoryHistory(lineageId: string): Promise<MemoryHistory>;
   /** Query this tenant's audit trail (admin only), newest-first + paginated. */
   getAudit(query?: AuditQuery): Promise<AuditPage>;
+  /**
+   * Every audit event matching `query` — the server follows the cursor to completeness, so this is
+   * the whole filtered trail rather than a page of it (admin only). Returns **data, not bytes**:
+   * formatting it as CSV/JSON is the caller's business. The export is itself audited (`audit.export`),
+   * so it appears in the trail it exported. `truncated` is true when the row cap applied.
+   */
+  exportAudit(query?: AuditExportQuery): Promise<AuditExport>;
   /** The deployment's effective memory retention policy (admin only); empty rules ⇒ retention off. */
   getRetention(): Promise<RetentionPolicy>;
   /** Apply the retention policy to this tenant's memories (admin only); returns what was pruned. */
@@ -204,6 +213,9 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
     },
     async getAudit(query = {}) {
       return unwrap(await client.GET('/v1/audit', { params: { query } }));
+    },
+    async exportAudit(query = {}) {
+      return unwrap(await client.GET('/v1/audit/export', { params: { query } }));
     },
     async getRetention() {
       return unwrap(await client.GET('/v1/retention', {}));

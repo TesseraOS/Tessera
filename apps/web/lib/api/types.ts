@@ -255,7 +255,8 @@ export type AuditAction =
   | 'retention.read'
   | 'retention.manage'
   | 'dsr.export'
-  | 'dsr.delete';
+  | 'dsr.delete'
+  | 'audit.export';
 
 export type AuditOutcome = 'success' | 'denied';
 

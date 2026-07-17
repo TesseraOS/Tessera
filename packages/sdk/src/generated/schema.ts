@@ -1450,7 +1450,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Filter by action. */
-                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete";
+                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
                     /** @description Filter by actor principal id. */
                     actor?: string;
                     /** @description Filter by outcome. */
@@ -1485,7 +1485,7 @@ export interface paths {
                                     kind: "local" | "user" | "token";
                                 };
                                 /** @enum {string} */
-                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete";
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
                                 target?: string;
                                 /** @enum {string} */
                                 outcome: "success" | "denied";
@@ -1495,6 +1495,77 @@ export interface paths {
                                 };
                             }[];
                             nextCursor?: string;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/audit/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export every audit event matching the filters (admin only); the export is audited. */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Filter by action. */
+                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
+                    /** @description Filter by actor principal id. */
+                    actor?: string;
+                    /** @description Filter by outcome. */
+                    outcome?: "success" | "denied";
+                    /** @description Inclusive lower time bound (ISO-8601). */
+                    since?: string;
+                    /** @description Inclusive upper time bound (ISO-8601). */
+                    until?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description When the server assembled this export (ISO-8601). */
+                            exportedAt: string;
+                            count: number;
+                            /** @description True when the export hit its row cap and is a PREFIX of the matching trail, not all of it. Narrow the date range for the rest. */
+                            truncated: boolean;
+                            events: {
+                                id: string;
+                                tenantId: string;
+                                actor: {
+                                    principalId: string;
+                                    /** @enum {string} */
+                                    kind: "local" | "user" | "token";
+                                };
+                                /** @enum {string} */
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
+                                target?: string;
+                                /** @enum {string} */
+                                outcome: "success" | "denied";
+                                at: string;
+                                metadata?: {
+                                    [key: string]: string | number | boolean;
+                                };
+                            }[];
                         };
                     };
                 };
@@ -1689,7 +1760,7 @@ export interface paths {
                                     kind: "local" | "user" | "token";
                                 };
                                 /** @enum {string} */
-                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete";
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
                                 target?: string;
                                 /** @enum {string} */
                                 outcome: "success" | "denied";

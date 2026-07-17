@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AuditEventInput } from './model.js';
+import { MAX_AUDIT_PAGE_SIZE, type AuditEventInput } from './model.js';
 import type { AuditLog } from './port.js';
 
 export interface AuditLogHarness {
@@ -76,6 +76,26 @@ export function runAuditLogConformance(name: string, makeLog: AuditLogFactory): 
         await log.record(event({ at: t(30) }));
         const { events } = await log.query({ since: t(20), until: t(30) });
         expect(events.map((e) => e.at)).toEqual([t(30), t(20)]);
+      } finally {
+        await cleanup?.();
+      }
+    });
+
+    it('clamps an over-large limit to MAX_AUDIT_PAGE_SIZE and defaults when absent', async () => {
+      // The adapters DIVERGED here undetected: in-memory clamped, SQLite did `query.limit ?? 50`
+      // with no bound. Not reachable over HTTP (the route schema caps it), but any caller reaching
+      // the PORT directly — like the audit-export trail walk — sits below that schema. A port
+      // contract that only one adapter honours is not a contract.
+      const { log, cleanup } = await makeLog();
+      try {
+        for (let i = 0; i < 3; i += 1) await log.record(event({ target: `c${i}` }));
+
+        const clamped = await log.query({ limit: MAX_AUDIT_PAGE_SIZE + 500 });
+        expect(clamped.events).toHaveLength(3);
+        expect(clamped.nextCursor).toBeUndefined();
+
+        const defaulted = await log.query({});
+        expect(defaulted.events).toHaveLength(3);
       } finally {
         await cleanup?.();
       }

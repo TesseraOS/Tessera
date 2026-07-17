@@ -2,7 +2,7 @@ import type { TenantId } from '@tessera/core';
 import type { GraphEdge, GraphNode } from '@tessera/knowledge-graph';
 import type { Memory } from '@tessera/memory';
 import type { AuditEvent } from '../audit/model.js';
-import { MAX_AUDIT_PAGE_SIZE } from '../audit/model.js';
+import { collectAuditTrail } from '../audit/collect.js';
 import type { AuditLog } from '../audit/port.js';
 import type { ApiServices } from '../services.js';
 
@@ -48,23 +48,10 @@ function toDsrSource(record: {
   };
 }
 
-/**
- * Page the whole audit trail. `query` is paginated by contract, so an export must follow `nextCursor`
- * to be complete; the cursor is opaque and strictly forward, so this terminates.
- */
-async function collectAuditTrail(auditLog: AuditLog): Promise<readonly AuditEvent[]> {
-  const events: AuditEvent[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await auditLog.query({
-      limit: MAX_AUDIT_PAGE_SIZE,
-      ...(cursor !== undefined ? { cursor } : {}),
-    });
-    events.push(...page.events);
-    cursor = page.nextCursor;
-  } while (cursor !== undefined);
-  return events;
-}
+// The trail walk now lives in `../audit/collect.js` — F-063's audit export needs the same loop, and
+// an audit route importing from `dsr/` would be the wrong dependency direction. DSR keeps its
+// unbounded behaviour by passing `cap: undefined`: a right-of-access answer must be complete or it is
+// not an answer, whereas an export button gets a stated bound.
 
 /**
  * Assemble the {@link DsrBundle} for `tenantId` (NFR-13). Every read is tenant-scoped via `forTenant`
@@ -80,7 +67,9 @@ export async function buildDsrBundle(
   const [memories, graph, audit] = await Promise.all([
     services.memory.forTenant(tenantId).exportAll(),
     services.graph.forTenant(tenantId).exportAll(),
-    collectAuditTrail(auditLog.forTenant(tenantId)),
+    // `cap: undefined` keeps DSR unbounded: a right-of-access answer must be COMPLETE or it is not an
+    // answer. The audit export button takes the default cap instead, and says when it applies.
+    collectAuditTrail(auditLog.forTenant(tenantId), {}, undefined),
   ]);
   const sources =
     services.sources === undefined ? [] : await services.sources.forTenant(tenantId).list();
@@ -91,6 +80,6 @@ export async function buildDsrBundle(
     memories,
     graph: { nodes: graph.nodes, edges: graph.edges },
     sources: sources.map(toDsrSource),
-    audit,
+    audit: audit.events,
   };
 }

@@ -1,8 +1,8 @@
 import { createEventBus } from '@tessera/core';
 import { createInProcessQueue } from '@tessera/storage';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createInMemoryDocumentSink } from '../adapters/in-memory-sink.js';
-import type { IngestionEvents, RawDocument, SourceEntry } from '../domain.js';
+import type { IngestionEvents, RawDocument, SourceEntry, SourceId } from '../domain.js';
 import { contentHashOf } from '../hash.js';
 import type { Connector } from '../ports/connector.js';
 import { createInMemoryManifest } from '../adapters/in-memory-manifest.js';
@@ -83,7 +83,7 @@ function harness(
   events.on('document.ingested', (e) => void seen.push(`ingested:${e.document.path}`));
   events.on('document.removed', (e) => void seen.push(`removed:${e.path}`));
 
-  return { service, sink, worker, seen };
+  return { service, sink, worker, seen, events };
 }
 
 describe('createSourceService', () => {
@@ -239,6 +239,146 @@ describe('createSourceService', () => {
     expect(await service.forTenant('tenant-b').list()).toHaveLength(0);
     // b cannot scan a's source.
     await expect(service.forTenant('tenant-b').scan(inA.id)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
+});
+
+/**
+ * F-081 — scans as background jobs.
+ *
+ * The defect: `scan()` awaited the coordinator AND `queue.drain()`, so an HTTP caller held a request
+ * open for the entire ingest, and nothing counted progress — which is why the dashboard could only
+ * show an unbounded spinner. `scan()` deliberately keeps that behaviour (MCP's `scan_source` returns
+ * the summary, and an agent wants the answer); `startScan()` is the non-blocking entry.
+ */
+describe('startScan', () => {
+  it('returns before the work is done, and reports running', async () => {
+    const files = new Map([
+      ['a.md', '# A'],
+      ['b.ts', 'const b = 1;'],
+    ]);
+    const { service, sink } = harness(new Map([['/repo', files]]));
+    const source = await service.register({ kind: 'fake', config: { root: '/repo' } });
+
+    const status = await service.startScan(source.id);
+
+    // The whole point: accepted, not finished. Nothing has reached the sink yet — the jobs are still
+    // on the microtask queue. If this ever reads 2, startScan has silently become synchronous again.
+    expect(status.state).toBe('running');
+    expect(sink.size).toBe(0);
+
+    await vi.waitFor(async () => {
+      expect((await service.scanStatus(source.id))?.state).toBe('idle');
+    });
+    expect(sink.size).toBe(2);
+  });
+
+  it('counts real progress, monotonically, and reaches total', async () => {
+    const files = new Map([
+      ['a.md', '# A'],
+      ['b.ts', 'const b = 1;'],
+      ['c.ts', 'const c = 2;'],
+    ]);
+    const { service, events } = harness(new Map([['/repo', files]]));
+    const source = await service.register({ kind: 'fake', config: { root: '/repo' } });
+
+    const progress: { processed: number; total: number }[] = [];
+    events.on(
+      'source.scan.progress',
+      (e) => void progress.push({ processed: e.processed, total: e.total }),
+    );
+
+    await service.startScan(source.id);
+    await vi.waitFor(async () => {
+      expect((await service.scanStatus(source.id))?.state).toBe('idle');
+    });
+
+    // A determinate bar needs both halves: it must actually finish, and it must never go backwards.
+    expect(progress.at(-1)).toEqual({ processed: 3, total: 3 });
+    expect(progress.map((p) => p.processed)).toEqual([...progress.map((p) => p.processed)].sort());
+    expect((await service.scanStatus(source.id))?.lastScan?.summary).toMatchObject({ added: 3 });
+  });
+
+  it('counts a re-scanned unchanged document as processed — the bar must not stall', async () => {
+    // The trap this feature exists to avoid. The worker returns SILENTLY when a path's persisted
+    // hash already matches, so `document.ingested` never fires for it. A progress counter watching
+    // ingested/removed would stick below total forever on a no-op re-scan — a bar stuck at 90% is
+    // worse than no bar. `document.processed` fires regardless, which is why it exists.
+    const files = new Map([['a.md', '# A']]);
+    const { service, events } = harness(new Map([['/repo', files]]));
+    const source = await service.register({ kind: 'fake', config: { root: '/repo' } });
+
+    await service.scan(source.id); // first pass: indexed
+    files.set('a.md', '# A changed'); // modify, so the diff enqueues it again
+
+    const progress: number[] = [];
+    events.on('source.scan.progress', (e) => void progress.push(e.processed));
+
+    await service.startScan(source.id);
+    await vi.waitFor(async () => {
+      expect((await service.scanStatus(source.id))?.state).toBe('idle');
+    });
+
+    expect(progress.at(-1)).toBe(1);
+  });
+
+  it('rejects a second scan while one is running, rather than racing the manifest', async () => {
+    const files = new Map([['a.md', '# A']]);
+    const { service } = harness(new Map([['/repo', files]]));
+    const source = await service.register({ kind: 'fake', config: { root: '/repo' } });
+
+    await service.startScan(source.id);
+    // Two coordinators over one manifest is not a scan, it is a data race.
+    await expect(service.startScan(source.id)).rejects.toMatchObject({ code: 'CONFLICT' });
+
+    await vi.waitFor(async () => {
+      expect((await service.scanStatus(source.id))?.state).toBe('idle');
+    });
+    // Once it settles, scanning again is fine.
+    await expect(service.startScan(source.id)).resolves.toMatchObject({ state: 'running' });
+  });
+
+  it('rejects an unknown source up front, while the caller is still listening', async () => {
+    const { service } = harness(new Map([['/repo', new Map()]]));
+    await expect(service.startScan('missing-source' as SourceId)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
+
+  it('surfaces a failure that happens AFTER acceptance, in status and on the stream', async () => {
+    // The hard case, and the reason `source.scan.failed` exists: by the time this throws, the
+    // request that started it has already been answered. If the error is not recorded and emitted,
+    // it reaches nobody and the UI shows a scan that simply never finishes.
+    const files = new Map([['a.md', '# A']]);
+    const { service, events } = harness(new Map([['/repo', files]]));
+    const source = await service.register({ kind: 'fake', config: { root: '/repo' } });
+
+    const failures: string[] = [];
+    events.on('source.scan.failed', (e) => void failures.push(e.error));
+
+    // Break listing after registration, so acceptance succeeds and the background scan then fails.
+    files.clear();
+    const connector = service.connectorFor({ id: source.id, kind: 'fake', label: source.label });
+    connector!.list = () => Promise.reject(new Error('connector exploded'));
+
+    await expect(service.startScan(source.id)).resolves.toMatchObject({ state: 'running' });
+
+    await vi.waitFor(async () => {
+      expect((await service.scanStatus(source.id))?.state).toBe('error');
+    });
+    expect((await service.scanStatus(source.id))?.error).toContain('connector exploded');
+    expect(failures).toEqual(['connector exploded']);
+  });
+
+  it('a tenant cannot start a scan on a source it cannot see', async () => {
+    const files = new Map([['a.md', '# A']]);
+    const { service } = harness(new Map([['/repo', files]]));
+    const inA = await service
+      .forTenant('tenant-a')
+      .register({ kind: 'fake', config: { root: '/repo' } });
+
+    await expect(service.forTenant('tenant-b').startScan(inA.id)).rejects.toMatchObject({
       code: 'NOT_FOUND',
     });
   });

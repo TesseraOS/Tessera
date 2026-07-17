@@ -2663,7 +2663,7 @@
       "package": "@tessera/ingestion",
       "release": "R4",
       "priority": "must",
-      "status": "todo",
+      "status": "in_progress",
       "blockedBy": [],
       "acceptance": [
         "POST /v1/sources/:id/scan returns promptly (202 + the scan state) instead of awaiting the whole pipeline; the scan runs as a tracked background job",

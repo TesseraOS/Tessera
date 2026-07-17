@@ -98,11 +98,47 @@ export interface ScanSummary {
 export interface IngestionEvents extends Record<string, unknown> {
   readonly 'document.ingested': { readonly document: ProcessedDocument };
   readonly 'document.removed': { readonly sourceId: SourceId; readonly path: string };
+  /**
+   * One queued change event finished processing — emitted for **every** outcome (F-081).
+   *
+   * This exists because `document.ingested`/`document.removed` are *not* a ledger of work done:
+   * the worker returns silently when a path's persisted hash already matches (idempotent re-scan),
+   * emitting nothing while still having processed the job. Counting those events for scan progress
+   * therefore stalls below total — a bar stuck at 90% is worse than no bar. This fires regardless,
+   * so "how much of this scan is done" has an honest source.
+   *
+   * **Domain-internal, not for the wire.** Consumers must de-duplicate by `path`: the queue may
+   * retry a handler, so this can fire more than once for the same job (see `SourceService`, which
+   * counts distinct paths).
+   */
+  readonly 'document.processed': { readonly sourceId: SourceId; readonly path: string };
   readonly 'source.scan.started': {
     readonly sourceId: SourceId;
     readonly tenantId: TenantId;
     readonly kind: string;
     readonly label: string;
+    /**
+     * How many changed paths this scan will process — known once the diff is done, so a client can
+     * show a determinate bar from the first frame. `0` is a real answer (nothing changed).
+     */
+    readonly total: number;
+  };
+  /** Progress of a running scan (F-081). `processed` counts distinct paths, so it never regresses. */
+  readonly 'source.scan.progress': {
+    readonly sourceId: SourceId;
+    readonly tenantId: TenantId;
+    readonly kind: string;
+    readonly label: string;
+    readonly processed: number;
+    readonly total: number;
+  };
+  /** A scan ended in failure (F-081). The request that started it is long gone — do not swallow it. */
+  readonly 'source.scan.failed': {
+    readonly sourceId: SourceId;
+    readonly tenantId: TenantId;
+    readonly kind: string;
+    readonly label: string;
+    readonly error: string;
   };
   readonly 'source.scan.completed': {
     readonly sourceId: SourceId;

@@ -99,5 +99,24 @@ export function createIngestionWorker(options: IngestionWorkerOptions): Ingestio
     await events?.emit('document.ingested', { document: processed });
   }
 
-  return { subscription: queue.subscribe<ChangeEvent>(topic, handle) };
+  /**
+   * Process one job and report that it is done — **whatever the outcome** (F-081).
+   *
+   * The `finally` is the point. `handle` returns silently when a path's persisted hash already
+   * matches (idempotent re-scan) and throws when a job fails, so `document.ingested`/`removed` are
+   * not a ledger of work *done*; anything counting them for scan progress stalls below total. This
+   * fires on every path, so progress is honest, and it does not swallow the failure — the throw
+   * still propagates to the queue's retry.
+   *
+   * Consumers must de-duplicate by `path`: a retried job runs this again.
+   */
+  async function handleAndReport(event: ChangeEvent): Promise<void> {
+    try {
+      await handle(event);
+    } finally {
+      await events?.emit('document.processed', { sourceId: event.source.id, path: event.path });
+    }
+  }
+
+  return { subscription: queue.subscribe<ChangeEvent>(topic, handleAndReport) };
 }

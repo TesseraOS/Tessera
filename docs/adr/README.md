@@ -62,12 +62,13 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0044](0044-marketing-v3-dual-themes-illustration-first-live-graph.md) | Marketing v3 — dual themes (Desert Rose/Modern Minimalist), illustration-first, live-graph hero | Amended by 0045 |
 | [0045](0045-marketing-v4-constellation-shader-hero-theme-true-chapters.md) | Marketing v4 — shader-field hero, canvas constellation graph, theme-true chapter bands | Accepted |
 | [0046](0046-brand-mascot-tess.md) | Brand mascot "Tess" — shared tessera-built character (`@tessera/mascot`), data-driven moods, CSS motion, usage budget | Accepted |
-| [0047](0047-dashboard-multi-theme-illustration-layer-contrast-gate.md) | Dashboard 4-theme system (Monkai/Amber/Claude/Notebook × light/dark), radial appearance propagation, illustration layer + Tess, executable WCAG-AA contrast gate | Accepted |
+| [0047](0047-dashboard-multi-theme-illustration-layer-contrast-gate.md) | Dashboard 4-theme system (Monkai/Amber/Claude/Notebook × light/dark), radial appearance propagation, illustration layer + Tess, executable WCAG-AA contrast gate | Superseded in part by 0053 |
 | [0048](0048-dashboard-auth-httponly-cookie-proxy.md) | Dashboard auth: httpOnly-cookie session behind a same-origin Next proxy (closes 0022 onto the SDK) | Accepted |
 | [0049](0049-data-governance-retention-dsr-mcp-audit.md) | Data governance: memory retention (delete-only), DSR export/erasure retaining the audit trail, MCP-surface audit on the existing taxonomy | Accepted |
 | [0050](0050-sse-tenant-scoped-event-stream.md) | Tenant-scope the `/v1/events` SSE stream via a server-side `tenantId` stripped before the wire (closes a cross-tenant leak; `document.*` stays default-attributed until F-071) | Accepted |
 | [0051](0051-audit-trail-is-chronological-no-column-sorting.md) | The audit trail is chronological: cursor pagination instead of column sorting, and no table library — the cursor *is* the sort order, so client-side sorting would lie; `aria-rowcount={-1}` because the total is genuinely unknown | Accepted |
 | [0052](0052-dependency-audit-via-trivy-not-pnpm-audit.md) | The dependency audit runs on Trivy over `pnpm-lock.yaml` at HIGH+, not `pnpm audit` (npm retired the legacy endpoints; the fix exists only in pnpm 11) — the gate had been failing open over a real critical + high, now fixed | Accepted |
+| [0053](0053-overview-leads-with-state-not-a-greeting-band.md) | The Overview leads with state: the greeting hero retires (supersedes 0047's hero-band budget in part), onboarding gates on `/v1/stats` rather than the session-only feed, and the activity chart starts no earlier than the oldest event the audit trail actually holds — so a pruned day cannot render as "nothing happened" | Accepted |
 
 ## Conventions
 

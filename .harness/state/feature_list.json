@@ -2619,7 +2619,7 @@
     },
     {
       "id": "F-080",
-      "title": "Overview v2: retire the greeting hero, gate onboarding on real state, bound the feed, chart real activity",
+      "title": "Overview v2: retire the greeting hero, gate onboarding on real state, bound the feed",
       "requirements": [
         "FR-38",
         "FR-49",
@@ -2629,15 +2629,15 @@
       "package": "apps/web",
       "release": "R4",
       "priority": "should",
-      "status": "backlog",
+      "status": "done",
       "blockedBy": [
         "F-079"
       ],
       "acceptance": [
-        "The greeting HeroBand is removed; ADR-0047 (which introduced it) is superseded by a new ADR recording why an authenticated dashboard leads with state, not a marketing band",
-        "The \"Get started\" card renders only while the workspace is genuinely empty, gated on /v1/stats sources+documents — NOT on the activity feed, which is session-only and empties on reload",
-        "Recent activity scrolls internally within a bounded height instead of growing the page",
-        "An activity-over-time chart sits below the stat cards, backed by REAL persisted history (audit + memory timestamps, server-aggregated), rendered only when there is data — no fabricated or interpolated series",
+        "The greeting HeroBand is removed; ADR-0047 is superseded in part by ADR-0053, recording why an authenticated dashboard leads with state rather than a marketing band",
+        "The \"Get started\" card renders only while the workspace is provably empty, gated on /v1/stats sources+documents — NOT on the activity feed, which is session-only and empties on reload; an unknown workspace (loading/error) shows no onboarding rather than guessed onboarding",
+        "Recent activity scrolls internally within a bounded height instead of growing the page, and the scroll region is keyboard-reachable (axe scrollable-region-focusable, WCAG 2.1.1)",
+        "The Overview keeps an accessible h1 after the hero (which owned it) is removed",
         "apps/web gates green; design-review + contrast gates pass across 4 themes x light/dark"
       ],
       "verification": [
@@ -2648,7 +2648,7 @@
         "build"
       ],
       "effects": [],
-      "notes": "REPORTED BY THE USER (2026-07-17), items 1/2/3/5. THE SIGNAL CORRECTION IS THE LOAD-BEARING PART: the user proposed gating \"Get started\" on the Recent-activity feed being empty. That signal is wrong and would ship a worse bug than the one it fixes — the feed is session-only BY DESIGN (lib/store/notifications.ts is explicit: \"a reload starts empty\", F-065 is what persists it), so \"Get started\" would flicker back on every refresh for a workspace with sources connected, telling an established user to go connect a source. The honest signal for \"is this workspace empty\" is the same one the stat cards already read: /v1/stats (sources, documents), which is persisted and tenant-scoped. THE CHART HAS THE SAME TRAP: \"activity over time\" cannot come from the feed either (session-only, capped at FEED_LIMIT=50) — charting it would draw a line that resets to zero on reload, which is fabrication with extra steps and violates the no-fabricated-data rule the Overview already honours. Real persisted history DOES exist: the audit log (timestamped, tenant-scoped, date-filterable + exportable since F-063) and memory lineages — the same two sources timeline.ts already merges. Aggregate server-side (a client paging the whole audit log to draw a sparkline is not enterprise-grade). REMOVING THE HERO deviates from ADR-0047, which added it deliberately (\"a welcoming onboarding band, not a metric\") — golden rule 7 means that is an ADR, not a delete. The user is right on the merits: the onboarding value belongs in the conditional Get-started card (item 2), which by construction shows exactly when onboarding is what the user needs, and nowhere else."
+      "notes": "REPORTED BY THE USER (2026-07-17), items 1/2/3/5. THE SIGNAL CORRECTION IS THE LOAD-BEARING PART: the user proposed gating \"Get started\" on the Recent-activity feed being empty. That signal is wrong and would ship a worse bug than the one it fixes — the feed is session-only BY DESIGN (lib/store/notifications.ts is explicit: \"a reload starts empty\", F-065 is what persists it), so \"Get started\" would flicker back on every refresh for a workspace with sources connected, telling an established user to go connect a source. The honest signal for \"is this workspace empty\" is the same one the stat cards already read: /v1/stats (sources, documents), which is persisted and tenant-scoped. THE CHART HAS THE SAME TRAP: \"activity over time\" cannot come from the feed either (session-only, capped at FEED_LIMIT=50) — charting it would draw a line that resets to zero on reload, which is fabrication with extra steps and violates the no-fabricated-data rule the Overview already honours. Real persisted history DOES exist: the audit log (timestamped, tenant-scoped, date-filterable + exportable since F-063) and memory lineages — the same two sources timeline.ts already merges. Aggregate server-side (a client paging the whole audit log to draw a sparkline is not enterprise-grade). REMOVING THE HERO deviates from ADR-0047, which added it deliberately (\"a welcoming onboarding band, not a metric\") — golden rule 7 means that is an ADR, not a delete. The user is right on the merits: the onboarding value belongs in the conditional Get-started card (item 2), which by construction shows exactly when onboarding is what the user needs, and nowhere else. SCOPE SPLIT 2026-07-17 (mid-implementation, surfaced to the user): the activity chart (user item 5) moved to F-084. Reason found while designing it, not guessed: aggregating the audit trail needs a store-level GROUP BY, because the alternative — the API paging the whole window into memory to count it — is the same thing this feature refused to let the CLIENT do, one layer down. That means an AuditLog PORT change (both adapters + the conformance suite, E-020) and it collides with the known F-078 debt; ADR-0051 also records that both adapters hardcode descending seq, so there is not even a cheap \"oldest event\" query to anchor the honest window on. That is a feature, not a rider on a UI change — folding it in here would have produced exactly the one enormous unreviewable commit the delivery split exists to avoid (golden rule 2/6). ADR-0053 clause 3 already records the chart DECISION; F-084 implements it. DONE 2026-07-17: HeroBand deleted (sr-only h1 keeps the route announceable — the hero owned the only h1); GetStarted gated on /v1/stats with unknown-state showing NO onboarding; feed bounded at max-h-[22rem] with tabIndex on the ul. ADR-0053 written; ADR-0047 marked superseded-in-part; DESIGN-SYSTEM §11 budget + mascot placements edited to match (E-004: the budget is what design-review audits against, so the doc could not lag). Gates green (state/typecheck 38-38/lint 22-22/format/test 36-36/build 19-19) + home.spec.ts 6/6 INCLUDING the axe WCAG A/AA sweep, so the tabIndex is proven not asserted. Screenshots captured for both states. Found in the gates: jsx-a11y/no-noninteractive-tabindex vs axe scrollable-region-focusable genuinely conflict; resolved in eslint config (repo convention) narrowed to the ul tag — roles:[list] fails (implicit role unresolved) and explicit role=list trips no-redundant-roles."
     },
     {
       "id": "F-081",
@@ -2746,6 +2746,46 @@
       ],
       "effects": [],
       "notes": "REPORTED BY THE USER (2026-07-17), item 15 — and it is a genuine cross-app divergence, not a preference. apps/marketing/components/logo.tsx carries \"Tessera mark v2 (BRAND.md §4, masters in docs/design/brand/)\": a 3x3 ivory mosaic with the top-right tile lifted out and gilded in the ember gradient, plus a lowercase serif wordmark (\"never bold\"). apps/web/components/logo.tsx still carries v1: a monochrome pixel mark (\"scattered tesserae converge into a solid core\") with a sans wordmark. Same brand, two marks, and BRAND.md is authoritative — so the dashboard is simply WRONG, and has been since v2 landed on marketing. ROOT CAUSE IS DUPLICATION, and fixing only the pixels would leave it: two hand-maintained copies of a brand asset in two apps drift the moment one is updated, which is exactly what happened. Extract to a shared package instead — @tessera/mascot is the in-repo precedent for a shared brand asset consumed by both apps, so this follows a proven pattern rather than inventing one. WATCH THE TOKENS: v2 references var(--rose)/var(--gold) and font-serif, which exist in the marketing token set; the dashboard runs the F-070 4-theme system and may not define them. Verify before porting — a mark whose gradient silently resolves to transparent in 3 of 8 theme combinations is worse than the v1 it replaced. The \"Context & Memory OS\" badge removals (F-080 hero, F-082 signin) are related brand-surface cleanup but tracked there, not here."
+    },
+    {
+      "id": "F-084",
+      "title": "Overview activity chart: a store-level audit aggregation that cannot render a pruned day as silence",
+      "requirements": [
+        "FR-38",
+        "FR-49",
+        "FR-55"
+      ],
+      "service": "api",
+      "package": "@tessera/api",
+      "release": "R4",
+      "priority": "should",
+      "status": "todo",
+      "blockedBy": [
+        "F-080"
+      ],
+      "acceptance": [
+        "GET /v1/stats/activity returns daily buckets by action group for one tenant, aggregated AT THE STORE (SQL GROUP BY) — never by paging the window into the API to count it",
+        "The response reports the `from` the server ACTUALLY used, and the chart labels that window rather than the requested one — ADR-0053 clause 3",
+        "The series never starts earlier than the oldest event the trail holds, derived from the DATA (not from config.audit.retention), so it is correct under maxAgeDays pruning, under maxEntries pruning, and for a workspace that is three days old",
+        "A pruned or absent day is distinguishable from a quiet one — a zero must never mean \"we deleted the record\"",
+        "The aggregation is a first-class AuditLog port method covered by the SHARED conformance suite, so both adapters are proven to agree (do not repeat the F-078 divergence: a contract only the reference adapter honours is not a contract)",
+        "The chart renders below the stat cards and only when there is data; it uses the existing ui/chart.tsx (shadcn/Recharts, DESIGN-SYSTEM §0) and --chart-* tokens so it is theme-true across 4 themes x light/dark",
+        "Reads (*.read) are excluded — the series covers work (ingestion/sources, memory writes, compiles, searches), not page views",
+        "No trend/delta field is added to /v1/stats — that refusal stands, for the reason the schema gives",
+        "api + web gates green; contrast gate passes"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "format",
+        "test",
+        "build"
+      ],
+      "effects": [
+        "E-003",
+        "E-020"
+      ],
+      "notes": "SPLIT OUT OF F-080 (2026-07-17) — user item 5, \"show some activity graph wrt time, only when we have data\". The decision is already recorded in ADR-0053 clause 3; this implements it. WHY IT IS ITS OWN FEATURE: the honest, scalable version needs an AuditLog PORT method (aggregate at the store), which ripples to both adapters + the conformance suite (E-020) and lands squarely in F-078 territory. THE TRAP, and the reason this cannot be built naively: apps/api/src/schemas/stats.ts already refuses trend fields IN ITS OWN WORDS because \"deriving one from createdAt would silently lie in any deployment using retention (FR-15), which deletes\" — and the audit trail IS pruned (AuditLog.prune + config.audit.retention, since F-027). So a naive \"last 30 days\" histogram draws zeros for pruned days, and a zero meaning \"we deleted the record\" is indistinguishable from one meaning \"nothing happened\". ADR-0053 closes this by anchoring the window on the oldest event the trail actually HOLDS, derived from the data rather than from config — which is the only form that survives maxEntries pruning (no time-based clamp can see it) and is simpler besides. NOTE ADR-0051: both adapters hardcode descending seq and AuditQuery has no sort param, so \"oldest retained event\" is NOT a cheap query today — resolve it in the port aggregation rather than by paging to the end of the trail. NOT FR-47/F-057: that is per-tenant metering for billing; this is a histogram of actions the trail already records. The audit log is the ONLY real persisted time series available — the graph has no per-node createdAt and the ingestion manifest holds only path -> contentHash (both stated in stats.ts). ui/chart.tsx (shadcn/Recharts) is already installed and has ZERO consumers; this would be its first, so expect to prove the token wiring rather than assume it."
     }
   ]
 }

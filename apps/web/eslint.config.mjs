@@ -45,5 +45,25 @@ export default tseslint.config(
     files: ['tests/e2e/**/*.ts'],
     rules: { 'react-hooks/rules-of-hooks': 'off' },
   },
+  {
+    // A scrollable LIST must be keyboard-reachable. Where its rows are not focusable (the Overview's
+    // activity feed), `tabIndex={0}` on the list is the only thing that lets a keyboard user scroll
+    // it at all — axe enforces exactly that as `scrollable-region-focusable` (WCAG 2.1.1), and our
+    // e2e a11y gate runs it. jsx-a11y's heuristic forbids the same attribute, so the two genuinely
+    // conflict; the WCAG-backed one wins.
+    //
+    // Narrowed to the `ul` TAG on purpose: this does NOT open tabIndex up to arbitrary
+    // non-interactive elements, which is what the rule is actually there to prevent. (Allowing it
+    // via `roles: ['list']` instead does not work — the rule does not resolve a `ul`'s implicit
+    // role, and stating `role="list"` explicitly to satisfy it trips `no-redundant-roles`. The two
+    // jsx-a11y rules cannot both be satisfied on this element; the tag allowance is the way out.)
+    files: ['**/*.tsx'],
+    rules: {
+      'jsx-a11y/no-noninteractive-tabindex': [
+        'error',
+        { tags: ['ul'], roles: ['tabpanel'], allowExpressionValues: true },
+      ],
+    },
+  },
   prettier,
 );

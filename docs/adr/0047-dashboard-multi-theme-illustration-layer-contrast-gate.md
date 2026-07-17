@@ -1,6 +1,6 @@
 # ADR-0047: Dashboard multi-theme system, expressive illustration layer, and an executable contrast gate
 
-- **Status:** Accepted
+- **Status:** Superseded in part by [ADR-0053](0053-overview-leads-with-state-not-a-greeting-band.md) (2026-07-17: the illustration usage budget's *"overview hero band"* entry and the *"overview onboarding (greeting)"* mascot placement no longer apply — the Overview leads with state, and its art moves inside the conditional onboarding card; the four-theme system, radial propagation, art idiom, honesty rules, and the contrast gate stand unchanged)
 - **Date:** 2026-07-12
 - **Deciders:** Project lead (stakeholder review + theme selection), Claude
 - **Tags:** frontend, design, web, accessibility

@@ -149,7 +149,20 @@ export function ActivityFeed() {
           Reconnecting to the live stream — this feed may be behind.
         </p>
       ) : null}
-      <ul className="divide-border/60 divide-y" aria-label="Recent activity">
+      {/*
+        Bounded, and scrolls internally (F-080). The feed holds up to FEED_LIMIT (50) entries, and an
+        unbounded list simply grew the page until the card dwarfed the rest of the Overview.
+
+        The scroll lives on the `ul` itself rather than a wrapper: it already carries the list role +
+        label the Overview e2e resolves the feed by, and a scrollable region must be keyboard-
+        reachable — none of these rows is focusable, so without `tabIndex` a keyboard user could not
+        scroll it at all (axe `scrollable-region-focusable`, WCAG 2.1.1).
+      */}
+      <ul
+        className="divide-border/60 max-h-[22rem] divide-y overflow-y-auto"
+        aria-label="Recent activity"
+        tabIndex={0}
+      >
         {entries.map((entry) => {
           const { icon: Icon, title, detail } = describeEntry(entry);
           return (

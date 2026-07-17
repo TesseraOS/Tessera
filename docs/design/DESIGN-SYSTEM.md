@@ -261,9 +261,12 @@ The dashboard carries a **signature illustration layer** in the marketing art id
   (hover/pointer — no canvas/WebGL, no animation libraries).
 - **Honesty:** arts depict **product truths** (compiler pipeline, effect propagation,
   retrieval signals, memory strata, audit ledger) — never fake charts, metrics, or data.
-- **Usage budget (hard):** empty states · error states · the 404 · onboarding/first-run ·
-  the overview hero band. **Never** headers, navigation, or data views (tables, result
-  lists, traces). Text remains the information carrier;
+- **Usage budget (hard):** empty states · error states · the 404 · onboarding/first-run.
+  **Never** headers, navigation, or data views (tables, result lists, traces). The
+  **overview hero band is retired** (ADR-0053): the Overview leads with state, and its art
+  now lives inside the onboarding card — which renders only while the workspace is actually
+  empty, so the budget's "onboarding/first-run" line is where it belongs. Text remains the
+  information carrier;
   [`EmptyState`](../../apps/web/components/empty-state.tsx) /
   [`ErrorState`](../../apps/web/components/error-state.tsx) expose optional `art` /
   `mascot` slots.
@@ -271,5 +274,6 @@ The dashboard carries a **signature illustration layer** in the marketing art id
   bound **per theme** in `globals.css` (the gilded heart maps to each theme's warm accent;
   in Monkai it is the one warm moment on non-data surfaces — the emerald/red functional
   accent rule applies to data UI, which the mascot never enters). Placements: empty
-  (`searching`/`watching`), error (`alarmed`), 404 (`lost`), overview onboarding
-  (`greeting`). Reduced-motion still poses are part of the a11y gate.
+  (`searching`/`watching`), error (`alarmed`), 404 (`lost`). Reduced-motion still poses are
+  part of the a11y gate. (ADR-0047's overview-onboarding `greeting` placement retires with
+  the hero band — ADR-0053. It was never built: `mood="greeting"` appears nowhere in `apps/web`.)

@@ -3,6 +3,85 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-17 (v5) — F-080: the Overview leads with state; the chart splits out once its real cost showed
+
+User items 1/2/3 of the 17. Decision: **ADR-0053** (supersedes **ADR-0047 in part** — only its
+illustration-budget "overview hero band" entry and the never-built "overview onboarding (greeting)"
+mascot placement; the 4-theme system, art idiom, honesty rules and contrast gate stand). Plan:
+[`F-080-overview-leads-with-state.md`](../plans/F-080-overview-leads-with-state.md).
+
+### What changed
+
+1. **The greeting hero is gone.** It was marketing copy behind a login — it explained what Tessera
+   *is* to a user who had already signed in, occupying the whole first screen of the one page whose
+   job is "what is the state of my workspace?". ADR-0047 sanctioned it *as onboarding*, but
+   onboarding is conditional and the band was not. `sr-only <h1>Overview</h1>` keeps the route
+   announceable: the hero owned the page's only `h1`, and the breadcrumb header is a landmark, not
+   a heading.
+2. **Onboarding renders only while it is true**, gated on `/v1/stats` (`sources === 0 &&
+   documents === 0`). Unknown (loading/error) shows **no** onboarding — "we don't know yet" must not
+   render as "you have nothing", the same distinction the stat cards draw with `'—'` vs `0`.
+   `useStats` already invalidates on `source.scan.completed`, so it resolves itself the moment data
+   lands.
+3. **The feed is bounded** (`max-h-[22rem]`, internal scroll) instead of growing the page.
+
+### The correction that mattered
+
+The user's proposal — hide onboarding "once we have data in recent activity" — is the natural
+reading and is **wrong**. That feed is session-only *by design* (`lib/store/notifications.ts`: "a
+reload starts empty"; F-065 persists it), so it empties on every refresh and the card would greet an
+established user forever. `/v1/stats` is persisted and tenant-scoped, and is what the stat cards
+already read. Pinned by test: *"keeps onboarding hidden for a populated workspace even with an empty
+activity feed"* is exactly that scenario.
+
+### Two conflicts found in the gates, not guessed
+
+- **jsx-a11y vs. axe, a real standoff.** A scrollable list whose rows are not focusable needs
+  `tabIndex={0}` or a keyboard user cannot scroll it at all — axe enforces this as
+  `scrollable-region-focusable` (WCAG 2.1.1) and our e2e gate runs it. `jsx-a11y/no-noninteractive-
+  tabindex` forbids the same attribute. Satisfying jsx-a11y via `roles: ['list']` fails (it does not
+  resolve a `ul`'s *implicit* role), and stating `role="list"` explicitly to fix that trips
+  `no-redundant-roles` — the two jsx-a11y rules cannot both be satisfied on this element. Resolved
+  in the **config** (the repo's convention for rule exceptions — see the Playwright `use()` override
+  above it), narrowed to the `ul` tag so tabIndex is not opened up generally. The WCAG-backed rule
+  wins.
+- The scroll had to live on the `ul` itself: `home.spec.ts` resolves the feed by
+  `getByRole('list', { name: 'Recent activity' })`, so a wrapper would have kept the label but moved
+  the scroll off the labelled node.
+
+**Evidence/verification** — gates green: `state` (84 features), `typecheck` (38/38), `lint` (22/22),
+`format`, `test` (36/36), `build` (19/19). **a11y/e2e:** `home.spec.ts` 6/6 including the axe
+WCAG A/AA sweep — the tabIndex is *proven*, not asserted. **Visual:** both states screenshotted
+(populated → no onboarding, bounded feed; empty → onboarding + art). The state verifier also caught
+F-080 running without a plan file and refused — the harness working as intended.
+
+### Scope split, surfaced mid-implementation
+
+The **activity chart (item 5) moved to F-084**, and the reason was found while designing it rather
+than assumed: aggregating the audit trail needs a store-level `GROUP BY`, because the alternative —
+the API paging the window into memory to count it — is precisely what this feature refused to let the
+*client* do, one layer down. That means an `AuditLog` **port** change (both adapters + the shared
+conformance suite, E-020) landing squarely on the known **F-078** debt; and ADR-0051 records that
+both adapters hardcode descending `seq`, so "oldest retained event" is not even a cheap query today.
+Folding that into a UI feature would have produced the one enormous unreviewable commit the delivery
+split exists to prevent. **ADR-0053 clause 3 already records the chart decision** — including the
+trap that motivates it: `stats.ts` refuses trend fields *in its own words* because retention
+**deletes**, and the audit trail **is** pruned, so a naive "last 30 days" histogram draws zeros for
+pruned days — a zero meaning "we deleted the record" being indistinguishable from "nothing happened".
+The ADR anchors the window on the oldest event the trail actually **holds**, derived from data rather
+than config (the only form that survives `maxEntries` pruning). F-084 implements it.
+
+**Known, accepted, recorded:** on an empty workspace "Connect a source" renders twice — onboarding
+step 1 and the feed's empty-state CTA (asserted by `activity-feed.test.tsx:85`, and visible in the
+screenshot). Pre-existing, tested behaviour, none of the 17 reported items; left for F-064 rather
+than absorbed (golden rule 2).
+
+**Next step**
+- **F-081** (async scans + worker pool) is unblocked and is the largest of the remaining set. F-084
+  is blocked on nothing but F-080 and can follow whenever.
+
+---
+
 ## 2026-07-17 (v4) — F-079: the live feed that listened on one route, and the palette that read a key that wasn't there
 
 User reported 17 dashboard issues. Triaged into **F-079…F-083** (plan:

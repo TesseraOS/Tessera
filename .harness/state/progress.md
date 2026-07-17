@@ -3,6 +3,69 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-17 (v6) — F-081/F-085 planned: embedding DOES hold the event loop (measured; the first two answers were wrong)
+
+No code. Research + decisions + plans only; tree otherwise untouched and green. F-081 is planned and
+left **`todo`** (unclaimed, `wip_limit` free) rather than half-implemented — clean-state protocol.
+
+### The finding: the user was right about item 13, and my first measurement said otherwise
+
+Item 13 ("use multi-threading … handle parallel requests") needed a fact, not an opinion: does
+in-process embedding actually block the loop? `@huggingface/transformers` runs ONNX through
+`onnxruntime-node`, whose async `run()` is *widely assumed* to offload to libuv's threadpool. If it
+does, a worker pool for embedding is theatre.
+
+**Take 1 — max event-loop lag: 68.7ms. Concluded "NOT blocking". WRONG.** Max lag cannot separate
+"inference offloads, and the 68ms is JS tokenization" from "inference runs on-thread in 36ms
+chunks" — both peak the same. I nearly reported it.
+
+**Takes 2 and 3 — cumulative lag, then `monitorEventLoopDelay`: both read a KNOWN busy-loop control
+as 0% blocked.** While the thread is held, no sample is ever taken, so the instrument goes blind
+exactly when the answer matters. The control caught the instrument three times. That is what a
+control is for, and it is the reason to always include one.
+
+**Take 4 — calibrated against both hypotheses, in the real *shape* of the work** (24 × 36ms with
+await boundaries between, matching one embed per call). Mean event-loop delay:
+
+| | mean loop delay |
+|---|---|
+| CONTROL B — offloaded (`await` a timer) | **16.7ms** |
+| **EMBEDDING — 24 real chunks** | **32.9ms** |
+| CONTROL A — on-thread (sync burst) | **36.1ms** |
+
+Embedding reads as **ON-THREAD**. `onnxruntime-node` does **not** give us a free thread here: the
+loop is unavailable for essentially the whole of each ~36ms call, so every concurrent request eats a
+~36ms stall per embedded chunk for the entire scan. **The pool is warranted, on evidence** → F-085.
+(Also measured, for F-085 to weigh: model load is a ~3s on-thread block and ~90MB resident — and a
+worker cannot share it, so N workers = N loads. That cuts hard against defaulting to `cpus-1`.)
+
+### Splits, both forced by what the research found
+
+- **F-081** keeps items 11/12/14 (async scan jobs). Design is additive: **`scan()` keeps its
+  synchronous semantics** because MCP's `scan_source` (`server.ts:339`) returns the summary — an
+  agent wants "scan and tell me what changed", and making it async would silently degrade that to
+  "started, poll elsewhere". A new `startScan()` serves REST. Contract change is real and recorded:
+  `POST /v1/sources/:id/scan` 200 `{source, summary}` → 202 `{source, state}` (E-003 → OpenAPI, SDK,
+  dashboard, `sources.spec.ts`); MCP deliberately unaffected.
+- **F-085** takes item 13 (the pool), with the numbers above.
+
+**The open risk, recorded in the plan rather than discovered later:** the progress signal is the weak
+point. Counting `document.*` per source is *inference*, not ledgering — an unchanged-hash document is
+"processed" but emits nothing, so a naive counter stalls below total. A bar that silently sticks at
+90% is worse than the spinner it replaces. Resolve it (per-job completion signal) before building the
+bar.
+
+**Scope guard, restated:** F-081 makes the *request* non-blocking; F-085 makes the *work* leave the
+main thread. Neither makes the API multi-**process** — the event bus and scan-status map are
+in-process (F-079 was that same bug at the app layer), and clustering needs F-056's shared bus. The
+wording must not imply otherwise.
+
+**Next step**
+- Claim **F-081** ([plan ready](../plans/F-081-async-scan-jobs.md)); resolve the progress-signal
+  question first. F-082 / F-083 / F-084 are independent and unblocked.
+
+---
+
 ## 2026-07-17 (v5) — F-080: the Overview leads with state; the chart splits out once its real cost showed
 
 User items 1/2/3 of the 17. Decision: **ADR-0053** (supersedes **ADR-0047 in part** — only its

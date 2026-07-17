@@ -2652,7 +2652,7 @@
     },
     {
       "id": "F-081",
-      "title": "Source scans block the request and the event loop: make them async jobs with real progress, on a worker-thread pool",
+      "title": "Source scans block the request: make them async jobs with real progress and honest state",
       "requirements": [
         "FR-62",
         "FR-6",
@@ -2663,16 +2663,16 @@
       "package": "@tessera/ingestion",
       "release": "R4",
       "priority": "must",
-      "status": "backlog",
+      "status": "todo",
       "blockedBy": [],
       "acceptance": [
-        "POST /v1/sources/:id/scan returns promptly (202 + job identity) instead of awaiting the whole pipeline; the scan runs as a tracked job",
-        "Scan progress is observable — processed/total over SSE — and scanStatus reports running|idle|error with progress, so the UI can show a determinate progressbar rather than an unbounded spinner",
-        "The dashboard handles every scan state honestly: queued, running (with progress), completed, failed (with the error), and a scan already running for that source",
-        "CPU-bound ingestion work (embedding, parsing) runs on a worker_threads pool, so a scan no longer starves the event loop that serves /v1/events and every other request",
-        "The pool is bounded and configurable, degrades to in-process when unavailable, and is torn down cleanly on shutdown (no leaked workers)",
-        "Scans remain incremental + idempotent; existing ingestion tests and the queue drain semantics for the Local profile stay green",
-        "API + ingestion gates green"
+        "POST /v1/sources/:id/scan returns promptly (202 + the scan state) instead of awaiting the whole pipeline; the scan runs as a tracked background job",
+        "Scan progress is observable — processed/total over SSE — so the UI shows a determinate progressbar rather than an unbounded spinner (there is no progress DATA today, which is why item 11 is not a UI-only fix)",
+        "scanStatus reports queued|running(with progress)|idle|error, and a second scan of a source already scanning is rejected cleanly rather than racing",
+        "The dashboard handles every scan state honestly: queued, running with progress, completed, failed with the error",
+        "A background scan failure is surfaced (status + SSE), never swallowed — the request that started it is long gone",
+        "Scans stay incremental + idempotent; existing ingestion tests and the Local drain semantics stay green",
+        "api + ingestion + web gates green"
       ],
       "verification": [
         "typecheck",
@@ -2682,9 +2682,10 @@
         "build"
       ],
       "effects": [
+        "E-003",
         "E-020"
       ],
-      "notes": "REPORTED BY THE USER (2026-07-17), items 11/12/13/14. CONFIRMED IN CODE: packages/ingestion/src/sources/service.ts performScan() awaits coordinator.scan() AND `await queue.drain?.()` — the F-038 doc comment says this out loud (\"so a Local scan is synchronous-complete\"). It was a deliberate, defensible choice for a Local profile (the summary reflects fully-processed work); it stops being defensible once the same process serves an SSE stream and a dashboard, because the drain is CPU-bound embedding and it owns the event loop for the duration. Hence items 11 (no expected time — there is no progress DATA to show, not just no progressbar) and 12 (blocks the API) are ONE defect with two faces. SCOPE DECISION (user, 2026-07-17, via AskUserQuestion): worker_threads + async jobs ONLY. Multi-PROCESS clustering was explicitly considered and DEFERRED, because it would break more than it fixes today: the event bus (packages/config/src/profiles/local.ts:265 createEventBus) and the scan-status map (sources/service.ts:96 new Map()) are BOTH in-process, so an SSE client connected to worker A would never see events emitted by worker B — reintroducing F-079 at the infrastructure layer, where it is far harder to see. Clustering needs a shared bus + externalized scan state (Redis pub/sub, BullMQ), which is precisely F-056 scope; chain it there rather than half-doing it here. Node already serves parallel I/O concurrently — threads are the answer to the CPU-bound half, and only to that half. Honest naming matters here: this makes scans NON-BLOCKING and PARALLEL-CAPABLE within one process; it does not make the API multi-process, and nothing should claim it does."
+      "notes": "REPORTED BY THE USER (2026-07-17), items 11/12/13/14. CONFIRMED IN CODE: packages/ingestion/src/sources/service.ts performScan() awaits coordinator.scan() AND `await queue.drain?.()` — the F-038 doc comment says this out loud (\"so a Local scan is synchronous-complete\"). It was a deliberate, defensible choice for a Local profile (the summary reflects fully-processed work); it stops being defensible once the same process serves an SSE stream and a dashboard, because the drain is CPU-bound embedding and it owns the event loop for the duration. Hence items 11 (no expected time — there is no progress DATA to show, not just no progressbar) and 12 (blocks the API) are ONE defect with two faces. SCOPE DECISION (user, 2026-07-17, via AskUserQuestion): worker_threads + async jobs ONLY. Multi-PROCESS clustering was explicitly considered and DEFERRED, because it would break more than it fixes today: the event bus (packages/config/src/profiles/local.ts:265 createEventBus) and the scan-status map (sources/service.ts:96 new Map()) are BOTH in-process, so an SSE client connected to worker A would never see events emitted by worker B — reintroducing F-079 at the infrastructure layer, where it is far harder to see. Clustering needs a shared bus + externalized scan state (Redis pub/sub, BullMQ), which is precisely F-056 scope; chain it there rather than half-doing it here. Node already serves parallel I/O concurrently — threads are the answer to the CPU-bound half, and only to that half. Honest naming matters here: this makes scans NON-BLOCKING and PARALLEL-CAPABLE within one process; it does not make the API multi-process, and nothing should claim it does. SCOPE SPLIT 2026-07-17: the worker-thread pool (user item 13) moved to F-085, because it is a separate subsystem (a new Embeddings adapter) and this feature already spans ingestion + API + web. MEASURED FIRST, and the measurement REVERSED the initial reading — see F-085 notes for the numbers. The async job is the fix for what the user actually reported (the request hangs with no expected time); the pool is the fix for the collateral damage (every OTHER request eats a ~36ms stall per embedded chunk while a scan runs). Landing them separately keeps each verifiable."
     },
     {
       "id": "F-082",
@@ -2786,6 +2787,41 @@
         "E-020"
       ],
       "notes": "SPLIT OUT OF F-080 (2026-07-17) — user item 5, \"show some activity graph wrt time, only when we have data\". The decision is already recorded in ADR-0053 clause 3; this implements it. WHY IT IS ITS OWN FEATURE: the honest, scalable version needs an AuditLog PORT method (aggregate at the store), which ripples to both adapters + the conformance suite (E-020) and lands squarely in F-078 territory. THE TRAP, and the reason this cannot be built naively: apps/api/src/schemas/stats.ts already refuses trend fields IN ITS OWN WORDS because \"deriving one from createdAt would silently lie in any deployment using retention (FR-15), which deletes\" — and the audit trail IS pruned (AuditLog.prune + config.audit.retention, since F-027). So a naive \"last 30 days\" histogram draws zeros for pruned days, and a zero meaning \"we deleted the record\" is indistinguishable from one meaning \"nothing happened\". ADR-0053 closes this by anchoring the window on the oldest event the trail actually HOLDS, derived from the data rather than from config — which is the only form that survives maxEntries pruning (no time-based clamp can see it) and is simpler besides. NOTE ADR-0051: both adapters hardcode descending seq and AuditQuery has no sort param, so \"oldest retained event\" is NOT a cheap query today — resolve it in the port aggregation rather than by paging to the end of the trail. NOT FR-47/F-057: that is per-tenant metering for billing; this is a histogram of actions the trail already records. The audit log is the ONLY real persisted time series available — the graph has no per-node createdAt and the ingestion manifest holds only path -> contentHash (both stated in stats.ts). ui/chart.tsx (shadcn/Recharts) is already installed and has ZERO consumers; this would be its first, so expect to prove the token wiring rather than assume it."
+    },
+    {
+      "id": "F-085",
+      "title": "Embedding holds the event loop: move it to a bounded worker-thread pool (measured, not assumed)",
+      "requirements": [
+        "NFR-2",
+        "FR-6"
+      ],
+      "service": "api",
+      "package": "@tessera/ai",
+      "release": "R4",
+      "priority": "should",
+      "status": "todo",
+      "blockedBy": [
+        "F-081"
+      ],
+      "acceptance": [
+        "A worker_threads-pool Embeddings adapter implements the SAME Embeddings port (embed/embedBatch/info) — swappable per ADR-0006, with no caller change",
+        "The pool is bounded and configurable, and defaults sanely: each worker loads its OWN model copy (~3s init, ~90MB resident measured), so the default must not be cpus-1 by reflex",
+        "Measured proof that it works: p99 event-loop delay during a scan drops toward the offloaded control, using the same calibrated harness that produced the original finding (a claim of \"now non-blocking\" without a re-measurement is exactly what this feature exists to disprove)",
+        "Degrades to the in-process adapter when workers are unavailable, and tears down cleanly on shutdown (no leaked threads, no orphaned model memory)",
+        "Model load happens off the request path (it is a ~3s on-thread block today, absorbed at composition because createTransformersEmbeddings awaits pipeline() at construction — verify it stays that way, or moves to the workers)",
+        "ai + api gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "format",
+        "test",
+        "build"
+      ],
+      "effects": [
+        "E-014"
+      ],
+      "notes": "SPLIT OUT OF F-081 (2026-07-17) — user item 13 (\"use multi-threading, handle parallel requests\"). THE USER WAS RIGHT, AND MY FIRST MEASUREMENT SAID OTHERWISE — recorded because the near-miss is the lesson. @huggingface/transformers runs ONNX via onnxruntime-node, whose async run() is widely assumed to offload to the libuv threadpool. Take 1 measured MAX event-loop lag (68.7ms) and concluded \"not blocking\" — WRONG: max lag cannot separate \"inference offloads, the lag is JS tokenization\" from \"inference runs on-thread in 36ms chunks\", because both peak the same. Take 2 (cumulative lag) and take 3 (monitorEventLoopDelay) both read a KNOWN busy-loop control as 0% blocked — while the thread is held, no sample is ever taken, so the instrument goes blind exactly when the answer matters. The control caught the instrument three times; that is what controls are for. Take 4 calibrated against BOTH hypotheses in the real SHAPE of the work (24 x 36ms with await boundaries): mean loop delay — offloaded control 16.7ms, EMBEDDING 32.9ms, on-thread control 36.1ms. Embedding reads as ON-THREAD: onnxruntime-node does NOT give us a free thread here, and every concurrent request eats a ~36ms stall per embedded chunk for the whole scan. So the pool is warranted on evidence. WATCH THE COST, it is real and cuts against a big default: a worker cannot share the loaded model, so N workers = N model loads (~3s each, measured) and N copies resident (~90MB each). Multi-PROCESS clustering remains OUT (F-081 notes + ADR: in-process bus + scan-status map; F-056 is the prerequisite). Re-run the calibrated harness to prove the fix — do not assert it."
     }
   ]
 }

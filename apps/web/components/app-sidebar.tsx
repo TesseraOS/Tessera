@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { LogoIcon } from '@/components/logo';
+import { Logo } from '@tessera/brand';
 import {
   Sidebar,
   SidebarContent,
@@ -26,8 +26,13 @@ export function AppSidebar() {
       <SidebarHeader className="h-14 justify-center">
         <SidebarMenuButton asChild>
           <a href="/">
-            <LogoIcon className="text-foreground size-5" />
-            <span className="font-semibold tracking-tight">Tessera</span>
+            {/* The lockup, not a mark plus a hand-rolled word: this rendered "Tessera" in bold sans,
+                where BRAND.md §4 specifies `tessera` lowercase in Instrument Serif, never bold. */}
+            <Logo
+              iconClassName="size-5"
+              textClassName="text-lg tracking-tight"
+              emberId="ember-sidebar"
+            />
           </a>
         </SidebarMenuButton>
       </SidebarHeader>

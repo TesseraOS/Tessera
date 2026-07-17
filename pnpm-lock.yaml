@@ -90,6 +90,9 @@ importers:
       '@tessera/billing':
         specifier: workspace:*
         version: link:../../packages/billing
+      '@tessera/brand':
+        specifier: workspace:*
+        version: link:../../packages/brand
       '@tessera/mascot':
         specifier: workspace:*
         version: link:../../packages/mascot
@@ -228,6 +231,9 @@ importers:
       '@tanstack/react-virtual':
         specifier: ^3.14.5
         version: 3.14.5(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@tessera/brand':
+        specifier: workspace:*
+        version: link:../../packages/brand
       '@tessera/mascot':
         specifier: workspace:*
         version: link:../../packages/mascot
@@ -355,6 +361,31 @@ importers:
       '@tessera/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/brand:
+    dependencies:
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      tailwind-merge:
+        specifier: ^3.6.0
+        version: 3.6.0
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.17
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.17)
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1
+      react:
+        specifier: ^19.2.7
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.7
+        version: 19.2.7(react@19.2.7)
 
   packages/config:
     dependencies:

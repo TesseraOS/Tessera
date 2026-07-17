@@ -142,6 +142,19 @@
   --mascot-heart: var(--gold);
   --mascot-sheen: var(--foreground); /* ivory glint on dusk */
   --mascot-ink: var(--background);
+
+  /*
+   * @tessera/brand bound to the marketing palette (F-083). The mark moved into a shared package
+   * because the dashboard had drifted onto v1 while this app rendered v2 — the same asset, two
+   * hand-maintained copies. These bindings reproduce exactly what this app already rendered, so
+   * marketing is the port's regression surface: any visible change here means the port is wrong.
+   *
+   * --rose/--gold are already per-band, which is why the ember tracks them rather than the master's
+   * fixed stops: a light warm ember on the noon band would wash out.
+   */
+  --brand-ember-from: var(--rose);
+  --brand-ember-to: var(--gold);
+  --brand-wordmark-font: var(--font-serif); /* Instrument Serif — BRAND.md §4 */
 }
 
 .light {

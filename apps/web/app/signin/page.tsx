@@ -4,7 +4,7 @@ import { Suspense, useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { KeyRound, Loader2, ShieldCheck, Sparkles } from 'lucide-react';
 import { Constellation } from '@/components/art';
-import { Logo } from '@/components/logo';
+import { Logo } from '@tessera/brand';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TesseraApiError } from '@/lib/api/client';
@@ -60,7 +60,7 @@ function SignInForm() {
         <Constellation className="absolute top-10 left-1/2 w-[120%] max-w-none -translate-x-1/2 opacity-50" />
         <div className="from-card via-card/75 absolute inset-0 bg-gradient-to-t to-transparent" />
         <div className="relative flex h-full flex-col justify-between p-12 xl:p-16">
-          <Logo iconClassName="size-7" textClassName="text-xl" />
+          <Logo emberId="ember-signin-brand" iconClassName="size-7" textClassName="text-xl" />
 
           <div className="max-w-md space-y-5">
             <span className="text-muted-foreground bg-background/40 inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] tracking-wide backdrop-blur">
@@ -95,7 +95,9 @@ function SignInForm() {
 
       {/* Form panel */}
       <div className="flex flex-col items-center justify-center gap-10 overflow-y-auto px-6 py-16 sm:px-10">
-        <Logo className="lg:hidden" />
+        {/* A distinct emberId: this page renders two marks, and SVG gradient ids are
+            document-global — sharing one would silently retarget the other's gradient. */}
+        <Logo emberId="ember-signin-mobile" className="lg:hidden" textClassName="text-xl" />
 
         <div className="w-full max-w-sm space-y-8">
           <div className="space-y-2">

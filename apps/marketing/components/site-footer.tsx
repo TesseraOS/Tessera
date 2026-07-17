@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Logo } from '@/components/logo';
+import { Logo } from '@tessera/brand';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Container } from '@/components/ui/container';
 import { siteConfig } from '@/lib/site';
@@ -50,7 +50,7 @@ export function SiteFooter() {
     <footer className="border-t">
       <Container className="grid gap-12 py-16 md:grid-cols-12">
         <div className="md:col-span-4">
-          <Logo emberId="ember-footer" />
+          <Logo emberId="ember-footer" textClassName="text-heading" />
           <p className="text-small text-muted-foreground mt-4 max-w-xs">{siteConfig.tagline}.</p>
           <p className="font-serif text-lead text-faint-foreground mt-6 max-w-xs italic">
             the fragment that completes the picture

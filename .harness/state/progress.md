@@ -3,6 +3,62 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-17 (v7) — F-083: one mark, defined once — the dashboard had been shipping a different logo
+
+User item 15. Plan:
+[`F-083-brand-mark-v2-shared-package.md`](../plans/F-083-brand-mark-v2-shared-package.md).
+
+### It was a real divergence, not a preference
+
+[`BRAND.md §4`](../../docs/design/BRAND.md) is authoritative and
+[`tessera-mark.svg`](../../docs/design/brand/tessera-mark.svg) is the master. Marketing rendered
+**v2**; the dashboard rendered **v1** — a monochrome *pixel* mark on a 32 viewBox, different
+geometry, a different logo — and had done since v2 landed. Worse than reported: the sidebar also
+hand-rolled **"Tessera" in bold sans** where BRAND.md specifies **`tessera` lowercase in Instrument
+Serif, never bold**, and the dashboard had **no favicon at all** (Next's default globe).
+
+**Root cause was duplication**, so fixing the pixels would have left it: two hand-maintained copies
+of a brand asset drift the moment one is updated, which is exactly what happened. Extracted to
+**`@tessera/brand`**, following the `@tessera/mascot` precedent rather than inventing one.
+
+### The risk was the ember, and the mascot had already solved it
+
+The mark's gilded tile needs `--rose`/`--gold`; those exist in **marketing** and **not** in the
+dashboard, so a naive port would render the ember `transparent` across all four themes — worse than
+the v1 it replaced. `@tessera/mascot`'s `styles.css` states the answer: *"Every value falls back to
+currentColor, so an unbound app renders a monochrome Tess — never off-brand color."* The mark now
+does the same: unbound ⇒ **monochrome**, which BRAND.md §4 explicitly sanctions as the fallback. The
+bindings are a refinement, not load-bearing.
+
+**The mark does NOT track the theme, deliberately** — the one place this departs from the mascot.
+ADR-0047 licensed the mascot to take each theme's warm accent; BRAND.md §4 says never recolor the
+*mark* outside the palette. So the ember is brand-constant across all four themes and varies only by
+**mode** (dark → the master's `#E2A3A8`/`#E4B65A`; light → the palette's deeper `#9E4A56`/`#8A6A24`)
+— which is what marketing already does, because a light warm ember washes out on a light ground.
+
+Instrument Serif joins the dashboard as `--font-brand` — **not** a theme face, so ADR-0047's
+per-theme font system is untouched and no theme can restyle the logo.
+
+**Evidence/verification** — gates green: `typecheck` (40/40 — the new package included), `lint`
+(23/23), `format`, `test` (38/38), `build` (20/20). **Marketing was the regression surface** (it
+already rendered v2, so any visible change there means the port is wrong): its **48 e2e** pass, and
+its bindings reproduce its prior values exactly. Dashboard screenshotted across themes × modes: the
+lockup renders v2 + lowercase serif, and the light binding is visibly correct (`notebook-light`).
+
+**Accepted, with reason:** `apps/web/app/icon.tsx` restates the mark's geometry rather than importing
+the package — the one sanctioned exception. It renders through **Satori** (`next/og`), not React DOM,
+and Satori does not rasterize SVG gradients, so the mark must be rebuilt from divs. Marketing's icon
+already did this; the dashboard's is identical to it on purpose (one brand, one favicon).
+
+**Visible change the user did not name explicitly:** the sidebar wordmark is now lowercase serif
+`tessera` rather than bold sans "Tessera". That is BRAND.md's rule and "the logo" *is* the lockup —
+flagged rather than slipped in.
+
+**Next step**
+- **F-082** (graph/search/inspector/settings/signin) — the last untouched reported items.
+
+---
+
 ## 2026-07-17 (v6) — F-081/F-085 planned: embedding DOES hold the event loop (measured; the first two answers were wrong)
 
 No code. Research + decisions + plans only; tree otherwise untouched and green. F-081 is planned and

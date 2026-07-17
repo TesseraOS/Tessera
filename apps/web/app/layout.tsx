@@ -5,6 +5,7 @@ import { GeistSans } from 'geist/font/sans';
 import {
   Architects_Daughter,
   Fira_Code,
+  Instrument_Serif,
   Inter,
   JetBrains_Mono,
   Source_Serif_4,
@@ -40,6 +41,19 @@ const architectsDaughter = Architects_Daughter({
 });
 const firaCode = Fira_Code({ subsets: ['latin'], variable: '--font-fira-code', preload: false });
 
+/*
+ * The brand face (BRAND.md §4, F-083) — Instrument Serif, the wordmark's own type. Deliberately
+ * NOT a theme face: it is bound to `--brand-wordmark-font` and used by exactly one string, so the
+ * ADR-0047 theme-font system above is untouched and no theme can restyle the logo. One weight,
+ * self-hosted and subset like the rest; `preload: false` because the wordmark is never LCP.
+ */
+const instrumentSerif = Instrument_Serif({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-brand',
+  preload: false,
+});
+
 export const metadata: Metadata = {
   title: {
     default: 'Tessera',
@@ -53,7 +67,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${GeistSans.variable} ${GeistMono.variable} ${inter.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} ${architectsDaughter.variable} ${firaCode.variable}`}
+      className={`${GeistSans.variable} ${GeistMono.variable} ${inter.variable} ${sourceSerif.variable} ${jetbrainsMono.variable} ${architectsDaughter.variable} ${firaCode.variable} ${instrumentSerif.variable}`}
     >
       <head>
         {/* Pre-paint theme application (no FOUC) — mirrors next-themes' own approach for mode. */}

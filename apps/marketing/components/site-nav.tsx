@@ -4,7 +4,7 @@ import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Mascot } from '@tessera/mascot';
-import { Logo } from '@/components/logo';
+import { Logo } from '@tessera/brand';
 import { MosaicField } from '@/components/art/mosaic-field';
 import { ButtonLink } from '@/components/ui/button';
 import { Container } from '@/components/ui/container';
@@ -70,7 +70,7 @@ export function SiteNav() {
       >
         <Container className="flex h-16 items-center justify-between">
           <Link href="/" aria-label="Tessera home" className="rounded-md">
-            <Logo emberId="ember-nav" />
+            <Logo emberId="ember-nav" textClassName="text-heading" />
           </Link>
 
           <nav aria-label="Main" className="hidden items-center gap-8 md:flex">
@@ -125,7 +125,7 @@ export function SiteNav() {
         >
           <div className="atmosphere absolute inset-x-0 top-0 h-1/2" aria-hidden="true" />
           <Container className="relative flex h-16 shrink-0 items-center justify-between">
-            <Logo emberId="ember-menu" />
+            <Logo emberId="ember-menu" textClassName="text-heading" />
             <button
               ref={closeRef}
               type="button"

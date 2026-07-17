@@ -43,8 +43,10 @@
 - **Surfaces:** flat cards in Monkai (`shadow` tokens defined but flat); other themes express
   their own vendored border/shadow scale — components use **surface tokens**, never hardcode
   `shadow-none`/`border-none`.
-- **Icons:** **Lucide** only. **Logo:** the Tessera **mosaic** mark
-  ([`logo.tsx`](../../apps/web/components/logo.tsx)).
+- **Icons:** **Lucide** only. **Logo:** the Tessera **mark v2** ([`BRAND.md §4`](BRAND.md)) from the
+  shared [`@tessera/brand`](../../packages/brand) — one definition for every app (F-083; the
+  dashboard had drifted onto v1). Theme it through the closed `--brand-*` contract bound in
+  [`globals.css`](../../apps/web/app/globals.css); never fork the component.
 - **Shell:** shadcn **Sidebar** (inset, collapsible, **grouped** nav with section labels) +
   breadcrumb header + ⌘K search + appearance/user — see
   [`app-shell.tsx`](../../apps/web/components/app-shell.tsx).

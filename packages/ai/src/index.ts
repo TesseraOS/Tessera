@@ -8,3 +8,4 @@ export * from './ports/embeddings.js';
 export * from './adapters/fake/index.js';
 export * from './adapters/transformers/index.js';
 export * from './adapters/ollama/index.js';
+export * from './adapters/worker-pool/index.js';

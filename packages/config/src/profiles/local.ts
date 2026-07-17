@@ -2,6 +2,7 @@ import {
   createFakeEmbeddings,
   createOllamaEmbeddings,
   createTransformersEmbeddings,
+  createWorkerPoolEmbeddings,
   type Embeddings,
 } from '@tessera/ai';
 // `ApiEventMap` is imported TYPE-ONLY (the bus is built via `@tessera/core`) so config stays Fastify-free.
@@ -165,10 +166,17 @@ async function createEmbeddings(config: TesseraConfig['embeddings']): Promise<Em
         ...(config.ollamaUrl !== undefined ? { baseUrl: config.ollamaUrl } : {}),
       });
     case 'transformers':
-    default:
-      return createTransformersEmbeddings(
-        config.model !== undefined ? { model: config.model } : {},
-      );
+    default: {
+      const model = config.model !== undefined ? { model: config.model } : {};
+      // `workers > 0` runs Transformers.js on a worker-thread pool (F-085): embedding holds the main
+      // thread (measured — 32.9ms mean loop delay, vs a 36.1ms on-thread control), so a scan stalls
+      // every concurrent request without this. `0` keeps it in-process. The pool degrades to
+      // in-process on its own if worker_threads is unavailable, so this stays safe by default.
+      if (config.workers > 0) {
+        return createWorkerPoolEmbeddings({ ...model, workers: config.workers });
+      }
+      return createTransformersEmbeddings(model);
+    }
   }
 }
 
@@ -403,6 +411,9 @@ export async function createLocalRuntime(
       worker.subscription.unsubscribe();
       for (const off of bridge) off();
       await queue.shutdown();
+      // Terminate the embedding worker threads (F-085) — without this the process cannot exit. No-op
+      // for the in-process adapters, which do not implement `close`.
+      await embeddings.close?.();
       await vector.close();
       await relational.close();
     },

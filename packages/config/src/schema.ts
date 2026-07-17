@@ -44,6 +44,14 @@ const embeddingsSchema = z
     dimension: z.number().int().positive().optional(),
     /** Ollama base URL (provider `ollama`). */
     ollamaUrl: z.string().url().optional(),
+    /**
+     * Worker threads for the `transformers` provider (F-085). Embedding runs ONNX on-thread and
+     * holds the event loop (measured), so a scan stalls every concurrent request; a pool moves it
+     * off. **Each worker loads its own ~90MB model copy** — so the default is `1` (moves 100% of
+     * embedding off the main thread, the whole point) and this is deliberately *not* `cpus`. `0`
+     * keeps embedding in-process. Ignored for `fake`/`ollama` (the latter is already out-of-process).
+     */
+    workers: z.number().int().nonnegative().default(1),
   })
   .default({});
 

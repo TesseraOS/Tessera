@@ -340,7 +340,7 @@
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "Changing the Embeddings port affects every adapter, its conformance suite, and consumers; changing the embedding model/dimension also requires re-embedding stored vectors (ADR-0006).",
+      "rationale": "Changing the Embeddings port affects every adapter, its conformance suite, and consumers; changing the embedding model/dimension also requires re-embedding stored vectors (ADR-0006). F-085 added an OPTIONAL close() to the Embeddings port — additive, so the three in-process adapters (fake/transformers/ollama) simply omit it and are unaffected; the worker-thread pool implements it to terminate its threads, without which the process cannot exit. A new adapter, createWorkerPoolEmbeddings, runs Transformers.js on a worker_threads pool behind the SAME port (swappable per ADR-0006, no caller change): it was warranted by measurement, not assumption — onnxruntime-node holds the main thread on-thread for embedding (standalone ~33ms mean loop delay; the pool reads lowest in every run). The composition root must call embeddings.close?.() on shutdown, which createLocalRuntime.close() now does.",
       "confidence": 1,
       "origin": "manual"
     },
@@ -618,7 +618,7 @@
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "@tessera/config is the composition root: the config schema + Local profile select and wire every adapter (sqlite/sqlite-vec/filesystem/in-process/transformers) into the ApiServices both surfaces consume. Changing the config schema, the profile wiring, the SecretsProvider port, or the blob FragmentSource convention ripples to whoever boots a runtime and to the future Postgres/cloud profile (F-023). The embedding dimension flows from the provider to the vector store (ADR-0006). ApiServices is imported type-only so api never depends on config (no cycle).",
+      "rationale": "@tessera/config is the composition root: the config schema + Local profile select and wire every adapter (sqlite/sqlite-vec/filesystem/in-process/transformers) into the ApiServices both surfaces consume. Changing the config schema, the profile wiring, the SecretsProvider port, or the blob FragmentSource convention ripples to whoever boots a runtime and to the future Postgres/cloud profile (F-023). The embedding dimension flows from the provider to the vector store (ADR-0006). ApiServices is imported type-only so api never depends on config (no cycle). F-085 added embeddings.workers (default 1) and a worker-pool branch to createEmbeddings: workers>0 runs the transformers provider on a worker_threads pool (@tessera/ai createWorkerPoolEmbeddings), which degrades to in-process on its own if worker_threads is unavailable. This is default-on and it is safe by that fallback; each worker loads its own ~90MB model, which is why the default is 1 and deliberately NOT cpus. createLocalRuntime.close() now also awaits embeddings.close?.() so the worker threads are terminated on shutdown (the runtime previously had nothing that needed closing on the embeddings). TESSERA_EMBEDDINGS_WORKERS documents it in .env.example.",
       "confidence": 1,
       "origin": "manual"
     },

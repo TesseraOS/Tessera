@@ -65,6 +65,7 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
     model: env.TESSERA_EMBEDDINGS_MODEL,
     dimension: num(env.TESSERA_EMBEDDINGS_DIMENSION),
     ollamaUrl: env.TESSERA_OLLAMA_URL,
+    workers: num(env.TESSERA_EMBEDDINGS_WORKERS),
   });
   const budgets = section({
     defaultContextTokens: num(env.TESSERA_CONTEXT_BUDGET),

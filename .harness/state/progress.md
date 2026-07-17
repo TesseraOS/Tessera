@@ -3,6 +3,71 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-17 (v10) — F-085: embedding moves to a worker pool — and the measurement corrected itself again
+
+User item 13. Plan: [`F-085-embedding-worker-pool.md`](../plans/F-085-embedding-worker-pool.md).
+`createWorkerPoolEmbeddings` (`@tessera/ai`) runs Transformers.js on a `worker_threads` pool behind
+the **same `Embeddings` port** (swappable, ADR-0006, no caller change); wired via
+`embeddings.workers` (default 1).
+
+### The measurement corrected itself a fourth time — recorded because it matters
+
+F-081's checkpoint established, with a calibrated standalone harness, that in-process embedding holds
+the main thread: mean loop delay **32.9ms**, next to a 36.1ms on-thread control and a 16.7ms
+offloaded one. The pool's own live test re-ran that harness — and in the **vitest** environment
+in-process measured **~14.2ms**, reading nearly *offloaded*, with the pool lowest at **8.8ms**.
+
+Two honest measurements disagree, and the reason is real: `onnxruntime-node` has an intra-op native
+threadpool, so **how much of an inference runs on-thread vs on its own threads shifts with core count
+and load**. The standalone run and the vitest run are different environments. So the test asserts
+only what is **robust in every run** — the two controls separate, the pool sits on the responsive
+side of them, and the pool is **never worse** than in-process — and explicitly does **not** assert
+"in-process always blocks", because a real run disproved it. Loosening it to a number that happened
+to pass once would have been the exact overconfidence the earlier four-attempt saga warns against.
+
+**What the pool robustly delivers, then:** (1) it never holds the main thread and is always at least
+as responsive as in-process; (2) **real parallelism across concurrent embeds** — N workers embed N
+documents at once, which the in-process adapter cannot do at all, and which a sequential
+micro-benchmark cannot show (it is covered by the unit queueing test instead). The headline is
+honest: this makes the *work* leave the main thread and run in parallel; the magnitude of the
+in-process problem is environment-dependent.
+
+### Design decisions worth keeping
+
+- **Default `workers: 1`, deliberately not `cpus`.** A worker cannot share the model — N workers = N
+  loads (~3s, ~90MB each, measured). 1 already moves 100% of embedding off the main thread (the whole
+  point) and costs nothing in throughput, since the in-process adapter embeds serially anyway.
+- **Degrades, never fails.** `worker_threads`/the native module can be unavailable; the pool falls
+  back to the in-process adapter and logs. Default-on is safe *because* of that fallback. Proven by a
+  unit test that injects an init-failing worker and asserts the fallback answers.
+- **`worker/embed-worker.mjs` is plain JS, outside `src/`, on purpose.** `src/` and `dist/` are the
+  same depth under the package root, so `../../../worker/embed-worker.mjs` resolves to the one file
+  from both the vitest (`src`) and built (`dist`) callers — a compiled `worker.ts` would exist in
+  `dist` only and break the test path. Verified: the URL resolves to the real file from a `dist`
+  location.
+- **Lifecycle.** The `Embeddings` port gained an **optional** `close?()` (E-008 — additive, the three
+  in-process adapters omit it); `createLocalRuntime.close()` now awaits `embeddings.close?.()`. The
+  live integration run **completing rather than hanging** is the proof the threads terminate.
+
+**Evidence/verification** — gates green: `state`, `typecheck` (40/40), `lint` (23/23), `format`,
+`test` (38/38 — ai pool unit suite 6/6, config 69), `build` (20/20). **Live** (guarded,
+`TESSERA_TEST_TRANSFORMERS=1`): the pool passes the shared Embeddings conformance suite, produces
+vectors equal to the in-process adapter (genuinely swappable), and the loop-delay assertions hold.
+Effects: E-008 (port) + E-014 (config) updated.
+
+### Scope, restated
+
+This makes the **work** parallel; it does **not** make the API multi-**process** (the bus and
+scan-status map are in-process — F-079 was that bug at the app layer, F-056 is the clustering
+prerequisite). Nothing here is described as multi-process. Item 13 asked for both "multi-threading and
+multi-processing"; the threading half is delivered and measured, and the processing half remains a
+recorded F-056 dependency, on purpose.
+
+**Next step**
+- **F-086** (inspector v3) or **F-084** (activity chart) — the last two of the 17.
+
+---
+
 ## 2026-07-17 (v9) — F-081: the scan stops holding the request, and the bar counts something real
 
 User items 11/12/14. Plan: [`F-081-async-scan-jobs.md`](../plans/F-081-async-scan-jobs.md). Landed in

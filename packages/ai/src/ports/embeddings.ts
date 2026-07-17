@@ -16,4 +16,10 @@ export interface Embeddings {
   embed(text: string): Promise<number[]>;
   /** Embed many texts; returns one vector per input, in order. */
   embedBatch(texts: readonly string[]): Promise<number[][]>;
+  /**
+   * Release any resources the provider holds (F-085). **Optional** — the in-process adapters hold
+   * nothing, so they omit it; the worker-thread pool implements it to terminate its threads, without
+   * which the process cannot exit. The composition root calls `embeddings.close?.()` on shutdown.
+   */
+  close?(): Promise<void>;
 }

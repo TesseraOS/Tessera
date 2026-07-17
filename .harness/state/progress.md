@@ -3,6 +3,88 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-17 (v4) — F-079: the live feed that listened on one route, and the palette that read a key that wasn't there
+
+User reported 17 dashboard issues. Triaged into **F-079…F-083** (plan:
+[`F-079-live-activity-and-palette-defects.md`](../plans/F-079-live-activity-and-palette-defects.md));
+F-079 — the two genuine defects — is `done`, the rest are registered and ordered. Scope decisions
+taken with the user up front (see "Decisions"), because three of the seventeen asked for something
+different from what the code needed.
+
+### 1. "Sometimes after scanning we see no activity and no notification" — deterministic, not flaky
+
+Not the transport. [`lib/api/events.ts`](../../apps/web/lib/api/events.ts) is correct: `EventsProvider`
+owns **one** app-wide `EventSource` and fans out to subscribers, and the socket **is** live on
+`/sources`. The defect sat one layer up: `useFeedIngest()` — the only code that pushes stream events
+into the `useNotifications` store — was called **exclusively** from `components/dashboard.tsx:37`, and
+`Dashboard` renders only at `/`.
+
+So on `/sources` — *the one route from which scans are actually triggered* — the stream had **zero
+subscribers**. Frames arrived, parsed, and were dropped. The bell never counted the scan the user had
+just started; returning to Overview mounted the ingest *after* the events had passed, so the feed
+truthfully reported "No activity this session". A **global consumer** (the bell renders in
+`app-header.tsx` on every route, read-only) fed by a **route-local producer**. The comment at
+`dashboard.tsx:35` ("Mount once — the bell reads the same entries") had exactly the right intent and
+picked the one mount point where it wasn't true. "Sometimes" = the cases where the user happened to
+be sitting on Overview when a scan completed.
+
+**Not** the ADR-0050/F-071 tenant gap documented in `routes/v1/events.ts` — that one drops
+`document.*` for non-default tenants. This dropped **everything, for every tenant**, including the
+tenant-correct `source.scan.*`. F-071 would not have fixed it.
+
+**Fixed:** a `FeedIngest` null-component mounted once in [`app/providers.tsx`](../../apps/web/app/providers.tsx)
+inside `EventsProvider` — the producer's lifetime now matches the consumer's. The route-local call is
+deleted **in the same change**: two surviving mounts is the mirror-image bug (every event counted
+twice). `AppShell` was rejected as the mount point — it early-returns for `/signin` before any hook.
+
+### 2. `Cannot read properties of undefined (reading 'toLowerCase')` in the command palette
+
+`command-palette.tsx:34` did `event.key.toLowerCase()`. `KeyboardEvent.key` is **not guaranteed to be
+a string** — keydown synthesised by browser autofill and some password managers carries none — and the
+listener is bound to `document`, so it saw those events and threw on every one. Extracted the decision
+into a **pure `isPaletteShortcut()`** predicate that guards the type and also skips `isComposing` (a
+`k` mid-IME-composition is text the user is typing, not a shortcut).
+
+**Evidence/verification** — gates green: `state` (83 features, 25 links), `typecheck` (38/38),
+`lint` (22/22), `format`, `test` (36/36 packages; web 31 files), `build` (19/19).
+
+**The tests were proven to fail without the fix** (a regression test that cannot fail is decoration):
+reverting `<FeedIngest />` → `expected [] to have a length of 1` — literally the user's empty feed;
+reverting the guard → the reported `TypeError`. This also caught a flaw in a first draft of the test:
+`expect(dispatch).not.toThrow()` **passes even when the handler throws**, because an exception inside
+a listener doesn't propagate out of `dispatchEvent` — it surfaced as an *uncaught* error attributed to
+the *next* test. Hence the pure predicate. A second hole was closed the same way: every test that
+renders `FeedIngest` explicitly would stay green if someone deleted it from the provider tree — i.e.
+the exact bug being fixed — so `feed-ingest.test.tsx` also renders the **real `Providers`** and
+asserts an event reaches the store through it.
+
+**Effect-link:** consulted, **no link added, deliberately.** The trigger is a *shared contract*
+(port / public package API / DB / HTTP / MCP / config schema); this changed none — it is an intra-app
+mount point. The one changed export (`useFeedIngest`'s mount contract) had exactly one importer,
+resolved in the same change. The invariant is now enforced by the wiring test, which is stronger than
+a graph entry.
+
+**Decisions** (with the user, via AskUserQuestion, before any code):
+- **React Flow attribution stays** (F-082), restyled as a discreet credit rather than hidden.
+  Surfaced rather than flipped: `hideAttribution: false` is deliberate, and @xyflow/react is MIT — so
+  hiding it is *legal*, but xyflow asks you to subscribe to Pro if you do, and the repo has a
+  NOTICE.md attribution culture (ADR-0013/0021/0038).
+- **Concurrency = worker_threads + async jobs only** (F-081). Multi-process clustering was
+  **rejected for now**: the event bus and scan-status map are both in-process, so an SSE client on
+  worker A would never see worker B's events — F-079 again, at the infrastructure layer. Needs a
+  shared bus + externalized state = F-056.
+- **Delivery split into five features**, landed one at a time (`wip_limit: 1`).
+- Two user-proposed approaches were **corrected on the merits** and recorded in F-080's notes: gating
+  "Get started" on the activity feed, and charting activity from it. The feed is session-only by
+  design — both would have shipped a reload-flicker or a self-erasing chart. Real signal: `/v1/stats`
+  and the persisted audit/memory history.
+
+**Next step**
+- **F-080** (Overview v2) is `todo` and unblocked. It needs an ADR superseding **ADR-0047** before the
+  greeting hero is removed (golden rule 7 — the hero was a deliberate decision, not an accident).
+
+---
+
 ## 2026-07-17 (v3) — CI repair: the perf gate that never exited, and the security gate that was failing open
 
 Both reported as "CI is failing". Neither was what it looked like. No feature claimed (`wip_limit`

@@ -23,6 +23,27 @@ const MODES = [
   { value: 'system', label: 'System mode', icon: Monitor },
 ] as const;
 
+/**
+ * Does this keydown mean "open the palette"? Pure, so the decision unit-tests directly rather than
+ * through a DOM dispatch — which matters more here than it looks: an exception thrown inside a
+ * listener does not propagate out of `dispatchEvent`, so a dispatching test cannot honestly assert
+ * "this did not throw".
+ *
+ * Two guards, both load-bearing (F-079):
+ * - **`key` is not guaranteed to be a string.** Keydown synthesised by browser autofill and some
+ *   password managers arrives without one. This listener is bound to `document`, so it sees those
+ *   events even though they have nothing to do with the palette — and `event.key.toLowerCase()`
+ *   threw a TypeError on every one of them.
+ * - **A `k` mid-IME-composition is text**, not a shortcut — composing users type it to write.
+ */
+export function isPaletteShortcut(
+  event: Pick<KeyboardEvent, 'key' | 'metaKey' | 'ctrlKey' | 'isComposing'>,
+): boolean {
+  if (typeof event.key !== 'string') return false;
+  if (event.isComposing) return false;
+  return event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey);
+}
+
 /** Global ⌘K / Ctrl-K command palette (UX baseline, FR-49). */
 export function CommandPalette() {
   const { open, setOpen, toggle } = useCommandMenu();
@@ -31,7 +52,7 @@ export function CommandPalette() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
+      if (isPaletteShortcut(event)) {
         event.preventDefault();
         toggle();
       }

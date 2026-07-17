@@ -6,6 +6,7 @@ import { MotionConfig } from 'framer-motion';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { FeedIngest } from '@/components/activity-feed';
 import { TesseraApiError } from '@/lib/api/client';
 import { EventsProvider } from '@/lib/api/events';
 import { SessionProvider } from '@/lib/auth/use-session';
@@ -32,6 +33,13 @@ export function Providers({ children }: { children: ReactNode }) {
       <SessionProvider>
         {/* Inside the session: the live stream opens only once someone is signed in (F-060). */}
         <EventsProvider>
+          {/*
+            The single app-wide owner of the activity ingest (F-079). It lives here, not on a page:
+            the events arrive while the user is on any route (scans are started from /sources) and
+            the bell that consumes them renders on every route. Mounted once — a second mount
+            double-counts every event.
+          */}
+          <FeedIngest />
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"

@@ -2586,6 +2586,166 @@
         "E-020"
       ],
       "notes": "FOUND BY F-063 (2026-07-17) — and it is the ROOT CAUSE of a real divergence F-063 had to fix. `apps/api/src/audit/audit-log.conformance.ts` exists and is good, but `runAuditLogConformance` is called from exactly ONE place: `apps/api/src/audit/in-memory-audit-log.test.ts`. The SQLite adapter — the one every real deployment uses (ADR-0034) — has only its own 4 hand-written tests and has never run the shared suite. The predictable result: `sqlite-audit-log.ts` had `const limit = query.limit ?? 50` with NO clamp and a hardcoded default, while the in-memory adapter did `Math.min(query.limit ?? DEFAULT_AUDIT_PAGE_SIZE, MAX_AUDIT_PAGE_SIZE)`. A port contract only the REFERENCE adapter honours is not a contract — it is a suggestion, and the divergence sat undetected because nothing could see it. Not reachable over HTTP (the route schema caps `limit` at MAX_AUDIT_PAGE_SIZE), but F-063's audit-export trail walk calls the PORT directly, below that schema, which is exactly where it lived. F-063 fixed the clamp, added the missing case to the shared suite (covering in-memory), and DUPLICATED the assertion into the SQLite adapter's own test with a comment pointing here — because wiring the suite across a package boundary is a test-architecture change, not a dashboard story (golden rule 2; the F-048/F-062 precedent of registering rather than folding). Contrast with @tessera/memory and @tessera/knowledge-graph, whose sqlite adapters DO run their conformance suites — because port and adapter live in the same package there. This is the cross-package case nobody wired up."
+    },
+    {
+      "id": "F-079",
+      "title": "Live activity is dropped on every route but Overview; the command palette crashes on keydown without a key",
+      "requirements": [
+        "FR-38",
+        "FR-49"
+      ],
+      "service": "web",
+      "package": "apps/web",
+      "release": "R4",
+      "priority": "must",
+      "status": "done",
+      "blockedBy": [],
+      "acceptance": [
+        "A scan triggered FROM /sources increments the notifications bell without navigating to Overview — the exact path that fails today",
+        "useFeedIngest() is mounted once at an app-wide client boundary whose lifetime matches the bell that consumes it; the route-local call in dashboard.tsx is deleted in the same increment (a surviving second mount = duplicate feed entries)",
+        "A keydown with `key` undefined (browser autofill / password managers / IME) does not throw; an IME composition `k` does not open the palette",
+        "Regression tests exist that FAIL on the current code: (a) events emitted while off-Overview land in the notifications store, (b) keydown without `key` does not throw",
+        "apps/web gates green (typecheck/lint/format/test/build)"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "format",
+        "test",
+        "build"
+      ],
+      "effects": [],
+      "notes": "REPORTED BY THE USER (2026-07-17), reported as intermittent, actually deterministic — and the two halves are unrelated defects that happened to be found together. (1) THE FEED. lib/api/events.ts is not at fault: EventsProvider correctly owns ONE app-wide EventSource and fans out to subscribers, and the socket IS live on /sources. The defect is one layer up: useFeedIngest() — the only code that pushes stream events into the useNotifications store — is called exclusively from components/dashboard.tsx:37, and Dashboard renders only at /. On /sources, where scanning is actually triggered, the handler set is EMPTY: frames arrive, parse, and are dropped. Navigating back mounts the ingest after the events have passed, so the store is empty and the feed says \"No activity this session\" — truthfully, from its point of view. The comment at dashboard.tsx:35 (\"Mount once — the bell reads the same entries\") had exactly the right intent and picked a mount point that only exists on one route: a GLOBAL consumer (the bell renders in app-header.tsx on every route, read-only) fed by a ROUTE-LOCAL producer. \"Sometimes\" in the report = the cases where the user happened to be on Overview while a scan completed (e.g. autoScanOnRegister). Note this is NOT the ADR-0050/F-071 tenant gap documented in routes/v1/events.ts — that one drops document.* for non-default tenants; this drops EVERYTHING for every tenant, including the tenant-correct source.scan.*. F-071 would not have fixed it. (2) THE PALETTE. command-palette.tsx:34 does event.key.toLowerCase(); KeyboardEvent.key is undefined for keydown synthesised by autofill and IME composition, and the listener is bound to document, so any such event anywhere on the page throws. Fix guards the read AND skips isComposing — an IME \"k\" is text, not a shortcut. Plan: .harness/plans/F-079-live-activity-and-palette-defects.md DONE 2026-07-17: FeedIngest mounted once in app/providers.tsx inside EventsProvider (route-local call deleted in the same change); isPaletteShortcut() extracted as a pure predicate guarding typeof key + isComposing. Gates green (state/typecheck 38-38/lint 22-22/format/test 36-36/build 19-19). Both regression tests PROVEN to fail without the fix: reverting FeedIngest gives \"expected [] to have a length of 1\" (the user empty feed exactly); reverting the guard gives the reported TypeError. feed-ingest.test.tsx also renders the REAL Providers, so deleting the mount fails the suite. No effect-link added (no shared contract changed; sole importer resolved in-change)."
+    },
+    {
+      "id": "F-080",
+      "title": "Overview v2: retire the greeting hero, gate onboarding on real state, bound the feed, chart real activity",
+      "requirements": [
+        "FR-38",
+        "FR-49",
+        "FR-62"
+      ],
+      "service": "web",
+      "package": "apps/web",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [
+        "F-079"
+      ],
+      "acceptance": [
+        "The greeting HeroBand is removed; ADR-0047 (which introduced it) is superseded by a new ADR recording why an authenticated dashboard leads with state, not a marketing band",
+        "The \"Get started\" card renders only while the workspace is genuinely empty, gated on /v1/stats sources+documents — NOT on the activity feed, which is session-only and empties on reload",
+        "Recent activity scrolls internally within a bounded height instead of growing the page",
+        "An activity-over-time chart sits below the stat cards, backed by REAL persisted history (audit + memory timestamps, server-aggregated), rendered only when there is data — no fabricated or interpolated series",
+        "apps/web gates green; design-review + contrast gates pass across 4 themes x light/dark"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "format",
+        "test",
+        "build"
+      ],
+      "effects": [],
+      "notes": "REPORTED BY THE USER (2026-07-17), items 1/2/3/5. THE SIGNAL CORRECTION IS THE LOAD-BEARING PART: the user proposed gating \"Get started\" on the Recent-activity feed being empty. That signal is wrong and would ship a worse bug than the one it fixes — the feed is session-only BY DESIGN (lib/store/notifications.ts is explicit: \"a reload starts empty\", F-065 is what persists it), so \"Get started\" would flicker back on every refresh for a workspace with sources connected, telling an established user to go connect a source. The honest signal for \"is this workspace empty\" is the same one the stat cards already read: /v1/stats (sources, documents), which is persisted and tenant-scoped. THE CHART HAS THE SAME TRAP: \"activity over time\" cannot come from the feed either (session-only, capped at FEED_LIMIT=50) — charting it would draw a line that resets to zero on reload, which is fabrication with extra steps and violates the no-fabricated-data rule the Overview already honours. Real persisted history DOES exist: the audit log (timestamped, tenant-scoped, date-filterable + exportable since F-063) and memory lineages — the same two sources timeline.ts already merges. Aggregate server-side (a client paging the whole audit log to draw a sparkline is not enterprise-grade). REMOVING THE HERO deviates from ADR-0047, which added it deliberately (\"a welcoming onboarding band, not a metric\") — golden rule 7 means that is an ADR, not a delete. The user is right on the merits: the onboarding value belongs in the conditional Get-started card (item 2), which by construction shows exactly when onboarding is what the user needs, and nowhere else."
+    },
+    {
+      "id": "F-081",
+      "title": "Source scans block the request and the event loop: make them async jobs with real progress, on a worker-thread pool",
+      "requirements": [
+        "FR-62",
+        "FR-6",
+        "FR-7",
+        "NFR-2"
+      ],
+      "service": "api",
+      "package": "@tessera/ingestion",
+      "release": "R4",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "POST /v1/sources/:id/scan returns promptly (202 + job identity) instead of awaiting the whole pipeline; the scan runs as a tracked job",
+        "Scan progress is observable — processed/total over SSE — and scanStatus reports running|idle|error with progress, so the UI can show a determinate progressbar rather than an unbounded spinner",
+        "The dashboard handles every scan state honestly: queued, running (with progress), completed, failed (with the error), and a scan already running for that source",
+        "CPU-bound ingestion work (embedding, parsing) runs on a worker_threads pool, so a scan no longer starves the event loop that serves /v1/events and every other request",
+        "The pool is bounded and configurable, degrades to in-process when unavailable, and is torn down cleanly on shutdown (no leaked workers)",
+        "Scans remain incremental + idempotent; existing ingestion tests and the queue drain semantics for the Local profile stay green",
+        "API + ingestion gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "format",
+        "test",
+        "build"
+      ],
+      "effects": [
+        "E-020"
+      ],
+      "notes": "REPORTED BY THE USER (2026-07-17), items 11/12/13/14. CONFIRMED IN CODE: packages/ingestion/src/sources/service.ts performScan() awaits coordinator.scan() AND `await queue.drain?.()` — the F-038 doc comment says this out loud (\"so a Local scan is synchronous-complete\"). It was a deliberate, defensible choice for a Local profile (the summary reflects fully-processed work); it stops being defensible once the same process serves an SSE stream and a dashboard, because the drain is CPU-bound embedding and it owns the event loop for the duration. Hence items 11 (no expected time — there is no progress DATA to show, not just no progressbar) and 12 (blocks the API) are ONE defect with two faces. SCOPE DECISION (user, 2026-07-17, via AskUserQuestion): worker_threads + async jobs ONLY. Multi-PROCESS clustering was explicitly considered and DEFERRED, because it would break more than it fixes today: the event bus (packages/config/src/profiles/local.ts:265 createEventBus) and the scan-status map (sources/service.ts:96 new Map()) are BOTH in-process, so an SSE client connected to worker A would never see events emitted by worker B — reintroducing F-079 at the infrastructure layer, where it is far harder to see. Clustering needs a shared bus + externalized scan state (Redis pub/sub, BullMQ), which is precisely F-056 scope; chain it there rather than half-doing it here. Node already serves parallel I/O concurrently — threads are the answer to the CPU-bound half, and only to that half. Honest naming matters here: this makes scans NON-BLOCKING and PARALLEL-CAPABLE within one process; it does not make the API multi-process, and nothing should claim it does."
+    },
+    {
+      "id": "F-082",
+      "title": "Dashboard surface professionalization: graph chrome, search clipping, inspector, settings, signin",
+      "requirements": [
+        "FR-49",
+        "NFR-14"
+      ],
+      "service": "web",
+      "package": "apps/web",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "Graph: MiniMap and Controls removed; the React Flow attribution is RETAINED (hideAttribution stays false) but restyled as a discreet muted credit, not a badge",
+        "Graph: the right side panel scrolls internally within the viewport — a node with many effects must not overflow and force the page to scroll",
+        "Search: result cards are no longer clipped on the left; the border renders in full (a focus-ring/overflow clip on the scroll container, not a card defect)",
+        "Inspector: rebuilt to enterprise grade under DESIGN-SYSTEM.md",
+        "Settings: section-header icons removed; every section except Appearance brought to the same bar as Appearance",
+        "Signin: the \"Context & Memory OS\" badge is removed from the left pane",
+        "apps/web gates green; design-review + contrast gates pass across 4 themes x light/dark; screenshot evidence per the frontend quality bar"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "format",
+        "test",
+        "build"
+      ],
+      "effects": [],
+      "notes": "REPORTED BY THE USER (2026-07-17), items 6/7/8/9/10/16. ATTRIBUTION DECISION (user, 2026-07-17, via AskUserQuestion): KEEP IT, restyle it. This was surfaced rather than silently flipped because proOptions={{ hideAttribution: false }} in graph-canvas-impl.tsx is deliberate, not an oversight, and the question is ethical rather than technical: @xyflow/react is MIT, so hiding the mark is LEGALLY permitted, but xyflow explicitly asks that you subscribe to React Flow Pro if you do. The repo already has a NOTICE.md attribution culture (ADR-0013/0021/0038) and the user chose to stay consistent with it — the mark stays, it just stops shouting. MiniMap/Controls are pure UI chrome and go. Item 7 (side panel overflow) is confirmed: graph-side-panel.tsx has no overflow/max-height constraint at all, so a high-degree node simply grows the document. Item 8 (\"border being cut off\" on the left) is almost certainly a clipped focus-ring/shadow on an overflow container rather than the cards themselves — diagnose before restyling; the fix is on the scroll parent. Items 9/10 are judgment work against DESIGN-SYSTEM.md, not bug fixes: the user singled out Appearance as the section that already meets the bar, so it is the in-repo reference to match, not a section to touch. Note F-064 (Dashboard: UX-baseline completion + i18n readiness) is adjacent — keep this feature to the reported surfaces and do not absorb it (golden rule 2)."
+    },
+    {
+      "id": "F-083",
+      "title": "The dashboard still ships brand mark v1: adopt mark v2 everywhere via a shared brand package",
+      "requirements": [
+        "NFR-14"
+      ],
+      "service": "web",
+      "package": "@tessera/brand",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "Mark v2 (BRAND.md §4) is the only Tessera mark rendered anywhere in the dashboard — sidebar, header, signin, favicon/metadata, and any loading or error surface",
+        "The mark lives in ONE shared package consumed by both apps/web and apps/marketing, so the two cannot silently diverge again — the divergence this feature exists to fix is the proof that duplication does not hold",
+        "The ember gradient resolves correctly against all 4 dashboard themes x light/dark (the mark carries --rose/--gold; the dashboard token set must actually define them)",
+        "Multiple marks on one page do not collide on the gradient id (the marketing implementation already anticipates this via emberId — preserve it)",
+        "web + marketing gates green; contrast gate passes; screenshot evidence per the frontend quality bar"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "format",
+        "test",
+        "build"
+      ],
+      "effects": [],
+      "notes": "REPORTED BY THE USER (2026-07-17), item 15 — and it is a genuine cross-app divergence, not a preference. apps/marketing/components/logo.tsx carries \"Tessera mark v2 (BRAND.md §4, masters in docs/design/brand/)\": a 3x3 ivory mosaic with the top-right tile lifted out and gilded in the ember gradient, plus a lowercase serif wordmark (\"never bold\"). apps/web/components/logo.tsx still carries v1: a monochrome pixel mark (\"scattered tesserae converge into a solid core\") with a sans wordmark. Same brand, two marks, and BRAND.md is authoritative — so the dashboard is simply WRONG, and has been since v2 landed on marketing. ROOT CAUSE IS DUPLICATION, and fixing only the pixels would leave it: two hand-maintained copies of a brand asset in two apps drift the moment one is updated, which is exactly what happened. Extract to a shared package instead — @tessera/mascot is the in-repo precedent for a shared brand asset consumed by both apps, so this follows a proven pattern rather than inventing one. WATCH THE TOKENS: v2 references var(--rose)/var(--gold) and font-serif, which exist in the marketing token set; the dashboard runs the F-070 4-theme system and may not define them. Verify before porting — a mark whose gradient silently resolves to transparent in 3 of 8 theme combinations is worse than the v1 it replaced. The \"Context & Memory OS\" badge removals (F-080 hero, F-082 signin) are related brand-surface cleanup but tracked there, not here."
     }
   ]
 }

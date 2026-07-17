@@ -3,7 +3,7 @@
 import { ArrowRight, BookText, Boxes, GitBranch, Network, Search, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ActivityFeed, useFeedIngest } from '@/components/activity-feed';
+import { ActivityFeed } from '@/components/activity-feed';
 import { Constellation } from '@/components/art';
 import { DashboardStats } from '@/components/stats';
 
@@ -32,10 +32,9 @@ const steps = [
 
 /** Overview — greeting hero + live stat cards + live activity feed + onboarding (no fabricated data). */
 export function Dashboard() {
-  // Pump the live stream into the shared store here, at the Overview root: the feed and the header's
-  // notifications bell both read it, so exactly one component owns the ingest.
-  useFeedIngest();
-
+  // The activity ingest is NOT owned here. It is mounted app-wide in `app/providers.tsx` (F-079):
+  // scans are started from /sources, so an Overview-root ingest never saw them. This page only
+  // renders the feed the store already holds.
   return (
     <div className="space-y-4">
       <HeroBand />

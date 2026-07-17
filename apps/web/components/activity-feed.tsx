@@ -15,7 +15,19 @@ import { useNotifications, type FeedEntry } from '@/lib/store/notifications';
  * that nothing has ever happened.
  */
 
-/** Pump the live stream into the shared store. Mount once — the bell reads the same entries. */
+/**
+ * Pump the live stream into the shared store.
+ *
+ * **Mounted exactly once, app-wide, by {@link FeedIngest} — never by a page.** The owner must
+ * outlive every route, because the events it captures are consumed globally (the header's
+ * notifications bell renders on every route) and arrive while the user is on *any* route —
+ * overwhelmingly `/sources`, since that is where scans are triggered.
+ *
+ * F-079: this hook previously ran at the Overview root, so on every other route the stream had zero
+ * subscribers and its events were parsed and dropped — the bell never counted a scan the user
+ * started from `/sources`, and returning to Overview showed an empty feed. Mounting it a second
+ * time is the mirror-image bug: each event would be pushed once per mount (duplicate entries).
+ */
 export function useFeedIngest(): void {
   const push = useNotifications((state) => state.push);
 
@@ -24,6 +36,16 @@ export function useFeedIngest(): void {
   useApiEvent('document.removed', (data) => push('document.removed', data));
   useApiEvent('source.scan.started', (data) => push('source.scan.started', data));
   useApiEvent('source.scan.completed', (data) => push('source.scan.completed', data));
+}
+
+/**
+ * The single app-wide owner of {@link useFeedIngest}. Renders nothing — it exists so the ingest can
+ * be mounted inside `EventsProvider` (whose context the hook needs) without a page owning it.
+ * Mounted in `app/providers.tsx`; nothing else may mount it.
+ */
+export function FeedIngest(): null {
+  useFeedIngest();
+  return null;
 }
 
 function text(value: unknown, fallback: string): string {

@@ -25,7 +25,7 @@ export function PackageGuidance({
   onRaiseBudget: () => void;
 }) {
   return (
-    <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
+    <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
       <CardContent className="flex flex-col items-center gap-4 p-0 py-8 text-center">
         <Mascot mood="searching" size={92} />
         <div className="space-y-1.5">

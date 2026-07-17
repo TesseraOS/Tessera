@@ -54,14 +54,16 @@ export function CompileForm({
     });
 
   return (
-    <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
-      <CardHeader className="p-0 pb-3">
-        <CardTitle>Context Package Compiler</CardTitle>
+    <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
+      <CardHeader className="space-y-1 p-0 pb-4">
+        {/* text-sm like every other card title in the dashboard — the page's hierarchy comes from
+            order and weight, not from one card shouting (F-086). */}
+        <CardTitle className="text-sm">Compile context</CardTitle>
         <CardDescription>
-          Compile a token-budget-bounded context package from files, graph edges, and memories
+          A token-budget-bounded context package from files, graph edges, and memories.
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-0 pt-4">
+      <CardContent className="p-0">
         <form onSubmit={submit} aria-label="Compile a context package" className="space-y-3">
           <div className="grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
             <div className="space-y-1.5">

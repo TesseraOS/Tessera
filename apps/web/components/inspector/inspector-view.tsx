@@ -164,12 +164,12 @@ function PackageView({
           onRaiseBudget={onRaiseBudget}
         />
       ) : (
-        <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-0 pb-3">
+        <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-0 pb-4">
             <CardTitle className="text-sm font-semibold">Package scores</CardTitle>
             <PackageExport pkg={pkg} />
           </CardHeader>
-          <CardContent className="flex flex-col gap-4 p-0 pt-4">
+          <CardContent className="flex flex-col gap-4 p-0">
             <div className="grid gap-4 sm:grid-cols-3">
               <ScoreBar label="Budget adherence" value={pkg.scores.budgetAdherence} />
               <ScoreBar label="Provenance coverage" value={pkg.scores.provenanceCoverage} />
@@ -189,13 +189,18 @@ function PackageView({
 
       {pkg.sections.map((section, idx) => (
         <Card
-          className="bg-sidebar border-none p-4 shadow-none dark:ring-0"
+          className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0"
           key={`${section.title}-${idx}`}
         >
-          <CardHeader className="p-0 pb-3">
-            <CardTitle className="text-sm font-semibold">{section.title}</CardTitle>
+          <CardHeader className="flex flex-row items-baseline justify-between gap-2 space-y-0 p-0 pb-4">
+            {/* The section title is a raw compiler string ("code", "memory") — capitalize it and
+                carry the count, so it reads as a heading rather than debug output (F-086). */}
+            <CardTitle className="text-sm font-semibold capitalize">{section.title}</CardTitle>
+            <span className="text-muted-foreground font-mono text-[10px] tabular-nums">
+              {section.fragments.length} fragment{section.fragments.length === 1 ? '' : 's'}
+            </span>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3 p-0 pt-4">
+          <CardContent className="flex flex-col gap-3 p-0">
             {section.fragments.map((fragment, fidx) => (
               <FragmentCard key={`${fragment.ref}-${fidx}`} fragment={fragment} />
             ))}
@@ -203,11 +208,11 @@ function PackageView({
         </Card>
       ))}
 
-      <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
-        <CardHeader className="p-0 pb-3">
+      <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
+        <CardHeader className="p-0 pb-4">
           <CardTitle className="text-sm font-semibold">Compilation trace</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3 p-0 pt-4">
+        <CardContent className="flex flex-col gap-3 p-0">
           {pkg.trace.stages.map((stage, index) => (
             <div key={stage.stage} className="space-y-1.5">
               {index > 0 ? <Separator className="mb-3" /> : null}
@@ -244,7 +249,7 @@ function PackageView({
 function InspectorSkeleton() {
   return (
     <div className="space-y-4" aria-hidden="true">
-      <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
+      <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
         <Skeleton className="mb-4 h-10 w-1/3" />
         <div className="grid gap-4 sm:grid-cols-3">
           <Skeleton className="h-14 w-full" />
@@ -252,7 +257,7 @@ function InspectorSkeleton() {
           <Skeleton className="h-14 w-full" />
         </div>
       </Card>
-      <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
+      <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
         <Skeleton className="h-28 w-full" />
       </Card>
     </div>

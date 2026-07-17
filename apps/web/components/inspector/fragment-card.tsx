@@ -21,7 +21,13 @@ export function FragmentCard({ fragment }: { fragment: ContextFragment }) {
   const hasReadableCitation = citation !== fragment.ref;
 
   return (
-    <div className="border-border/30 bg-background/30 space-y-2 rounded-xl border p-3">
+    /*
+     * ONE surface per fragment (F-086). This was a bordered box inside the section Card, holding an
+     * inset "Why included" box, an inset <pre>, and a bordered footer — three nesting levels, the
+     * design-review "nested cards" anti-pattern, and it read boxed-in rather than composed. Now the
+     * fragment is a single quiet surface; only the code body keeps its own ground (code earns one).
+     */
+    <div className="bg-background/30 space-y-2 rounded-lg p-3">
       <div className="flex items-start justify-between gap-3">
         <span className="text-foreground min-w-0 font-mono text-[11px] font-medium break-all">
           {citation}
@@ -50,18 +56,18 @@ export function FragmentCard({ fragment }: { fragment: ContextFragment }) {
         </div>
       </div>
 
-      <div className="bg-muted/40 text-muted-foreground rounded-lg px-2.5 py-1.5 text-[11px] leading-normal">
-        <span className="text-foreground font-semibold">Why included: </span>
+      <p className="text-muted-foreground text-[11px] leading-normal">
+        <span className="text-foreground font-medium">Why included: </span>
         {fragment.whyIncluded}
-      </div>
+      </p>
 
       {fragment.text ? (
-        <pre className="text-muted-foreground bg-background/20 scrollbar-thin max-h-40 overflow-x-auto rounded-lg p-2 font-mono text-[10px] whitespace-pre-wrap">
+        <pre className="text-muted-foreground bg-background/40 scrollbar-thin max-h-40 overflow-x-auto rounded-md p-2 font-mono text-[10px] whitespace-pre-wrap">
           {fragment.text}
         </pre>
       ) : null}
 
-      <div className="border-border/30 flex flex-wrap items-center gap-1.5 border-t pt-1.5">
+      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
         {fragment.provenance.signals.map((signal) => (
           <Badge
             key={signal}
@@ -76,18 +82,21 @@ export function FragmentCard({ fragment }: { fragment: ContextFragment }) {
             ← {fragment.provenance.expandedFrom}
           </Badge>
         ) : null}
-        <span className="text-muted-foreground ml-auto font-mono text-[10px] tabular-nums">
+        <span className="text-muted-foreground ml-auto flex items-center gap-2 font-mono text-[10px] tabular-nums">
+          {/*
+            The ref is the identity a compile/fetch actually uses — kept reachable, no longer
+            printed. It was a full 64-char sha256 wrapped across the card under every fragment:
+            hash noise repeated N times per package (F-086). The truncated form + title carries it;
+            the copy button above carries it in full inside the Markdown block.
+          */}
+          {/* No opacity dimming: muted-foreground is already contrast-tuned to AA, and the axe gate
+              caught exactly this — a further 0.6 alpha computed 3.33:1 on the fragment surface. */}
+          {hasReadableCitation ? (
+            <span title={fragment.ref}>{fragment.ref.slice(0, 10)}…</span>
+          ) : null}
           score {fragment.score.toFixed(3)}
         </span>
       </div>
-
-      {/* The ref is the identity a compile/fetch actually uses — kept, but demoted below the
-          readable citation rather than standing in for it. */}
-      {hasReadableCitation ? (
-        <p className="text-muted-foreground font-mono text-[9px] break-all opacity-70">
-          {fragment.ref}
-        </p>
-      ) : null}
     </div>
   );
 }

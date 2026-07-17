@@ -3,6 +3,61 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-17 (v12) — F-086: the inspector's problem was five mechanical defects, not a missing rebuild
+
+User item 9 — **the last of the 17**. Plan (written as the audit record):
+[`F-086-inspector-design-pass.md`](../plans/F-086-inspector-design-pass.md).
+
+### Screenshot first, then judge — and the audit changed the diagnosis
+
+The feature was registered as "Inspector v3", because F-062 had rebuilt the page three commits before
+the report and the user still called it unprofessional. The design-review skill's first step is a
+**before-screenshot audit**, and it found the gap was not structure at all — F-062's structure is
+right — but five mechanical execution defects:
+
+1. **~52px of dead space inside every card**: the Card base carries `gap-6`; every other dashboard
+   surface neutralizes it with `gap-0`; the inspector never did. One missing utility class produced
+   most of the "hollow, unfinished" read.
+2. **Nested cards** (the skill's explicit anti-pattern): fragment = bordered box in the section Card,
+   holding an inset why-included box, an inset `<pre>`, and a bordered footer — three levels.
+3. **A raw 64-char sha256 printed as a wrapping line under every fragment.**
+4. **Raw compiler strings as headings** ("code", "memory") with no counts.
+5. **One card shouting** (the form's default-size title vs `text-sm` everywhere else).
+
+Fixes were the smallest that resolve the hits: `gap-0` + the dashboard's header rhythm on all seven
+cards; fragments flattened to one quiet surface; the ref demoted to a 10-char identifier beside the
+score (full hash on `title` + in the Markdown copy); `capitalize` + counts on section headers;
+`text-sm` on the form. **Nothing added** — restraint over richness, the skill's own rule.
+
+### The axe sweep caught the polish itself
+
+The first version dimmed the truncated ref with `opacity-60` — and the inspector e2e's WCAG sweep
+failed it: **3.33:1** against the fragment surface. `muted-foreground` is already AA-tuned; a further
+alpha broke the guarantee. Removed. This is the second time this session the gate caught what the
+diff looked fine on (F-082's attribution restyle was the first).
+
+**Evidence/verification** — gates green: `state`, `typecheck` (40/40), `lint` (23/23), `format`,
+`test` (38/38 — inspector unit 18/18, F-062's honest-empty-guidance untouched), `build` (20/20).
+Inspector e2e 4/4 incl. axe. Before/after screenshots (dark) + Notebook-light spot check: the package
+content starts a full screen earlier; two sections + the trace now fit where one fragment used to.
+
+**Scope honesty, recorded:** the acceptance imagined a v3; the audit showed v3 was not needed, and a
+rebuild would have discarded F-062's correct decisions to fix a spacing utility and a nesting depth.
+If the maintainer still reads the page as unprofessional, the next step is a *directed* critique
+(which surface, against which reference), not another blind pass.
+
+### The 17-item report is complete
+
+All 17 reported items are now landed: F-079 (4, 17) · F-080 (1, 2, 3) · F-081 (11, 12, 14) ·
+F-082 (6, 7, 8, 10, 16) · F-083 (15) · F-084 (5) · F-085 (13) · F-086 (9). Multi-process remains
+the one deliberately deferred half (item 13 → F-056 prerequisite, recorded three times over).
+
+**Next step**
+- Nothing claimed. Candidates: **F-078** (wire the shared audit conformance across the package
+  boundary — twice deferred, twice grown), **F-071** (tenant-aware ingestion), or the R4 backlog.
+
+---
+
 ## 2026-07-17 (v11) — F-084: the activity chart, floored so a pruned day is never drawn as silence
 
 User item 5 (the last data feature). Plan:

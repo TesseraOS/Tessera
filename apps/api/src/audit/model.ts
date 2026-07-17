@@ -39,6 +39,16 @@ export const AUDIT_ACTIONS = [
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
+/**
+ * The actions the Overview activity chart counts as "work" (F-084) — everything except the passive
+ * `*.read` page-view actions. So `search`, `compile`, the `*.write`/`*.manage`/`*.export` mutations
+ * and `dsr.delete` count; `memory.read`/`effects.read`/`source.read`/`audit.read`/`billing.read`/
+ * `token.read`/`retention.read` do not. A mechanical, defensible rule — "activity, not page views".
+ */
+export const ACTIVITY_ACTIONS = AUDIT_ACTIONS.filter(
+  (action) => !action.endsWith('.read'),
+) as readonly AuditAction[];
+
 /** Whether an audited action succeeded or was denied (authz/authn failure). */
 export type AuditOutcome = 'success' | 'denied';
 
@@ -100,6 +110,42 @@ export interface AuditPage {
 export interface RetentionPolicy {
   readonly maxAgeMs?: number;
   readonly maxEntries?: number;
+}
+
+/**
+ * Query for {@link import('./port.js').AuditLog.activity} — daily activity aggregation (F-084).
+ * The window is inclusive on both ends. `actions` restricts which actions count; omitted ⇒
+ * {@link ACTIVITY_ACTIONS}.
+ */
+export interface ActivityQuery {
+  /** Inclusive lower bound (ISO). */
+  readonly since: string;
+  /** Inclusive upper bound (ISO). */
+  readonly until: string;
+  /** Actions to count; defaults to {@link ACTIVITY_ACTIONS}. */
+  readonly actions?: readonly AuditAction[];
+}
+
+/** One UTC day's activity count. */
+export interface ActivityBucket {
+  /** The UTC calendar day, `YYYY-MM-DD`. */
+  readonly date: string;
+  readonly count: number;
+}
+
+/**
+ * Result of {@link import('./port.js').AuditLog.activity}. `buckets` holds only days that had ≥1
+ * matching event; the caller zero-fills the calendar. `earliest` is the oldest event in the tenant's
+ * **whole** trail (any action), or `null` if the trail is empty.
+ *
+ * `earliest` is the load-bearing field (ADR-0053 clause 3): it is the retention floor — how far back
+ * the trail can prove anything — so a chart never draws a zero for a day whose records were pruned.
+ * It is the min over *all* actions, not the filtered set, because pruning (`maxAgeMs`/`maxEntries`)
+ * does not discriminate by action, so the floor does not either.
+ */
+export interface ActivityResult {
+  readonly buckets: readonly ActivityBucket[];
+  readonly earliest: string | null;
 }
 
 export const DEFAULT_AUDIT_PAGE_SIZE = 50;

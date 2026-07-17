@@ -1,6 +1,7 @@
 import { DEFAULT_TENANT_ID, newId, type TenantId } from '@tessera/core';
-import { DEFAULT_AUDIT_PAGE_SIZE, MAX_AUDIT_PAGE_SIZE } from '@tessera/api';
+import { ACTIVITY_ACTIONS, DEFAULT_AUDIT_PAGE_SIZE, MAX_AUDIT_PAGE_SIZE } from '@tessera/api';
 import type {
+  ActivityResult,
   AuditAction,
   AuditEvent,
   AuditLog,
@@ -9,7 +10,7 @@ import type {
   AuditPage,
   AuditQuery,
 } from '@tessera/api';
-import { and, desc, eq, gte, lte, lt, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lte, lt, sql, type SQL } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
@@ -124,6 +125,43 @@ export function createSqliteAuditLog(db: BetterSQLite3Database): AuditLog {
           hasMore && lastRow !== undefined
             ? { events: pageRows.map(toEvent), nextCursor: String(lastRow.seq) }
             : { events: pageRows.map(toEvent) };
+        return Promise.resolve(result);
+      },
+
+      activity(query) {
+        const actions = query.actions ?? ACTIVITY_ACTIONS;
+        // GROUP BY the UTC day (the first 10 chars of the ISO `at`), counting only "work" actions in
+        // the window — AT THE STORE. `IN (…)` is parameterised via drizzle's `inArray`.
+        const rows = db
+          .select({
+            date: sql<string>`substr(${auditEvents.at}, 1, 10)`,
+            count: sql<number>`count(*)`,
+          })
+          .from(auditEvents)
+          .where(
+            and(
+              inTenant,
+              inArray(auditEvents.action, actions as AuditAction[]),
+              gte(auditEvents.at, query.since),
+              lte(auditEvents.at, query.until),
+            ),
+          )
+          .groupBy(sql`substr(${auditEvents.at}, 1, 10)`)
+          .orderBy(sql`substr(${auditEvents.at}, 1, 10)`)
+          .all();
+
+        // The retention floor — MIN(at) over the WHOLE tenant trail (any action), so a chart never
+        // draws a pruned day as silence (ADR-0053 clause 3). `null` for an empty trail.
+        const [floor] = db
+          .select({ earliest: sql<string | null>`min(${auditEvents.at})` })
+          .from(auditEvents)
+          .where(inTenant)
+          .all();
+
+        const result: ActivityResult = {
+          buckets: rows.map((row) => ({ date: row.date, count: Number(row.count) })),
+          earliest: floor?.earliest ?? null,
+        };
         return Promise.resolve(result);
       },
 

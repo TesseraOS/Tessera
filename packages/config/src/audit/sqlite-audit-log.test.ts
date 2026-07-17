@@ -115,4 +115,58 @@ describe('createSqliteAuditLog', () => {
     expect(events[0]?.actor.principalId).toBe('admin');
     await second.close();
   });
+
+  // Activity aggregation (F-084). These duplicate cases from the shared `audit-log.conformance` suite
+  // for the SAME reason the clamp test above does: this adapter does not run that suite (the F-078
+  // gap). The GROUP BY / MIN(at) here is real SQL, so it MUST be verified against the shipping
+  // adapter, not only the in-memory reference — the divergence F-078 exists to prevent.
+  it('aggregates activity by UTC day, at the store, excluding *.read', async () => {
+    const store = createSqliteStore({ path: ':memory:' });
+    const audit = createSqliteAuditLog(store.db).forTenant('acme');
+
+    await audit.record(event({ action: 'search', at: '2026-03-01T08:00:00.000Z' }));
+    await audit.record(event({ action: 'compile', at: '2026-03-01T22:00:00.000Z' }));
+    await audit.record(event({ action: 'memory.read', at: '2026-03-01T23:00:00.000Z' })); // read: ignored
+    await audit.record(event({ action: 'memory.write', at: '2026-03-04T09:00:00.000Z' }));
+
+    const { buckets } = await audit.activity({
+      since: '2026-03-01T00:00:00.000Z',
+      until: '2026-03-31T23:59:59.999Z',
+    });
+    expect(buckets).toEqual([
+      { date: '2026-03-01', count: 2 },
+      { date: '2026-03-04', count: 1 },
+    ]);
+  });
+
+  it('reports the retention floor as MIN(at) over all actions, per tenant', async () => {
+    const store = createSqliteStore({ path: ':memory:' });
+    const base = createSqliteAuditLog(store.db);
+    const acme = base.forTenant('acme');
+
+    // Oldest for acme is a READ — the floor must still see it.
+    await acme.record(event({ action: 'source.read', at: '2026-01-02T00:00:00.000Z' }));
+    await acme.record(event({ action: 'compile', at: '2026-03-10T00:00:00.000Z' }));
+    // Another tenant's older event must NOT lower acme's floor.
+    await base
+      .forTenant('globex')
+      .record(event({ action: 'compile', at: '2025-06-01T00:00:00.000Z' }));
+
+    const { earliest } = await acme.activity({
+      since: '2026-03-01T00:00:00.000Z',
+      until: '2026-03-31T23:59:59.999Z',
+    });
+    expect(earliest).toBe('2026-01-02T00:00:00.000Z');
+  });
+
+  it('returns an empty result for a tenant with no trail', async () => {
+    const store = createSqliteStore({ path: ':memory:' });
+    const audit = createSqliteAuditLog(store.db).forTenant('empty');
+    expect(
+      await audit.activity({
+        since: '2026-03-01T00:00:00.000Z',
+        until: '2026-03-31T23:59:59.999Z',
+      }),
+    ).toEqual({ buckets: [], earliest: null });
+  });
 });

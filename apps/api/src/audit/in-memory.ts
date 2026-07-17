@@ -1,8 +1,10 @@
 import { DEFAULT_TENANT_ID, type TenantId } from '@tessera/core';
 import {
+  ACTIVITY_ACTIONS,
   DEFAULT_AUDIT_PAGE_SIZE,
   MAX_AUDIT_PAGE_SIZE,
   toAuditEvent,
+  type ActivityResult,
   type AuditEvent,
   type AuditPage,
   type AuditQuery,
@@ -68,6 +70,29 @@ export function createInMemoryAuditLog(): AuditLog {
           hasMore && last !== undefined
             ? { events: page.map((entry) => entry.event), nextCursor: String(last.seq) }
             : { events: page.map((entry) => entry.event) };
+        return Promise.resolve(result);
+      },
+
+      activity(query) {
+        const actions = new Set(query.actions ?? ACTIVITY_ACTIONS);
+        const counts = new Map<string, number>();
+        let earliest: string | null = null;
+
+        for (const { event } of entries) {
+          // `earliest` is the retention floor: the oldest event of ANY action (pruning does not
+          // discriminate by action), so a chart never claims to know a day that was pruned away.
+          if (earliest === null || event.at < earliest) earliest = event.at;
+
+          if (!actions.has(event.action)) continue;
+          if (event.at < query.since || event.at > query.until) continue;
+          const day = event.at.slice(0, 10); // ISO 'YYYY-MM-DDT…' → the UTC calendar day
+          counts.set(day, (counts.get(day) ?? 0) + 1);
+        }
+
+        const buckets = [...counts.entries()]
+          .map(([date, count]) => ({ date, count }))
+          .sort((a, b) => (a.date < b.date ? -1 : 1));
+        const result: ActivityResult = { buckets, earliest };
         return Promise.resolve(result);
       },
 

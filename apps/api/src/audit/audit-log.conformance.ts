@@ -169,5 +169,97 @@ export function runAuditLogConformance(name: string, makeLog: AuditLogFactory): 
         await cleanup?.();
       }
     });
+
+    // --- activity aggregation (F-084) ---------------------------------------------------------
+    // These run against BOTH adapters, so the SQLite GROUP BY and the in-memory JS are proven to
+    // agree — the F-078 lesson: a port contract only the reference adapter honours is not a contract.
+
+    it('groups matching events by UTC day and counts them', async () => {
+      const { log, cleanup } = await makeLog();
+      try {
+        await log.record(event({ action: 'search', at: '2026-03-01T08:00:00.000Z' }));
+        await log.record(event({ action: 'compile', at: '2026-03-01T20:00:00.000Z' }));
+        await log.record(event({ action: 'memory.write', at: '2026-03-03T10:00:00.000Z' }));
+
+        const { buckets } = await log.activity({
+          since: '2026-03-01T00:00:00.000Z',
+          until: '2026-03-31T23:59:59.999Z',
+        });
+        expect(buckets).toEqual([
+          { date: '2026-03-01', count: 2 },
+          { date: '2026-03-03', count: 1 },
+        ]);
+      } finally {
+        await cleanup?.();
+      }
+    });
+
+    it('excludes *.read actions and honours the window', async () => {
+      const { log, cleanup } = await makeLog();
+      try {
+        await log.record(event({ action: 'memory.read', at: '2026-03-02T10:00:00.000Z' }));
+        await log.record(event({ action: 'source.read', at: '2026-03-02T11:00:00.000Z' }));
+        await log.record(event({ action: 'source.manage', at: '2026-03-02T12:00:00.000Z' }));
+        // Outside the window — must not count.
+        await log.record(event({ action: 'compile', at: '2026-02-01T10:00:00.000Z' }));
+
+        const { buckets } = await log.activity({
+          since: '2026-03-01T00:00:00.000Z',
+          until: '2026-03-31T23:59:59.999Z',
+        });
+        // Only the one write survived reads + window.
+        expect(buckets).toEqual([{ date: '2026-03-02', count: 1 }]);
+      } finally {
+        await cleanup?.();
+      }
+    });
+
+    it('reports the oldest event as the retention floor — over ALL actions, not just work', async () => {
+      const { log, cleanup } = await makeLog();
+      try {
+        // The oldest event is a READ. `earliest` must still see it: pruning does not discriminate by
+        // action, so the floor does not either (ADR-0053 clause 3).
+        await log.record(event({ action: 'memory.read', at: '2026-01-05T00:00:00.000Z' }));
+        await log.record(event({ action: 'compile', at: '2026-03-10T00:00:00.000Z' }));
+
+        const { earliest } = await log.activity({
+          since: '2026-03-01T00:00:00.000Z',
+          until: '2026-03-31T23:59:59.999Z',
+        });
+        expect(earliest).toBe('2026-01-05T00:00:00.000Z');
+      } finally {
+        await cleanup?.();
+      }
+    });
+
+    it('returns no buckets and a null floor for an empty trail', async () => {
+      const { log, cleanup } = await makeLog();
+      try {
+        const result = await log.activity({
+          since: '2026-03-01T00:00:00.000Z',
+          until: '2026-03-31T23:59:59.999Z',
+        });
+        expect(result).toEqual({ buckets: [], earliest: null });
+      } finally {
+        await cleanup?.();
+      }
+    });
+
+    it('respects an explicit actions filter', async () => {
+      const { log, cleanup } = await makeLog();
+      try {
+        await log.record(event({ action: 'search', at: '2026-03-01T10:00:00.000Z' }));
+        await log.record(event({ action: 'compile', at: '2026-03-01T11:00:00.000Z' }));
+
+        const { buckets } = await log.activity({
+          since: '2026-03-01T00:00:00.000Z',
+          until: '2026-03-31T23:59:59.999Z',
+          actions: ['compile'],
+        });
+        expect(buckets).toEqual([{ date: '2026-03-01', count: 1 }]);
+      } finally {
+        await cleanup?.();
+      }
+    });
   });
 }

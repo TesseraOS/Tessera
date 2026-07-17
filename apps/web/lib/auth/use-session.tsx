@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, type ReactN
 import { usePathname, useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, TesseraApiError } from '@/lib/api/client';
+import { useNotifications } from '@/lib/store/notifications';
+import { useRecentCompiles } from '@/lib/store/recent-compiles';
 import { SESSION_ENDPOINT, isLocalIdentity, type Identity } from './session';
 
 /** The sign-in route (rendered without the dashboard chrome). */
@@ -95,6 +97,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await fetch(SESSION_ENDPOINT, { method: 'DELETE' });
+    // Drop the in-memory session stores. TanStack Query's cache is keyed and invalidated above, but
+    // these Zustand stores are not part of it and would otherwise survive into the next sign-in on a
+    // shared machine — carrying the previous user's activity feed and their compile task text
+    // ("audit the auth bypass in payments"), which is user-authored content. `notifications.clear()`
+    // has documented this as its purpose since F-060 without anyone calling it.
+    useNotifications.getState().clear();
+    useRecentCompiles.getState().clear();
     await queryClient.invalidateQueries({ queryKey: IDENTITY_QUERY_KEY });
   }, [queryClient]);
 

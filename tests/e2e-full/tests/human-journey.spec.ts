@@ -60,6 +60,15 @@ test('sign in → sources → search → inspector → capture memory → audit,
   await expect(page.getByText('Compilation trace')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/append-only/i).first()).toBeVisible();
 
+  // Fragments are CITED BY PATH (F-062), not by the 64-char content hash the Inspector rendered
+  // until now. This is the only place that claim can be proven: the citation comes from corpus
+  // metadata that round-trips through a real scan of a real repo, not from a fixture.
+  await expect(page.getByText(/ledger\.ts/).first()).toBeVisible();
+
+  // Scores render because this package HAS fragments. An empty one shows guidance instead — the
+  // "Budget adherence 100% · 0 fragments" state the 2026-07-04 review found.
+  await expect(page.getByText('Package scores')).toBeVisible();
+
   // ---- 5. Capture a memory through the UI ----------------------------------------------------
   const memoryTitle = `Quernstone ledger is append-only (e2e ${Date.now()})`;
   await page.goto('/memory');

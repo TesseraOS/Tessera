@@ -2,7 +2,7 @@
   "$schemaRef": "./schemas/feature_list.schema.json",
   "version": 1,
   "project": "tessera",
-  "updated": "2026-07-16",
+  "updated": "2026-07-17",
   "policy": {
     "wip_limit": 1,
     "ordering": "by release, then id; respect blockedBy"
@@ -2048,7 +2048,7 @@
       "package": "@tessera/web",
       "release": "R3",
       "priority": "should",
-      "status": "backlog",
+      "status": "done",
       "blockedBy": [],
       "acceptance": [
         "An empty package renders a GUIDANCE state instead of perfect scores (the 2026-07-04 live review compiled against an empty corpus and got 'Budget adherence 100% · Provenance coverage 100% · 0 fragments' — misleading): explain that retrieval matched nothing, link to Sources; package scores render only when fragmentCount > 0",
@@ -2063,10 +2063,11 @@
         "e2e"
       ],
       "effects": [
+        "E-004",
         "E-003",
-        "E-013",
-        "E-004"
-      ]
+        "E-018"
+      ],
+      "notes": "Done 2026-07-17. THE HEADLINE IS WHAT WAS *NOT* TOUCHED: no server code at all — not the compiler, api, mcp, sdk, billing, config or retrieval. Every acceptance clause was satisfiable from data already on the wire, proven MECHANICALLY not asserted: `pnpm --filter @tessera/sdk generate` produces NO DIFF, and the perf gate's compile tokens did not move by one byte (3373/3411, envelope x1.61/x1.63). The feature's DECLARED effects (E-003, E-013) were a reasonable prior the tree disproved; recorded as a negative result on E-003. (1) HONEST EMPTY GUIDANCE: computePackageScores([], budget, 0) returns budgetAdherence 1 / provenanceCoverage 1 / redundancy 0 — every one a defensible VACUOUS TRUTH (the package did not exceed budget; 100% of zero fragments carry provenance; 0 of 0 pairs duplicate). The lie was never the arithmetic, it was rendering a vacuous truth as an ACHIEVEMENT: three full bg-primary bars with aria-valuenow=100. So the fix is a RENDER RULE in apps/web (the acceptance says 'render', not 'compute') and the compiler is untouched — making PackageScores nullable would ripple through quality.ts/explain/schemas/SDK for zero user gain (agents were never misled: they get fragmentCount:0 in the same object and can see the denominator; the human was misled because the UI drew bars). Tests assert role='progressbar' has COUNT 0, not the '100%' string — aria-valuenow was half the lie, announced to screen readers. The diagnosis is a PURE function over the trace's integer counts (first stage with outputCount 0 — a fact, not an inference), sharpened by useStats as PROGRESSIVE ENHANCEMENT only (a token without stats:read 403s and the copy degrades, never blocks). It never claims what the data cannot prove: the trace cannot tell empty-corpus from no-match so the stats do; an unrecognised stage degrades to a generic message (stage names are string literals on the wire, not an enum — a soft contract); it never blames a filter the user did not set. Copy says 'indexed for your sources' (what the stat MEANS, F-060 SL-6), never 'your corpus contains'. (2) EXPORT IS CLIENT-SIDE, and this is where the F-060/F-061 parity pattern does NOT apply — worth writing down since two features in a row went the other way: those moved logic server-side because they computed FACTS (workspace counts, a result label) where two implementations can disagree about TRUTH. Markdown is not a fact; it is a re-formatting of bytes the caller already holds. An agent already has the whole ContextPackage from compile_context, so Markdown would be a lossier, fatter encoding of what it has. buildExplanation is NOT reusable (wrong package, and it strips the very fragment text an export exists to carry). Markdown = what you paste into an agent; JSON = the complete record (trace included). FENCE INJECTION is this export's XSS: fragment text is ingested repo content and `markdown` is a first-class DocumentKind, so bodies WILL contain triple-backticks — the fence outgrows the longest run inside (CommonMark), structurally correct rather than hopefully correct, with a test. Citations are provenance.source.path, not the ref: F-073's disease SURVIVED in the Inspector after /search was cured, and the cure needed NO contract change (the compiler already forwards corpus metadata). (3) CONTROLS: kind filters were already on the wire and simply never surfaced; CONTEXT_FRAGMENT_KINDS is a documented mirror in types.ts (there is NO catalog to derive from — DocumentKind is a bare type, 'memory' is a literal in a decorator, and RETRIEVER_KINDS is a different axis: signals, not kinds; tightening the wire to an enum would turn today's 200 into a 400 = breaking, NFR-11). The clamp notice is DERIVED (requested > pkg.budget), scoped to THIS compile — claiming plan-wide enforcement would be FALSE while MCP bypasses the clamp entirely (F-077, registered not folded), and a non-admin cannot read their plan name anyway (billing/subscription needs admin:manage). Presets AUGMENT the labelled numeric budget input; e2e-full fills it against a live deployment (golden rule 6). Recent compiles are session-local Zustand, remembered on SUCCESS (a failed compile is not history) and re-run by prefill+submit, never on mount. BONUS: signOut now clears both session stores — notifications.ts has documented clear() as 'used on sign-out' since F-060 and NOTHING ever called it (grep: only tests); adding a second store holding user-authored task text would have doubled that gap. Gates: verify-state ok - typecheck 38 - lint 22 - format - test 36 (web 330: +18 export, +12 diagnose, +6 store, +18 inspector, +1 signout) - build 19 - e2e 20 (web 45 incl. axe AA on the GUIDANCE state — F-061 shipped a critical axe violation only an empty state could reveal, and this feature's whole subject is an empty state) - bench PASSES with compile tokens UNCHANGED - web-perf both budgets met (web /signin 256.2 KB) - e2e-full 2/2 (the human journey now asserts a real PATH citation against the scanned fixture). SCOPE LIMITS: (SL-1) the vacuous 1.0 scores stay on the wire, so computeQuality still hands an empty package a high CQS — a real if latent wart, flagged not fixed (a compiler concern, E-013; no user sees it). (SL-2) CONTEXT_FRAGMENT_KINDS can drift from the producing vocabulary; bounded by design (the wire stays open, so a stale value matches nothing rather than 400ing). (SL-3) the Markdown omits the trace by design — JSON carries it. Also fixed in passing: '1 fragments'."
     },
     {
       "id": "F-063",
@@ -2524,6 +2525,37 @@
         "E-003"
       ],
       "notes": "FOUND BY F-061 (2026-07-16), and MADE VISIBLE by it. The same file has two refs: the document ref `documentIdFor(sourceId, path) = sha256(sourceId:path)` (packages/ingestion/src/domain.ts) used by keyword/semantic/temporal, and the graph node id `nodeIdFor(kind, key) = sha256(kind:key)` (packages/knowledge-graph/src/domain.ts) used by graph/symbolic. `fuse()` keys on `ref` and therefore CANNOT merge them, so one file can occupy two rows of one result set with its signals split across them — which also understates the fused score of a file that genuinely matched on several signals. Before F-061 this was invisible (one row rendered a hash, the other a node label, so they looked like different things); labelling both makes the duplicate obvious. F-061 deliberately SURFACED the wart rather than papering over it: deduping post-fusion would corrupt ranks/scores, and unifying the ref spaces is a retrieval-architecture change. Needs an ADR (which space wins, or a reconciliation layer, and what it does to the fusion contract)."
+    },
+    {
+      "id": "F-077",
+      "title": "MCP compile bypasses the plan entitlement clamp — an agent can request any token budget",
+      "requirements": [
+        "NFR-12",
+        "FR-35"
+      ],
+      "service": "api",
+      "package": "@tessera/mcp",
+      "release": "R4",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "The MCP `compile_context` and `explain` tools enforce the caller's plan cap, so an over-cap budget cannot produce an over-cap package: an mcp e2e asks for a budget above the free cap and asserts the returned package is bounded by the cap (today it is granted in full)",
+        "The silent-vs-explicit question is decided in an ADR and applied consistently: REST clamps SILENTLY today, so either MCP clamps silently too (behaviour parity) or BOTH surfaces tell the caller their budget was reduced. An agent quietly downgraded cannot tell a clamp from a thin corpus — argue it, do not default to it",
+        "One implementation, not two: the clamp is applied through the same `clampBudgetToPlan` + `effectiveEntitlements` path REST uses (two copies of an entitlement rule WILL drift — the F-060/F-061 lesson), and neither surface can be extended without the other",
+        "Workspace gates green incl. e2e and e2e-full"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-013"
+      ],
+      "notes": "FOUND BY F-062 (2026-07-17), verified against the tree, NOT folded in — deliberately, and the reasoning is the point. apps/api/src/routes/v1/compile.ts:41 clamps via clampBudgetToPlan(entitlements, budget) over `services.billing ?? createLocalBilling()`, so free-tier caps (packages/billing/src/domain.ts: free 8000 / pro 32000 / enterprise 128000) apply by default. apps/mcp/src/server.ts has ZERO references to billing or clampBudget, and toCompileRequest (:123-138) forwards `budget: args.budget` verbatim to BOTH compile_context (:206) and explain (:357). So NFR-12's per-plan cap is enforced on the surface humans use and unenforced on the surface AGENTS use — which is the population it exists to meter. Structurally this is the F-060 defect again (one surface hardened, its twin walked past) and the F-061 lesson (one rule, two implementations, inevitable drift). WHY NOT FOLDED (unlike F-060's SSE leak): F-062 does not AMPLIFY it — F-060 was about to pipe leaked data onto every page, whereas F-062 renders a claim about the REST surface that is true of the surface it describes. Golden rule 2 + the F-048 precedent (which registered F-071/072/073 rather than fixing them) therefore apply. Consequence F-062 respects: its clamp copy is scoped to the OBSERVED compile ('Capped to 8,000 — you requested 20,000'), never a claim of system-wide enforcement, which would be false while this stands. NEEDS AN ADR: silent clamp vs explicit rejection — an agent that is quietly downgraded cannot distinguish a clamp from a thin corpus, and REST has the same problem; decide it once, for both."
     }
   ]
 }

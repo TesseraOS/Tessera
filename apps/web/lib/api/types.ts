@@ -142,6 +142,30 @@ export interface ContextPackage {
   scores: PackageScores;
 }
 
+/**
+ * The fragment kinds `CompileBody.filters.kinds` can usefully carry (F-062).
+ *
+ * A **documented mirror**, following `MEMORY_KINDS` / `NODE_KINDS` / `REGISTERABLE_SOURCE_KINDS`
+ * below — because there is no catalog to derive from. The wire types `kinds` as an open
+ * `string[]` (api + mcp + the compiler all agree), the compiler compares each value against the raw
+ * corpus `fragment.kind`, and the producing vocabulary has no exported runtime constant:
+ * `DocumentKind` is a bare type in `@tessera/ingestion`, and `'memory'` is a string literal in the
+ * memory-indexing decorator. Tightening the wire to an enum would turn today's 200 into a 400 —
+ * breaking, against NFR-11, and a feature of its own.
+ *
+ * **Not to be confused with the search kinds** (`file`/`memory`/`symbol`): those are a *derived
+ * display* taxonomy, and putting `file` in here matches nothing.
+ *
+ * `'binary'` is deliberately excluded: ingestion never indexes binaries, so filtering to it always
+ * yields an empty package.
+ *
+ * Drift is bounded by design — the wire stays open, so a stale value produces a filter that matches
+ * nothing (a UI bug), never a rejected request.
+ */
+export const CONTEXT_FRAGMENT_KINDS = ['code', 'markdown', 'text', 'memory'] as const;
+
+export type ContextFragmentKind = (typeof CONTEXT_FRAGMENT_KINDS)[number];
+
 // --- memory (/v1/memory*) — mirrors @tessera/memory MEMORY_KINDS + the memory schemas (F-007) ---
 export type MemoryKind =
   'decision' | 'lesson' | 'incident' | 'failure' | 'architecture' | 'glossary' | 'task';

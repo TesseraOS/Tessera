@@ -148,6 +148,10 @@
         {
           "kind": "module",
           "ref": "POST /v1/search + the MCP `search` tool gain an additive optional `include { kind?, node?, snippet? }` request and optional `label`/`kind`/`snippet`/`node` on each hit (F-061/F-073) => regenerated OpenAPI + @tessera/sdk (committed). NO tool added, so the gateway/mcp tool-set assertions are untouched. THE CONTRACT LINE: `label` is ALWAYS on (a 64-char hash is not an answer at any price); kind/node/snippet are DEPTH the caller asks for, because a ranked answer is billed to every agent on every call (NFR-4). Each extra carries its MEASURED token cost in the OpenAPI/MCP description so a caller chooses knowingly: kind +35, node +135, snippet ~+200 on a 10-result answer. Highlighting rides OFFSETS, never HTML — the excerpt is ingested repo content (attacker-influenceable), so the client slices the plain string and renders its own <mark>: the XSS is structurally impossible, not sanitized."
+        },
+        {
+          "kind": "contract",
+          "ref": "F-062 declared E-003 + E-013 and extended NEITHER — recorded because the tree disproved a reasonable prior, and the negative is the useful fact. Every clause was satisfiable from data ALREADY on the wire: (1) the entitlement clamp is SILENT (clampBudgetToPlan never signals), but pkg.budget IS the effective clamped budget and the client knows what it sent, so `requested > pkg.budget` <=> clamped — derivable with NO additive field, no SDK regen, no envelope-ratio cost. (2) filters.kinds already exists on CompileBody + the MCP compileShape; it was simply never surfaced in the UI. (3) fragment.provenance.source already carries the real path (metadata round-trips through the blob corpus). (4) EXPORT IS CLIENT-SIDE, and this is where the F-060/F-061 parity pattern does NOT apply: those moved logic server-side because they computed FACTS (workspace counts, a result label) where two implementations can disagree about TRUTH. Markdown is not a fact — it is a re-formatting of bytes the caller already holds, so there is nothing to disagree about; an agent already has the whole ContextPackage from compile_context and Markdown would be a lossier, fatter encoding of what it has. PROVEN MECHANICALLY: `pnpm --filter @tessera/sdk generate` produces NO DIFF, and the perf gate's compile tokens did not move by one byte (3373/3411, envelope x1.61/x1.63). No MCP tool added => gateway.test.ts's 14-tool assertion untouched."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -221,6 +225,10 @@
         {
           "kind": "module",
           "ref": "Search depth surfaces (F-061): result cards with excerpt + <mark> highlight, kind filters with counts, a virtualized keyboard-navigable listbox, and the detail Sheet (expanded provenance + inline effects). Tokens-only, verified by screenshot across 4 themes x light/dark. TWO REAL BUGS CAUGHT BY SCREENSHOT/AXE THAT NO UNIT TEST WOULD HAVE: (1) the Card base sets `dark:ring-0`, which BEATS an unprefixed `ring-2` — the active-row cue was invisible in all four dark themes while correct in light; `dark:ring-2` is load-bearing, not redundant. (2) `aria-controls` pointed at the results listbox, which does not exist until there are results — a CRITICAL dangling-ARIA violation on the empty search page, found by the auth e2e (which lands on /search with no query) and now pinned by an empty-state axe test. Same rule as aria-activedescendant: an ARIA reference must point at a live element."
+        },
+        {
+          "kind": "module",
+          "ref": "Inspector v2 (F-062): the empty-package GUIDANCE state, agent-ready export, kind filters + budget presets, the clamp notice, and a session recent-compiles list — tokens-only across 4 themes x light/dark, screenshot-verified. THE FIX IS A RENDER RULE, NOT ARITHMETIC: computePackageScores([], budget, 0) returns budgetAdherence 1 / provenanceCoverage 1 / redundancy 0, and every one is a defensible VACUOUS TRUTH (the package did not exceed budget; 100% of zero fragments carry provenance). The lie was rendering that as three full bg-primary bars with aria-valuenow=100. So the scores are gated on fragmentCount > 0 in apps/web and the compiler is untouched — making PackageScores nullable would ripple through quality.ts/explain/the schemas/the SDK for zero user gain. Tests assert on role='progressbar' having COUNT 0, not on the '100%' string: aria-valuenow was half the lie, announced to screen readers. Also: fragment citations are now provenance.source.path (F-073's disease survived in the Inspector after /search was cured — cure needed no contract change, the compiler already forwards corpus metadata)."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -771,6 +779,10 @@
         {
           "kind": "module",
           "ref": "stats:read added to PERMISSIONS + READ_PERMISSIONS (F-060) → ROLE_PERMISSIONS, GET /v1/rbac, and the MCP gateway TOOL_PERMISSIONS all derive automatically. Its own permission rather than reusing an existing read: the summary aggregates across documents/memory/graph/sources, so a token scoped to only memory:read must not learn the other counts through it (scopes are a least-privilege upper bound). Web e2e permission fixtures (LOCAL_IDENTITY/LOCAL_RBAC) hardcode the catalog and MUST be updated with it or the Overview 403s"
+        },
+        {
+          "kind": "module",
+          "ref": "signOut now clears the in-memory session stores (F-062, apps/web/lib/auth/use-session.tsx). TanStack Query's cache is keyed and invalidated on sign-out, but the Zustand stores are NOT part of it — they survived into the next sign-in on a shared machine. notifications.ts has documented `clear()` as 'used on sign-out' since F-060 and NOTHING EVER CALLED IT (verified by grep: only tests). F-062 adds a second session store holding user-authored compile task text ('audit the auth bypass in payments'), so shipping it unclearing would have doubled a gap whose intent was already written down. ~3 lines, additive, pinned by a test that signs out and asserts both stores empty."
         }
       ],
       "kind": "EFFECT_LINK",

@@ -1,20 +1,28 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CompilerAssembly } from '@/components/art';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { ScoreBar } from '@/components/provenance/score-bar';
-import { useCompile } from '@/lib/api/hooks';
-import type { ContextPackage } from '@/lib/api/types';
-import { Terminal } from 'lucide-react';
+import {
+  ClampNotice,
+  CompileForm,
+  type CompileFormValues,
+} from '@/components/inspector/compile-form';
+import { FragmentCard } from '@/components/inspector/fragment-card';
+import { PackageExport } from '@/components/inspector/package-export';
+import { PackageGuidance } from '@/components/inspector/package-guidance';
+import { RecentCompiles } from '@/components/inspector/recent-compiles';
+import { useCompile, useStats } from '@/lib/api/hooks';
+import { diagnoseEmptyPackage } from '@/lib/inspector/diagnose';
+import { useRecentCompiles } from '@/lib/store/recent-compiles';
+import type { WorkspaceStats } from '@/lib/api/client';
+import type { ContextFragmentKind, ContextPackage } from '@/lib/api/types';
 
 const DEFAULT_BUDGET = 2000;
 
@@ -24,70 +32,67 @@ export function InspectorView() {
   // does not auto-compile: a compile spends budget and is entitlement-clamped, so firing one from a
   // navigation would surprise the user and burn quota they never chose to spend.
   const searchParams = useSearchParams();
-  const [task, setTask] = useState(() => searchParams.get('task') ?? '');
-  const [budget, setBudget] = useState(DEFAULT_BUDGET);
-  const compile = useCompile();
+  const [values, setValues] = useState<CompileFormValues>(() => ({
+    task: searchParams.get('task') ?? '',
+    budget: DEFAULT_BUDGET,
+    kinds: [],
+  }));
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const trimmed = task.trim();
-    if (trimmed.length === 0 || budget < 1) return;
-    compile.mutate({ task: trimmed, budget });
-  };
+  const compile = useCompile();
+  const remember = useRecentCompiles((state) => state.remember);
+
+  // Progressive enhancement for the empty-package guidance ONLY — never gates the Inspector. A token
+  // without `stats:read` 403s here and the diagnosis falls back to what the trace alone proves.
+  const { data: stats } = useStats();
+
+  const run = useCallback(
+    (next: CompileFormValues) => {
+      const task = next.task.trim();
+      if (task.length === 0 || next.budget < 1) return;
+      compile.mutate({
+        task,
+        budget: next.budget,
+        ...(next.kinds.length > 0 ? { filters: { kinds: next.kinds } } : {}),
+      });
+    },
+    [compile],
+  );
+
+  // Remember a task once its compile lands — not on submit, so a failed compile does not pollute the
+  // list with something that never produced a package.
+  useEffect(() => {
+    if (compile.data === undefined || compile.variables === undefined) return;
+    const kinds = compile.variables.filters?.kinds;
+    remember({
+      task: compile.variables.task,
+      budget: compile.variables.budget,
+      ...(kinds !== undefined && kinds.length > 0 ? { kinds } : {}),
+    });
+  }, [compile.data, compile.variables, remember]);
+
+  const requested = compile.variables?.budget;
+  const filtersApplied = (compile.variables?.filters?.kinds?.length ?? 0) > 0;
 
   return (
     <div className="space-y-4">
-      <Card className="border-none bg-sidebar p-4 shadow-none dark:ring-0">
-        <CardHeader className="p-0 pb-3">
-          <CardTitle>Context Package Compiler</CardTitle>
-          <CardDescription>
-            Compile a token-budget-bounded context package from files, graph edges, and memories
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0 pt-4">
-          <form onSubmit={submit} aria-label="Compile a context package">
-            <div className="grid gap-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
-              <div className="space-y-1.5">
-                <label htmlFor="task" className="text-xs font-semibold text-foreground">
-                  Task description
-                </label>
-                <Input
-                  id="task"
-                  value={task}
-                  onChange={(event) => setTask(event.target.value)}
-                  placeholder="e.g. Explain how retrieval fusion works"
-                  className="h-9 text-xs"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="budget" className="text-xs font-semibold text-foreground">
-                  Token budget
-                </label>
-                <Input
-                  id="budget"
-                  type="number"
-                  min={1}
-                  value={budget}
-                  onChange={(event) => {
-                    const next = Number(event.target.value);
-                    setBudget(Number.isFinite(next) ? next : 0);
-                  }}
-                  className="w-32 h-9 text-xs"
-                />
-              </div>
-              <Button
-                type="submit"
-                size="sm"
-                className="h-9 text-xs"
-                disabled={compile.isPending || task.trim().length === 0}
-              >
-                <Terminal className="size-4" />
-                Compile
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      <CompileForm
+        values={values}
+        onChange={setValues}
+        onSubmit={() => run(values)}
+        pending={compile.isPending}
+      />
+
+      <RecentCompiles
+        onRerun={(entry) => {
+          const next: CompileFormValues = {
+            task: entry.task,
+            budget: entry.budget,
+            kinds: [...(entry.kinds ?? [])] as ContextFragmentKind[],
+          };
+          setValues(next);
+          run(next);
+        }}
+      />
 
       {compile.isPending ? (
         <InspectorSkeleton />
@@ -96,13 +101,29 @@ export function InspectorView() {
           mascot
           title="Compilation failed"
           description={compile.error instanceof Error ? compile.error.message : 'Unknown error'}
-          onRetry={() => {
-            const trimmed = task.trim();
-            if (trimmed.length > 0 && budget >= 1) compile.mutate({ task: trimmed, budget });
-          }}
+          onRetry={() => run(values)}
         />
       ) : compile.data ? (
-        <PackageView pkg={compile.data} />
+        <>
+          {requested !== undefined ? (
+            <ClampNotice requested={requested} effective={compile.data.budget} />
+          ) : null}
+          <PackageView
+            pkg={compile.data}
+            stats={stats}
+            filtersApplied={filtersApplied}
+            onClearFilters={() => {
+              const next = { ...values, kinds: [] };
+              setValues(next);
+              run(next);
+            }}
+            onRaiseBudget={() => {
+              const next = { ...values, budget: Math.max(values.budget * 4, 8000) };
+              setValues(next);
+              run(next);
+            }}
+          />
+        </>
       ) : (
         <EmptyState
           art={<CompilerAssembly />}
@@ -114,110 +135,84 @@ export function InspectorView() {
   );
 }
 
-function PackageView({ pkg }: { pkg: ContextPackage }) {
+function PackageView({
+  pkg,
+  stats,
+  filtersApplied,
+  onClearFilters,
+  onRaiseBudget,
+}: {
+  pkg: ContextPackage;
+  stats: WorkspaceStats | undefined;
+  filtersApplied: boolean;
+  onClearFilters: () => void;
+  onRaiseBudget: () => void;
+}) {
+  const diagnosis = diagnoseEmptyPackage(pkg, { stats, filtersApplied });
+
   return (
     <div className="space-y-4">
-      <Card className="border-none bg-sidebar p-4 shadow-none dark:ring-0">
-        <CardHeader className="p-0 pb-3">
-          <CardTitle className="text-sm font-semibold">Package scores</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 pt-4 flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <ScoreBar label="Budget adherence" value={pkg.scores.budgetAdherence} />
-            <ScoreBar label="Provenance coverage" value={pkg.scores.provenanceCoverage} />
-            <ScoreBar label="Redundancy" value={pkg.scores.redundancy} />
-          </div>
-          <div className="text-muted-foreground text-[10px] font-mono leading-none">
-            <span className="text-foreground font-semibold tabular-nums">
-              {pkg.scores.fragmentCount}
-            </span>{' '}
-            fragments ·{' '}
-            <span className="text-foreground font-semibold tabular-nums">{pkg.totalTokens}</span> /{' '}
-            {pkg.budget} tokens
-          </div>
-        </CardContent>
-      </Card>
+      {/* The scores render ONLY for a package with fragments. `computePackageScores([], …)` returns
+          budgetAdherence 1 / provenanceCoverage 1 / redundancy 0 — every one a defensible vacuous
+          truth, and together a lie: three full bars announcing a success that did not happen. The
+          arithmetic is not wrong, so the fix is here rather than in the compiler; what is wrong is
+          celebrating a vacuous truth. */}
+      {diagnosis ? (
+        <PackageGuidance
+          diagnosis={diagnosis}
+          onClearFilters={onClearFilters}
+          onRaiseBudget={onRaiseBudget}
+        />
+      ) : (
+        <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-0 pb-3">
+            <CardTitle className="text-sm font-semibold">Package scores</CardTitle>
+            <PackageExport pkg={pkg} />
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4 p-0 pt-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <ScoreBar label="Budget adherence" value={pkg.scores.budgetAdherence} />
+              <ScoreBar label="Provenance coverage" value={pkg.scores.provenanceCoverage} />
+              <ScoreBar label="Redundancy" value={pkg.scores.redundancy} />
+            </div>
+            <div className="text-muted-foreground font-mono text-[10px] leading-none">
+              <span className="text-foreground font-semibold tabular-nums">
+                {pkg.scores.fragmentCount}
+              </span>{' '}
+              fragment{pkg.scores.fragmentCount === 1 ? '' : 's'} ·{' '}
+              <span className="text-foreground font-semibold tabular-nums">{pkg.totalTokens}</span>{' '}
+              / {pkg.budget} tokens
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {pkg.sections.map((section, idx) => (
         <Card
-          className="border-none bg-sidebar p-4 shadow-none dark:ring-0"
+          className="bg-sidebar border-none p-4 shadow-none dark:ring-0"
           key={`${section.title}-${idx}`}
         >
           <CardHeader className="p-0 pb-3">
             <CardTitle className="text-sm font-semibold">{section.title}</CardTitle>
           </CardHeader>
-          <CardContent className="p-0 pt-4 flex flex-col gap-3">
+          <CardContent className="flex flex-col gap-3 p-0 pt-4">
             {section.fragments.map((fragment, fidx) => (
-              <div
-                key={`${fragment.ref}-${fidx}`}
-                className="space-y-2 rounded-xl bg-background/30 border border-border/30 p-3"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <span className="font-mono text-[11px] font-medium break-all text-foreground">
-                    {fragment.ref}
-                  </span>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <Badge variant="outline" className="font-mono text-[9px] h-5 px-1.5 uppercase">
-                      {fragment.kind}
-                    </Badge>
-                    <Badge
-                      variant="secondary"
-                      className="font-mono text-[9px] h-5 px-1.5 tabular-nums"
-                    >
-                      {fragment.tokens} tok
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="bg-muted/40 rounded-lg px-2.5 py-1.5 text-[11px] leading-normal text-muted-foreground">
-                  <span className="font-semibold text-foreground">Why included: </span>
-                  {fragment.whyIncluded}
-                </div>
-
-                {fragment.text ? (
-                  <pre className="text-muted-foreground bg-background/20 rounded-lg p-2 font-mono text-[10px] whitespace-pre-wrap overflow-x-auto max-h-40 scrollbar-thin">
-                    {fragment.text}
-                  </pre>
-                ) : null}
-
-                <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-border/30">
-                  {fragment.provenance.signals.map((signal) => (
-                    <Badge
-                      key={signal}
-                      variant="outline"
-                      className="font-mono text-[9px] h-5 px-1.5 font-normal"
-                    >
-                      {signal}
-                    </Badge>
-                  ))}
-                  {fragment.provenance.expandedFrom ? (
-                    <Badge
-                      variant="outline"
-                      className="font-mono text-[9px] h-5 px-1.5 font-normal"
-                    >
-                      ← {fragment.provenance.expandedFrom}
-                    </Badge>
-                  ) : null}
-                  <span className="text-muted-foreground ml-auto font-mono text-[10px] tabular-nums">
-                    score {fragment.score.toFixed(3)}
-                  </span>
-                </div>
-              </div>
+              <FragmentCard key={`${fragment.ref}-${fidx}`} fragment={fragment} />
             ))}
           </CardContent>
         </Card>
       ))}
 
-      <Card className="border-none bg-sidebar p-4 shadow-none dark:ring-0">
+      <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
         <CardHeader className="p-0 pb-3">
           <CardTitle className="text-sm font-semibold">Compilation trace</CardTitle>
         </CardHeader>
-        <CardContent className="p-0 pt-4 flex flex-col gap-3">
+        <CardContent className="flex flex-col gap-3 p-0 pt-4">
           {pkg.trace.stages.map((stage, index) => (
             <div key={stage.stage} className="space-y-1.5">
               {index > 0 ? <Separator className="mb-3" /> : null}
               <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-semibold text-foreground">{stage.stage}</span>
+                <span className="text-foreground text-xs font-semibold">{stage.stage}</span>
                 <span className="text-muted-foreground font-mono text-[10px] tabular-nums">
                   {stage.inputCount} → {stage.outputCount}
                 </span>
@@ -226,13 +221,13 @@ function PackageView({ pkg }: { pkg: ContextPackage }) {
                 <p className="text-muted-foreground text-[11px] leading-normal">{stage.notes}</p>
               ) : null}
               {stage.dropped.length > 0 ? (
-                <ul className="mt-1.5 space-y-1 bg-background/20 rounded-lg p-2 font-mono text-[10px]">
+                <ul className="bg-background/20 mt-1.5 space-y-1 rounded-lg p-2 font-mono text-[10px]">
                   {stage.dropped.map((drop, didx) => (
                     <li
                       key={`${drop.ref}-${didx}`}
-                      className="text-muted-foreground flex flex-col sm:flex-row sm:justify-between gap-1"
+                      className="text-muted-foreground flex flex-col gap-1 sm:flex-row sm:justify-between"
                     >
-                      <span className="break-all text-muted-foreground">{drop.ref}</span>
+                      <span className="text-muted-foreground break-all">{drop.ref}</span>
                       <span className="text-foreground/80 shrink-0">— {drop.reason}</span>
                     </li>
                   ))}
@@ -249,15 +244,15 @@ function PackageView({ pkg }: { pkg: ContextPackage }) {
 function InspectorSkeleton() {
   return (
     <div className="space-y-4" aria-hidden="true">
-      <Card className="border-none bg-sidebar p-4 shadow-none dark:ring-0">
-        <Skeleton className="h-10 w-1/3 mb-4" />
+      <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
+        <Skeleton className="mb-4 h-10 w-1/3" />
         <div className="grid gap-4 sm:grid-cols-3">
           <Skeleton className="h-14 w-full" />
           <Skeleton className="h-14 w-full" />
           <Skeleton className="h-14 w-full" />
         </div>
       </Card>
-      <Card className="border-none bg-sidebar p-4 shadow-none dark:ring-0">
+      <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
         <Skeleton className="h-28 w-full" />
       </Card>
     </div>

@@ -3,6 +3,135 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-17 — F-062 DONE — Inspector v2: honest empty guidance, agent-ready export, compile controls. **Zero server code.**
+
+**Harness-strict selection** (next by id in R3; no blockers). Plan:
+[`.harness/plans/F-062-inspector-v2.md`](../plans/F-062-inspector-v2.md).
+
+### The headline is what was *not* touched
+
+Not the compiler, api, mcp, sdk, billing, config or retrieval. **Every acceptance clause was
+satisfiable from data already on the wire** — and that is proven *mechanically*, not asserted:
+`pnpm --filter @tessera/sdk generate` produces **no diff**, and the perf gate's compile tokens did
+**not move by one byte** (3373/3411, envelope ×1.61/×1.63).
+
+The feature's *declared* effects (E-003, E-013) were a reasonable prior that **the tree disproved**.
+Recorded as a negative result on E-003, because the negative is the useful fact: the brief assumed
+surfacing the entitlement clamp needed an additive response field. It does not — `clampBudgetToPlan`
+is silent, but **`pkg.budget` IS the effective clamped budget** and the client knows what it sent, so
+`requested > pkg.budget` ⟺ clamped. No field, no regen, no tokens.
+
+### The empty-package lie was never the arithmetic
+
+`computePackageScores([], 2000, 0)` → `budgetAdherence: 1, provenanceCoverage: 1, redundancy: 0`.
+Every one is a **defensible vacuous truth**: the package did not exceed budget; 100% of zero fragments
+carry provenance; 0 of 0 pairs are duplicates. **The lie is rendering a vacuous truth as an
+achievement** — three full `bg-primary` bars with `aria-valuenow={100}`.
+
+So the fix is a **render rule in `apps/web`** (the acceptance says *"scores render only when
+fragmentCount > 0"* — render, not compute), and the compiler is untouched. Making `PackageScores`
+nullable would ripple through `quality.ts`, `explain`, the schemas and the SDK for **zero user gain**:
+an agent was never misled, because it receives `fragmentCount: 0` in the same object and can see the
+denominator. The human was misled because the UI drew bars.
+
+The tests assert `role="progressbar"` has **count 0**, not that "100%" is absent — `aria-valuenow`
+was half the lie, announced to screen readers.
+
+### Guidance that only says what the data proves
+
+`diagnoseEmptyPackage` is a **pure function** over the trace's integer counts (the first stage whose
+`outputCount` is 0 — a fact, not an inference), with `useStats` as **progressive enhancement only**:
+
+- The trace proves retrieval returned nothing. It **cannot** distinguish *empty corpus* from *no
+  match* — so the workspace summary settles it (`sources: 0` → "No sources are connected";
+  `documents: 0` → "registered but nothing indexed"; else → "128 documents are indexed **for your
+  sources**, none matched").
+- A token without `stats:read` 403s → the copy **degrades**, never blocks, never crashes.
+- Copy says *"indexed for your sources"* — what the stat **means** (F-060 SL-6) — never *"your corpus
+  contains"*, which the number does not support under multi-tenant while F-071 stands.
+- Stage names are string literals on the wire, **not an exported enum** — a soft contract. An
+  unrecognised stage degrades to a generic honest message pointing at the trace, pinned by a test.
+- It never blames a filter the user did not set.
+
+### Export is client-side — and this is where the F-060/F-061 pattern does *not* apply
+
+Worth writing down, because two features in a row went the other way: **those moved logic server-side
+because they computed *facts*** (workspace counts, a result's label) where two implementations can
+disagree about **truth**. **Markdown is not a fact.** It is a re-formatting of bytes the caller
+already holds, so there is nothing to disagree about — and an agent already has the whole
+`ContextPackage` from `compile_context`, for which Markdown would be a *lossier and fatter* encoding.
+A server export would have cost an endpoint, an SDK regen, an MCP tool (breaking the 14-tool
+assertion) and compile-envelope budget **to serve nobody**.
+
+`buildExplanation` is **not** reusable: wrong package, and its whole purpose is the opposite — it
+strips the fragment text an export exists to carry.
+
+**Fence injection is this export's XSS.** Fragment text is ingested repository content and `markdown`
+is a first-class `DocumentKind`, so bodies **will** contain ``` runs; a hardcoded triple-backtick
+wrapper breaks the document on the first real `.md` file. The fence outgrows the longest run inside
+(CommonMark) — structurally correct rather than hopefully correct, with a test. Same discipline as
+F-061's offsets-not-HTML.
+
+**F-073's disease survived in the Inspector** after `/search` was cured — it rendered `fragment.ref`,
+a 64-char hash. The cure needed **no contract change**: the compiler already forwards corpus metadata
+on `provenance.source`, so the same `citationOf` the export uses names the card too.
+
+### ⚠️ F-077 registered, deliberately not folded
+
+**The MCP compile surface bypasses the F-035 entitlement clamp.** Verified: `routes/v1/compile.ts:41`
+clamps via `clampBudgetToPlan`; `apps/mcp/src/server.ts` has **zero** references to billing and
+`toCompileRequest` forwards `budget` verbatim to both `compile_context` and `explain`. NFR-12's
+per-plan cap is enforced on the surface humans use and **unenforced on the surface agents use** — the
+population it exists to meter.
+
+**Not folded, and the reasoning is the point.** F-060's SSE fold was the exception, justified by
+**amplification** — it was about to pipe leaked data onto every page. F-062 does not amplify this: it
+renders a claim about the REST surface that is *true of the surface it describes*. Golden rule 2 and
+the F-048 precedent (which registered three findings rather than fixing them) therefore apply. It is
+also a different service, changes verified agent behaviour, and carries an **ADR question** — should
+MCP clamp *silently* like REST, or **reject**? An agent quietly downgraded cannot tell a clamp from a
+thin corpus, and REST has the same problem. That is not a dashboard story's decision to smuggle.
+
+**The binding consequence F-062 respects:** the clamp copy is scoped to the observed compile —
+*"Capped to 8,000 tokens — you requested 20,000"* — never a claim of system-wide enforcement, which
+would be false while F-077 stands. It is the more defensible sentence anyway: a non-admin cannot read
+their own plan name (`/v1/billing/subscription` needs `admin:manage`).
+
+### Bonus: a documented intent that nothing implemented
+
+`notifications.ts` has said `clear()` is *"used on sign-out so one user's activity never bleeds into
+the next session"* since F-060 — and **nothing ever called it** (grep: only tests). TanStack Query's
+cache is invalidated on sign-out; these Zustand stores are not part of it. F-062 adds a **second**
+session store holding **user-authored task text**, so shipping it unclearing would have doubled a gap
+whose intent was already written down. `signOut` now clears both. ~3 lines, pinned by a test.
+
+**Evidence** — verify-state ok · typecheck **38** · lint **22** · format clean · test **36** (web
+**330**: +18 export, +12 diagnose, +6 store, +18 inspector, +1 sign-out) · build **19** · e2e **20**
+(web **45**, incl. **axe AA on the guidance state** — F-061 shipped a *critical* axe violation only an
+empty state could reveal, and this feature's whole subject is an empty state) · **bench passes with
+compile tokens unchanged** · **web-perf** both budgets met (web `/signin` **256.2 KB** gz) ·
+**e2e-full 2/2** — the human journey now asserts a real **path citation** against the scanned fixture.
+SDK regeneration produces **no diff**. UI screenshot-verified across 4 themes × light/dark.
+
+Effects **E-004**, **E-003** (a *negative* result), **E-018** extended. No ADR: the honesty fix is a
+render rule and deviates from no documented default.
+
+### Scope limits — stated, not hidden
+
+1. **SL-1** — the vacuous `1.0` scores stay on the wire, so `computeQuality` still hands an empty
+   package a high CQS. A real if latent wart, flagged not fixed: it is a compiler concern (E-013) and
+   no user sees it.
+2. **SL-2** — `CONTEXT_FRAGMENT_KINDS` can drift from the producing vocabulary. Bounded by design: the
+   wire stays open, so a stale value yields a filter that matches nothing (a UI bug), never a 400.
+3. **SL-3** — the Markdown omits the compilation trace by design; JSON is the complete record.
+
+**Next step**
+- R3 remaining: **F-063** (enterprise data-table standard + Audit v2) — the last one. Then R3 is done.
+- R4 heads: **F-071** (`must`, tenant-aware ingestion — now blocking ADR-0050's feed gap and F-075)
+  and **F-077** (`must`, the MCP clamp bypass, with its ADR question).
+
+---
+
 ## 2026-07-16 (v6) — F-061 DONE (**delivers F-073**) — search is an investigation surface; the **perf gate failed and shaped the design**
 
 **Harness-strict selection** (next by id in R3; blocker F-039 done). Plan:

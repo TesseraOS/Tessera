@@ -3,6 +3,95 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-17 (v3) — CI repair: the perf gate that never exited, and the security gate that was failing open
+
+Both reported as "CI is failing". Neither was what it looked like. No feature claimed (`wip_limit`
+untouched, F-063 stays `done`) — this is repair of the verification harness itself. Decisions in
+**ADR-0052**.
+
+### 1. `pnpm test:perf` ran forever — it hung AFTER printing PASS
+
+Not a perf problem and not a budget miss: the gate measured both apps, printed
+`✓ web-perf gate passed`, and then **never exited**. `startApp()` spawned
+`pnpm --filter <app> start` with `shell: true`, and `stop()` was `child.kill('SIGTERM')` —
+which signals only the **direct child**, i.e. `cmd.exe`. The tree
+(`cmd.exe → pnpm → node next start`) survived, and the orphaned server still held the **write end of
+our stdio pipes**, so the read handles stayed active and the event loop never drained. Turbo waited on
+it forever.
+
+**Proven, not theorised:** a leftover `node …/next/dist/bin/next start --port 3311` was still
+LISTENING from the operator's earlier run (its `cmd.exe` parent alive too), and a 6-line repro showed
+**2 live `Socket` handles 2s after `kill()` returned**. The orphan also owned port 3311 — the next
+run would have connected to **yesterday's server** and reported a budget for a stale build, green.
+
+**Fixed** (`tests/web-perf/web-perf.mjs`): own **one** process — spawn `node <next-bin> start`
+directly from the app's own dir, no shell and no `pnpm` wrapper; kill the **tree** anyway
+(`detached`+`process.kill(-pid)` on POSIX, `taskkill /T /F` on Windows) with SIGTERM→SIGKILL
+escalation; register teardown on `exit`/`SIGINT`/`SIGTERM` rather than in a `finally`; **drain**
+the pipes (an unread pipe wedges the writer) and keep the tail for diagnostics; **preflight the port**
+so an impostor is never measured; and **race the wait loop against child exit**. Also
+`--filter=@tessera/web-perf`: unfiltered, turbo gave every package a no-op `test:perf` node whose
+`^build` rebuilt all 16 packages — while building **neither app the gate measures**.
+
+**Evidence:** exits **0 in 19s** (was: unbounded). Identical numbers — 203.9 KB / 256.9 KB — so the
+lifecycle changed, not the measurement. No orphans, no listeners left. Failure paths verified by
+injection: busy port → *"port 3310 is already in use — a stale server would be measured instead of
+this build"*; unbuilt app → *"apps/marketing/.next is not a production build — run `pnpm build`
+first"*, instantly, where before it burned 120s in silence and said only "has the app been built?".
+
+### 2. The security gate was not broken — it was failing OPEN, over a real critical
+
+`pnpm audit` returned **410**: npm retired the legacy audit endpoints after a brownout ending
+**2026-07-15**, and the bulk-endpoint migration landed in **pnpm 11 only** — never backported to the
+9.x/10.x lines (we pin 9.3.0). A 410 is **neither a pass nor a fail**: nothing was being audited.
+
+Querying npm's bulk endpoint directly against the lockfile found **22 advisories**, incl. a
+**critical** (`vitest@2.1.9 <3.2.6`, [GHSA-5xrq-8626-4rwp](https://github.com/advisories/GHSA-5xrq-8626-4rwp))
+and a **high** (`vite@5.4.21 <=6.4.2`, [GHSA-fx2h-pf6j-xcff](https://github.com/advisories/GHSA-fx2h-pf6j-xcff)).
+The gate had been hiding them.
+
+**The trap:** `vitest ^2 → ^4` did **not** clear the high. **`vite` was declared by nobody** — an
+auto-installed peer only — so pnpm reused the locked `5.4.21` and the vulnerable version survived the
+upgrade silently. It moved only once `vite: "^8"` was declared explicitly (root, `apps/web`,
+`tests/bench`). A required peer nobody declares is a dependency nobody owns.
+
+**Fixed:** Trivy (`aquasecurity/trivy-action@v0.36.0`) reads `pnpm-lock.yaml` at
+`severity: CRITICAL,HIGH` — no registry endpoint, no toolchain, no install step in the job. Policy
+held at HIGH+ **deliberately**: that is what `--audit-level=high` meant, and OSV-Scanner (the first
+choice) had to be rejected on evidence — it has **no severity threshold**
+([#1400](https://github.com/google/osv-scanner/issues/1400)), so it would have swapped "no high+" for
+"no vulns at any severity" and red-lined CI on 17 moderates *as a side effect of a repair*.
+Advisories **fixed, not ignored**: `vitest ^2→^4`, `@vitejs/plugin-react ^4.7→^6`, `vite ^8`.
+
+**Evidence:** re-querying the bulk endpoint against the **updated** lockfile returns **no critical and
+no high** (esbuild's moderate cleared too — vite 8 pulls esbuild 0.28.1). 17 moderate + 3 low remain
+(mostly transitive `dompurify`) — below policy, and now *known* rather than merely unmeasured.
+
+**Evidence/verification (all 10 gates, on the upgraded toolchain)**
+
+state ✓ · typecheck ✓ 38 · lint ✓ 22 · format ✓ · test ✓ 36 tasks (368 tests in apps/web alone —
+**vitest 2→4 across two majors needed no test or config changes**) · build ✓ 19 · e2e+a11y ✓ 50 ·
+web-perf ✓ (19s, exit 0) · e2e-full ✓ 2 · bench ✓ (search p95 8.29ms, compile p95 8.47ms).
+
+**Decisions**
+
+- **ADR-0052** — audit on Trivy over the lockfile at HIGH+, not `pnpm audit`; stay on pnpm 9.3.0.
+- Policy deliberately unchanged at HIGH+; tightening it is its own decision, not a repair side effect.
+- The pnpm 11 migration is **not** done here: two majors of breaking changes (pure ESM, `.npmrc`
+  auth-only, `npm_config_*`→`pnpm_config_*`, `allowBuilds`, `ignoreCves`→`ignoreGhsas`) run as
+  a hotfix for a red CI would risk the whole toolchain to repair one job.
+
+**Next step**
+
+- **The `security` job is not a `gates.json` gate**, so `verify-state`'s ci-mirror guard (E-005)
+  never protected it — that is *how this rotted unseen*. Worth deciding whether it becomes a real gate.
+- **Moderate/low advisories** deserve a pass (chiefly transitive `dompurify`; may need
+  `pnpm.overrides`).
+- **pnpm 11 migration** as its own planned + verified feature.
+- **`build` is `cache: false`** ([[turbo-cache-stale-uncommitted]]), so CI rebuilds everything per
+  gate. Correct, but the reason `--filter` mattered so much here.
+- **SHA-pin third-party actions** across `ci.yml` as one deliberate hardening change.
+
 ## 2026-07-17 (v2) — F-063 DONE — **R3 IS COMPLETE**. Audit v2: real pagination, actor/date filters, an audited export; the data-table pattern
 
 **Harness-strict selection** (the last open R3 feature; no blockers). Plan:

@@ -16,7 +16,7 @@
     "test:e2e": "turbo run test:e2e",
     "test:e2e:full": "turbo run test:e2e:full",
     "bench": "turbo run bench",
-    "test:perf": "turbo run test:perf",
+    "test:perf": "turbo run test:perf --filter=@tessera/web-perf",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -29,6 +29,7 @@
     "turbo": "^2",
     "typescript": "^5",
     "typescript-eslint": "^8",
-    "vitest": "^2"
+    "vite": "^8",
+    "vitest": "^4"
   }
 }

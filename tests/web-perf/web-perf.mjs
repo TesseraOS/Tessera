@@ -15,9 +15,12 @@
 // on either would be gating on noise. CWV needs its own investigation (freeze animations for the trace,
 // or measure via PerformanceObserver) — that is **F-074**, with the evidence recorded there. NFR-17's
 // CWV budgets therefore remain declared-but-unenforced; the bundle budget below is real and enforced.
-import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { spawn, spawnSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { createServer } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { chromium } from '@playwright/test';
@@ -27,29 +30,161 @@ const repoRoot = resolve(here, '../..');
 const budgets = JSON.parse(readFileSync(join(here, 'budgets.json'), 'utf8'));
 
 const KB = 1024;
+const STARTUP_TIMEOUT_MS = 120_000;
+const SHUTDOWN_GRACE_MS = 5_000;
 
-/** Start `next start` for an app and resolve once it answers. Returns a stop() that always kills it. */
-async function startApp(app) {
-  const child = spawn('pnpm', ['--filter', app.packageName, 'start', '--port', String(app.port)], {
-    cwd: repoRoot,
-    shell: process.platform === 'win32',
-    stdio: 'pipe',
+/**
+ * The gate could not be RUN (not built, port taken, config drift) — as opposed to the budget being
+ * missed, or the harness having a real bug. These carry an actionable message and no useful stack,
+ * so they are reported as guidance; anything else keeps its stack, because it is a defect.
+ */
+class GateSetupError extends Error {}
+
+// Every server we own. A gate that leaks a server poisons the NEXT run (a stale build answers on the
+// port), so teardown is registered process-wide rather than trusted to a finally block.
+const running = new Set();
+
+/** Kill a whole process TREE. Must stay synchronous — `process.on('exit')` cannot await. */
+function killTree(child, signal) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  try {
+    if (process.platform === 'win32') {
+      // Windows has no signalable process group; taskkill /T is how a tree is killed.
+      spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+    } else {
+      // `detached: true` gave the child its own group; the negative pid signals the whole group.
+      process.kill(-child.pid, signal);
+    }
+  } catch {
+    // Already gone, or the group vanished between the check and the signal — either way, done.
+  }
+}
+
+function killAllSync() {
+  for (const child of running) killTree(child, 'SIGKILL');
+  running.clear();
+}
+process.on('exit', killAllSync);
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => {
+    killAllSync();
+    process.exit(130);
   });
-  const url = `http://127.0.0.1:${app.port}`;
-  const stop = () => {
-    child.kill('SIGTERM');
+}
+
+/** budgets.json names a package AND a directory; a rename must not silently measure the wrong app. */
+function resolveAppDir(app) {
+  const dir = join(repoRoot, app.dir);
+  const manifest = join(dir, 'package.json');
+  if (!existsSync(manifest)) throw new GateSetupError(`${app.name}: no package.json at ${app.dir}`);
+  const declared = JSON.parse(readFileSync(manifest, 'utf8')).name;
+  if (declared !== app.packageName) {
+    throw new GateSetupError(
+      `${app.name}: budgets.json says ${app.dir} is ${app.packageName}, but that directory is ${declared} — they have drifted`,
+    );
+  }
+  return dir;
+}
+
+/** A busy port means someone else's server would be measured — the budget would be a fiction. */
+async function assertPortFree(app) {
+  await new Promise((resolvePort, reject) => {
+    const probe = createServer();
+    probe.once('error', (error) =>
+      reject(
+        error.code === 'EADDRINUSE'
+          ? new GateSetupError(
+              `${app.name}: port ${app.port} is already in use — a stale server would be measured instead of this build. Stop it and re-run.`,
+            )
+          : error,
+      ),
+    );
+    probe.once('listening', () => probe.close(() => resolvePort()));
+    probe.listen(app.port, '127.0.0.1');
+  });
+}
+
+/**
+ * Start an app and resolve once it answers. Returns a stop() that always kills it.
+ *
+ * The app is ONE process we own — `node <next-bin> start --port N`, no shell, no `pnpm --filter`.
+ * Those wrappers are what broke this gate: they put cmd.exe (Windows) or pnpm (POSIX) between us and
+ * the server, and `child.kill()` only ever reaches the DIRECT child. The real server survived as an
+ * orphan holding the write end of our stdio pipes, so the event loop never drained: this script
+ * printed its verdict and then hung forever, taking `turbo run test:perf` with it. Killing a tree
+ * below is belt-and-braces, since `next start` is free to fork workers.
+ */
+async function startApp(app) {
+  const dir = resolveAppDir(app);
+  if (!existsSync(join(dir, '.next', 'BUILD_ID'))) {
+    throw new GateSetupError(
+      `${app.name}: ${app.dir}/.next is not a production build — run \`pnpm build\` first (CI's build gate runs before this one).`,
+    );
+  }
+  await assertPortFree(app);
+
+  const nextBin = createRequire(join(dir, 'package.json')).resolve('next/dist/bin/next');
+  const child = spawn(process.execPath, [nextBin, 'start', '--port', String(app.port)], {
+    cwd: dir,
+    detached: process.platform !== 'win32',
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, NEXT_TELEMETRY_DISABLED: '1' },
+  });
+  running.add(child);
+
+  // The pipes MUST be drained: an unread pipe fills its buffer and wedges the server it belongs to.
+  // Keeping the tail also means a boot failure reports what the app actually said.
+  const output = [];
+  const capture = (chunk) => {
+    output.push(chunk.toString());
+    if (output.length > 100) output.shift();
   };
-  for (let i = 0; i < 120; i += 1) {
+  child.stdout.on('data', capture);
+  child.stderr.on('data', capture);
+
+  let exit;
+  child.once('exit', (code, signal) => {
+    exit = { code, signal };
+    running.delete(child);
+  });
+
+  const url = `http://127.0.0.1:${app.port}`;
+  const stop = async () => {
+    if (exit) return;
+    killTree(child, 'SIGTERM');
+    // Escalate rather than wait forever: a gate must fail fast, never hang.
+    const escalate = setTimeout(() => killTree(child, 'SIGKILL'), SHUTDOWN_GRACE_MS);
+    escalate.unref();
+    await Promise.race([
+      new Promise((done) => child.once('exit', done)),
+      delay(SHUTDOWN_GRACE_MS * 2),
+    ]);
+    clearTimeout(escalate);
+    running.delete(child);
+    child.stdout.destroy();
+    child.stderr.destroy();
+  };
+
+  const deadline = Date.now() + STARTUP_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    // A dead server will never answer — say so now instead of burning the whole timeout in silence.
+    if (exit) {
+      throw new GateSetupError(
+        `${app.name}: server exited (code ${exit.code}, signal ${exit.signal}) before answering on ${url}\n${output.join('')}`,
+      );
+    }
     try {
       const response = await fetch(url, { redirect: 'manual' });
       if (response.status < 500) return { url, stop };
     } catch {
       // not up yet
     }
-    await new Promise((r) => setTimeout(r, 1000));
+    await delay(1000);
   }
-  stop();
-  throw new Error(`${app.name}: server never answered on ${url} — has the app been built?`);
+  await stop();
+  throw new GateSetupError(
+    `${app.name}: server never answered on ${url} within ${STARTUP_TIMEOUT_MS / 1000}s\n${output.join('')}`,
+  );
 }
 
 /**
@@ -129,7 +264,7 @@ async function main() {
 
         report.push(entry);
       } finally {
-        stop();
+        await stop();
       }
     }
   } finally {
@@ -156,4 +291,12 @@ async function main() {
   return 0;
 }
 
-process.exitCode = await main();
+process.exitCode = await main().catch((error) => {
+  if (error instanceof GateSetupError) {
+    console.error(`\n✗ web-perf gate could not run:\n  ${error.message}\n`);
+  } else {
+    console.error('\n✗ web-perf gate crashed — this is a harness defect, not a budget miss:');
+    console.error(error);
+  }
+  return 1;
+});

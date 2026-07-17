@@ -84,15 +84,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # No `version` input: action-setup@v4 errors if it is set alongside `packageManager`.
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22.16.0
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+
+      # Dependency audit at HIGH+ — the same policy `pnpm audit --audit-level=high` enforced.
+      #
+      # NOT `pnpm audit`: npm retired the legacy audit endpoints (/-/npm/v1/security/audits{,/quick})
+      # on 2026-07-15, and every pnpm 9.x/10.x release calls them, so `pnpm audit` now fails with a
+      # flat 410 no matter how healthy the tree is — the gate could not pass OR fail, it just errored.
+      # The migration to the bulk advisory endpoint landed in pnpm 11 only and was never backported
+      # (see ADR-0052). Trivy reads pnpm-lock.yaml itself, so this job depends on no registry audit
+      # endpoint, and needs neither a toolchain nor an install step.
+      #
+      # Severity is deliberately CRITICAL,HIGH and not "any known vuln": that is the policy this repo
+      # already had, and widening it here would have red-lined CI on 17 moderate advisories in one
+      # step. Tightening it is a separate, deliberate decision — not a side effect of a CI repair.
       - name: Dependency audit (high+)
-        run: pnpm audit --audit-level=high
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: pnpm-lock.yaml
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          exit-code: '1'
 
   secret-scan:
     runs-on: ubuntu-latest

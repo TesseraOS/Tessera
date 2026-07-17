@@ -6,6 +6,7 @@
     {
       "name": "marketing",
       "packageName": "@tessera/marketing",
+      "dir": "apps/marketing",
       "port": 3310,
       "path": "/",
       "public": true,
@@ -21,6 +22,7 @@
     {
       "name": "web",
       "packageName": "@tessera/web",
+      "dir": "apps/web",
       "port": 3311,
       "path": "/signin",
       "public": false,

@@ -1,7 +1,14 @@
 import type { ZodFastify } from '../../app-types.js';
+import type { AuditLog } from '../../audit/index.js';
 import { requirePermission, tenantOf } from '../../auth/index.js';
-import { statsResponseSchema } from '../../schemas/stats.js';
+import {
+  activityQuerySchema,
+  activityResponseSchema,
+  statsResponseSchema,
+  type ActivityQueryString,
+} from '../../schemas/stats.js';
 import type { ApiServices } from '../../services.js';
+import { computeWorkspaceActivity } from '../../stats/activity.js';
 import { computeWorkspaceStats } from '../../stats/core.js';
 
 /**
@@ -17,7 +24,7 @@ import { computeWorkspaceStats } from '../../stats/core.js';
  * an audit row per load would flood the trail F-027 built and degrade the compliance signal it
  * exists to give. The mutating surfaces it summarizes are each audited at their own route.
  */
-export function registerStatsRoutes(app: ZodFastify, services: ApiServices): void {
+export function registerStatsRoutes(app: ZodFastify, services: ApiServices, audit: AuditLog): void {
   app.get(
     '/stats',
     {
@@ -30,5 +37,31 @@ export function registerStatsRoutes(app: ZodFastify, services: ApiServices): voi
       },
     },
     (request) => computeWorkspaceStats(services, tenantOf(request)),
+  );
+
+  app.get<{ Querystring: ActivityQueryString }>(
+    '/stats/activity',
+    {
+      preHandler: requirePermission('stats:read'),
+      schema: {
+        tags: ['stats'],
+        summary:
+          'Daily activity for the Overview chart — audit-derived, floored to the trail (F-084).',
+        description:
+          'Zero-filled per-UTC-day counts of workspace activity. `from` is the window the server ' +
+          'actually used (clamped to the oldest event the trail holds), which the client must label; ' +
+          '`points` is empty when the trail has no history. No trend field is added to /v1/stats.',
+        querystring: activityQuerySchema,
+        response: { 200: activityResponseSchema },
+      },
+      // Same posture as /stats: a low-sensitivity aggregate read on page load, not audited — a row
+      // per load would flood the very trail this reads from.
+    },
+    (request) =>
+      computeWorkspaceActivity(
+        audit,
+        tenantOf(request),
+        request.query.days !== undefined ? { days: request.query.days } : {},
+      ),
   );
 }

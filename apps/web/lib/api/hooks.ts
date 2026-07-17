@@ -166,6 +166,20 @@ export function useStats() {
   });
 }
 
+/**
+ * The Overview activity chart's data (F-084). A plain query — it does not self-invalidate on live
+ * events like {@link useStats}: the chart is daily-granular, so a new event this second does not
+ * change today's bar meaningfully, and the 60s staleness picks it up on the next natural refetch
+ * without a burst of refetches during a scan.
+ */
+export function useActivity(days?: number) {
+  return useQuery({
+    queryKey: ['stats', 'activity', days ?? null],
+    queryFn: () => api.getActivity(days),
+    staleTime: 60_000,
+  });
+}
+
 // --- sources (F-038/FR-62) ---
 
 /** List registered sources — GET /v1/sources. */

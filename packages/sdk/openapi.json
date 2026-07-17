@@ -2948,6 +2948,74 @@
         }
       }
     },
+    "/v1/stats/activity": {
+      "get": {
+        "summary": "Daily activity for the Overview chart — audit-derived, floored to the trail (F-084).",
+        "tags": [
+          "stats"
+        ],
+        "description": "Zero-filled per-UTC-day counts of workspace activity. `from` is the window the server actually used (clamped to the oldest event the trail holds), which the client must label; `points` is empty when the trail has no history. No trend field is added to /v1/stats.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 365
+            },
+            "in": "query",
+            "name": "days",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string"
+                    },
+                    "until": {
+                      "type": "string"
+                    },
+                    "points": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string"
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "count"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "until",
+                    "points"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/events": {
       "get": {
         "tags": [

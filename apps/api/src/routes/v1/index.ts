@@ -69,7 +69,7 @@ export function registerV1Routes(
       registerGraphRoutes(v1, services);
       registerMemoryRoutes(v1, services, events);
       registerSourceRoutes(v1, services);
-      registerStatsRoutes(v1, services);
+      registerStatsRoutes(v1, services, audit);
       registerEventsRoutes(v1, events, hardening.security);
       registerBillingRoutes(v1, services);
       registerAuditRoutes(v1, audit);

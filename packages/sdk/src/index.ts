@@ -33,6 +33,8 @@ export {
   type ScanAccepted,
   type ScanStatus,
   type WorkspaceStats,
+  type WorkspaceActivity,
+  type ActivityQuery as ActivityStatsQuery,
   type GraphQuery,
   type GraphSnapshot,
   type AssertEffectRequest,

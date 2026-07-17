@@ -1266,6 +1266,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stats/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daily activity for the Overview chart — audit-derived, floored to the trail (F-084).
+         * @description Zero-filled per-UTC-day counts of workspace activity. `from` is the window the server actually used (clamped to the oldest event the trail holds), which the client must label; `points` is empty when the trail has no history. No trend field is added to /v1/stats.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    days?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            from: string;
+                            until: string;
+                            points: {
+                                date: string;
+                                count: number;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/events": {
         parameters: {
             query?: never;

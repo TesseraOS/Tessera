@@ -3,6 +3,66 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-17 (v11) — F-084: the activity chart, floored so a pruned day is never drawn as silence
+
+User item 5 (the last data feature). Plan:
+[`F-084-overview-activity-chart.md`](../plans/F-084-overview-activity-chart.md); decision recorded
+back in **ADR-0053 clause 3**. Two increments (data layer, then API+SDK+web).
+
+### The trap, and the shape of the fix
+
+`stats.ts` refuses trend fields *in its own words* because retention **deletes**, and the audit trail
+is pruned. A naive "last 30 days" histogram draws zeros for pruned days — a zero meaning "we deleted
+the record" being indistinguishable from "nothing happened". So the series is **floored to the oldest
+event the trail actually holds**, derived from the data (`MIN(at)`), not from `config.audit.retention`
+— the only form that survives `maxEntries` pruning, which no time clamp can see.
+
+- **Port method `activity()` aggregates at the store** — a SQL `GROUP BY substr(at,1,10)` counting
+  `ACTIVITY_ACTIONS` (= `AUDIT_ACTIONS` minus the `*.read` page-views), plus `earliest = MIN(at)` over
+  the tenant's **whole** trail (any action — pruning does not discriminate by action, so the floor
+  does not either). Never a page walked into memory to count, which is the same thing F-080 refused to
+  let the *client* do.
+- **`computeWorkspaceActivity`** (Fastify-free, like `computeWorkspaceStats`) does the honest window
+  above the store: `from = max(requested, earliest)`, then zero-fills the calendar days **inside**
+  `[from, until]` (a gap day in the proven window honestly reads 0) and **never** emits a day before
+  `from` (that is the lie). Pinned by the **anti-lie test**: a trail whose oldest event is 3 days old
+  inside a 30-day request starts at day -3, not day -30.
+
+### Both adapters, and the F-078 discipline
+
+The new method moves both adapters + the conformance together (E-020, exactly the shape F-078
+flagged). The shared conformance covers the in-memory reference; the SQLite adapter — which still does
+not run the shared suite across the package boundary (that is F-078's own deliverable) — gets focused
+tests in its own file with a pointer to F-078, the **F-063 precedent**. The SQL is real and proven:
+reverting the `inArray` action filter fails the read-exclusion case.
+
+### Contract + honesty at the edge
+
+- `GET /v1/stats/activity` — **dashboard-only, no MCP tool** (ADR-0053: an agent has no use for a
+  histogram; `get_stats` stays its summary), and `/v1/stats` itself is unchanged, its no-trend refusal
+  intact. E-003 updated; OpenAPI+SDK+dashboard resolved in-change (same SDK-regen trap as F-081 — the
+  generator imports the built API, so rebuild first).
+- The chart **renders only when there is data** (empty `points` or all-zero ⇒ returns `null`, so an
+  empty workspace never gets a flat zero line), and it **labels `from`, not the request** — pinned by
+  test. UTC bucketing is stated in the description rather than silently shifting events across a local
+  midnight. First consumer of `ui/chart.tsx`, so the `--chart-*` token binding was **proven**, not
+  assumed: screenshotted in Monkai (blue `--chart-1`) and Notebook (its own ink) — theme-true.
+
+**Evidence/verification** — gates green: `state`, `typecheck` (40/40), `lint` (23/23), `format`,
+`test` (38/38 — api 75, config 75, web incl. activity-chart 3 + helper 5 + conformance both adapters),
+`build` (20/20). Two Overview screenshots. E-003 + E-020 updated.
+
+**One test honestly dropped, and why:** the chart's `isError → return null` guard is the same
+null-render path the empty/all-zero cases already prove end-to-end; a dedicated error test tripped
+vitest's unhandled-rejection guard (a query rejecting as the component unmounts), and a global swallow
+to work around it would hide real rejections elsewhere. Not worth a flaky test for a one-line guard.
+
+**Next step**
+- **F-086** (inspector v3) — the last of the 17. It is a design-judgment task (F-062 rebuilt this
+  page three commits before the report), so it needs screenshot iteration, not another quick restyle.
+
+---
+
 ## 2026-07-17 (v10) — F-085: embedding moves to a worker pool — and the measurement corrected itself again
 
 User item 13. Plan: [`F-085-embedding-worker-pool.md`](../plans/F-085-embedding-worker-pool.md).

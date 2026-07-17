@@ -41,6 +41,9 @@ export type ScanAccepted =
   paths['/v1/sources/{id}/scan']['post']['responses'][202]['content'][Json];
 export type ScanStatus = paths['/v1/sources/{id}/scan']['get']['responses'][200]['content'][Json];
 export type WorkspaceStats = paths['/v1/stats']['get']['responses'][200]['content'][Json];
+export type ActivityQuery = NonNullable<paths['/v1/stats/activity']['get']['parameters']['query']>;
+export type WorkspaceActivity =
+  paths['/v1/stats/activity']['get']['responses'][200]['content'][Json];
 export type Identity = paths['/v1/me']['get']['responses'][200]['content'][Json];
 export type RbacCatalog = paths['/v1/rbac']['get']['responses'][200]['content'][Json];
 export type TokenList = paths['/v1/tokens']['get']['responses'][200]['content'][Json];
@@ -135,6 +138,12 @@ export interface TesseraClient {
    * when a source last completed a scan (F-060). Scoped to the caller's tenant.
    */
   getStats(): Promise<WorkspaceStats>;
+  /**
+   * Daily activity for the Overview chart (F-084) — audit-derived, floored to the trail. `from` is
+   * the window the server actually used (clamped to the oldest event it holds), which the caller
+   * must label; `points` is empty when the trail has no history.
+   */
+  getActivity(query?: ActivityQuery): Promise<WorkspaceActivity>;
   /** A source's most recent scan status. */
   scanStatus(id: string): Promise<ScanStatus>;
   /** The subscription plan catalog + entitlements (public). */
@@ -258,6 +267,11 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
     },
     async getStats() {
       return unwrap(await client.GET('/v1/stats', {}));
+    },
+    async getActivity(query) {
+      return unwrap(
+        await client.GET('/v1/stats/activity', query !== undefined ? { params: { query } } : {}),
+      );
     },
     async scanStatus(id) {
       return unwrap(await client.GET('/v1/sources/{id}/scan', { params: { path: { id } } }));

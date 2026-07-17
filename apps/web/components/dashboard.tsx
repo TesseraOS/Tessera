@@ -2,6 +2,7 @@
 
 import { BookText, Boxes, GitBranch, Network, Search } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ActivityChart } from '@/components/activity-chart';
 import { ActivityFeed } from '@/components/activity-feed';
 import { Constellation } from '@/components/art';
 import { DashboardStats } from '@/components/stats';
@@ -66,6 +67,10 @@ export function Dashboard() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <DashboardStats />
       </div>
+
+      {/* Below the stat cards, above Recent activity (ADR-0053). Self-hiding when there is no history,
+          so it never adds a flat zero line to an empty workspace. */}
+      <ActivityChart />
 
       <div className={cn('grid grid-cols-1 gap-4', onboarding && 'lg:grid-cols-3')}>
         <Card

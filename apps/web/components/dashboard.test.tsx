@@ -4,9 +4,10 @@ import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const getStats = vi.hoisted(() => vi.fn());
+const getActivity = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api/client', () => ({
-  api: { getStats },
+  api: { getStats, getActivity },
   API_ORIGIN: 'http://localhost:3000',
   TesseraApiError: class extends Error {},
 }));
@@ -45,6 +46,9 @@ const onboarding = () => screen.queryByText('Get started');
 
 beforeEach(() => {
   getStats.mockReset();
+  getActivity.mockReset();
+  // The chart self-hides on empty history; default it so the dashboard tests stay about onboarding.
+  getActivity.mockResolvedValue({ from: '2026-03-01', until: '2026-03-31', points: [] });
   useNotifications.getState().clear();
 });
 

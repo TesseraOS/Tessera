@@ -38,3 +38,28 @@ export const statsResponseSchema = z.object({
 });
 
 export type StatsResponse = z.infer<typeof statsResponseSchema>;
+
+/** `GET /v1/stats/activity` querystring (F-084). `days` arrives as a string. */
+export const activityQuerySchema = z.object({
+  days: z.coerce.number().int().positive().max(365).optional(),
+});
+
+/**
+ * `GET /v1/stats/activity` response (F-084; ADR-0053 clause 3) — a zero-filled daily activity series.
+ *
+ * `from` is the window start the server **actually used** (`max(requested, oldest retained event)`),
+ * not the requested one: the trail is pruned, so anchoring on its real floor is what stops the chart
+ * drawing a pruned day as a zero. The client must label `from`. `points` is empty when the trail has
+ * no history — the chart then does not render (no fabricated flat line).
+ *
+ * This is deliberately **not** on `/v1/stats` and has **no MCP tool** (ADR-0053): an agent has no use
+ * for a histogram, and `/v1/stats` keeps its documented refusal to carry trend fields.
+ */
+export const activityResponseSchema = z.object({
+  from: z.string(),
+  until: z.string(),
+  points: z.array(z.object({ date: z.string(), count: z.number().int().nonnegative() })),
+});
+
+export type ActivityResponse = z.infer<typeof activityResponseSchema>;
+export type ActivityQueryString = z.infer<typeof activityQuerySchema>;

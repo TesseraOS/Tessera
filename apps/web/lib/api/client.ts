@@ -36,6 +36,7 @@ import type {
   Subscription,
   TokenList,
   WorkspaceStats,
+  WorkspaceActivity,
 } from '@tessera/sdk';
 
 /**
@@ -55,6 +56,7 @@ export type {
   CreateTokenRequest,
   Subscription,
   WorkspaceStats,
+  WorkspaceActivity,
 };
 
 /** Label for the endpoint the dashboard talks to (the same-origin proxy). Shown in Settings. */
@@ -94,6 +96,9 @@ export const api = {
   // --- sources (F-038/FR-62) ---
   /** The workspace summary: documents, memories, graph, sources, last scan (F-060; stats:read). */
   getStats: (): Promise<WorkspaceStats> => sdk.getStats(),
+  /** Daily activity for the Overview chart, audit-derived + floored to the trail (F-084). */
+  getActivity: (days?: number): Promise<WorkspaceActivity> =>
+    sdk.getActivity(days !== undefined ? { days } : undefined),
 
   listSources: (): Promise<SourceListResponse> => sdk.listSources(),
   registerSource: (body: RegisterSourceBody): Promise<Source> => sdk.registerSource(body),

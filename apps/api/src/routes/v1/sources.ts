@@ -6,7 +6,7 @@ import type { ApiServices } from '../../services.js';
 import {
   registerSourceBodySchema,
   removeSourceResponseSchema,
-  scanResultResponseSchema,
+  scanAcceptedResponseSchema,
   scanStatusResponseSchema,
   sourceIdParamSchema,
   sourceListResponseSchema,
@@ -133,18 +133,36 @@ export function registerSourceRoutes(app: ZodFastify, services: ApiServices): vo
       preHandler: requirePermission('sources:manage'),
       schema: {
         tags: ['sources'],
-        summary: 'Scan a source (incremental + idempotent); returns what changed.',
+        summary:
+          'Start a scan (incremental + idempotent). Returns 202; poll GET or watch /v1/events.',
+        description:
+          'Accepts the scan and returns immediately — it runs in the background. Follow it with ' +
+          'GET /v1/sources/:id/scan or the source.scan.progress / .completed / .failed events. ' +
+          'Returns 409 if a scan of this source is already running.',
         params: sourceIdParamSchema,
-        response: { 200: scanResultResponseSchema },
+        response: { 202: scanAcceptedResponseSchema },
       },
       config: { audit: 'source.manage' },
     },
-    async (request) => {
+    async (request, reply) => {
       const id = request.params.id as SourceId;
-      const { source, summary } = await requireSources(services)
-        .forTenant(tenantOf(request))
-        .scan(id);
-      return { source: toWire(source), summary };
+      const scoped = requireSources(services).forTenant(tenantOf(request));
+
+      // `startScan`, not `scan` (F-081). This used to await the coordinator AND the queue drain, so
+      // the client held a request open for the whole ingest — CPU-bound embedding included. The
+      // audited action still fires here and still records the truth: a scan was *requested*.
+      // A 409 (already running) surfaces from ConflictError via the error handler.
+      const status = await scoped.startScan(id);
+      const source = await scoped.get(id);
+      if (source === undefined) {
+        throw new NotFoundError('source not found', { details: { id } });
+      }
+
+      return reply.status(202).send({
+        source: toWire(source),
+        state: status.state,
+        ...(status.progress !== undefined ? { progress: status.progress } : {}),
+      });
     },
   );
 

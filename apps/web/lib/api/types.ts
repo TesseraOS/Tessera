@@ -344,15 +344,31 @@ export interface ScanSummary {
   unchanged: number;
 }
 
-export interface ScanResult {
+/** How far a running scan has got (F-081). `processed` counts distinct paths, so it never regresses. */
+export interface ScanProgress {
+  processed: number;
+  /** Changed paths this scan will process. `0` is a real answer — nothing changed. */
+  total: number;
+}
+
+/**
+ * What POST /v1/sources/:id/scan returns: the scan was **accepted** (202) and is running — not
+ * finished (F-081). Deliberately carries no `summary`; a request that does not wait for the ingest
+ * has nothing truthful to say about what changed. The result arrives via {@link ScanStatus}
+ * (`lastScan`) or the `source.scan.completed` event.
+ */
+export interface ScanAccepted {
   source: Source;
-  summary: ScanSummary;
+  state: ScanState;
+  progress?: ScanProgress;
 }
 
 export type ScanState = 'idle' | 'running' | 'error';
 
 export interface ScanStatus {
   state: ScanState;
+  /** Present while `state: 'running'` — what the determinate progress bar reads (F-081). */
+  progress?: ScanProgress;
   lastScan?: { summary: ScanSummary; at: string };
   error?: string;
 }

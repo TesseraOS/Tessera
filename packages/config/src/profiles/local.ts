@@ -292,7 +292,38 @@ export async function createLocalRuntime(
         path,
       }),
     ),
-    ingestionEvents.on('source.scan.started', (event) => events.emit('source.scan.started', event)),
+    ingestionEvents.on('source.scan.started', (event) =>
+      events.emit('source.scan.started', {
+        sourceId: event.sourceId,
+        tenantId: event.tenantId,
+        kind: event.kind,
+        label: event.label,
+        total: event.total,
+      }),
+    ),
+    // Scan progress + failure (F-081): the scan now runs in the background, so these are the only
+    // way a client learns how far it has got or that it died. Field-by-field like the rest — the
+    // ingestion payloads are domain events, and re-emitting them wholesale would put whatever they
+    // gain next straight onto the wire.
+    ingestionEvents.on('source.scan.progress', (event) =>
+      events.emit('source.scan.progress', {
+        sourceId: event.sourceId,
+        tenantId: event.tenantId,
+        kind: event.kind,
+        label: event.label,
+        processed: event.processed,
+        total: event.total,
+      }),
+    ),
+    ingestionEvents.on('source.scan.failed', (event) =>
+      events.emit('source.scan.failed', {
+        sourceId: event.sourceId,
+        tenantId: event.tenantId,
+        kind: event.kind,
+        label: event.label,
+        error: event.error,
+      }),
+    ),
     ingestionEvents.on('source.scan.completed', (event) =>
       events.emit('source.scan.completed', {
         sourceId: event.sourceId,

@@ -3,6 +3,75 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-17 (v9) — F-081: the scan stops holding the request, and the bar counts something real
+
+User items 11/12/14. Plan: [`F-081-async-scan-jobs.md`](../plans/F-081-async-scan-jobs.md). Landed in
+two increments (ingestion first, additive and green on its own; then API+SDK+web).
+
+### Items 11 and 12 were one defect with two faces
+
+`performScan` awaited the coordinator **and** `queue.drain()`, and the route awaited that — so an
+HTTP client held a request open for the entire ingest, CPU-bound embedding included (F-085 has the
+measurement: embedding holds the main thread). And there was **no progress data anywhere**: item 11
+was never a missing progressbar, it was that nothing counted.
+
+### `scan()` kept its semantics on purpose
+
+MCP's `scan_source` returns the summary, and an agent asking *"scan and tell me what changed"* wants
+the answer — turning that into "started, poll elsewhere" would be a regression dressed as an
+improvement. So `scan()` is untouched and `startScan()` was **added**; both share one `performScan`.
+This is the one place ADR-0036 REST/MCP parity is deliberately **asymmetric**: the surfaces have
+different callers with different needs, and what parity protects is the shared engine, not the verb.
+
+### The progress signal needed a ledger that did not exist
+
+`document.ingested`/`removed` are **not** a record of work done: the worker returns silently when a
+path's hash already matches, emitting nothing while still having processed the job. Counting those
+stalls below total — *a bar stuck at 90% is worse than no bar*, which the plan called out as the
+thing not to ship. So the worker now emits **`document.processed` for every outcome**, in a
+`finally`, without swallowing the throw. **Proven:** reverting the worker to the naive signal fails
+both progress tests.
+
+Three details that are load-bearing rather than incidental:
+- The service counts **distinct paths** (a `Set`), because the queue may retry a handler — otherwise
+  progress overshoots `total`.
+- It subscribes **before** the diff enqueues: the in-process queue delivers on the microtask queue,
+  so a job can finish while `scan()` is still awaited. Subscribing after would silently under-report
+  — **the F-079 shape of bug, one layer down**.
+- `total` = added+modified+removed. `unchanged` is not work, so it is not in the denominator.
+
+### The client's progress was a heuristic; now it is the server's count
+
+The web reducer inferred progress by counting `document.ingested` and attributing it to "whatever is
+running". That was wrong three ways: it broke with two concurrent scans, it under-counted silently
+(same unchanged-hash hole), and under a **non-default tenant it stayed at 0 forever**, because
+`document.*` is attributed to the tenant ingestion actually wrote to (ADR-0050/F-071). All four
+`source.scan.*` events carry the owning tenant from the registry record — so progress is exact and
+tenant-correct **today**, without waiting on F-071.
+
+### Item 14 — the states are honest now
+
+The toast said **"Scan complete"** with a summary. Post-change the call returns on *acceptance*, so
+that was simply false: it says **"Scan started"**. 409 (already running) reads as such. A background
+failure reaches the UI via `source.scan.failed` + status — it has to, because the request that
+started the scan was answered long before it died. The bar is **determinate** from `processed/total`,
+with `role="progressbar"` + aria values; while `total` is still 0 the diff has not finished and there
+is genuinely nothing to predict, so it says "Scanning…" rather than drawing a made-up percentage.
+
+**Effect-link (E-003) — the first breaking `/v1` response change.** `POST /v1/sources/:id/scan`:
+200 `{source, summary}` → **202** `{source, state, progress?}`. Dependents resolved in the same
+change, and TypeScript named every one. **Trap worth knowing:** `packages/sdk/scripts/generate.mjs`
+imports the **built** `@tessera/api`, so a stale `dist` silently regenerates the *old* spec — the
+first regeneration emitted `200` and the error surfaced in the SDK instead. Rebuild the API first.
+
+**Evidence/verification** — gates green: `state`, `typecheck` (40/40), `lint` (23/23), `format`,
+`test` (38/38; ingestion 74 ↑ from 67), `build` (20/20), plus `sources.spec.ts` 2/2 with axe.
+
+**Next step**
+- **F-086** (inspector) or **F-085** (worker pool — the measured event-loop fix). F-084 unblocked.
+
+---
+
 ## 2026-07-17 (v8) — F-082: four surface reports, four specific causes (and a screenshot that caught the fifth)
 
 User items 6/7/8/10/16. Plan:

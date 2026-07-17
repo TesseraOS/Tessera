@@ -31,7 +31,14 @@ export type AuditExport = paths['/v1/audit/export']['get']['responses'][200]['co
 export type RegisterSourceRequest = paths['/v1/sources']['post']['requestBody']['content'][Json];
 export type Source = paths['/v1/sources']['post']['responses'][201]['content'][Json];
 export type SourceList = paths['/v1/sources']['get']['responses'][200]['content'][Json];
-export type ScanResult = paths['/v1/sources/{id}/scan']['post']['responses'][200]['content'][Json];
+/**
+ * What `scanSource` resolves with: the scan was **accepted** and is running (202), not finished
+ * (F-081). It carries no `summary` — a call that does not wait for the ingest has nothing truthful
+ * to say about what changed. Read the result from {@link ScanStatus} (`lastScan`) or the
+ * `source.scan.completed` event.
+ */
+export type ScanAccepted =
+  paths['/v1/sources/{id}/scan']['post']['responses'][202]['content'][Json];
 export type ScanStatus = paths['/v1/sources/{id}/scan']['get']['responses'][200]['content'][Json];
 export type WorkspaceStats = paths['/v1/stats']['get']['responses'][200]['content'][Json];
 export type Identity = paths['/v1/me']['get']['responses'][200]['content'][Json];
@@ -116,8 +123,13 @@ export interface TesseraClient {
   getSource(id: string): Promise<Source>;
   /** Remove a registered source. */
   removeSource(id: string): Promise<{ id: string }>;
-  /** Scan a source (incremental + idempotent); returns what changed. */
-  scanSource(id: string): Promise<ScanResult>;
+  /**
+   * Start a scan (incremental + idempotent). Returns as soon as it is **accepted** — the scan runs
+   * in the background (F-081). Follow it with {@link TesseraClient.scanStatus} or the
+   * `source.scan.progress` / `.completed` / `.failed` events. Rejects with `CONFLICT` if a scan of
+   * this source is already running.
+   */
+  scanSource(id: string): Promise<ScanAccepted>;
   /**
    * The workspace summary: indexed documents, memories, graph nodes + effect-links, sources, and
    * when a source last completed a scan (F-060). Scoped to the caller's tenant.

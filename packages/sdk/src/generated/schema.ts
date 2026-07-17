@@ -1153,6 +1153,10 @@ export interface paths {
                         "application/json": {
                             /** @enum {string} */
                             state: "idle" | "running" | "error";
+                            progress?: {
+                                processed: number;
+                                total: number;
+                            };
                             lastScan?: {
                                 summary: {
                                     added: number;
@@ -1169,7 +1173,10 @@ export interface paths {
             };
         };
         put?: never;
-        /** Scan a source (incremental + idempotent); returns what changed. */
+        /**
+         * Start a scan (incremental + idempotent). Returns 202; poll GET or watch /v1/events.
+         * @description Accepts the scan and returns immediately — it runs in the background. Follow it with GET /v1/sources/:id/scan or the source.scan.progress / .completed / .failed events. Returns 409 if a scan of this source is already running.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1182,7 +1189,7 @@ export interface paths {
             requestBody?: never;
             responses: {
                 /** @description Default Response */
-                200: {
+                202: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1197,11 +1204,11 @@ export interface paths {
                                 };
                                 createdAt: string;
                             };
-                            summary: {
-                                added: number;
-                                modified: number;
-                                removed: number;
-                                unchanged: number;
+                            /** @enum {string} */
+                            state: "idle" | "running" | "error";
+                            progress?: {
+                                processed: number;
+                                total: number;
                             };
                         };
                     };

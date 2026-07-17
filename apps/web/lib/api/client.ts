@@ -21,7 +21,7 @@ import type {
   PlansResponse,
   ReadyStatus,
   RegisterSourceBody,
-  ScanResult,
+  ScanAccepted,
   ScanStatus,
   SearchBody,
   SearchResponse,
@@ -98,7 +98,7 @@ export const api = {
   listSources: (): Promise<SourceListResponse> => sdk.listSources(),
   registerSource: (body: RegisterSourceBody): Promise<Source> => sdk.registerSource(body),
   removeSource: (id: string): Promise<{ id: string }> => sdk.removeSource(id),
-  scanSource: (id: string): Promise<ScanResult> => sdk.scanSource(id),
+  scanSource: (id: string): Promise<ScanAccepted> => sdk.scanSource(id),
   getScanStatus: (id: string): Promise<ScanStatus> => sdk.scanStatus(id),
 
   // --- knowledge graph (F-043) — node/edge-kind arrays are sent comma-joined (the API query shape) ---

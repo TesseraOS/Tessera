@@ -30,7 +30,7 @@ export {
   type RegisterSourceRequest,
   type Source,
   type SourceList,
-  type ScanResult,
+  type ScanAccepted,
   type ScanStatus,
   type WorkspaceStats,
   type GraphQuery,

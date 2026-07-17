@@ -30,11 +30,32 @@ export interface ApiEventMap extends Record<string, unknown> {
     readonly kind: string;
     readonly title: string;
   };
-  /** A source scan started (F-038). */
+  /** A source scan started (F-038). Carries `total` so a client can draw a determinate bar (F-081). */
   readonly 'source.scan.started': TenantScoped & {
     readonly sourceId: string;
     readonly kind: string;
     readonly label: string;
+    /** Changed paths this scan will process. `0` is a real answer — nothing changed. */
+    readonly total: number;
+  };
+  /** How far a running scan has got (F-081) — `processed` counts distinct paths and never regresses. */
+  readonly 'source.scan.progress': TenantScoped & {
+    readonly sourceId: string;
+    readonly kind: string;
+    readonly label: string;
+    readonly processed: number;
+    readonly total: number;
+  };
+  /**
+   * A scan ended in failure (F-081). Since F-081 the scan runs in the background, so the request
+   * that started it has already been answered — without this the failure reaches nobody and the UI
+   * shows a scan that simply never finishes.
+   */
+  readonly 'source.scan.failed': TenantScoped & {
+    readonly sourceId: string;
+    readonly kind: string;
+    readonly label: string;
+    readonly error: string;
   };
   /** A source scan finished, with what changed (F-038). Counts only — non-sensitive. */
   readonly 'source.scan.completed': TenantScoped & {
@@ -56,6 +77,8 @@ export const API_EVENT_TYPES = [
   'document.removed',
   'memory.captured',
   'source.scan.started',
+  'source.scan.progress',
+  'source.scan.failed',
   'source.scan.completed',
 ] as const satisfies readonly (keyof ApiEventMap)[];
 

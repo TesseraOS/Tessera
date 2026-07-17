@@ -43,6 +43,8 @@ export const API_EVENT_TYPES = [
   'document.removed',
   'memory.captured',
   'source.scan.started',
+  'source.scan.progress',
+  'source.scan.failed',
   'source.scan.completed',
 ] as const;
 
@@ -219,12 +221,16 @@ export function useEventsStatus(): ConnectionStatus {
 
 export interface SourceScanProgress {
   running: boolean;
-  /** Documents ingested observed while this source's scan was running (live cue). */
-  ingested: number;
+  /** Changed paths processed so far — counted server-side, per source (F-081). Never regresses. */
+  processed: number;
+  /** Changed paths this scan will process, known once the diff is done. `0` = nothing changed. */
+  total: number;
   /** The last completed scan's counts (authoritative once running is false). */
   lastSummary?: ScanSummary;
   /** ISO time the last scan completed. */
   at?: string;
+  /** Why the last scan failed. The scan runs in the background, so this is how the failure lands. */
+  error?: string;
 }
 
 export interface ScanEventsState {
@@ -232,39 +238,70 @@ export interface ScanEventsState {
 }
 
 export type ScanEvent =
-  | { type: 'source.scan.started'; sourceId: string }
-  | { type: 'source.scan.completed'; sourceId: string; summary: ScanSummary; at: string }
-  | { type: 'document.ingested' };
+  | { type: 'source.scan.started'; sourceId: string; total: number }
+  | { type: 'source.scan.progress'; sourceId: string; processed: number; total: number }
+  | { type: 'source.scan.failed'; sourceId: string; error: string }
+  | { type: 'source.scan.completed'; sourceId: string; summary: ScanSummary; at: string };
 
 export const initialScanEventsState: ScanEventsState = { bySource: {} };
 
-/** Fold one SSE event into the live scan-progress state. Pure — the unit test drives this directly. */
+/**
+ * Fold one SSE event into the live scan-progress state. Pure — the unit test drives this directly.
+ *
+ * F-081 replaced a heuristic here. Progress used to be inferred by counting `document.ingested` and
+ * attributing it to "whatever source is running", which was wrong three ways: it broke with two
+ * concurrent scans, it silently under-counted (the worker emits nothing for an unchanged-hash
+ * document, so a no-op re-scan stalled the count at 0), and under a non-default tenant it stayed at
+ * 0 entirely because `document.*` is attributed to the tenant ingestion actually wrote to (ADR-0050
+ * / F-071). The server now counts per source and says so, and `source.scan.progress` carries the
+ * owning tenant — so the count is real, exact, and tenant-correct.
+ */
 export function scanEventsReducer(state: ScanEventsState, event: ScanEvent): ScanEventsState {
+  const prev = state.bySource[event.sourceId];
   switch (event.type) {
     case 'source.scan.started':
       return {
-        bySource: { ...state.bySource, [event.sourceId]: { running: true, ingested: 0 } },
+        bySource: {
+          ...state.bySource,
+          [event.sourceId]: { running: true, processed: 0, total: event.total },
+        },
       };
-    case 'document.ingested': {
-      // Attribute to whatever is running (one at a time on Local). No running source → ignore.
-      const bySource = { ...state.bySource };
-      let changed = false;
-      for (const [id, progress] of Object.entries(bySource)) {
-        if (progress.running) {
-          bySource[id] = { ...progress, ingested: progress.ingested + 1 };
-          changed = true;
-        }
-      }
-      return changed ? { bySource } : state;
-    }
+    case 'source.scan.progress':
+      return {
+        bySource: {
+          ...state.bySource,
+          [event.sourceId]: {
+            ...prev,
+            running: true,
+            processed: event.processed,
+            total: event.total,
+          },
+        },
+      };
+    case 'source.scan.failed':
+      return {
+        bySource: {
+          ...state.bySource,
+          [event.sourceId]: {
+            ...prev,
+            running: false,
+            processed: prev?.processed ?? 0,
+            total: prev?.total ?? 0,
+            error: event.error,
+          },
+        },
+      };
     case 'source.scan.completed': {
-      const prev = state.bySource[event.sourceId];
+      const total = event.summary.added + event.summary.modified + event.summary.removed;
       return {
         bySource: {
           ...state.bySource,
           [event.sourceId]: {
             running: false,
-            ingested: prev?.ingested ?? 0,
+            // Completed means completed: land the bar on total rather than leaving it wherever the
+            // last progress frame happened to be.
+            processed: total,
+            total,
             lastSummary: event.summary,
             at: event.at,
           },
@@ -290,16 +327,39 @@ function isScanSummary(value: unknown): value is ScanSummary {
 /**
  * Subscribe to live scan progress over the shared connection and return the per-source progress map.
  *
- * Note (ADR-0050): `document.ingested` is attributed to the tenant ingestion actually wrote to, so
- * under a non-default tenant the live `ingested` cue stays at 0 until F-071 lands. The scan
- * **summary** — the authoritative number — is unaffected.
+ * All four `source.scan.*` events carry the owning tenant from the registry record, so — unlike the
+ * `document.*` cue this replaced — progress is tenant-correct today and does not wait on F-071.
  */
 export function useScanEvents(): ScanEventsState {
   const [state, dispatch] = useReducer(scanEventsReducer, initialScanEventsState);
 
   useApiEvent('source.scan.started', (data) => {
     const sourceId = data['sourceId'];
-    if (typeof sourceId === 'string') dispatch({ type: 'source.scan.started', sourceId });
+    const total = data['total'];
+    if (typeof sourceId === 'string' && typeof total === 'number') {
+      dispatch({ type: 'source.scan.started', sourceId, total });
+    }
+  });
+
+  useApiEvent('source.scan.progress', (data) => {
+    const sourceId = data['sourceId'];
+    const processed = data['processed'];
+    const total = data['total'];
+    if (
+      typeof sourceId === 'string' &&
+      typeof processed === 'number' &&
+      typeof total === 'number'
+    ) {
+      dispatch({ type: 'source.scan.progress', sourceId, processed, total });
+    }
+  });
+
+  useApiEvent('source.scan.failed', (data) => {
+    const sourceId = data['sourceId'];
+    const error = data['error'];
+    if (typeof sourceId === 'string' && typeof error === 'string') {
+      dispatch({ type: 'source.scan.failed', sourceId, error });
+    }
   });
 
   useApiEvent('source.scan.completed', (data) => {
@@ -309,8 +369,6 @@ export function useScanEvents(): ScanEventsState {
       dispatch({ type: 'source.scan.completed', sourceId, summary, at: new Date().toISOString() });
     }
   });
-
-  useApiEvent('document.ingested', () => dispatch({ type: 'document.ingested' }));
 
   return state;
 }

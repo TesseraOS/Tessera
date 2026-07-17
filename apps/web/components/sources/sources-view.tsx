@@ -137,17 +137,30 @@ function SourceRow({
   const running = Boolean(progress?.running) || scan.isPending || status?.state === 'running';
   const lastSummary = progress?.lastSummary ?? status?.lastScan?.summary;
   const lastAt = progress?.at ?? status?.lastScan?.at;
-  const hasError = !running && (status?.state === 'error' || Boolean(status?.error));
+  // A background scan reports failure over the stream (`source.scan.failed`) as well as in status —
+  // the request that started it was answered long before it died (F-081).
+  const hasError =
+    !running && (Boolean(progress?.error) || status?.state === 'error' || Boolean(status?.error));
 
   const triggerScan = () => {
     scan.mutate(source.id, {
-      onSuccess: (result) =>
-        toast.success('Scan complete', { description: summaryLine(result.summary) }),
-      onError: (error) =>
-        toast.error('Scan failed', {
-          description:
-            error instanceof TesseraApiError ? error.message : 'Is the Tessera API running?',
+      // "Started", not "complete" (F-081). The request is answered the moment the scan is ACCEPTED,
+      // so it has no summary to report and claiming completion here would simply be false. The real
+      // outcome arrives over the stream and lands in the status line below.
+      onSuccess: () =>
+        toast.success('Scan started', {
+          description: 'Indexing in the background — progress appears below.',
         }),
+      onError: (error) =>
+        toast.error(
+          error instanceof TesseraApiError && error.status === 409
+            ? 'A scan is already running'
+            : 'Could not start the scan',
+          {
+            description:
+              error instanceof TesseraApiError ? error.message : 'Is the Tessera API running?',
+          },
+        ),
     });
   };
 
@@ -184,11 +197,13 @@ function SourceRow({
             </p>
             <ScanStatusLine
               running={running}
-              ingested={progress?.ingested ?? 0}
+              processed={progress?.processed ?? status?.progress?.processed ?? 0}
+              total={progress?.total ?? status?.progress?.total ?? 0}
               summary={lastSummary}
               at={lastAt}
               hasError={hasError}
-              errorText={status?.error}
+              errorText={progress?.error ?? status?.error}
+              label={source.label}
             />
           </div>
         </div>
@@ -246,24 +261,61 @@ function SourceRow({
 
 function ScanStatusLine({
   running,
-  ingested,
+  processed,
+  total,
   summary,
   at,
   hasError,
   errorText,
+  label,
 }: {
   running: boolean;
-  ingested: number;
+  /** Changed paths processed so far, counted server-side per source (F-081). */
+  processed: number;
+  /** Changed paths this scan will process. `0` = the diff has not finished yet. */
+  total: number;
   summary?: ScanSummary | undefined;
   at?: string | undefined;
   hasError: boolean;
   errorText?: string | undefined;
+  label: string;
 }) {
   if (running) {
+    // A DETERMINATE bar (F-081): `total` is what the diff actually enqueued, so this is a real
+    // fraction, not decoration. Until the diff finishes `total` is 0 and there is genuinely nothing
+    // to predict — say "Scanning…" rather than draw a bar at a made-up percentage.
+    const known = total > 0;
+    const percent = known ? Math.round((processed / total) * 100) : 0;
     return (
-      <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-        <Loader2 className="text-primary size-3 animate-spin" aria-hidden="true" />
-        Scanning…{ingested > 0 ? ` ${ingested} indexed` : ''}
+      <span className="flex flex-col gap-1">
+        <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+          <Loader2 className="text-primary size-3 animate-spin" aria-hidden="true" />
+          {known ? (
+            <>
+              Scanning…{' '}
+              <span className="tabular-nums">
+                {processed} / {total}
+              </span>
+            </>
+          ) : (
+            'Scanning…'
+          )}
+        </span>
+        {known ? (
+          <span
+            role="progressbar"
+            aria-valuenow={processed}
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-label={`Scanning ${label}`}
+            className="bg-muted block h-1 w-full max-w-56 overflow-hidden rounded-full"
+          >
+            <span
+              className="bg-primary block h-full rounded-full transition-[width] duration-300 ease-out"
+              style={{ width: `${percent}%` }}
+            />
+          </span>
+        ) : null}
       </span>
     );
   }

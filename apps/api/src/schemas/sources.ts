@@ -47,15 +47,37 @@ export const scanSummarySchema = z.object({
   unchanged: z.number().int(),
 });
 
-/** `POST /v1/sources/:id/scan` response — the source plus what changed. */
-export const scanResultResponseSchema = z.object({
+/** How far a running scan has got (F-081). `processed` counts distinct paths, so it never regresses. */
+const scanProgressSchema = z.object({
+  processed: z.number().int().nonnegative(),
+  /** Changed paths this scan will process. `0` is a real answer — nothing changed. */
+  total: z.number().int().nonnegative(),
+});
+
+/**
+ * `POST /v1/sources/:id/scan` response — **202 Accepted** (F-081): the source plus the state of the
+ * scan now running.
+ *
+ * It no longer returns `summary`, and it cannot: a request that does not wait for the ingest has
+ * nothing truthful to say about what changed. Before F-081 this awaited the whole pipeline —
+ * coordinator *and* `queue.drain()` — which is why a scan held an HTTP request open for its entire
+ * duration. The summary now arrives via `GET /v1/sources/:id/scan` (`lastScan`) or the
+ * `source.scan.completed` event.
+ *
+ * The MCP `scan_source` tool is deliberately **unchanged** and still returns the summary: an agent
+ * asking "scan and tell me what changed" wants the answer, not a job id.
+ */
+export const scanAcceptedResponseSchema = z.object({
   source: sourceSchema,
-  summary: scanSummarySchema,
+  state: z.enum(['idle', 'running', 'error']),
+  progress: scanProgressSchema.optional(),
 });
 
 /** `GET /v1/sources/:id/scan` response — the source's most recent scan status. */
 export const scanStatusResponseSchema = z.object({
   state: z.enum(['idle', 'running', 'error']),
+  /** Present while `state: 'running'` — what a determinate progress bar reads (F-081). */
+  progress: scanProgressSchema.optional(),
   lastScan: z.object({ summary: scanSummarySchema, at: z.string() }).optional(),
   error: z.string().optional(),
 });

@@ -2665,10 +2665,11 @@
     },
     "/v1/sources/{id}/scan": {
       "post": {
-        "summary": "Scan a source (incremental + idempotent); returns what changed.",
+        "summary": "Start a scan (incremental + idempotent). Returns 202; poll GET or watch /v1/events.",
         "tags": [
           "sources"
         ],
+        "description": "Accepts the scan and returns immediately — it runs in the background. Follow it with GET /v1/sources/:id/scan or the source.scan.progress / .completed / .failed events. Returns 409 if a scan of this source is already running.",
         "parameters": [
           {
             "schema": {
@@ -2681,7 +2682,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "202": {
             "description": "Default Response",
             "content": {
               "application/json": {
@@ -2720,42 +2721,38 @@
                       ],
                       "additionalProperties": false
                     },
-                    "summary": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "idle",
+                        "running",
+                        "error"
+                      ]
+                    },
+                    "progress": {
                       "type": "object",
                       "properties": {
-                        "added": {
+                        "processed": {
                           "type": "integer",
-                          "minimum": -9007199254740991,
+                          "minimum": 0,
                           "maximum": 9007199254740991
                         },
-                        "modified": {
+                        "total": {
                           "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "removed": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "unchanged": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
+                          "minimum": 0,
                           "maximum": 9007199254740991
                         }
                       },
                       "required": [
-                        "added",
-                        "modified",
-                        "removed",
-                        "unchanged"
+                        "processed",
+                        "total"
                       ],
                       "additionalProperties": false
                     }
                   },
                   "required": [
                     "source",
-                    "summary"
+                    "state"
                   ],
                   "additionalProperties": false
                 }
@@ -2795,6 +2792,26 @@
                         "running",
                         "error"
                       ]
+                    },
+                    "progress": {
+                      "type": "object",
+                      "properties": {
+                        "processed": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "processed",
+                        "total"
+                      ],
+                      "additionalProperties": false
                     },
                     "lastScan": {
                       "type": "object",

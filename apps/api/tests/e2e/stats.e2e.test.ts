@@ -10,6 +10,7 @@ import {
   type TokenStore,
 } from '../../src/index';
 import type { StatsResponse } from '../../src/schemas/stats';
+import { awaitScan } from './support/await-scan';
 import { createInMemoryServices } from './support/in-memory-services';
 
 /** The workspace summary over the HTTP surface (F-060; FR-38/FR-62). */
@@ -65,6 +66,9 @@ describe('@tessera/api stats', () => {
       });
       const source = registered.json() as { id: string };
       await app.inject({ method: 'POST', url: `/v1/sources/${source.id}/scan` });
+      // F-081: the scan runs in the background (202). Await its completion before reading stats, or
+      // the two fixture documents have not landed in the manifest yet.
+      await awaitScan(app, source.id);
 
       await app.inject({
         method: 'POST',

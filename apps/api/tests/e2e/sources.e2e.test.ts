@@ -9,6 +9,7 @@ import {
   type ApiServices,
   type TokenStore,
 } from '../../src/index';
+import { awaitScan } from './support/await-scan';
 import { createInMemoryServices } from './support/in-memory-services';
 
 /** End-to-end runtime source management over the HTTP surface (F-038; FR-62). */
@@ -63,13 +64,16 @@ describe('@tessera/api sources', () => {
       expect(got.json().id).toBe(source.id);
 
       const scan = await app.inject({ method: 'POST', url: `/v1/sources/${source.id}/scan` });
-      expect(scan.statusCode).toBe(200);
-      expect(scan.json().summary).toEqual({ added: 2, modified: 0, removed: 0, unchanged: 0 });
+      // F-081: the scan is asynchronous — 202 Accepted, running in the background. The summary can
+      // no longer ride the response (it is not yet known); it arrives via GET (`lastScan`).
+      expect(scan.statusCode).toBe(202);
+      expect(scan.json().state).toBe('running');
+      expect(scan.json()).not.toHaveProperty('summary');
 
-      const status = await app.inject({ method: 'GET', url: `/v1/sources/${source.id}/scan` });
-      expect(status.statusCode).toBe(200);
-      expect(status.json().state).toBe('idle');
-      expect(status.json().lastScan.summary.added).toBe(2);
+      // Poll the real status endpoint to completion, then assert what the scan actually changed.
+      const status = await awaitScan(app, source.id);
+      expect(status.state).toBe('idle');
+      expect(status.lastScan?.summary).toEqual({ added: 2, modified: 0, removed: 0, unchanged: 0 });
     });
 
     it('404s an unknown source and 400s an unsupported kind', async () => {

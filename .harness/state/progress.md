@@ -3,6 +3,54 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-19 — fix: the api e2e still spoke the pre-F-081 synchronous scan contract
+
+Two api e2e tests were red on `main` (8317407), **one root cause**. Plan:
+[`fix-e2e-async-scan-contract.md`](../plans/fix-e2e-async-scan-contract.md).
+
+### Root cause — a contract change TypeScript could not see
+
+**F-081 pt2** (3b1fd13) deliberately made `POST /v1/sources/:id/scan` asynchronous: `200 {source,
+summary}` → `202 {source, state}` via `startScan`, the ingest runs in the background, and the summary
+now arrives via `GET /v1/sources/:id/scan` (`lastScan`). The schema + route comments document this as
+intended. F-081 resolved the *type-checked* dependents (OpenAPI, SDK, dashboard) and the **web**
+Playwright spec — but left the **api-side** e2e tests encoding the old synchronous contract:
+
+- `stats.e2e.test.ts` fired the scan and read `/v1/stats` in the same tick, before the background
+  scan populated the manifest → `documents: 0` (expected `2`).
+- `sources.e2e.test.ts` asserted `200` + a `summary` the async route no longer returns → `202`.
+
+They slipped **because e2e assertions read untyped `.json()`** — the drift the SDK/OpenAPI type-check
+caught everywhere else is invisible here; it only fails at run time. The two suspects in the brief were
+both ruled out as the mechanism: the scan *is* async (F-081), but the fix is to await it, not pad it;
+and **F-085** (embedding worker pool) is entirely `packages/ai` + `packages/config`, not in the e2e
+path at all — the in-memory composition root uses a keyword retriever + `createInMemoryDocumentSink` +
+`createInProcessQueue`, no `packages/ai`, no worker threads (`grep worker_threads|piscina` is empty
+tree-wide). Documents are counted from the ingestion **manifest**, populated synchronously by the
+in-process worker; the only variable was whether the background scan had finished when stats was read.
+
+### Fix — await the real completion signal (tests only; production is correct)
+
+New `apps/api/tests/e2e/support/await-scan.ts` → `awaitScan(app, sourceId, headers?)` polls `GET
+/v1/sources/:id/scan` until `state !== 'running'` and returns the terminal status — the **actual**
+completion signal, **no timeout padding** (bounded only as a safety net so a stuck scan fails loudly
+rather than hanging). `stats.e2e` awaits it before reading stats; `sources.e2e` now asserts the async
+`202` shape (state `running`, no `summary`) then asserts the summary on `lastScan` after completion.
+
+**Evidence/verification** — api gates green: `typecheck` (tsc clean), `lint` (eslint clean), repo
+`format:check` (prettier clean), unit `test` 86/86, `build` (tsc clean), `test:e2e` **99/99** (was
+97/99 — the two named tests now pass, the other 97 unchanged). Repo `verify-state` valid (91 features,
+25 effect-links, 1047 doc links; only the pre-existing F-031/033/035/073 plan-file warnings).
+
+**Decisions** — no product/source code changed: the async scan contract is intended (F-081) and the
+tests were stale, so the fix belongs in the tests. No ADR (no default deviated). Recorded the miss on
+**E-003** as a `test` dependent with the durable lesson: *when a `/v1` response shape changes, grep the
+api e2e for the route — TypeScript will not name those the way it names the SDK.*
+
+**Next step** — nothing claimed. Candidates unchanged: F-078, F-071, or the R4 backlog.
+
+---
+
 ## 2026-07-18 — F-091: the Overview stops mumbling — activity narratives, a bell that says what it's doing, a chart in the theme's own color
 
 A second five-item report, all on the Overview/notifications surfaces. Plan:

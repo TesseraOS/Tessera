@@ -1275,12 +1275,13 @@ export interface paths {
         };
         /**
          * Daily activity for the Overview chart — audit-derived, floored to the trail (F-084).
-         * @description Zero-filled per-UTC-day counts of workspace activity. `from` is the window the server actually used (clamped to the oldest event the trail holds), which the client must label; `points` is empty when the trail has no history. No trend field is added to /v1/stats.
+         * @description Zero-filled per-day counts of workspace activity, bucketed into the viewer’s calendar days when `tzOffset` (minutes east of UTC) is sent, UTC days otherwise (F-088). `from` is the window the server actually used (clamped to the oldest event the trail holds), which the client must label; `points` is empty when the trail has no history. No trend field is added to /v1/stats.
          */
         get: {
             parameters: {
                 query?: {
                     days?: number;
+                    tzOffset?: number;
                 };
                 header?: never;
                 path?: never;

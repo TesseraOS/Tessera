@@ -75,6 +75,7 @@ export function createInMemoryAuditLog(): AuditLog {
 
       activity(query) {
         const actions = new Set(query.actions ?? ACTIVITY_ACTIONS);
+        const offsetMs = (query.tzOffsetMinutes ?? 0) * 60_000;
         const counts = new Map<string, number>();
         let earliest: string | null = null;
 
@@ -85,7 +86,9 @@ export function createInMemoryAuditLog(): AuditLog {
 
           if (!actions.has(event.action)) continue;
           if (event.at < query.since || event.at > query.until) continue;
-          const day = event.at.slice(0, 10); // ISO 'YYYY-MM-DDT…' → the UTC calendar day
+          // The viewer's calendar day (F-088): shift the instant by the offset, then read the date.
+          // Offset 0 = the UTC day, byte-identical to the pre-F-088 `at.slice(0, 10)`.
+          const day = new Date(Date.parse(event.at) + offsetMs).toISOString().slice(0, 10);
           counts.set(day, (counts.get(day) ?? 0) + 1);
         }
 

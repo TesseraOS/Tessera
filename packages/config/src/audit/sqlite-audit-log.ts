@@ -130,11 +130,15 @@ export function createSqliteAuditLog(db: BetterSQLite3Database): AuditLog {
 
       activity(query) {
         const actions = query.actions ?? ACTIVITY_ACTIONS;
-        // GROUP BY the UTC day (the first 10 chars of the ISO `at`), counting only "work" actions in
-        // the window — AT THE STORE. `IN (…)` is parameterised via drizzle's `inArray`.
+        // GROUP BY the viewer's calendar day, counting only "work" actions in the window — AT THE
+        // STORE. The day is `date(at, '<n> minutes')` (F-088): SQLite parses the ISO `Z` form and
+        // applies the signed minute modifier, so offset 0 reproduces the UTC day the pre-F-088
+        // `substr(at, 1, 10)` read. Modifier + `IN (…)` are parameterised (drizzle `sql`/`inArray`).
+        const dayModifier = `${query.tzOffsetMinutes ?? 0} minutes`;
+        const localDay = sql<string>`date(${auditEvents.at}, ${dayModifier})`;
         const rows = db
           .select({
-            date: sql<string>`substr(${auditEvents.at}, 1, 10)`,
+            date: localDay,
             count: sql<number>`count(*)`,
           })
           .from(auditEvents)
@@ -146,8 +150,8 @@ export function createSqliteAuditLog(db: BetterSQLite3Database): AuditLog {
               lte(auditEvents.at, query.until),
             ),
           )
-          .groupBy(sql`substr(${auditEvents.at}, 1, 10)`)
-          .orderBy(sql`substr(${auditEvents.at}, 1, 10)`)
+          .groupBy(localDay)
+          .orderBy(localDay)
           .all();
 
         // The retention floor — MIN(at) over the WHOLE tenant trail (any action), so a chart never

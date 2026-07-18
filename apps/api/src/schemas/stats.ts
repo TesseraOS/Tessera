@@ -39,13 +39,22 @@ export const statsResponseSchema = z.object({
 
 export type StatsResponse = z.infer<typeof statsResponseSchema>;
 
-/** `GET /v1/stats/activity` querystring (F-084). `days` arrives as a string. */
+/** `GET /v1/stats/activity` querystring (F-084/F-088). Values arrive as strings. */
 export const activityQuerySchema = z.object({
   days: z.coerce.number().int().positive().max(365).optional(),
+  /**
+   * The viewer's UTC offset in minutes **east** of UTC (JS: `-new Date().getTimezoneOffset()`),
+   * so the buckets are the viewer's calendar days (F-088). Omitted ⇒ UTC days. Bounded to the real
+   * range of world timezones (UTC-12:00 … UTC+14:00). This is a **fixed** offset applied to the
+   * whole window — across a DST transition inside it, hours near the boundary can land one day
+   * off; stated here rather than silently wrong (the store has no tz database to do better).
+   */
+  tzOffset: z.coerce.number().int().min(-720).max(840).optional(),
 });
 
 /**
- * `GET /v1/stats/activity` response (F-084; ADR-0053 clause 3) — a zero-filled daily activity series.
+ * `GET /v1/stats/activity` response (F-084; ADR-0053 clause 3) — a zero-filled daily activity series,
+ * in the viewer's calendar days when `tzOffset` is sent (F-088), UTC days otherwise.
  *
  * `from` is the window start the server **actually used** (`max(requested, oldest retained event)`),
  * not the requested one: the trail is pruned, so anchoring on its real floor is what stops the chart

@@ -48,9 +48,11 @@ export function registerStatsRoutes(app: ZodFastify, services: ApiServices, audi
         summary:
           'Daily activity for the Overview chart — audit-derived, floored to the trail (F-084).',
         description:
-          'Zero-filled per-UTC-day counts of workspace activity. `from` is the window the server ' +
-          'actually used (clamped to the oldest event the trail holds), which the client must label; ' +
-          '`points` is empty when the trail has no history. No trend field is added to /v1/stats.',
+          'Zero-filled per-day counts of workspace activity, bucketed into the viewer’s calendar ' +
+          'days when `tzOffset` (minutes east of UTC) is sent, UTC days otherwise (F-088). `from` ' +
+          'is the window the server actually used (clamped to the oldest event the trail holds), ' +
+          'which the client must label; `points` is empty when the trail has no history. No trend ' +
+          'field is added to /v1/stats.',
         querystring: activityQuerySchema,
         response: { 200: activityResponseSchema },
       },
@@ -58,10 +60,11 @@ export function registerStatsRoutes(app: ZodFastify, services: ApiServices, audi
       // per load would flood the very trail this reads from.
     },
     (request) =>
-      computeWorkspaceActivity(
-        audit,
-        tenantOf(request),
-        request.query.days !== undefined ? { days: request.query.days } : {},
-      ),
+      computeWorkspaceActivity(audit, tenantOf(request), {
+        ...(request.query.days !== undefined ? { days: request.query.days } : {}),
+        ...(request.query.tzOffset !== undefined
+          ? { tzOffsetMinutes: request.query.tzOffset }
+          : {}),
+      }),
   );
 }

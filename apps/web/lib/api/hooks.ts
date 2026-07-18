@@ -171,11 +171,16 @@ export function useStats() {
  * events like {@link useStats}: the chart is daily-granular, so a new event this second does not
  * change today's bar meaningfully, and the 60s staleness picks it up on the next natural refetch
  * without a burst of refetches during a scan.
+ *
+ * The buckets are the **viewer's** calendar days (F-088): the browser's current UTC offset rides
+ * along (`-getTimezoneOffset()` = minutes east), and it is part of the query key so a machine that
+ * changes timezone does not serve stale buckets from the old frame.
  */
 export function useActivity(days?: number) {
+  const tzOffset = -new Date().getTimezoneOffset();
   return useQuery({
-    queryKey: ['stats', 'activity', days ?? null],
-    queryFn: () => api.getActivity(days),
+    queryKey: ['stats', 'activity', days ?? null, tzOffset],
+    queryFn: () => api.getActivity({ ...(days !== undefined ? { days } : {}), tzOffset }),
     staleTime: 60_000,
   });
 }

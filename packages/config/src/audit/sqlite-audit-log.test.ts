@@ -139,6 +139,38 @@ describe('createSqliteAuditLog', () => {
     ]);
   });
 
+  it('buckets by the viewer’s calendar day when tzOffsetMinutes is set — in SQL (F-088)', async () => {
+    const store = createSqliteStore({ path: ':memory:' });
+    const audit = createSqliteAuditLog(store.db).forTenant('acme');
+
+    // The `date(at, '<n> minutes')` modifier is real SQL against the shipping adapter — verified
+    // here for the same F-078 reason as the UTC case above. +330 (UTC+5:30): 20:00Z lands on the
+    // NEXT local day. -300 (UTC-5): 02:00Z lands on the PREVIOUS local day.
+    await audit.record(event({ action: 'compile', at: '2026-03-01T02:00:00.000Z' }));
+    await audit.record(event({ action: 'compile', at: '2026-03-01T08:00:00.000Z' }));
+    await audit.record(event({ action: 'compile', at: '2026-03-01T20:00:00.000Z' }));
+
+    const plus = await audit.activity({
+      since: '2026-03-01T00:00:00.000Z',
+      until: '2026-03-31T23:59:59.999Z',
+      tzOffsetMinutes: 330,
+    });
+    expect(plus.buckets).toEqual([
+      { date: '2026-03-01', count: 2 },
+      { date: '2026-03-02', count: 1 },
+    ]);
+
+    const minus = await audit.activity({
+      since: '2026-03-01T00:00:00.000Z',
+      until: '2026-03-31T23:59:59.999Z',
+      tzOffsetMinutes: -300,
+    });
+    expect(minus.buckets).toEqual([
+      { date: '2026-02-28', count: 1 },
+      { date: '2026-03-01', count: 2 },
+    ]);
+  });
+
   it('reports the retention floor as MIN(at) over all actions, per tenant', async () => {
     const store = createSqliteStore({ path: ':memory:' });
     const base = createSqliteAuditLog(store.db);

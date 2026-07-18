@@ -1,6 +1,6 @@
 'use client';
 
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, XAxis } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -17,12 +17,20 @@ const chartConfig = {
   count: { label: 'Actions', color: 'var(--chart-1)' },
 } satisfies ChartConfig;
 
-/** A short, UTC label for an axis tick / tooltip: `Mar 3`. The series is UTC-bucketed (F-084). */
+/**
+ * A short label for a `YYYY-MM-DD` bucket day: `Mar 3`. The buckets are the **viewer's** calendar
+ * days (F-088 — the server shifted them by this browser's own offset), so the day is formatted as a
+ * plain local calendar date, no timezone gymnastics.
+ */
 function labelFor(date: string): string {
-  const parsed = new Date(`${date}T00:00:00.000Z`);
-  return Number.isNaN(parsed.getTime())
-    ? date
-    : parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const [year, month, day] = date.split('-').map(Number);
+  if (year === undefined || month === undefined || day === undefined || !year || !month || !day) {
+    return date;
+  }
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 /**
@@ -35,10 +43,13 @@ function labelFor(date: string): string {
  * - **Labels the window the server actually used** (`from`), not the 30 days requested — the trail is
  *   pruned, and the server floors the series to its oldest event so a pruned day is never drawn as a
  *   zero.
- * - **UTC**, stated in the description: the buckets are UTC days, so the axis is too, rather than
- *   quietly shifting events across a local midnight.
+ * - **The viewer's days, honestly bucketed** (F-088): the browser's UTC offset is sent with the
+ *   request and the server aggregates in that frame — evening work lands on the day the viewer
+ *   experienced, not on UTC's tomorrow.
  *
- * First consumer of `ui/chart.tsx`, so it uses the `--chart-*` tokens — theme-true in all 4 themes.
+ * Axis-free by design (F-088, user item 3): no x/y axes, no grid — the trend is the message, and the
+ * tooltip carries the exact per-day values on demand. The hidden `XAxis` stays mounted only so the
+ * tooltip label resolves to the bucket day.
  */
 export function ActivityChart() {
   const { data, isPending, isError } = useActivity(DAYS);
@@ -68,35 +79,20 @@ export function ActivityChart() {
       <CardHeader className="p-0 pb-4">
         <CardTitle className="text-sm font-semibold">Activity</CardTitle>
         <CardDescription className="text-xs">
-          Workspace actions per day (UTC), since {labelFor(data.from)}.
+          Workspace actions per day, since {labelFor(data.from)}.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         <ChartContainer config={chartConfig} className="h-40 w-full">
-          <AreaChart data={data.points as ActivityPoint[]} margin={{ left: -20, right: 4, top: 4 }}>
+          <AreaChart data={data.points as ActivityPoint[]} margin={{ top: 4 }}>
             <defs>
               <linearGradient id="activity-fill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--color-count)" stopOpacity={0.3} />
                 <stop offset="100%" stopColor="var(--color-count)" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/50" />
-            <XAxis
-              dataKey="date"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              minTickGap={24}
-              tickFormatter={labelFor}
-              className="text-[10px]"
-            />
-            <YAxis
-              allowDecimals={false}
-              tickLine={false}
-              axisLine={false}
-              width={32}
-              className="text-[10px]"
-            />
+            {/* Hidden, not removed: it anchors the tooltip's label to the bucket day (item 3). */}
+            <XAxis dataKey="date" hide />
             <ChartTooltip
               content={<ChartTooltipContent labelFormatter={(value) => labelFor(String(value))} />}
             />

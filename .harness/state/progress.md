@@ -3,6 +3,48 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-18 — F-088: the day boundary belongs to the viewer, and the chart lost its chrome
+
+Items 3+10 of the report. Plan:
+[`F-088-activity-chart-local-days.md`](../plans/F-088-activity-chart-local-days.md).
+
+### Item 10 — local days, aggregated at the store
+
+F-084 bucketed UTC days honestly — but honesty about the wrong unit is still the wrong unit: at
+UTC+5:30, evening work drew on *tomorrow's* bar. The viewer's offset now rides the whole path:
+
+- `GET /v1/stats/activity?tzOffset=` (minutes **east** of UTC, validated −720…840, default 0 =
+  byte-identical F-084 behavior — pinned by a test). Fixed-offset semantics + the DST caveat are
+  stated in the schema, not silent.
+- `ActivityQuery.tzOffsetMinutes` shifts the day **inside the store aggregation**: SQLite
+  `date(at, '<n> minutes')` in the `GROUP BY` (SQLite parses the ISO `Z` form), in-memory the
+  shifted `toISOString` slice. Both adapters moved together: conformance suite grew ±offset cases,
+  the SQLite adapter its focused SQL tests (F-063 precedent; F-078 unchanged).
+- `computeWorkspaceActivity` windows in the viewer's frame: local-midnight edges converted to UTC
+  instants for the query, and — the part that keeps ADR-0053 clause 3 true in every timezone — the
+  pruning-floor clamp compares the **local** day of `earliest`. New tests: the +330 evening event
+  lands on the viewer's day, the floor clamps in-frame, UTC+14's "today" is tomorrow's UTC date.
+- OpenAPI + SDK regenerated (api rebuilt first — the standing generate.mjs trap); web sends
+  `-getTimezoneOffset()` and keys the query on it, so a machine changing timezone refetches.
+
+### Item 3 — no axes
+
+`YAxis` and the grid are gone; `XAxis` stays mounted but `hide` (it anchors the tooltip's label).
+The tooltip still serves exact per-day values; the window label ("since Jul 17") moved fully into
+the card description, now formatted as a plain local date with the "(UTC)" tag deleted.
+
+**Evidence/verification** — gates green: `state`, `format`, `typecheck` (40/40), `lint` (23/23),
+`test` (38/38), `build` (20/20). Stats API e2e 7/8 — the 1 failure ("reports real counts after a
+scan", documents 0≠2) was **proven pre-existing on clean HEAD via `git stash`** (fails identically
+at 8317407 without this change; scan-ingestion related, likely F-081/F-085 interplay) and is
+flagged as its own follow-up task, not absorbed here. Preview-verified: chart renders axis-free
+with the local window label, tooltip says "Jul 18 · Actions 6", and
+`GET /v1/stats/activity?tzOffset=330` returns viewer-frame days.
+
+**Next step** — F-089 (persisted recent activity + notifications).
+
+---
+
 ## 2026-07-18 — F-087: the scan that never finished was a stale snapshot winning an OR
 
 First of a new 10-item user report (items 1+2 here; the batch is F-087…F-090, all planned and

@@ -261,5 +261,45 @@ export function runAuditLogConformance(name: string, makeLog: AuditLogFactory): 
         await cleanup?.();
       }
     });
+
+    it('buckets by the viewer’s calendar day when tzOffsetMinutes is set (F-088)', async () => {
+      const { log, cleanup } = await makeLog();
+      try {
+        // At UTC+5:30 (offset +330), a 20:00Z event is 01:30 the NEXT local day; an 08:00Z event
+        // stays on the same local day. This is the exact "evening work lands on tomorrow's bar"
+        // defect the offset exists to fix.
+        await log.record(event({ action: 'compile', at: '2026-03-01T08:00:00.000Z' }));
+        await log.record(event({ action: 'compile', at: '2026-03-01T20:00:00.000Z' }));
+
+        const { buckets } = await log.activity({
+          since: '2026-03-01T00:00:00.000Z',
+          until: '2026-03-31T23:59:59.999Z',
+          tzOffsetMinutes: 330,
+        });
+        expect(buckets).toEqual([
+          { date: '2026-03-01', count: 1 },
+          { date: '2026-03-02', count: 1 },
+        ]);
+      } finally {
+        await cleanup?.();
+      }
+    });
+
+    it('shifts a small-hours event to the previous local day for a negative offset', async () => {
+      const { log, cleanup } = await makeLog();
+      try {
+        // At UTC-5 (offset -300), a 02:00Z event is 21:00 the PREVIOUS local day.
+        await log.record(event({ action: 'compile', at: '2026-03-02T02:00:00.000Z' }));
+
+        const { buckets } = await log.activity({
+          since: '2026-03-01T00:00:00.000Z',
+          until: '2026-03-31T23:59:59.999Z',
+          tzOffsetMinutes: -300,
+        });
+        expect(buckets).toEqual([{ date: '2026-03-01', count: 1 }]);
+      } finally {
+        await cleanup?.();
+      }
+    });
   });
 }

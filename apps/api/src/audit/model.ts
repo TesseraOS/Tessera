@@ -124,11 +124,20 @@ export interface ActivityQuery {
   readonly until: string;
   /** Actions to count; defaults to {@link ACTIVITY_ACTIONS}. */
   readonly actions?: readonly AuditAction[];
+  /**
+   * The viewer's UTC offset in minutes **east** of UTC (JS: `-getTimezoneOffset()`), applied when
+   * bucketing an instant into a calendar day (F-088): a day boundary is a viewer-relative concept,
+   * so the offset must reach the aggregation — the store — rather than re-bucketing pages of the
+   * trail in memory. Default `0` = UTC days (exact F-084 behavior). A **fixed** offset for the whole
+   * window: across a DST transition inside it, boundary hours can land one day off — documented at
+   * the API parameter, deliberate (SQLite has no tz database to do better honestly).
+   */
+  readonly tzOffsetMinutes?: number;
 }
 
-/** One UTC day's activity count. */
+/** One calendar day's activity count, in the query's `tzOffsetMinutes` frame (UTC when 0). */
 export interface ActivityBucket {
-  /** The UTC calendar day, `YYYY-MM-DD`. */
+  /** The calendar day, `YYYY-MM-DD`, in the query's offset frame. */
   readonly date: string;
   readonly count: number;
 }

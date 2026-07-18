@@ -2905,7 +2905,7 @@
       "package": "@tessera/api",
       "release": "R4",
       "priority": "should",
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "GET /v1/stats/activity accepts tzOffset (minutes east of UTC, validated to ±840, default 0 = exact F-084 behavior); buckets are the VIEWER’S calendar days, computed inside the store aggregation (GROUP BY on the shifted day) — never by paging the trail into memory",
         "The pruning floor survives the shift: the clamp compares the local day of the trail’s earliest event, so a pruned local day is never drawn as silence (ADR-0053 clause 3 holds under tz)",

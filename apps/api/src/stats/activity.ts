@@ -14,7 +14,7 @@ import type { AuditLog } from '../audit/index.js';
  */
 
 export interface ActivityPoint {
-  /** UTC calendar day, `YYYY-MM-DD`. */
+  /** Calendar day, `YYYY-MM-DD`, in the viewer's offset frame (UTC when `tzOffsetMinutes` is 0). */
   readonly date: string;
   readonly count: number;
 }
@@ -22,9 +22,9 @@ export interface ActivityPoint {
 export interface WorkspaceActivity {
   /** The window start actually used: `max(requestedStart, oldestRetainedEvent)`. Label this, not the request. */
   readonly from: string;
-  /** The window end (inclusive), UTC day. */
+  /** The window end (inclusive) — the viewer's current calendar day. */
   readonly until: string;
-  /** One contiguous point per UTC day in `[from, until]`, zero-filled. Empty when the trail is empty. */
+  /** One contiguous point per day in `[from, until]`, zero-filled. Empty when the trail is empty. */
   readonly points: readonly ActivityPoint[];
 }
 
@@ -38,9 +38,9 @@ function utcDay(ms: number): string {
 }
 
 /**
- * Every UTC day from `fromDay` to `untilDay` inclusive, ascending. Pure calendar math — filling a day
- * inside the retained window with a real `0` is not fabrication; emitting a day *before* `from` would
- * be, and this never does (the caller passes the clamped `from`).
+ * Every day from `fromDay` to `untilDay` inclusive, ascending. Pure calendar math over day strings —
+ * filling a day inside the retained window with a real `0` is not fabrication; emitting a day
+ * *before* `from` would be, and this never does (the caller passes the clamped `from`).
  */
 function fillDays(fromDay: string, untilDay: string, counts: Map<string, number>): ActivityPoint[] {
   const points: ActivityPoint[] = [];
@@ -57,20 +57,33 @@ function fillDays(fromDay: string, untilDay: string, counts: Map<string, number>
  *
  * `days` is the requested window length; the real window is `[max(now-days, oldestEvent), now]`. An
  * empty trail returns an empty `points` — the caller renders the chart only when there is data.
+ *
+ * `tzOffsetMinutes` (F-088) makes the days the **viewer's** calendar days: the window edges are the
+ * viewer's local midnights (converted to UTC instants for the store query), the store buckets by the
+ * shifted day, and — critically — the pruning-floor clamp compares the *local* day of the trail's
+ * oldest event, so ADR-0053 clause 3 holds in every timezone, not just UTC.
  */
 export async function computeWorkspaceActivity(
   audit: AuditLog,
   tenantId: TenantId,
-  options: { days?: number; now?: number } = {},
+  options: { days?: number; now?: number; tzOffsetMinutes?: number } = {},
 ): Promise<WorkspaceActivity> {
   const days = Math.min(Math.max(1, options.days ?? DEFAULT_ACTIVITY_DAYS), MAX_ACTIVITY_DAYS);
   const now = options.now ?? Date.now();
-  const untilDay = utcDay(now);
-  const requestedFromDay = utcDay(now - (days - 1) * MS_PER_DAY);
+  const tzOffsetMinutes = options.tzOffsetMinutes ?? 0;
+  const offsetMs = tzOffsetMinutes * 60_000;
+  /** The viewer's calendar day of an instant. */
+  const localDay = (ms: number): string => utcDay(ms + offsetMs);
 
-  const { buckets, earliest } = await audit
-    .forTenant(tenantId)
-    .activity({ since: `${requestedFromDay}T00:00:00.000Z`, until: `${untilDay}T23:59:59.999Z` });
+  const untilDay = localDay(now);
+  const requestedFromDay = localDay(now - (days - 1) * MS_PER_DAY);
+
+  const { buckets, earliest } = await audit.forTenant(tenantId).activity({
+    // The UTC instants of the viewer's local-midnight window edges.
+    since: new Date(Date.parse(`${requestedFromDay}T00:00:00.000Z`) - offsetMs).toISOString(),
+    until: new Date(Date.parse(`${untilDay}T23:59:59.999Z`) - offsetMs).toISOString(),
+    tzOffsetMinutes,
+  });
 
   // An empty trail proves nothing about any day — return no points, so the chart stays hidden rather
   // than drawing a flat zero line across a window the workspace has no history for.
@@ -78,9 +91,10 @@ export async function computeWorkspaceActivity(
     return { from: requestedFromDay, until: untilDay, points: [] };
   }
 
-  // The clamp (ADR-0053 clause 3): never start earlier than the trail's oldest day. If the trail
-  // goes back further than requested, the request wins; if it is younger, the trail's floor wins.
-  const earliestDay = earliest.slice(0, 10);
+  // The clamp (ADR-0053 clause 3): never start earlier than the trail's oldest day — in the
+  // viewer's frame. If the trail goes back further than requested, the request wins; if it is
+  // younger, the trail's floor wins.
+  const earliestDay = localDay(Date.parse(earliest));
   const fromDay = earliestDay > requestedFromDay ? earliestDay : requestedFromDay;
 
   const counts = new Map(buckets.map((bucket) => [bucket.date, bucket.count]));

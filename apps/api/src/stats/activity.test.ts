@@ -90,4 +90,56 @@ describe('computeWorkspaceActivity', () => {
     const a = await computeWorkspaceActivity(audit, 'a', { days: 5, now: NOW });
     expect(a.points.reduce((sum, p) => sum + p.count, 0)).toBe(1);
   });
+
+  // --- viewer-local days (F-088) ------------------------------------------------------------------
+
+  it('buckets into the viewer’s calendar days and clamps the floor in that frame', async () => {
+    const audit = createInMemoryAuditLog();
+    // At UTC+5:30 the viewer experienced this 20:00Z event at 01:30 on 03-30 — their evening work
+    // must not land on "yesterday's" bar (user item 10).
+    await audit.record(event({ action: 'compile', at: '2026-03-29T20:00:00.000Z' }));
+    await audit.record(event({ action: 'compile', at: '2026-03-31T09:00:00.000Z' }));
+
+    const { from, until, points } = await computeWorkspaceActivity(audit, 'default', {
+      days: 30,
+      now: NOW,
+      tzOffsetMinutes: 330,
+    });
+
+    // The floor clamp holds in the viewer's frame (ADR-0053 clause 3 under tz): the oldest event
+    // belongs to the viewer's 03-30, so the series must not begin on 03-29.
+    expect(from).toBe('2026-03-30');
+    expect(until).toBe('2026-03-31');
+    expect(points).toEqual([
+      { date: '2026-03-30', count: 1 },
+      { date: '2026-03-31', count: 1 },
+    ]);
+  });
+
+  it('reports the viewer’s today as the window end, even when it is tomorrow in UTC', async () => {
+    const audit = createInMemoryAuditLog();
+    await audit.record(event({ action: 'compile', at: '2026-03-31T11:00:00.000Z' }));
+
+    const { until, points } = await computeWorkspaceActivity(audit, 'default', {
+      days: 2,
+      now: NOW, // 12:00Z — already 02:00 on 04-01 at UTC+14
+      tzOffsetMinutes: 840,
+    });
+
+    expect(until).toBe('2026-04-01');
+    expect(points.at(-1)).toEqual({ date: '2026-04-01', count: 1 });
+  });
+
+  it('offset 0 is byte-identical to the pre-F-088 UTC behavior', async () => {
+    const audit = createInMemoryAuditLog();
+    await audit.record(event({ action: 'compile', at: '2026-03-30T10:00:00.000Z' }));
+
+    const explicit = await computeWorkspaceActivity(audit, 'default', {
+      days: 5,
+      now: NOW,
+      tzOffsetMinutes: 0,
+    });
+    const omitted = await computeWorkspaceActivity(audit, 'default', { days: 5, now: NOW });
+    expect(explicit).toEqual(omitted);
+  });
 });

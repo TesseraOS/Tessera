@@ -79,12 +79,12 @@ describe('ActivityChart', () => {
     expect(await screen.findByText('Activity')).toBeInTheDocument();
 
     // Compute the label the way the component does, so the assertion is locale-independent: the point
-    // is that `from` (03-29) is shown, not the 30-days-ago the request implied. Target the description
-    // node directly (a `textContent.includes` matcher also matches every ancestor).
-    const expectedLabel = new Date('2026-03-29T00:00:00.000Z').toLocaleDateString(undefined, {
+    // is that `from` (03-29) is shown, not the 30-days-ago the request implied. Since F-088 the
+    // buckets are the viewer's own calendar days, so the label is a plain local date. Target the
+    // description node directly (a `textContent.includes` matcher also matches every ancestor).
+    const expectedLabel = new Date(2026, 2, 29).toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
-      timeZone: 'UTC',
     });
     const description = container.querySelector('[data-slot="card-description"]');
     expect(description?.textContent).toContain(`since ${expectedLabel}`);

@@ -96,9 +96,12 @@ export const api = {
   // --- sources (F-038/FR-62) ---
   /** The workspace summary: documents, memories, graph, sources, last scan (F-060; stats:read). */
   getStats: (): Promise<WorkspaceStats> => sdk.getStats(),
-  /** Daily activity for the Overview chart, audit-derived + floored to the trail (F-084). */
-  getActivity: (days?: number): Promise<WorkspaceActivity> =>
-    sdk.getActivity(days !== undefined ? { days } : undefined),
+  /**
+   * Daily activity for the Overview chart, audit-derived + floored to the trail (F-084). `tzOffset`
+   * (minutes east of UTC) makes the buckets the viewer's calendar days rather than UTC's (F-088).
+   */
+  getActivity: (query?: { days?: number; tzOffset?: number }): Promise<WorkspaceActivity> =>
+    sdk.getActivity(query),
 
   listSources: (): Promise<SourceListResponse> => sdk.listSources(),
   registerSource: (body: RegisterSourceBody): Promise<Source> => sdk.registerSource(body),

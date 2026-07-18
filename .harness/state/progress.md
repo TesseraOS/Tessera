@@ -49,6 +49,28 @@ api e2e for the route — TypeScript will not name those the way it names the SD
 
 **Next step** — nothing claimed. Candidates unchanged: F-078, F-071, or the R4 backlog.
 
+### Follow-up (same day) — the fix carried its own instance of the lesson it recorded
+
+Review caught a type error in the new `support/await-scan.ts`: it imported `z` from the **v3 root**
+`'zod'` and inferred `ScanStatus` via `z.infer` over `scanStatusResponseSchema`, which is a
+**`zod/v4`** schema (all of `src/schemas/*` use `zod/v4`). v3's `infer` rejects a v4 schema type
+(TS2344 "does not satisfy the constraint `ZodType`"), so the helper's return type was wrong. It
+slipped for the **exact reason** this entry's lesson names: `apps/api/tsconfig.json` is
+`include: ["src/**/*"]`, so the whole `tests/` tree — even *typed* helper code — is outside the
+typecheck gate (proven: `pnpm -w typecheck` is 40/40 green WITH the bug present). Fixed by importing
+`z` from `'zod/v4'` (matches the schema + the `fastify-type-provider-zod-v4-bridge` convention);
+type-only change, runtime identical. Verified with an isolated probe (v3 infer → TS2344, v4 infer →
+clean). Swept the last commit + repo for the same v3-infer-on-v4-schema shape — none elsewhere (the
+two test files import no zod; other root-`zod` importers use their own v3 schemas, internally
+consistent). Lesson [`untyped-e2e-assertions-escape-the-contract-type-check`](../memory/lessons/untyped-e2e-assertions-escape-the-contract-type-check.md)
+broadened accordingly.
+
+Also fixed a **pre-existing, unrelated** red gate surfaced by the full-gate sweep: F-091 (6d139e5)
+shipped an unused `import type { ReactNode }` in `apps/web/components/app-header.test.tsx`, failing
+`@typescript-eslint/no-unused-vars` — the web lint gate was red on `main` despite F-091's "lint
+green" claim. Removed the dead import (test-only). Gates now green workspace-wide: `state`,
+`typecheck` 40/40, `lint` 23/23, `format`, `test` 38/38, `build` 20/20, api `e2e` 99/99.
+
 ---
 
 ## 2026-07-18 — F-091: the Overview stops mumbling — activity narratives, a bell that says what it's doing, a chart in the theme's own color

@@ -43,6 +43,17 @@ retriever + `createInMemoryDocumentSink` + `createInProcessQueue` and touches ne
 worker_threads|piscina` is empty tree-wide). Rule a suspect in by tracing the *actual* code path the
 failing test executes, not by the plausibility of the feature name.
 
+**It happened again in the same change, one layer deeper.** The fix's own new helper
+(`support/await-scan.ts`) inferred the wire type with `z.infer<typeof scanStatusResponseSchema>` but
+imported `z` from the **v3 root** `'zod'`, while the schema is **`zod/v4`** (all of `src/schemas/*`
+are). v3's `infer` rejects a v4 schema type (TS2344), so the helper's return type was silently wrong
+— and `pnpm -w typecheck` was **40/40 green with the bug in the tree**, because `apps/api/tsconfig.json`
+is `include: ["src/**/*"]`: the entire `tests/` directory is outside the typecheck gate. So it is not
+only untyped `.json()` assertions that escape — *typed* test code escapes too, because the tests are
+not compiled by any gate. When you write a typed test helper that infers from a schema, import `z`
+from the **same** entrypoint the schema uses (`zod/v4` here) and typecheck it deliberately (an
+isolated `tsc` over the file), because CI will not.
+
 **How to apply:**
 - When you change a `/v1` (or MCP) **response shape**, don't trust the compiler to find every
   dependent. `grep` the api e2e (and mcp e2e) for the route/tool and the fields you changed — those

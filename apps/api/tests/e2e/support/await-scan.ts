@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import type { z } from 'zod/v4';
 import type { buildServer } from '../../../src/index';
 import type { scanStatusResponseSchema } from '../../../src/schemas/sources';
 

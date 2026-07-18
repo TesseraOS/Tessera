@@ -3,6 +3,63 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-18 — F-091: the Overview stops mumbling — activity narratives, a bell that says what it's doing, a chart in the theme's own color
+
+A second five-item report, all on the Overview/notifications surfaces. Plan:
+[`F-091-overview-polish.md`](../plans/F-091-overview-polish.md).
+
+### Items 2+3 — one root: `describeEvent` had titles but nothing to say
+
+Trail rows carry no content (NFR-7 — targets are route patterns or opaque ids), so the subtext the
+user asked for is **derived from action semantics**: `describeEvent` now returns a mandatory
+`description` for every branch *including the unknown-action fallback* ("Source scan started →
+Indexing of new and changed source content began."; "Context compiled → Context pack assembled from
+indexed sources and memory."). One map, both surfaces — the feed and the bell render the same
+narrative, kept ≤ ~60 chars so the 320px popover truncates cleanly. An id target (memory lineage)
+rides the title line in mono instead of claiming a third line.
+
+### Item 1 — alignment was arithmetic
+
+Bell rows were `items-start` with a 24px chip beside a single 16px text line: the title's center sat
+~6px above the chip's. With the description mandatory, every row is a deterministic two-line block,
+and `items-center` holds chip, text, and meta on one rhythm — the misalignment is structurally
+impossible now, not just tuned away.
+
+### Item 4 — the bell now has all four async states
+
+`NotificationsMenu` read only `data`; while pending it showed the empty state's copy (one refetch
+away from lying). It now renders skeleton rows + an sr-only "Loading notifications…" while pending,
+an honest "Notifications could not be loaded." + Try again (refetch) on error — verified live by
+killing/restoring the API mid-session — and the existing empty/populated states otherwise.
+
+### Item 5 — the chart's blue was stock, and the fix was *not* retuning the ramp
+
+Dark `--chart-1` is shadcn's default blue on a theme whose header documents a "monochrome chart
+ramp" — but `--chart-1..5` is the **categorical** palette (graph kind accents, signal badges,
+memory kinds, the art layer), so recoloring it would have broken every hue-coded surface. Decided:
+**single-series trends ride `--primary`** — white-on-near-black in Monkai dark, ink in Monkai
+light, gold/terracotta/ink in Amber/Claude/Notebook — all verified by screenshot. Recorded in
+E-004; the globals.css header comment now states the actual rule. Endpoint clipping was zero
+left/right/bottom margins (half the stroke and the whole hover dot fell outside the viewBox) —
+margins now cover both, the active dot is themed (`--primary` punched out of `--sidebar`), and the
+header carries the window total ("N total actions"). Axis-free stays (F-088).
+
+**Evidence/verification** — gates green: `state` (91 features), `typecheck`, `lint`, repo-wide
+`format:check`, `test` (web 411/411 — 35 files; new: bell loading/error/retry/description unit
+tests via a mocked AppHeader, describeEvent coverage for every action × target + fallback),
+`build` (turbo 15/15). Home e2e 8/8 — titles, `— mark as read` labels, testids, and both axe
+WCAG A/AA sweeps unchanged and green. Preview-verified: Monkai dark/light, Amber; bell populated /
+error / recovered; chart hover at the right endpoint shows the full dot + themed tooltip.
+
+**Decisions** — the chart-color rule (categorical `--chart-*` vs single-series `--primary`) is a
+convention, not a contract change: recorded in E-004 and the token header, no ADR needed (no
+default deviated — the documented Monkai intent was finally implemented).
+
+**Next step** — nothing claimed. Candidates unchanged: the stats-e2e fix, F-078, F-071, or the R4
+backlog.
+
+---
+
 ## 2026-07-18 — F-090: the graph opens readable, and the inspector stands level with the canvas
 
 Items 7+8 — **the last of the 10-item report; all ten are now landed** (F-087: 1, 2 · F-088: 3, 10

@@ -13,8 +13,15 @@ import { useActivity } from '@/lib/api/hooks';
 
 const DAYS = 30;
 
+/**
+ * The single series rides `--primary`, not `--chart-1` (F-091, user item 5): a one-series trend
+ * should carry the theme's own accent — monochrome in Monkai (the documented "monochrome chart
+ * ramp" of DESIGN-SYSTEM §0.1), amber/terracotta/ink in the catalog themes. `--chart-1..5` is the
+ * *categorical* palette (graph kind accents, signal badges, memory kinds, the art layer) and its
+ * dark-mode stock blue has no business on this neutral surface.
+ */
 const chartConfig = {
-  count: { label: 'Actions', color: 'var(--chart-1)' },
+  count: { label: 'Actions', color: 'var(--primary)' },
 } satisfies ChartConfig;
 
 /**
@@ -76,15 +83,30 @@ export function ActivityChart() {
 
   return (
     <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
-      <CardHeader className="p-0 pb-4">
-        <CardTitle className="text-sm font-semibold">Activity</CardTitle>
-        <CardDescription className="text-xs">
-          Workspace actions per day, since {labelFor(data.from)}.
-        </CardDescription>
+      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 p-0 pb-4">
+        <div className="space-y-0.5">
+          <CardTitle className="text-sm font-semibold">Activity</CardTitle>
+          <CardDescription className="text-xs">
+            Workspace actions per day, since {labelFor(data.from)}.
+          </CardDescription>
+        </div>
+        {/* The window total — the one number the trend line cannot carry by itself. */}
+        <div className="shrink-0 text-right">
+          <p className="text-sm leading-5 font-semibold tabular-nums">{total.toLocaleString()}</p>
+          <p className="text-muted-foreground text-[11px]">total actions</p>
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <ChartContainer config={chartConfig} className="h-40 w-full">
-          <AreaChart data={data.points as ActivityPoint[]} margin={{ top: 4 }}>
+          {/*
+            The margins are clipping headroom, not decoration: recharts clips the plot to its
+            viewBox, so with zero margins half the 2px stroke — and the whole hover dot — vanished
+            at the first/last day and at the window's peak (F-091, user item 5).
+          */}
+          <AreaChart
+            data={data.points as ActivityPoint[]}
+            margin={{ top: 6, right: 6, bottom: 6, left: 6 }}
+          >
             <defs>
               <linearGradient id="activity-fill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--color-count)" stopOpacity={0.3} />
@@ -102,6 +124,13 @@ export function ActivityChart() {
               stroke="var(--color-count)"
               strokeWidth={2}
               fill="url(#activity-fill)"
+              activeDot={{
+                r: 3.5,
+                strokeWidth: 2,
+                // Punched out of the card's own ground, so the dot reads on every theme × mode.
+                stroke: 'var(--sidebar)',
+                fill: 'var(--color-count)',
+              }}
             />
           </AreaChart>
         </ChartContainer>

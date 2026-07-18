@@ -184,7 +184,7 @@
         },
         {
           "kind": "module",
-          "ref": "@tessera/web charts (Recharts/Tremor using the --chart-* palette, F-014+)"
+          "ref": "@tessera/web charts (Recharts/Tremor, F-014+) — color rule since F-091: --chart-1..5 is the CATEGORICAL palette (graph kind accents, signal badges, memory kinds, art); SINGLE-series trends ride --primary (activity-chart), which is what keeps them monochrome in Monkai and accent-true in Amber/Claude/Notebook"
         },
         {
           "kind": "module",

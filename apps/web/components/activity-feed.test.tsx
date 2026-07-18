@@ -71,6 +71,43 @@ describe('describeEvent', () => {
     expect(described.title).toBe('future action');
     expect(described.title).not.toContain('undefined');
   });
+
+  it('supplies a non-empty description for every known action AND the fallback (F-091)', () => {
+    // No surface may render a bare two-word title — the bell and the feed both lean on this.
+    const shapes: [string, string][] = [
+      ['memory.write', '/v1/memory'],
+      ['memory.write', 'lin_abc123'],
+      ['compile', '/v1/compile'],
+      ['effects.write', '/v1/effects'],
+      ['source.manage', '/v1/sources'],
+      ['source.manage', '/v1/sources/:id/scan'],
+      ['source.manage', '/v1/sources/:id'],
+      ['source.manage', '/v1/sources/:id/other'],
+      ['token.manage', '/v1/tokens'],
+      ['token.manage', '/v1/tokens/:id'],
+      ['billing.manage', '/v1/billing'],
+      ['retention.manage', '/v1/retention/prune'],
+      ['retention.manage', '/v1/retention'],
+      ['dsr.export', '/v1/dsr/export'],
+      ['dsr.delete', '/v1/dsr/delete'],
+      ['audit.export', '/v1/audit/export'],
+      ['future.action', '/v1/future'],
+    ];
+    for (const [action, target] of shapes) {
+      const described = describeEvent(event({ action, target }));
+      expect(described.description, `${action} ${target}`).toBeTruthy();
+      expect(described.description.length, `${action} ${target}`).toBeGreaterThan(10);
+    }
+  });
+
+  it('keeps the scan and compile subtext meaningful, not generic (user items 2/3)', () => {
+    expect(
+      describeEvent(event({ action: 'source.manage', target: '/v1/sources/:id/scan' })).description,
+    ).toBe('Indexing of new and changed source content began.');
+    expect(describeEvent(event({ action: 'compile', target: '/v1/compile' })).description).toBe(
+      'Context pack assembled from indexed sources and memory.',
+    );
+  });
 });
 
 describe('relativeTime', () => {
@@ -113,6 +150,9 @@ describe('ActivityFeed', () => {
     expect(items).toHaveLength(2);
     expect(items[0]).toHaveTextContent('Source scan started');
     expect(items[1]).toHaveTextContent('Memory captured');
+    // Each row carries its description subtext, not a bare title (F-091).
+    expect(items[0]).toHaveTextContent('Indexing of new and changed source content began.');
+    expect(items[1]).toHaveTextContent('New entry recorded to the workspace memory store.');
   });
 
   it('states a load failure instead of pretending the workspace is idle', async () => {

@@ -31,62 +31,115 @@ import type { RecentActivityEvent } from '@/lib/api/types';
  * (user items 4/6/9).
  */
 
-/** One line of prose + an icon for a feed row. Pure, so it is unit-testable directly. */
+/**
+ * Icon, title, and a one-line description for a feed/bell row. Pure, so it is unit-testable
+ * directly. The description is **derived from action semantics** — trail rows carry no content
+ * (NFR-7: targets are route patterns or opaque ids) — and every branch supplies one, so no surface
+ * ever renders a bare two-word title (F-091, user items 2/3). Kept short (≤ ~60 chars) so the
+ * 320px bell popover truncates gracefully.
+ */
 export function describeEvent(event: Pick<RecentActivityEvent, 'action' | 'target' | 'actor'>): {
   icon: LucideIcon;
   title: string;
+  description: string;
   detail?: string;
 } {
   const { action, target } = event;
   // A target that is not a route pattern is an id worth showing (a memory lineage, for instance).
   const idTarget = target !== undefined && !target.startsWith('/') ? target : undefined;
-  const base = (icon: LucideIcon, title: string) =>
-    idTarget !== undefined ? { icon, title, detail: idTarget } : { icon, title };
+  const base = (icon: LucideIcon, title: string, description: string) =>
+    idTarget !== undefined
+      ? { icon, title, description, detail: idTarget }
+      : { icon, title, description };
 
   switch (action) {
     case 'memory.write':
       return target === '/v1/memory'
-        ? { icon: BookText, title: 'Memory captured' }
-        : base(BookText, 'Memory updated');
+        ? {
+            icon: BookText,
+            title: 'Memory captured',
+            description: 'New entry recorded to the workspace memory store.',
+          }
+        : base(BookText, 'Memory updated', 'An existing memory entry was revised.');
     case 'compile':
-      return base(Package, 'Context compiled');
+      return base(
+        Package,
+        'Context compiled',
+        'Context pack assembled from indexed sources and memory.',
+      );
     case 'effects.write':
-      return base(Waypoints, 'Effect link asserted');
+      return base(
+        Waypoints,
+        'Effect link asserted',
+        'Dependency edge recorded in the effect graph.',
+      );
     case 'source.manage':
       switch (target) {
         case '/v1/sources':
-          return { icon: Boxes, title: 'Source registered' };
+          return {
+            icon: Boxes,
+            title: 'Source registered',
+            description: 'New source connection added to the workspace.',
+          };
         case '/v1/sources/:id/scan':
-          return { icon: RefreshCw, title: 'Source scan started' };
+          return {
+            icon: RefreshCw,
+            title: 'Source scan started',
+            description: 'Indexing of new and changed source content began.',
+          };
         case '/v1/sources/:id':
-          return { icon: Trash2, title: 'Source removed' };
+          return {
+            icon: Trash2,
+            title: 'Source removed',
+            description: 'Connection removed along with its indexed documents.',
+          };
         default:
-          return base(Boxes, 'Source updated');
+          return base(Boxes, 'Source updated', 'Source connection settings were changed.');
       }
     case 'token.manage':
       switch (target) {
         case '/v1/tokens':
-          return { icon: KeyRound, title: 'API token issued' };
+          return {
+            icon: KeyRound,
+            title: 'API token issued',
+            description: 'New token created for programmatic API access.',
+          };
         case '/v1/tokens/:id':
-          return { icon: KeyRound, title: 'API token revoked' };
+          return {
+            icon: KeyRound,
+            title: 'API token revoked',
+            description: 'Token invalidated; it can no longer authenticate.',
+          };
         default:
-          return base(KeyRound, 'Tokens updated');
+          return base(KeyRound, 'Tokens updated', 'API token settings were changed.');
       }
     case 'billing.manage':
-      return base(CreditCard, 'Billing updated');
+      return base(CreditCard, 'Billing updated', 'Subscription or payment details were changed.');
     case 'retention.manage':
       return target === '/v1/retention/prune'
-        ? { icon: Timer, title: 'Retention prune run' }
-        : base(Timer, 'Retention policy updated');
+        ? {
+            icon: Timer,
+            title: 'Retention prune run',
+            description: 'Data past the retention window was purged.',
+          }
+        : base(Timer, 'Retention policy updated', 'Data lifecycle rules were changed.');
     case 'dsr.export':
-      return base(FileDown, 'Data exported (DSR)');
+      return base(FileDown, 'Data exported (DSR)', 'Data-subject export bundle was generated.');
     case 'dsr.delete':
-      return base(FileX2, 'Data erased (DSR)');
+      return base(FileX2, 'Data erased (DSR)', 'Subject data was permanently erased on request.');
     case 'audit.export':
-      return base(ScrollText, 'Audit trail exported');
+      return base(
+        ScrollText,
+        'Audit trail exported',
+        'Compliance export of the audit trail was generated.',
+      );
     default:
       // A new audit action renders honestly before this map learns it.
-      return base(ScrollText, action.replace(/[._]/g, ' '));
+      return base(
+        ScrollText,
+        action.replace(/[._]/g, ' '),
+        'Recorded in the workspace audit trail.',
+      );
   }
 }
 
@@ -178,19 +231,28 @@ export function ActivityFeed() {
         tabIndex={0}
       >
         {entries.map((entry) => {
-          const { icon: Icon, title, detail } = describeEvent(entry);
+          const { icon: Icon, title, description, detail } = describeEvent(entry);
           return (
             <li key={entry.id} className="flex items-center gap-3 py-2.5">
               <span className="bg-background/60 text-muted-foreground grid size-7 shrink-0 place-items-center rounded-md">
                 <Icon className="size-3.5" aria-hidden="true" />
               </span>
+              {/* Always exactly two lines (the description is mandatory), so the chip and the
+                  timestamp center against a deterministic block — no single-line rows floating
+                  above the icon (F-091, user item 1). An id target rides the title line in mono
+                  instead of claiming a third line. */}
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-medium">{title}</span>
-                {detail !== undefined ? (
-                  <span className="text-muted-foreground block truncate font-mono text-[11px]">
-                    {detail}
-                  </span>
-                ) : null}
+                <span className="flex items-baseline gap-2">
+                  <span className="shrink-0 truncate text-xs leading-4 font-medium">{title}</span>
+                  {detail !== undefined ? (
+                    <span className="text-muted-foreground min-w-0 truncate font-mono text-[10px]">
+                      {detail}
+                    </span>
+                  ) : null}
+                </span>
+                <span className="text-muted-foreground block truncate text-[11px] leading-4">
+                  {description}
+                </span>
               </span>
               <span
                 className="text-muted-foreground shrink-0 text-xs tabular-nums"

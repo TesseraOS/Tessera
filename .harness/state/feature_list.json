@@ -2986,6 +2986,41 @@
       ],
       "effects": [],
       "notes": "User items 7+8 (2026-07-18 report). Plan: .harness/plans/F-090-graph-zoom-and-panel.md"
+    },
+    {
+      "verification": [
+        "typecheck",
+        "lint",
+        "format",
+        "test",
+        "build"
+      ],
+      "blockedBy": [],
+      "id": "F-091",
+      "title": "Overview polish: activity narratives, notification loading/alignment, theme-true chart",
+      "requirements": [
+        "FR-38",
+        "FR-49",
+        "NFR-14"
+      ],
+      "service": "web",
+      "package": "apps/web",
+      "release": "R4",
+      "priority": "should",
+      "status": "done",
+      "acceptance": [
+        "describeEvent returns a professional one-line description for EVERY event (including the unknown-action fallback), derived from action semantics only (targets are route patterns/ids — NFR-7 forbids content); feed and bell render it as subtext, so no row is a bare two-word title",
+        "Notification rows align: icon chip, two-line text block, and meta column sit on one consistent vertical rhythm (no single-line rows floating above the chip)",
+        "The bell shows a skeleton loading state while the recent-activity query is pending and an honest error state (with retry) when it fails — never the empty-state copy during a fetch",
+        "The Activity chart is theme-true in every theme x mode: the single series rides --primary (monochrome in Monkai per the documented ramp intent, each theme's accent elsewhere); no stock-palette blue in dark mode; --chart-1..5 stays untouched (categorical consumers: KIND_ACCENT, signal badges, memory kinds, art)",
+        "Chart endpoints are not clipped: plot margins cover the stroke and the themed active dot at the window edges; the header carries the window total; axis-free stays (F-088)",
+        "Existing pinned copy survives: row titles, '— mark as read' labels, testids, and the home e2e stay green; apps/web gates green"
+      ],
+      "effects": [
+        "E-004",
+        "E-020"
+      ],
+      "notes": "User items 1-5 (2026-07-18 report, second batch). Done 2026-07-18: descriptions from action semantics (NFR-7-safe), bell gains loading/error/retry, chart rides --primary (E-004 records the categorical-vs-single-series color rule). Plan: .harness/plans/F-091-overview-polish.md"
     }
   ]
 }

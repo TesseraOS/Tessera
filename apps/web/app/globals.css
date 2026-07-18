@@ -9,9 +9,11 @@
 /*
  * Design tokens — semantic CSS variables. The classless :root/.dark blocks ARE the
  * Monkai default theme (DESIGN-SYSTEM §0.1, ADR-0047): efferd Dashboard 3 — near-black
- * canvas, flat surfaces, a MONOCHROME chart ramp, and emerald-up / red-down as the only
- * functional accent (see components/delta). The Amber/Claude/Notebook catalogs live in
- * themes.css as :root[data-theme='X'] blocks. Components reference tokens only — never
+ * canvas, flat surfaces, and emerald-up / red-down as the only functional accent (see
+ * components/delta). The monochrome trend look is carried by SINGLE-series charts riding
+ * --primary (see activity-chart); --chart-1..5 is the CATEGORICAL palette for surfaces
+ * that need distinguishable hues (graph kind accents, signal badges, memory kinds, art).
+ * The Amber/Claude/Notebook catalogs live in themes.css as :root[data-theme='X'] blocks. Components reference tokens only — never
  * hardcode, never branch on theme/mode. Text pairings are enforced by
  * tests/contrast.test.ts (WCAG AA; nudged values carry a comment).
  */

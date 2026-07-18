@@ -10,6 +10,7 @@ import { CustomSidebarTrigger } from '@/components/custom-sidebar-trigger';
 import { NavUser } from '@/components/nav-user';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import { describeEvent, relativeTime } from '@/components/activity-feed';
 import { cn } from '@/lib/utils';
 import { useRecentActivity } from '@/lib/api/hooks';
@@ -69,7 +70,7 @@ export function AppHeader() {
  * Marks persist per device, keyed by identity, wiped on sign-out (`lib/store/notifications`).
  */
 function NotificationsMenu() {
-  const { data } = useRecentActivity();
+  const { data, isPending, isError, refetch } = useRecentActivity();
   const { identity } = useSession();
   const identityKey = identityKeyOf(identity);
   const readState = useNotificationsRead(
@@ -119,7 +120,35 @@ function NotificationsMenu() {
           ) : null}
         </div>
         <Separator className="-mx-1 w-auto" />
-        {entries.length === 0 ? (
+        {isPending ? (
+          // The fetch is in flight — say so (F-091, user item 4). The empty-state copy below would
+          // be a lie here: the trail may well have history that simply hasn't arrived yet.
+          <div className="py-1">
+            <p className="sr-only" role="status">
+              Loading notifications…
+            </p>
+            <div aria-hidden="true">
+              {['a', 'b', 'c'].map((key) => (
+                <div key={key} className="flex items-center gap-2.5 px-2 py-2">
+                  <Skeleton className="size-6 shrink-0 rounded-md" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-3 w-28" />
+                    <Skeleton className="h-3 w-44" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center gap-2.5 px-4 py-6 text-center">
+            <p className="text-muted-foreground text-xs" role="status">
+              Notifications could not be loaded.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => void refetch()}>
+              Try again
+            </Button>
+          </div>
+        ) : entries.length === 0 ? (
           <div className="flex flex-col items-center gap-1.5 px-4 py-8 text-center">
             <span className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-full">
               <Bell className="size-4" />
@@ -132,37 +161,38 @@ function NotificationsMenu() {
         ) : (
           <ul className="max-h-80 overflow-y-auto py-1" aria-label="Recent notifications">
             {entries.map((entry) => {
-              const { icon: Icon, title, detail } = describeEvent(entry);
+              const { icon: Icon, title, description } = describeEvent(entry);
               const read = isRead(entry, readState);
               return (
                 <li key={entry.id}>
                   {/*
                     A plain button — clicking marks the row read and the panel stays open, so
                     several can be cleared in a pass (the whole point of per-message marks).
+                    Every row is exactly two lines (title + mandatory description), so
+                    `items-center` holds the chip, text block, and meta on one rhythm — the
+                    single-line-title misalignment is structurally gone (F-091, user item 1).
                   */}
                   <button
                     type="button"
                     onClick={() => markRead(identityKey, entry.id)}
                     aria-label={`${title} — mark as read`}
-                    className="hover:bg-accent focus-visible:ring-ring flex w-full items-start gap-2.5 rounded-sm px-2 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    className="hover:bg-accent focus-visible:ring-ring flex w-full items-center gap-2.5 rounded-sm px-2 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
                   >
-                    <span className="bg-muted text-muted-foreground mt-0.5 grid size-6 shrink-0 place-items-center rounded-md">
+                    <span className="bg-muted text-muted-foreground grid size-6 shrink-0 place-items-center rounded-md">
                       <Icon className="size-3" aria-hidden="true" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span
                         className={cn(
-                          'block truncate text-xs',
+                          'block truncate text-xs leading-4',
                           read ? 'text-muted-foreground font-normal' : 'font-medium',
                         )}
                       >
                         {title}
                       </span>
-                      {detail !== undefined ? (
-                        <span className="text-muted-foreground block truncate font-mono text-[11px]">
-                          {detail}
-                        </span>
-                      ) : null}
+                      <span className="text-muted-foreground block truncate text-[11px] leading-4">
+                        {description}
+                      </span>
                     </span>
                     <span className="flex shrink-0 items-center gap-1.5">
                       <span

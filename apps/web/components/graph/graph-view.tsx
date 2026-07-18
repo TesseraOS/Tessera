@@ -198,19 +198,19 @@ export function GraphView() {
           description="Register and scan a source — Tessera extracts code symbols and their relationships into the graph."
         />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-2">
-            <p className="text-muted-foreground px-1 text-xs">
-              {nodes.length} nodes · {edges.length} edges
-              {nodes.length >= GRAPH_LIMIT ? ` · showing the first ${GRAPH_LIMIT}` : ''}
-            </p>
-            <GraphCanvas
-              nodes={flow.nodes}
-              edges={flow.edges}
-              onSelect={setSelectedId}
-              reducedMotion={reducedMotion}
-            />
-          </div>
+        // Both columns start at the same y and share the canvas height (F-090, user item 8): the
+        // node/edge count that used to sit above the canvas lives ON it now (a React Flow panel
+        // chip), so nothing pushes the columns out of line.
+        <div className="grid gap-4 lg:grid-cols-[1fr_320px] lg:items-start">
+          <GraphCanvas
+            nodes={flow.nodes}
+            edges={flow.edges}
+            onSelect={setSelectedId}
+            reducedMotion={reducedMotion}
+            statsLabel={`${nodes.length} nodes · ${edges.length} edges${
+              nodes.length >= GRAPH_LIMIT ? ` · first ${GRAPH_LIMIT}` : ''
+            }`}
+          />
           <GraphSidePanel
             mode={mode}
             node={selected}
@@ -219,6 +219,8 @@ export function GraphView() {
             effects={effects.data?.effects ?? []}
             effectsPending={mode === 'effects' && effects.isPending && selected !== null}
             onInspectEffects={() => setMode('effects')}
+            onSelect={setSelectedId}
+            onClose={() => setSelectedId(null)}
           />
         </div>
       )}

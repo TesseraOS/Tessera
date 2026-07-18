@@ -3,6 +3,52 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-18 — F-090: the graph opens readable, and the inspector stands level with the canvas
+
+Items 7+8 — **the last of the 10-item report; all ten are now landed** (F-087: 1, 2 · F-088: 3, 10
+· F-089: 4, 5, 6, 9 · F-090: 7, 8). Plan:
+[`F-090-graph-zoom-and-panel.md`](../plans/F-090-graph-zoom-and-panel.md).
+
+### Item 7 — a clamped fit, not a smaller world
+
+`fitView` captured the whole graph at whatever zoom that took — 49 nodes was already confetti. The
+fit is now clamped (`fitViewOptions.minZoom: 0.6`, `maxZoom: 1`): a large graph opens centered and
+*legible*, a tiny one no longer balloons, and the user's manual zoom range (0.1–2) is untouched —
+only the default changed.
+
+### Item 8 — alignment was mechanical; the overhaul was subtraction and navigation
+
+The misalignment was one element: the "N nodes · M edges" line stacked above the canvas pushed that
+column ~24px below the panel. It is canvas metadata, so it lives ON the canvas now (a React Flow
+`Panel` chip), and the two columns top- and bottom-align (`lg:h-[65vh]` on the panel — height, not
+max-height — scrolling internally, F-082's cap kept). The panel itself:
+
+- **The empty state teaches:** the kind→color legend (shared `kind-accent.ts` — the canvas's
+  encoding, previously written down nowhere) plus select guidance, full height.
+- **Connections are navigation:** grouped Incoming/Outgoing with counts and direction glyphs, each
+  row a real button that walks the graph in the panel (they were inert text), capped with an honest
+  "+N more".
+- **Effects read as a ranking:** a score meter against the top hit per row, flat rows with
+  dividers — no nested bordered boxes (F-086's rule held).
+- Selected header: kind dot + kind + deselect control; key in mono.
+
+**Evidence/verification** — gates green: `state`, `format`, `typecheck` (40/40), `lint` (23/23),
+`test` (38/38 — web 406/406, graph-view 6/6 incl. new connection-navigation + deselect-to-legend
+cases), `build` (20/20). Graph e2e 1/1 with the axe sweep, now also walking a connection row and
+the deselect path. Preview-verified against a real scan of `packages/core/src` (49 nodes · 62
+edges): default zoom readable, chip on canvas, columns level, Effects mode honest; light-theme spot
+check clean.
+
+**The 10-item report is complete.** Two session notes: (1) the `E:` drive dropped twice
+mid-session and remounted with a health warning — one interrupted atomic write was recovered from
+its `.tmp` by hand; the repo has **no remote**, so with the drive now flagged, an off-drive backup
+/ remote deserves the maintainer's attention before more work lands here. (2) The pre-existing
+stats-e2e scan-count failure (documents 0≠2 on clean HEAD) is flagged as its own follow-up task.
+
+**Next step** — nothing claimed. Candidates: the stats-e2e fix, F-078, F-071, or the R4 backlog.
+
+---
+
 ## 2026-07-18 — F-089: the feed and the bell read the trail — "session" is no longer a thing a refresh can reset
 
 Items 4+5+6+9 of the report, decided as one architecture question. Plan:

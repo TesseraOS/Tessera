@@ -2977,7 +2977,7 @@
       "package": "apps/web",
       "release": "R4",
       "priority": "should",
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "The canvas opens at a readable zoom: the initial fit is clamped (fitViewOptions.minZoom) so a large graph never opens as dust, and maxZoom 1 so a tiny graph does not balloon; the user’s manual zoom range is untouched",
         "The side panel top-aligns with the canvas and matches its height (internal scroll); the node/edge count moves onto the canvas as a React Flow Panel chip",

@@ -33,9 +33,21 @@ test('graph explorer renders, search selects a node, and passes a11y', async ({ 
   await expect(page.getByRole('tab', { name: /explore/i })).toBeVisible();
 
   // Search-to-focus: find a node and open its detail panel (the keyboard-accessible alternative).
+  // Connections group by direction since F-090 — util.ts's one edge arrives FROM app.ts.
   await page.getByLabel('Search nodes').fill('util');
   await page.getByRole('button', { name: /util\.ts/ }).click();
-  await expect(page.getByText(/Connections/)).toBeVisible();
+  await expect(page.getByText(/Incoming \(1\)/)).toBeVisible();
+
+  // The rows are navigation: walking the edge selects app.ts, whose edge is outgoing.
+  await page
+    .getByRole('region', { name: 'Node details' })
+    .getByRole('button', { name: /app\.ts/ })
+    .click();
+  await expect(page.getByText(/Outgoing \(1\)/)).toBeVisible();
+
+  // Deselecting restores the guidance + the kind legend (new in F-090 — taught nowhere before).
+  await page.getByRole('button', { name: 'Clear selection' }).click();
+  await expect(page.getByText('Legend')).toBeVisible();
 
   const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
   expect(results.violations).toEqual([]);

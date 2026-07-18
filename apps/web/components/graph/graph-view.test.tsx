@@ -12,9 +12,13 @@ vi.mock('@/lib/api/client', () => ({
   TesseraApiError: class extends Error {},
 }));
 
-// Keep React Flow out of jsdom — the canvas is verified in e2e + screenshots.
+// Keep React Flow out of jsdom — the canvas is verified in e2e + screenshots. The stats chip is a
+// canvas prop since F-090 (it renders on the canvas as a React Flow panel); surface it as text so
+// the view test can still assert what the user reads.
 vi.mock('@/components/graph/graph-canvas', () => ({
-  GraphCanvas: () => <div data-testid="graph-canvas" />,
+  GraphCanvas: ({ statsLabel }: { statsLabel?: string }) => (
+    <div data-testid="graph-canvas">{statsLabel}</div>
+  ),
 }));
 
 import { GraphView } from '@/components/graph/graph-view';
@@ -46,13 +50,16 @@ const GRAPH = {
 describe('GraphView', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('renders the graph stats, filters, and canvas', async () => {
+  it('renders the graph stats on the canvas, plus filters and the legend panel', async () => {
     queryGraph.mockResolvedValue(GRAPH);
     renderWithClient(<GraphView />);
 
     expect(await screen.findByText('2 nodes · 1 edges')).toBeInTheDocument();
     expect(screen.getByTestId('graph-canvas')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /effects/i })).toBeInTheDocument();
+    // With nothing selected, the panel teaches the canvas's color encoding (F-090).
+    expect(screen.getByRole('region', { name: 'Node details' })).toBeInTheDocument();
+    expect(screen.getByText('Legend')).toBeInTheDocument();
   });
 
   it('shows an empty state when the graph is empty', async () => {
@@ -76,7 +83,41 @@ describe('GraphView', () => {
     await user.type(screen.getByLabelText('Search nodes'), 'util');
     await user.click(await screen.findByText('util.ts'));
 
-    // The side panel now shows the selected node + its connections.
-    expect(await screen.findByText(/Connections/)).toBeInTheDocument();
+    // The side panel shows the selected node with connections grouped by direction (F-090).
+    expect(await screen.findByText(/Incoming \(1\)/)).toBeInTheDocument();
+  });
+
+  it('connection rows navigate: clicking one selects the other node (F-090)', async () => {
+    const user = userEvent.setup();
+    queryGraph.mockResolvedValue(GRAPH);
+    renderWithClient(<GraphView />);
+    await screen.findByText('2 nodes · 1 edges');
+
+    // Select app.ts via search, then walk the imports edge to util.ts through the panel.
+    await user.type(screen.getByLabelText('Search nodes'), 'app');
+    await user.click(await screen.findByText('app.ts'));
+    await screen.findByText(/Outgoing \(1\)/);
+
+    await user.click(screen.getByRole('button', { name: /util\.ts/ }));
+
+    // The panel now inspects util.ts — whose one connection is INCOMING from app.ts.
+    expect(await screen.findByText(/Incoming \(1\)/)).toBeInTheDocument();
+    const panel = screen.getByRole('region', { name: 'Node details' });
+    expect(panel).toHaveTextContent('util.ts');
+  });
+
+  it('the deselect control returns the panel to the legend (F-090)', async () => {
+    const user = userEvent.setup();
+    queryGraph.mockResolvedValue(GRAPH);
+    renderWithClient(<GraphView />);
+    await screen.findByText('2 nodes · 1 edges');
+
+    await user.type(screen.getByLabelText('Search nodes'), 'util');
+    await user.click(await screen.findByText('util.ts'));
+    await screen.findByText(/Incoming \(1\)/);
+
+    await user.click(screen.getByRole('button', { name: 'Clear selection' }));
+
+    expect(await screen.findByText('Legend')).toBeInTheDocument();
   });
 });

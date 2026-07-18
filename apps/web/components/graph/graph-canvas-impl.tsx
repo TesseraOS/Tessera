@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import {
   Background,
   Handle,
+  Panel,
   Position,
   ReactFlow,
   type NodeProps,
@@ -12,18 +13,8 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
-import type { NodeKind } from '@/lib/api/types';
+import { KIND_ACCENT } from '@/components/graph/kind-accent';
 import type { FlowEdge, FlowNode } from '@/lib/graph-layout';
-
-/** Stable accent per node kind (design-system chart palette, tokens only). */
-const KIND_ACCENT: Record<NodeKind, string> = {
-  file: 'var(--chart-1)',
-  symbol: 'var(--chart-2)',
-  module: 'var(--chart-3)',
-  person: 'var(--chart-4)',
-  decision: 'var(--chart-5)',
-  memory: 'var(--chart-1)',
-};
 
 /** A compact, token-themed graph node with a kind dot + label + connection handles. */
 function GraphFlowNode({ data }: NodeProps<FlowNode>) {
@@ -54,6 +45,8 @@ export interface GraphCanvasImplProps {
   edges: FlowEdge[];
   onSelect: (id: string | null) => void;
   reducedMotion: boolean;
+  /** Canvas metadata (e.g. "512 nodes · 87 edges"), drawn as a chip on the canvas itself (F-090). */
+  statsLabel?: string | undefined;
 }
 
 /**
@@ -65,11 +58,16 @@ export default function GraphCanvasImpl({
   edges,
   onSelect,
   reducedMotion,
+  statsLabel,
 }: GraphCanvasImplProps) {
   const { resolvedTheme } = useTheme();
   const colorMode = resolvedTheme === 'dark' ? 'dark' : 'light';
   const fitViewOptions = useMemo(
-    () => ({ padding: 0.2, duration: reducedMotion ? 0 : 300 }),
+    // A CLAMPED fit (F-090, user item 7): plain fitView shrinks a 500-node graph to confetti to
+    // capture all of it. `minZoom` floors the initial view at a readable scale (a large graph opens
+    // centered and legible; the rest is one scroll away), and `maxZoom: 1` keeps a three-node graph
+    // from ballooning. Only the DEFAULT is clamped — the user's manual zoom range is untouched.
+    () => ({ padding: 0.2, minZoom: 0.6, maxZoom: 1, duration: reducedMotion ? 0 : 300 }),
     [reducedMotion],
   );
 
@@ -99,6 +97,16 @@ export default function GraphCanvasImpl({
         proOptions={{ hideAttribution: false }}
       >
         <Background gap={16} />
+        {statsLabel !== undefined ? (
+          // Canvas metadata belongs on the canvas (F-090): as a sibling line above it, it pushed
+          // the whole column ~24px below the side panel — the misalignment the report named.
+          <Panel
+            position="top-left"
+            className="bg-background/80 text-muted-foreground rounded-md border px-2 py-1 text-[11px] tabular-nums backdrop-blur"
+          >
+            {statsLabel}
+          </Panel>
+        ) : null}
       </ReactFlow>
     </div>
   );

@@ -3,6 +3,46 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-18 — F-087: the scan that never finished was a stale snapshot winning an OR
+
+First of a new 10-item user report (items 1+2 here; the batch is F-087…F-090, all planned and
+registered this session). Plan: [`F-087-scan-state-and-progress.md`](../plans/F-087-scan-state-and-progress.md).
+
+### Item 1 — "still scanning" until refresh
+
+`SourceRow` derived `running` as `progress?.running || isPending || status?.state === 'running'`.
+The `useScanStatus` snapshot is fetched once; loaded mid-scan it says `running`, and when the
+stream's `source.scan.completed` flipped the live state, the OR let the stale snapshot keep the row
+scanning forever — nothing invalidated it (`refetchOnWindowFocus` is globally off). Three layered
+mechanisms, smallest first:
+
+1. **Precedence** — `deriveScanView` (pure, 9 unit tests): once the stream has spoken for a source,
+   the snapshot no longer decides `running` (nor error: a live success clears a stale snapshot error).
+2. **Invalidation** — `useScanStatusSync`: completed/failed events invalidate that source's
+   `scan-status` + the `sources` list.
+3. **Polling fallback** — `useScanStatus` refetches every 5s **only while** `state === 'running'`,
+   so the row resolves even with the stream down, and stops the moment it settles.
+
+### Item 2 — the card carries its own progress
+
+The determinate bar (F-081's real `total`) moved from a `max-w-56` sliver in the status line to a
+full-width rail on the card's bottom edge (`absolute inset-x-0 bottom-0 h-1`, primary over
+`primary/15`). Unknown total stays honest: an indeterminate sweep (new `--animate-scan-sweep`
+keyframes, used `motion-safe:` only; reduced motion gets a static fill) — never a fabricated
+percentage. Status line gains the percent; progressbar a11y semantics ride the rail
+(`aria-valuenow` only when determinate).
+
+**Evidence/verification** — gates green: `state`, `typecheck` (40/40), `lint` (23/23), `format`,
+`test` (38/38 — web 400/400 incl. 9 new derivation tests + 2 new view tests pinning the
+stale-snapshot case), `build` (20/20), sources e2e 2/2 incl. axe. Live-verified in the preview
+(api + web dev servers): scanned `docs/` (84 files) — determinate rail at 56/84 · 67% mid-flight,
+and the row resolved to "84 added · …" **without a refresh**; `.claude/launch.json` gained the
+`api` server entry to make that verification reproducible.
+
+**Next step** — F-088 (chart: local-time days, axis-free).
+
+---
+
 ## 2026-07-17 (v12) — F-086: the inspector's problem was five mechanical defects, not a missing rebuild
 
 User item 9 — **the last of the 17**. Plan (written as the audit record):

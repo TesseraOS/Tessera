@@ -214,6 +214,20 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+
+  /* Indeterminate scan sweep (F-087): the sources card's bottom progress rail while the diff has
+     not yet produced a real total. Used behind `motion-safe:` only — reduced motion gets a static
+     fill instead. A third-width bar travelling -100%→300% of its own width crosses the full track. */
+  --animate-scan-sweep: scan-sweep 1.2s ease-in-out infinite;
+
+  @keyframes scan-sweep {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(300%);
+    }
+  }
 }
 
 @layer base {

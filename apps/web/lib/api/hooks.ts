@@ -221,6 +221,9 @@ export function useScanSource() {
   });
 }
 
+/** Poll cadence for a running scan whose live stream may be down (F-087). */
+const SCAN_STATUS_POLL_MS = 5_000;
+
 /** A source's most recent scan status — GET /v1/sources/:id/scan. */
 export function useScanStatus(id: string, enabled = true) {
   return useQuery({
@@ -228,7 +231,32 @@ export function useScanStatus(id: string, enabled = true) {
     queryFn: () => api.getScanStatus(id),
     enabled: enabled && id.length > 0,
     staleTime: 5_000,
+    // While a scan runs, this snapshot must resolve on its own (F-087): with the stream down
+    // (sleep, proxy drop) nothing else would ever flip it out of `running`. Polls only while
+    // running, stops the moment the state settles; with a healthy stream the completed/failed
+    // events invalidate it first (useScanStatusSync), so this costs at most a confirming refetch.
+    refetchInterval: (query) =>
+      query.state.data?.state === 'running' ? SCAN_STATUS_POLL_MS : false,
   });
+}
+
+/**
+ * Keep scan-status snapshots honest against the live stream (F-087). A background scan reports its
+ * outcome over SSE (F-081); the cached `GET /v1/sources/:id/scan` result from mid-scan still says
+ * `running` and nothing refetched it — the reported "stuck on Scanning until refresh" bug. Mounted
+ * once by the sources view: completed/failed invalidates that source's snapshot + the source list,
+ * so every consumer converges without a refresh.
+ */
+export function useScanStatusSync(): void {
+  const queryClient = useQueryClient();
+  const settle = (data: Record<string, unknown>) => {
+    const sourceId = data['sourceId'];
+    if (typeof sourceId !== 'string') return;
+    void queryClient.invalidateQueries({ queryKey: ['scan-status', sourceId] });
+    void queryClient.invalidateQueries({ queryKey: ['sources'] });
+  };
+  useApiEvent('source.scan.completed', settle);
+  useApiEvent('source.scan.failed', settle);
 }
 
 // --- settings-facing reads (FR-46) ---

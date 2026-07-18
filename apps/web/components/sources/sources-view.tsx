@@ -33,8 +33,15 @@ import { ErrorState } from '@/components/error-state';
 import { RegisterSourceDialog } from '@/components/sources/register-source-dialog';
 import { cn } from '@/lib/utils';
 import { TesseraApiError } from '@/lib/api/client';
-import { useRemoveSource, useScanSource, useScanStatus, useSources } from '@/lib/api/hooks';
+import {
+  useRemoveSource,
+  useScanSource,
+  useScanStatus,
+  useScanStatusSync,
+  useSources,
+} from '@/lib/api/hooks';
 import { useScanEvents, type SourceScanProgress } from '@/lib/api/events';
+import { deriveScanView, type ScanView } from '@/components/sources/scan-state';
 import type { ScanSummary, Source } from '@/lib/api/types';
 
 const KIND_ICON: Record<string, typeof Folder> = {
@@ -58,6 +65,8 @@ export function SourcesView() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { data, isPending, isError, error, refetch, isFetching } = useSources();
   const scanEvents = useScanEvents();
+  // Without this, a scan-status snapshot fetched mid-scan stays `running` forever (F-087).
+  useScanStatusSync();
   const sources = data?.sources ?? [];
 
   return (
@@ -134,13 +143,9 @@ function SourceRow({
   const Icon = KIND_ICON[source.kind] ?? Boxes;
   const root = typeof source.config['root'] === 'string' ? (source.config['root'] as string) : '—';
 
-  const running = Boolean(progress?.running) || scan.isPending || status?.state === 'running';
-  const lastSummary = progress?.lastSummary ?? status?.lastScan?.summary;
-  const lastAt = progress?.at ?? status?.lastScan?.at;
-  // A background scan reports failure over the stream (`source.scan.failed`) as well as in status —
-  // the request that started it was answered long before it died (F-081).
-  const hasError =
-    !running && (Boolean(progress?.error) || status?.state === 'error' || Boolean(status?.error));
+  // One derivation, pure and unit-tested (F-087): live stream truth outranks the cached snapshot,
+  // so a completed scan ends the scanning state without a refresh.
+  const view = deriveScanView({ progress, status, mutationPending: scan.isPending });
 
   const triggerScan = () => {
     scan.mutate(source.id, {
@@ -179,8 +184,13 @@ function SourceRow({
   };
 
   return (
-    <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
-      <CardContent className="flex flex-col gap-3 p-0 sm:flex-row sm:items-center sm:justify-between">
+    // `relative overflow-hidden` so the progress rail can live on the card's own bottom edge —
+    // the card is the unit of work, so it carries its own progress (F-087, user item 2).
+    <Card className="bg-sidebar relative overflow-hidden border-none p-4 shadow-none dark:ring-0">
+      <CardContent
+        className="flex flex-col gap-3 p-0 sm:flex-row sm:items-center sm:justify-between"
+        aria-busy={view.running}
+      >
         <div className="flex min-w-0 items-start gap-3">
           <div className="bg-muted/50 text-muted-foreground mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg [&_svg]:size-4">
             <Icon aria-hidden="true" />
@@ -195,16 +205,7 @@ function SourceRow({
             <p className="text-muted-foreground truncate font-mono text-xs" title={root}>
               {root}
             </p>
-            <ScanStatusLine
-              running={running}
-              processed={progress?.processed ?? status?.progress?.processed ?? 0}
-              total={progress?.total ?? status?.progress?.total ?? 0}
-              summary={lastSummary}
-              at={lastAt}
-              hasError={hasError}
-              errorText={progress?.error ?? status?.error}
-              label={source.label}
-            />
+            <ScanStatusLine view={view} />
           </div>
         </div>
 
@@ -214,10 +215,13 @@ function SourceRow({
             variant="outline"
             className="h-8 gap-1.5"
             onClick={triggerScan}
-            disabled={running}
+            disabled={view.running}
           >
-            <RefreshCw className={cn('size-3.5', running && 'animate-spin')} aria-hidden="true" />
-            {running ? 'Scanning…' : 'Scan'}
+            <RefreshCw
+              className={cn('size-3.5', view.running && 'animate-spin')}
+              aria-hidden="true"
+            />
+            {view.running ? 'Scanning…' : 'Scan'}
           </Button>
           <Button
             size="icon"
@@ -255,67 +259,63 @@ function SourceRow({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {view.running ? <ScanProgressRail percent={view.percent} label={source.label} /> : null}
     </Card>
   );
 }
 
-function ScanStatusLine({
-  running,
-  processed,
-  total,
-  summary,
-  at,
-  hasError,
-  errorText,
-  label,
-}: {
-  running: boolean;
-  /** Changed paths processed so far, counted server-side per source (F-081). */
-  processed: number;
-  /** Changed paths this scan will process. `0` = the diff has not finished yet. */
-  total: number;
-  summary?: ScanSummary | undefined;
-  at?: string | undefined;
-  hasError: boolean;
-  errorText?: string | undefined;
-  label: string;
-}) {
+/**
+ * The scan's progress, drawn on the card's own bottom edge — full width, so the whole card reads as
+ * the unit of work (F-087, user item 2). Determinate when the diff has produced a real `total`
+ * (F-081); an indeterminate sweep while it has not — never a fabricated percentage. The sweep is
+ * `motion-safe` only; reduced motion gets a calm static fill.
+ */
+function ScanProgressRail({ percent, label }: { percent?: number | undefined; label: string }) {
+  const determinate = percent !== undefined;
+  return (
+    <div
+      role="progressbar"
+      aria-label={`Scanning ${label}`}
+      {...(determinate
+        ? { 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': percent }
+        : {})}
+      className="bg-primary/15 absolute inset-x-0 bottom-0 h-1"
+    >
+      {determinate ? (
+        <div
+          className="bg-primary h-full transition-[width] duration-300 ease-out"
+          style={{ width: `${percent}%` }}
+        />
+      ) : (
+        <div className="bg-primary/70 motion-safe:animate-scan-sweep h-full w-1/3 motion-reduce:w-full" />
+      )}
+    </div>
+  );
+}
+
+function ScanStatusLine({ view }: { view: ScanView }) {
+  const { running, processed, total, percent, summary, at, hasError, errorText } = view;
   if (running) {
-    // A DETERMINATE bar (F-081): `total` is what the diff actually enqueued, so this is a real
-    // fraction, not decoration. Until the diff finishes `total` is 0 and there is genuinely nothing
-    // to predict — say "Scanning…" rather than draw a bar at a made-up percentage.
+    // Real numbers only (F-081): `total` is what the diff actually enqueued. Until the diff
+    // finishes there is genuinely nothing to predict — say so instead of inventing a percentage.
     const known = total > 0;
-    const percent = known ? Math.round((processed / total) * 100) : 0;
     return (
-      <span className="flex flex-col gap-1">
-        <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-          <Loader2 className="text-primary size-3 animate-spin" aria-hidden="true" />
-          {known ? (
-            <>
-              Scanning…{' '}
-              <span className="tabular-nums">
-                {processed} / {total}
-              </span>
-            </>
-          ) : (
-            'Scanning…'
-          )}
-        </span>
+      <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
+        <Loader2 className="text-primary size-3 animate-spin" aria-hidden="true" />
         {known ? (
-          <span
-            role="progressbar"
-            aria-valuenow={processed}
-            aria-valuemin={0}
-            aria-valuemax={total}
-            aria-label={`Scanning ${label}`}
-            className="bg-muted block h-1 w-full max-w-56 overflow-hidden rounded-full"
-          >
-            <span
-              className="bg-primary block h-full rounded-full transition-[width] duration-300 ease-out"
-              style={{ width: `${percent}%` }}
-            />
-          </span>
-        ) : null}
+          <>
+            Scanning{' '}
+            <span className="tabular-nums">
+              {processed} / {total}
+            </span>
+            {percent !== undefined ? (
+              <span className="text-foreground/70 tabular-nums">· {percent}%</span>
+            ) : null}
+          </>
+        ) : (
+          'Scanning — finding changes…'
+        )}
       </span>
     );
   }

@@ -2,7 +2,7 @@
   "$schemaRef": "./schemas/feature_list.schema.json",
   "version": 1,
   "project": "tessera",
-  "updated": "2026-07-17",
+  "updated": "2026-07-18",
   "policy": {
     "wip_limit": 1,
     "ordering": "by release, then id; respect blockedBy"
@@ -2170,7 +2170,8 @@
         "E-014",
         "E-018",
         "E-004"
-      ]
+      ],
+      "notes": "SCOPE NARROWED by F-089 (2026-07-18): the dashboard feed/bell now read persisted trail data with per-device read marks — F-065 keeps what genuinely needs a server store: notification preferences, CROSS-DEVICE read state keyed {tenantId, principalId}, the agent-readable surface, and occurredAt on wire events."
     },
     {
       "id": "F-066",
@@ -2851,6 +2852,140 @@
       ],
       "effects": [],
       "notes": "SPLIT OUT OF F-082 (2026-07-17) — user item 9: \"The UI/UX of the inspector page is not professional. Make it professional and enterprise grade, ready for production.\" THE IMPORTANT CONTEXT: F-062 rebuilt this page as \"Inspector v2\" only three commits before the report (1469b6e), and the user is looking at THAT and still calling it unprofessional. So this is not a missing pass — another quick pass would produce F-062 again. Treat the ask as a design problem: 1022 lines across inspector-view/compile-form/fragment-card/package-export/package-guidance/recent-compiles, currently a vertical stack of same-weight `bg-sidebar` cards (scores, sections, trace) with no visual hierarchy, so nothing leads and the eye has no entry point. Start from what the page is FOR — answering \"what context did the compiler select, and why\" — and let the layout say that, rather than restyling the existing cards. Use the design-review + frontend-craft skills, and screenshot BEFORE deciding (the F-061 lesson: a screenshot caught a dark-theme ring bug no test could see). Do NOT regress F-062 honest empty guidance or the agent-ready export — those were the point of v2 and they work. DONE 2026-07-17 — and the audit CHANGED THE DIAGNOSIS, which is the point of screenshotting before deciding. The gap was not structure (F-062 structure is right); it was five mechanical execution defects: (1) ~52px dead space in EVERY card — the Card base carries gap-6, every other dashboard surface neutralizes it with gap-0, the inspector never did; one missing utility produced most of the hollow read; (2) nested cards, the design-review anti-pattern — fragment = bordered box in the section Card holding an inset why-included box, an inset pre, and a bordered footer; (3) a raw 64-char sha256 printed as a wrapping line under every fragment; (4) raw compiler strings as headings (code/memory, no counts); (5) the form title at default size vs text-sm everywhere else. Fixes were the smallest that resolve the hits (remove, do not add): gap-0 + dashboard header rhythm on all seven cards; fragments flattened to ONE quiet surface; ref demoted to a 10-char identifier beside the score (full hash on title + in the Markdown copy); capitalize + counts on section headers; text-sm form title. THE AXE SWEEP CAUGHT THE POLISH ITSELF: opacity-60 on the truncated ref computed 3.33:1 — muted-foreground is already AA-tuned, further alpha broke it; removed (second gate-catch of the session after F-082 attribution). F-062 honest-empty-guidance untouched and green (18/18). Gates green (typecheck 40-40/lint 23-23/format/test 38-38/build 20-20) + inspector e2e 4/4 incl. axe + before/after screenshots + Notebook-light spot check: package content starts a full screen earlier. SCOPE HONESTY: the acceptance imagined a v3 rebuild; the audit showed it was not needed and a rebuild would have discarded F-062 correct decisions to fix a spacing utility. If still read as unprofessional, the next step is a DIRECTED critique (which surface, against which reference), not another blind pass. THIS CLOSES THE 17-ITEM REPORT."
+    },
+    {
+      "verification": [
+        "typecheck",
+        "lint",
+        "format",
+        "test",
+        "build"
+      ],
+      "blockedBy": [],
+      "id": "F-087",
+      "title": "Sources: scan state that resolves without a refresh, progress carried by the card",
+      "requirements": [
+        "FR-38",
+        "FR-46",
+        "FR-62",
+        "FR-49"
+      ],
+      "service": "web",
+      "package": "apps/web",
+      "release": "R4",
+      "priority": "should",
+      "status": "done",
+      "acceptance": [
+        "When source.scan.completed/.failed arrives over the stream, the row leaves the scanning state WITHOUT a refresh — live truth outranks the cached scan-status snapshot (the stale-snapshot case is pinned by a unit test on a pure derivation)",
+        "The completed/failed events invalidate the scan-status + sources queries, and scan-status polls only while state is running — so the row resolves even with the stream down, and stops polling when settled",
+        "The progress bar spans the full width of the source card at its bottom edge; determinate (real fraction, F-081) when total is known, an honest indeterminate sweep while the diff runs — never a fabricated percentage",
+        "Progressbar a11y semantics preserved; indeterminate motion is motion-safe only; tokens only, all 4 themes x light/dark",
+        "apps/web gates green; sources e2e + axe sweep green"
+      ],
+      "effects": [],
+      "notes": "User items 1+2 (2026-07-18 report). Root cause of item 1: SourceRow ORs live SSE state with a one-shot useScanStatus snapshot and the stale snapshot wins after completion; nothing invalidates it. Plan: .harness/plans/F-087-scan-state-and-progress.md"
+    },
+    {
+      "verification": [
+        "typecheck",
+        "lint",
+        "format",
+        "test",
+        "build"
+      ],
+      "blockedBy": [],
+      "id": "F-088",
+      "title": "Overview activity chart: local-time days at the store, axis-free at the surface",
+      "requirements": [
+        "FR-38",
+        "FR-49",
+        "FR-55"
+      ],
+      "service": "api",
+      "package": "@tessera/api",
+      "release": "R4",
+      "priority": "should",
+      "status": "todo",
+      "acceptance": [
+        "GET /v1/stats/activity accepts tzOffset (minutes east of UTC, validated to ±840, default 0 = exact F-084 behavior); buckets are the VIEWER’S calendar days, computed inside the store aggregation (GROUP BY on the shifted day) — never by paging the trail into memory",
+        "The pruning floor survives the shift: the clamp compares the local day of the trail’s earliest event, so a pruned local day is never drawn as silence (ADR-0053 clause 3 holds under tz)",
+        "Fixed-offset semantics are documented where the parameter is defined (offset-at-request; DST boundary caveat stated, not silent)",
+        "Both adapters agree via the shared conformance suite; the SQLite adapter gets focused tests in its own file (F-063 precedent; F-078 unchanged)",
+        "The chart shows no axes (x hidden but anchoring the tooltip label, y and grid removed); tooltip and the \"since {from}\" window label remain; labels format local days; the (UTC) tag goes",
+        "OpenAPI + SDK regenerated in-change; api + web gates green"
+      ],
+      "effects": [
+        "E-003",
+        "E-020"
+      ],
+      "notes": "User items 3+10 (2026-07-18 report). Plan: .harness/plans/F-088-activity-chart-local-days.md"
+    },
+    {
+      "verification": [
+        "typecheck",
+        "lint",
+        "format",
+        "test",
+        "build"
+      ],
+      "blockedBy": [],
+      "id": "F-089",
+      "title": "Recent activity & notifications read from the trail: persisted, limited, per-message read state",
+      "requirements": [
+        "FR-38",
+        "FR-55",
+        "FR-49",
+        "NFR-7"
+      ],
+      "service": "api",
+      "package": "@tessera/api",
+      "release": "R4",
+      "priority": "should",
+      "status": "todo",
+      "acceptance": [
+        "AuditQuery gains a multi-action filter honoured by BOTH adapters and pinned by the shared conformance suite + focused SQLite tests",
+        "GET /v1/stats/activity/recent (stats:read) returns the last N (default 20, max 50) SUCCESSFUL work actions — reads and search excluded by a documented rule; fields are non-sensitive by the recorder’s guarantee (id, action, target?, actor, at); not audited (same posture as /v1/stats); no MCP tool",
+        "The Overview feed renders those persisted entries — seeded on load, refreshed by debounced stream invalidation plus onSuccess invalidation for trail-writing mutations that emit no SSE — never empty after a reload when the trail has history",
+        "The bell shows the same entries with PER-MESSAGE read marking + mark-all-read; read state survives reload (per-device, keyed tenantId:principalId), is wiped on sign-out; opening the bell no longer auto-clears",
+        "No user-visible surface is scoped to \"this session\" any more; all such copy is gone (feed, bell, Overview description); F-065 notes updated to its remaining server-side scope (preferences, cross-device read state, agent surface, occurredAt)",
+        "Home e2e exercises the persisted feed + unread badge honesty; api + web gates green"
+      ],
+      "effects": [
+        "E-003",
+        "E-020"
+      ],
+      "notes": "User items 4+5+6+9 (2026-07-18 report). Item 9 decided: the audit trail IS the persisted activity record — the feed/bell read a narrowed, member-visible view of it instead of an in-memory session store; item 6’s \"session resets on refresh\" was exactly this scoping. Plan: .harness/plans/F-089-persisted-activity-and-notifications.md"
+    },
+    {
+      "verification": [
+        "typecheck",
+        "lint",
+        "format",
+        "test",
+        "build"
+      ],
+      "blockedBy": [],
+      "id": "F-090",
+      "title": "Graph explorer: a readable default zoom and an inspector panel level with the canvas",
+      "requirements": [
+        "FR-42",
+        "FR-19",
+        "FR-49",
+        "NFR-14"
+      ],
+      "service": "web",
+      "package": "apps/web",
+      "release": "R4",
+      "priority": "should",
+      "status": "todo",
+      "acceptance": [
+        "The canvas opens at a readable zoom: the initial fit is clamped (fitViewOptions.minZoom) so a large graph never opens as dust, and maxZoom 1 so a tiny graph does not balloon; the user’s manual zoom range is untouched",
+        "The side panel top-aligns with the canvas and matches its height (internal scroll); the node/edge count moves onto the canvas as a React Flow Panel chip",
+        "Panel overhaul per the design-review skill (before/after screenshots): empty state carries the node-kind legend (the KIND_ACCENT mapping, currently taught nowhere); selected header gets kind accent + deselect; connections grouped Incoming/Outgoing and CLICKABLE (selecting navigates the panel) with an honest +N more; effects ranking gets score meters; no nested-box anti-pattern (F-086)",
+        "axe WCAG A/AA clean on the graph page; contrast gate passes; apps/web gates green"
+      ],
+      "effects": [],
+      "notes": "User items 7+8 (2026-07-18 report). Plan: .harness/plans/F-090-graph-zoom-and-panel.md"
     }
   ]
 }

@@ -101,6 +101,9 @@ export function createSqliteAuditLog(db: BetterSQLite3Database): AuditLog {
         const limit = Math.min(query.limit ?? DEFAULT_AUDIT_PAGE_SIZE, MAX_AUDIT_PAGE_SIZE);
         const conditions: SQL[] = [inTenant];
         if (query.action !== undefined) conditions.push(eq(auditEvents.action, query.action));
+        if (query.actions !== undefined) {
+          conditions.push(inArray(auditEvents.action, query.actions as AuditAction[]));
+        }
         if (query.actor !== undefined) {
           conditions.push(eq(auditEvents.actorPrincipalId, query.actor));
         }

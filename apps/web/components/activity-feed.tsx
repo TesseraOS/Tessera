@@ -1,127 +1,144 @@
 'use client';
 
-import { ArrowRight, BookText, Boxes, FileMinus, FilePlus, RefreshCw } from 'lucide-react';
+import {
+  ArrowRight,
+  BookText,
+  Boxes,
+  CreditCard,
+  FileDown,
+  FileX2,
+  KeyRound,
+  Package,
+  RefreshCw,
+  ScrollText,
+  Timer,
+  Trash2,
+  Waypoints,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Mascot } from '@tessera/mascot';
 import { Button } from '@/components/ui/button';
-import { useApiEvent, useEventsStatus } from '@/lib/api/events';
-import { useNotifications, type FeedEntry } from '@/lib/store/notifications';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useEventsStatus } from '@/lib/api/events';
+import { useRecentActivity } from '@/lib/api/hooks';
+import type { RecentActivityEvent } from '@/lib/api/types';
 
 /**
- * The Overview's live activity feed (F-060; FR-38). Replaces the permanent "No activity yet" block
- * that shipped in F-014 with the real event stream.
- *
- * Live-session only (see `lib/store/notifications`) — the empty state says so rather than implying
- * that nothing has ever happened.
+ * The Overview's Recent activity feed (F-089; FR-38). Renders the **persisted trail** — the last N
+ * successful work actions from `GET /v1/stats/activity/recent` — kept fresh by `ActivitySync`
+ * (stream-driven invalidation). F-060's in-memory session store is gone: a reload shows the same
+ * history every other surface shows, and no copy scopes itself to "this session" any more
+ * (user items 4/6/9).
  */
 
-/**
- * Pump the live stream into the shared store.
- *
- * **Mounted exactly once, app-wide, by {@link FeedIngest} — never by a page.** The owner must
- * outlive every route, because the events it captures are consumed globally (the header's
- * notifications bell renders on every route) and arrive while the user is on *any* route —
- * overwhelmingly `/sources`, since that is where scans are triggered.
- *
- * F-079: this hook previously ran at the Overview root, so on every other route the stream had zero
- * subscribers and its events were parsed and dropped — the bell never counted a scan the user
- * started from `/sources`, and returning to Overview showed an empty feed. Mounting it a second
- * time is the mirror-image bug: each event would be pushed once per mount (duplicate entries).
- */
-export function useFeedIngest(): void {
-  const push = useNotifications((state) => state.push);
-
-  useApiEvent('memory.captured', (data) => push('memory.captured', data));
-  useApiEvent('document.ingested', (data) => push('document.ingested', data));
-  useApiEvent('document.removed', (data) => push('document.removed', data));
-  useApiEvent('source.scan.started', (data) => push('source.scan.started', data));
-  useApiEvent('source.scan.completed', (data) => push('source.scan.completed', data));
-}
-
-/**
- * The single app-wide owner of {@link useFeedIngest}. Renders nothing — it exists so the ingest can
- * be mounted inside `EventsProvider` (whose context the hook needs) without a page owning it.
- * Mounted in `app/providers.tsx`; nothing else may mount it.
- */
-export function FeedIngest(): null {
-  useFeedIngest();
-  return null;
-}
-
-function text(value: unknown, fallback: string): string {
-  return typeof value === 'string' && value.length > 0 ? value : fallback;
-}
-
-/** One line of prose + an icon for a feed entry. Pure, so it is unit-testable directly. */
-export function describeEntry(entry: FeedEntry): {
+/** One line of prose + an icon for a feed row. Pure, so it is unit-testable directly. */
+export function describeEvent(event: Pick<RecentActivityEvent, 'action' | 'target' | 'actor'>): {
   icon: LucideIcon;
   title: string;
-  detail: string;
+  detail?: string;
 } {
-  switch (entry.type) {
-    case 'memory.captured':
-      return {
-        icon: BookText,
-        title: text(entry.data['title'], 'Memory captured'),
-        detail: `${text(entry.data['kind'], 'memory')} captured`,
-      };
-    case 'document.ingested':
-      return {
-        icon: FilePlus,
-        title: text(entry.data['path'], 'Document ingested'),
-        detail: 'indexed',
-      };
-    case 'document.removed':
-      return {
-        icon: FileMinus,
-        title: text(entry.data['path'], 'Document removed'),
-        detail: 'removed from the index',
-      };
-    case 'source.scan.started':
-      return {
-        icon: RefreshCw,
-        title: text(entry.data['label'], 'Source'),
-        detail: 'scan started',
-      };
-    case 'source.scan.completed': {
-      const summary = entry.data['summary'];
-      const counts =
-        typeof summary === 'object' && summary !== null
-          ? (summary as Record<string, unknown>)
-          : undefined;
-      const added = typeof counts?.['added'] === 'number' ? counts['added'] : undefined;
-      return {
-        icon: Boxes,
-        title: text(entry.data['label'], 'Source'),
-        detail: added === undefined ? 'scan completed' : `scan completed — ${added} added`,
-      };
-    }
+  const { action, target } = event;
+  // A target that is not a route pattern is an id worth showing (a memory lineage, for instance).
+  const idTarget = target !== undefined && !target.startsWith('/') ? target : undefined;
+  const base = (icon: LucideIcon, title: string) =>
+    idTarget !== undefined ? { icon, title, detail: idTarget } : { icon, title };
+
+  switch (action) {
+    case 'memory.write':
+      return target === '/v1/memory'
+        ? { icon: BookText, title: 'Memory captured' }
+        : base(BookText, 'Memory updated');
+    case 'compile':
+      return base(Package, 'Context compiled');
+    case 'effects.write':
+      return base(Waypoints, 'Effect link asserted');
+    case 'source.manage':
+      switch (target) {
+        case '/v1/sources':
+          return { icon: Boxes, title: 'Source registered' };
+        case '/v1/sources/:id/scan':
+          return { icon: RefreshCw, title: 'Source scan started' };
+        case '/v1/sources/:id':
+          return { icon: Trash2, title: 'Source removed' };
+        default:
+          return base(Boxes, 'Source updated');
+      }
+    case 'token.manage':
+      switch (target) {
+        case '/v1/tokens':
+          return { icon: KeyRound, title: 'API token issued' };
+        case '/v1/tokens/:id':
+          return { icon: KeyRound, title: 'API token revoked' };
+        default:
+          return base(KeyRound, 'Tokens updated');
+      }
+    case 'billing.manage':
+      return base(CreditCard, 'Billing updated');
+    case 'retention.manage':
+      return target === '/v1/retention/prune'
+        ? { icon: Timer, title: 'Retention prune run' }
+        : base(Timer, 'Retention policy updated');
+    case 'dsr.export':
+      return base(FileDown, 'Data exported (DSR)');
+    case 'dsr.delete':
+      return base(FileX2, 'Data erased (DSR)');
+    case 'audit.export':
+      return base(ScrollText, 'Audit trail exported');
+    default:
+      // A new audit action renders honestly before this map learns it.
+      return base(ScrollText, action.replace(/[._]/g, ' '));
   }
 }
 
-/** Relative time, coarse — the feed is a live cue, not a forensic log. */
+/** Relative time, coarse — the feed is a cue, not a forensic log (the row's title holds the exact time). */
 export function relativeTime(at: string, now: number = Date.now()): string {
   const seconds = Math.max(0, Math.round((now - new Date(at).getTime()) / 1000));
   if (seconds < 60) return 'just now';
   const minutes = Math.round(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
-  return `${Math.round(minutes / 60)}h ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
 }
 
 export function ActivityFeed() {
-  const entries = useNotifications((state) => state.entries);
+  const { data, isPending, isError } = useRecentActivity();
   const status = useEventsStatus();
+  const entries = data?.events ?? [];
+
+  if (isPending) {
+    return (
+      <div className="space-y-2 py-1" aria-hidden="true">
+        {['a', 'b', 'c'].map((key) => (
+          <div key={key} className="flex items-center gap-3 py-1.5">
+            <Skeleton className="size-7 rounded-md" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-3 w-44" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <p className="text-muted-foreground py-6 text-center text-xs" role="status">
+        Could not load recent activity. Is the Tessera API running?
+      </p>
+    );
+  }
 
   if (entries.length === 0) {
     return (
       <div className="border-border/70 bg-background/40 flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed px-6 py-12 text-center">
         <Mascot mood="watching" size={92} />
         <div className="space-y-1.5">
-          <p className="text-sm font-semibold">No activity this session</p>
+          <p className="text-sm font-semibold">No recorded activity yet</p>
           <p className="text-muted-foreground mx-auto max-w-sm text-xs leading-relaxed">
-            {status === 'reconnecting'
-              ? 'Reconnecting to the live stream — activity will appear here once the connection is back.'
-              : 'Ingests, scans, and captured memories appear here in real time as they happen. This feed covers the current session.'}
+            Scans, compiles, captured memories, and other workspace changes appear here — and stay
+            here across reloads.
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
@@ -150,13 +167,10 @@ export function ActivityFeed() {
         </p>
       ) : null}
       {/*
-        Bounded, and scrolls internally (F-080). The feed holds up to FEED_LIMIT (50) entries, and an
-        unbounded list simply grew the page until the card dwarfed the rest of the Overview.
-
-        The scroll lives on the `ul` itself rather than a wrapper: it already carries the list role +
-        label the Overview e2e resolves the feed by, and a scrollable region must be keyboard-
-        reachable — none of these rows is focusable, so without `tabIndex` a keyboard user could not
-        scroll it at all (axe `scrollable-region-focusable`, WCAG 2.1.1).
+        Bounded (the server caps the rows) and scrolls internally (F-080). The scroll lives on the
+        `ul` itself: it carries the list role + label the Overview e2e resolves the feed by, and a
+        scrollable region must be keyboard-reachable — no row is focusable, so without `tabIndex` a
+        keyboard user could not scroll it at all (axe `scrollable-region-focusable`, WCAG 2.1.1).
       */}
       <ul
         className="divide-border/60 max-h-[22rem] divide-y overflow-y-auto"
@@ -164,7 +178,7 @@ export function ActivityFeed() {
         tabIndex={0}
       >
         {entries.map((entry) => {
-          const { icon: Icon, title, detail } = describeEntry(entry);
+          const { icon: Icon, title, detail } = describeEvent(entry);
           return (
             <li key={entry.id} className="flex items-center gap-3 py-2.5">
               <span className="bg-background/60 text-muted-foreground grid size-7 shrink-0 place-items-center rounded-md">
@@ -172,9 +186,16 @@ export function ActivityFeed() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-xs font-medium">{title}</span>
-                <span className="text-muted-foreground block truncate text-xs">{detail}</span>
+                {detail !== undefined ? (
+                  <span className="text-muted-foreground block truncate font-mono text-[11px]">
+                    {detail}
+                  </span>
+                ) : null}
               </span>
-              <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+              <span
+                className="text-muted-foreground shrink-0 text-xs tabular-nums"
+                title={new Date(entry.at).toLocaleString()}
+              >
                 {relativeTime(entry.at)}
               </span>
             </li>

@@ -50,9 +50,9 @@ export function Dashboard() {
   // never render as "you have nothing", the same distinction the stat cards draw by showing '—'
   // rather than 0. So an unknown workspace shows no onboarding rather than guessed onboarding.
   //
-  // NOT gated on the activity feed, which is the intuitive reading of "hide it once there's
-  // activity" and is wrong: that feed is session-only by design (`lib/store/notifications`), so it
-  // is empty after every reload and this card would greet an established user forever.
+  // Still gated on stats, not the activity feed: the feed is persisted since F-089, but it reads
+  // the pruned audit trail — retention can empty it for a workspace that is anything but empty.
+  // The stat counts are the provable emptiness signal.
   //
   // `useStats` invalidates itself on `source.scan.completed`, so this resolves on its own the
   // moment the first documents land — no refresh, no manual wiring.
@@ -83,7 +83,7 @@ export function Dashboard() {
             <div className="space-y-0.5">
               <CardTitle className="text-sm font-semibold">Recent activity</CardTitle>
               <CardDescription className="text-xs">
-                Changes and compilations across your connected sources, live this session.
+                The latest recorded workspace activity — scans, compiles, and captured memories.
               </CardDescription>
             </div>
             <GitBranch className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />

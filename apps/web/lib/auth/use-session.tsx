@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, type ReactN
 import { usePathname, useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, TesseraApiError } from '@/lib/api/client';
-import { useNotifications } from '@/lib/store/notifications';
+import { useNotificationsRead } from '@/lib/store/notifications';
 import { useRecentCompiles } from '@/lib/store/recent-compiles';
 import { SESSION_ENDPOINT, isLocalIdentity, type Identity } from './session';
 
@@ -97,12 +97,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await fetch(SESSION_ENDPOINT, { method: 'DELETE' });
-    // Drop the in-memory session stores. TanStack Query's cache is keyed and invalidated above, but
-    // these Zustand stores are not part of it and would otherwise survive into the next sign-in on a
-    // shared machine — carrying the previous user's activity feed and their compile task text
-    // ("audit the auth bypass in payments"), which is user-authored content. `notifications.clear()`
-    // has documented this as its purpose since F-060 without anyone calling it.
-    useNotifications.getState().clear();
+    // Drop the client-held stores. TanStack Query's cache is keyed and invalidated above, but these
+    // Zustand stores are not part of it and would otherwise survive into the next sign-in on a
+    // shared machine — the compile store carries user-authored task text, and the notifications
+    // read-state (persisted per device since F-089) would leak which events the previous user had
+    // seen. Same hygiene F-060 documented; F-089 extended it to the persisted marks.
+    useNotificationsRead.getState().clear();
     useRecentCompiles.getState().clear();
     await queryClient.invalidateQueries({ queryKey: IDENTITY_QUERY_KEY });
   }, [queryClient]);

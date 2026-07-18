@@ -72,3 +72,35 @@ export const activityResponseSchema = z.object({
 
 export type ActivityResponse = z.infer<typeof activityResponseSchema>;
 export type ActivityQueryString = z.infer<typeof activityQuerySchema>;
+
+/** `GET /v1/stats/activity/recent` querystring (F-089). `limit` arrives as a string. */
+export const recentActivityQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().max(50).optional(),
+});
+
+/**
+ * `GET /v1/stats/activity/recent` response (F-089) — the last N successful work actions, newest
+ * first: what the Overview's "Recent activity" feed and the notifications bell render. A **narrowed,
+ * member-visible view of the audit trail** (`stats:read`), deliberately less than `/v1/audit`
+ * (`admin:manage`): success only, work actions minus `search`, and only non-sensitive fields — no
+ * outcome (constant by construction), no metadata. `target` is an id or a route pattern, never
+ * content (NFR-7). `id` is the audit event's stable id, which is what per-message read state keys
+ * on. Not audited (the `/v1/stats` posture), and no MCP tool (ADR-0053 — agents have `get_stats`).
+ */
+export const recentActivityResponseSchema = z.object({
+  events: z.array(
+    z.object({
+      id: z.string(),
+      action: z.string(),
+      target: z.string().optional(),
+      actor: z.object({
+        principalId: z.string(),
+        kind: z.enum(['local', 'user', 'token']),
+      }),
+      at: z.string(),
+    }),
+  ),
+});
+
+export type RecentActivityResponse = z.infer<typeof recentActivityResponseSchema>;
+export type RecentActivityQueryString = z.infer<typeof recentActivityQuerySchema>;

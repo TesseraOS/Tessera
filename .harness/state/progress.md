@@ -3,6 +3,65 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-18 — F-089: the feed and the bell read the trail — "session" is no longer a thing a refresh can reset
+
+Items 4+5+6+9 of the report, decided as one architecture question. Plan:
+[`F-089-persisted-activity-and-notifications.md`](../plans/F-089-persisted-activity-and-notifications.md).
+
+### The decision (item 9)
+
+The user asked directly: *why are recent activity and notifications session-scoped? Persist and
+limit — but think and decide for yourself.* Decided: **the audit trail is already the persisted,
+tenant-scoped, pruned, non-sensitive record of workspace activity** — the feed and the bell now read
+it instead of an in-memory store. No new store, no new write path (ADR-0022's posture). Item 6's
+"session changes on refresh" was exactly this scoping — the auth cookie always survived a reload;
+the only thing that reset *was* the F-060 store. All "this session" copy is gone.
+
+### Server — a narrowed view, not a second audit surface
+
+- `AuditQuery.actions` (multi-action `IN` filter): both adapters + shared conformance + focused
+  SQLite tests, the E-020 discipline.
+- `GET /v1/stats/activity/recent` (`stats:read`; default 20, max 50 — over-max is a 400, not a
+  silent widening): **success only** (denied attempts are the admin's security signal, pinned by an
+  e2e where a viewer's 403'd write does not appear), **work actions minus `search`**
+  (`RECENT_ACTIVITY_ACTIONS` — a feed row per debounced search would bury the rows that matter),
+  **non-sensitive fields only** (no outcome/metadata; targets are ids/route patterns, NFR-7).
+  Fastify-free `computeRecentActivity` mirrors the stats helpers. No MCP tool; not audited (the
+  /v1/stats posture). OpenAPI + SDK regenerated.
+
+### Web — one query, two surfaces, read state that is honestly *per device*
+
+- `useRecentActivity` feeds both the Overview feed and the bell; `ActivitySync` (replacing
+  `FeedIngest`, holding F-079's line with the same "Providers wiring" guard test) debounces
+  stream→invalidation; trail-writing mutations with no SSE event (compile, tokens, audit export,
+  source register/remove) invalidate in `onSuccess`.
+- `lib/store/notifications` is now a **persisted read-state store**: `{watermark, readIds}` per
+  `tenantId:principalId`, pure helpers unit-tested (watermark never regresses, marks capped,
+  mark-all prunes), wiped on sign-out (the F-060 shared-machine hygiene, extended to marks).
+  Cross-device read state stays F-065's server-side deliverable — its notes now say exactly that.
+- **The bell became a Popover.** The scoped axe sweep caught that a `role="menu"` may only contain
+  menu items — and the panel holds a list + real buttons (click a row = mark THAT message read, the
+  panel stays open; "Mark all as read"; opening claims nothing). Dialog semantics are the correct
+  shape; `ui/popover.tsx` added via shadcn.
+- Onboarding stays gated on `/v1/stats`, with the reason updated: the feed is persisted now, but it
+  reads the *pruned* trail — retention can empty it for a workspace that is anything but empty.
+
+**Evidence/verification** — gates green: `state`, `format`, `typecheck` (40/40), `lint` (23/23),
+`test` (38/38 — incl. rewritten store/feed/dashboard/session suites + the new `activity-sync` and
+`recent` API tests), `build` (20/20). Home e2e 8/8 — including read-marks-survive-reload,
+mark-all-clears-badge, and TWO axe sweeps (full page + the open bell, which found the real
+menu-semantics violation). Stats API e2e 10/11 (the 1 failure is the pre-existing scan-count case,
+tracked separately).
+
+**Session note:** mid-feature, the `E:` drive (external SSD) dropped and remounted with a health
+warning — the tree survived intact (`git fsck` clean), but this commit was made promptly after
+recovery. The repo has **no remote**; with the drive now flagged, arranging one (or any off-drive
+backup) is worth the user's attention.
+
+**Next step** — F-090 (graph zoom + inspector panel).
+
+---
+
 ## 2026-07-18 — F-088: the day boundary belongs to the viewer, and the chart lost its chrome
 
 Items 3+10 of the report. Plan:

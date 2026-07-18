@@ -1315,6 +1315,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stats/activity/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The last N successful work actions — what the Recent activity feed and the bell render (F-089).
+         * @description A narrowed, member-visible view of the audit trail: success only, work actions minus search, non-sensitive fields only (no outcome, no metadata; targets are ids or route patterns). Newest first; `limit` defaults to 20, max 50. The full trail stays behind /v1/audit (admin:manage).
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            events: {
+                                id: string;
+                                action: string;
+                                target?: string;
+                                actor: {
+                                    principalId: string;
+                                    /** @enum {string} */
+                                    kind: "local" | "user" | "token";
+                                };
+                                at: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/events": {
         parameters: {
             query?: never;

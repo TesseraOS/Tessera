@@ -384,17 +384,6 @@ export const LIVE_ACTIVITY_TYPES = [
 
 export type LiveActivityType = (typeof LIVE_ACTIVITY_TYPES)[number];
 
-/** Event types surfaced on the Overview feed + notifications bell (F-060) — adds scan lifecycle. */
-export const FEED_EVENT_TYPES = [
-  'memory.captured',
-  'document.ingested',
-  'document.removed',
-  'source.scan.started',
-  'source.scan.completed',
-] as const;
-
-export type FeedEventType = (typeof FEED_EVENT_TYPES)[number];
-
 export interface LiveEvent {
   /** Stable id for the received event (monotonic within the session). */
   id: string;

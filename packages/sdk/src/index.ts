@@ -34,6 +34,7 @@ export {
   type ScanStatus,
   type WorkspaceStats,
   type WorkspaceActivity,
+  type RecentActivity,
   type ActivityQuery as ActivityStatsQuery,
   type GraphQuery,
   type GraphSnapshot,

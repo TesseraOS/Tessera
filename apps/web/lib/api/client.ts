@@ -33,6 +33,7 @@ import type {
   CreateTokenRequest,
   Identity,
   RbacCatalog,
+  RecentActivity,
   Subscription,
   TokenList,
   WorkspaceStats,
@@ -102,6 +103,11 @@ export const api = {
    */
   getActivity: (query?: { days?: number; tzOffset?: number }): Promise<WorkspaceActivity> =>
     sdk.getActivity(query),
+  /**
+   * The last N successful work actions, newest first — the Recent activity feed + bell (F-089;
+   * stats:read). A narrowed view of the audit trail; the full trail stays behind getAudit (admin).
+   */
+  getRecentActivity: (limit?: number): Promise<RecentActivity> => sdk.getRecentActivity(limit),
 
   listSources: (): Promise<SourceListResponse> => sdk.listSources(),
   registerSource: (body: RegisterSourceBody): Promise<Source> => sdk.registerSource(body),

@@ -139,6 +139,18 @@ describe('createSqliteAuditLog', () => {
     ]);
   });
 
+  it('filters query() by a set of actions — real SQL IN (F-089)', async () => {
+    const store = createSqliteStore({ path: ':memory:' });
+    const audit = createSqliteAuditLog(store.db).forTenant('acme');
+
+    await audit.record(event({ action: 'compile', at: '2026-03-01T10:00:00.000Z' }));
+    await audit.record(event({ action: 'search', at: '2026-03-01T11:00:00.000Z' }));
+    await audit.record(event({ action: 'memory.write', at: '2026-03-01T12:00:00.000Z' }));
+
+    const { events } = await audit.query({ actions: ['compile', 'memory.write'] });
+    expect(events.map((e) => e.action)).toEqual(['memory.write', 'compile']);
+  });
+
   it('buckets by the viewer’s calendar day when tzOffsetMinutes is set — in SQL (F-088)', async () => {
     const store = createSqliteStore({ path: ':memory:' });
     const audit = createSqliteAuditLog(store.db).forTenant('acme');

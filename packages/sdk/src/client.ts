@@ -44,6 +44,8 @@ export type WorkspaceStats = paths['/v1/stats']['get']['responses'][200]['conten
 export type ActivityQuery = NonNullable<paths['/v1/stats/activity']['get']['parameters']['query']>;
 export type WorkspaceActivity =
   paths['/v1/stats/activity']['get']['responses'][200]['content'][Json];
+export type RecentActivity =
+  paths['/v1/stats/activity/recent']['get']['responses'][200]['content'][Json];
 export type Identity = paths['/v1/me']['get']['responses'][200]['content'][Json];
 export type RbacCatalog = paths['/v1/rbac']['get']['responses'][200]['content'][Json];
 export type TokenList = paths['/v1/tokens']['get']['responses'][200]['content'][Json];
@@ -144,6 +146,12 @@ export interface TesseraClient {
    * must label; `points` is empty when the trail has no history.
    */
   getActivity(query?: ActivityQuery): Promise<WorkspaceActivity>;
+  /**
+   * The last N successful work actions, newest first (F-089) — the Recent activity feed + bell
+   * data. A narrowed, member-visible view of the audit trail; the full trail is `getAudit`
+   * (admin-only).
+   */
+  getRecentActivity(limit?: number): Promise<RecentActivity>;
   /** A source's most recent scan status. */
   scanStatus(id: string): Promise<ScanStatus>;
   /** The subscription plan catalog + entitlements (public). */
@@ -271,6 +279,14 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
     async getActivity(query) {
       return unwrap(
         await client.GET('/v1/stats/activity', query !== undefined ? { params: { query } } : {}),
+      );
+    },
+    async getRecentActivity(limit) {
+      return unwrap(
+        await client.GET(
+          '/v1/stats/activity/recent',
+          limit !== undefined ? { params: { query: { limit } } } : {},
+        ),
       );
     },
     async scanStatus(id) {

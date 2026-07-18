@@ -1,64 +1,110 @@
 import { create } from 'zustand';
-import type { FeedEventType } from '@/lib/api/events';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 /**
- * Live activity for the Overview feed + the notifications bell (F-060), in one store so both render
- * the same events and the bell's unread count means "since you last looked".
+ * Per-message **read state** for the notifications bell (F-089).
  *
- * **Live-session only, by design.** Events arrive over SSE and are held in memory; a reload starts
- * empty. That is the feature's stated scope — the persistent, per-user notification centre (with read
- * state that survives a reload, preferences, and an agent-readable surface) is F-065 and builds on
- * this. The UI must therefore never imply history it does not have: an empty feed says "nothing yet
- * **this session**", not "nothing ever happened".
+ * The entries themselves are no longer stored here: since F-089 the feed and the bell render the
+ * persisted trail (`GET /v1/stats/activity/recent` — see `useRecentActivity`), so a reload shows
+ * the same history every other surface shows. What genuinely belongs to this client is only *which
+ * of those rows this user has seen* — the trail is append-only and shared, so read marks cannot
+ * live in it.
+ *
+ * **Persisted per device** (`localStorage`), keyed by `tenantId:principalId` so two users of one
+ * browser never share marks, and **wiped on sign-out** (`clear()`, called by the session provider —
+ * the same shared-machine hygiene F-060 documented). What persists is opaque event ids + one
+ * timestamp — never content, which is why the recent-compiles objection to `localStorage` does not
+ * apply here. Cross-device read state needs a server store and stays F-065's deliverable.
+ *
+ * The state math is in pure, exported helpers so it unit-tests without a store or storage.
  */
 
-/** The most events retained in a session. Beyond this the oldest are dropped (F-065 persists). */
-export const FEED_LIMIT = 50;
-
-export interface FeedEntry {
-  /** Stable id, monotonic within the session. */
-  readonly id: string;
-  readonly type: FeedEventType;
-  /** Client receive time (ISO) — the wire payloads carry no timestamp (F-065 adds `occurredAt`). */
-  readonly at: string;
-  readonly data: Record<string, unknown>;
+export interface ReadState {
+  /** Everything at or before this ISO instant is read ("mark all as read" sets it). */
+  readonly watermark: string | null;
+  /** Individually-read event ids newer than the watermark. */
+  readonly readIds: readonly string[];
 }
 
-export interface NotificationsState {
-  readonly entries: readonly FeedEntry[];
-  /** Events received since the bell was last opened. */
-  readonly unread: number;
-  push: (type: FeedEventType, data: Record<string, unknown>) => void;
-  /** Mark everything seen (the bell was opened). */
-  markRead: () => void;
-  /** Drop everything — used on sign-out so one user's activity never bleeds into the next session. */
+export const EMPTY_READ_STATE: ReadState = { watermark: null, readIds: [] };
+
+/**
+ * Cap on individually-marked ids. The feed serves ≤50 rows, so 200 is generous headroom; beyond it
+ * the oldest marks fall off (those rows have long since left the feed).
+ */
+export const READ_IDS_CAP = 200;
+
+/** Whether one feed entry is read under `state`. */
+export function isRead(entry: { id: string; at: string }, state: ReadState): boolean {
+  if (state.watermark !== null && entry.at <= state.watermark) return true;
+  return state.readIds.includes(entry.id);
+}
+
+/** How many of `entries` are unread under `state`. */
+export function unreadCount(
+  entries: readonly { id: string; at: string }[],
+  state: ReadState,
+): number {
+  return entries.reduce((count, entry) => count + (isRead(entry, state) ? 0 : 1), 0);
+}
+
+/** `state` with one id marked read (idempotent, capped). Pure. */
+export function withRead(state: ReadState, id: string): ReadState {
+  if (state.readIds.includes(id)) return state;
+  return { ...state, readIds: [...state.readIds, id].slice(-READ_IDS_CAP) };
+}
+
+/**
+ * `state` after "mark all as read" at `newestAt` (the newest visible entry's timestamp). The
+ * watermark only moves forward, and individual marks below it are pruned — they are implied.
+ */
+export function withAllRead(state: ReadState, newestAt: string): ReadState {
+  const watermark =
+    state.watermark !== null && state.watermark > newestAt ? state.watermark : newestAt;
+  return { watermark, readIds: [] };
+}
+
+interface NotificationsReadStore {
+  /** Read state per `tenantId:principalId`, so users of a shared browser never share marks. */
+  readonly byIdentity: Readonly<Record<string, ReadState>>;
+  markRead: (identity: string, id: string) => void;
+  markAllRead: (identity: string, newestAt: string) => void;
+  /** Drop everything — called on sign-out so no trace of one user's marks outlives their session. */
   clear: () => void;
 }
 
-/** Fold one event into the feed. Pure + exported so the state math unit-tests without a socket. */
-export function appendEntry(
-  entries: readonly FeedEntry[],
-  entry: FeedEntry,
-  limit = FEED_LIMIT,
-): readonly FeedEntry[] {
-  return [entry, ...entries].slice(0, limit);
+/** Build the per-identity key. Falls back to the local principal when unauthenticated. */
+export function identityKeyOf(
+  identity: { tenantId: string; principal: { id: string } } | null,
+): string {
+  return identity === null ? 'default:local' : `${identity.tenantId}:${identity.principal.id}`;
 }
 
-let sequence = 0;
-
-export const useNotifications = create<NotificationsState>((set) => ({
-  entries: [],
-  unread: 0,
-  push: (type, data) =>
-    set((state) => ({
-      entries: appendEntry(state.entries, {
-        id: `${type}-${Date.now()}-${sequence++}`,
-        type,
-        at: new Date().toISOString(),
-        data,
-      }),
-      unread: state.unread + 1,
-    })),
-  markRead: () => set({ unread: 0 }),
-  clear: () => set({ entries: [], unread: 0 }),
-}));
+export const useNotificationsRead = create<NotificationsReadStore>()(
+  persist(
+    (set) => ({
+      byIdentity: {},
+      markRead: (identity, id) =>
+        set((state) => ({
+          byIdentity: {
+            ...state.byIdentity,
+            [identity]: withRead(state.byIdentity[identity] ?? EMPTY_READ_STATE, id),
+          },
+        })),
+      markAllRead: (identity, newestAt) =>
+        set((state) => ({
+          byIdentity: {
+            ...state.byIdentity,
+            [identity]: withAllRead(state.byIdentity[identity] ?? EMPTY_READ_STATE, newestAt),
+          },
+        })),
+      clear: () => set({ byIdentity: {} }),
+    }),
+    {
+      name: 'tessera.notifications.read.v1',
+      // SSR-safe: on the server there is no localStorage; createJSONStorage handles the absence and
+      // persist simply skips hydration there.
+      storage: createJSONStorage(() => localStorage),
+    },
+  ),
+);

@@ -20,7 +20,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 import { SessionProvider, useSession } from '@/lib/auth/use-session';
-import { useNotifications } from '@/lib/store/notifications';
+import { useNotificationsRead } from '@/lib/store/notifications';
 import { useRecentCompiles } from '@/lib/store/recent-compiles';
 
 function SignOutButton() {
@@ -44,15 +44,16 @@ describe('signOut', () => {
       'fetch',
       vi.fn(async () => new Response(null, { status: 204 })),
     );
-    useNotifications.getState().clear();
+    useNotificationsRead.getState().clear();
     useRecentCompiles.getState().clear();
   });
 
-  it('clears the in-memory session stores so one user activity never bleeds into the next', async () => {
+  it('clears the client-held stores so one user never bleeds into the next', async () => {
     // These Zustand stores are not part of TanStack Query's cache, so invalidating queries does not
     // touch them — they would survive into the next sign-in on a shared machine, carrying the
-    // previous user's feed and their compile task text (user-authored content).
-    useNotifications.getState().push('memory.captured', { title: 'Acme internal decision' });
+    // previous user's read marks (F-089 persists them per device) and their compile task text
+    // (user-authored content).
+    useNotificationsRead.getState().markRead('acme:u1', 'evt-1');
     useRecentCompiles
       .getState()
       .remember({ task: 'audit the auth bypass in payments', budget: 2000 });
@@ -70,7 +71,7 @@ describe('signOut', () => {
     await user.click(screen.getByRole('button', { name: 'Sign out' }));
 
     await waitFor(() => {
-      expect(useNotifications.getState().entries).toEqual([]);
+      expect(useNotificationsRead.getState().byIdentity).toEqual({});
       expect(useRecentCompiles.getState().entries).toEqual([]);
     });
   });

@@ -303,6 +303,25 @@ export interface AuditExport {
   events: AuditEvent[];
 }
 
+/**
+ * One row of the Recent activity feed / notifications bell (F-089) — a narrowed, member-visible
+ * view of an audit event (`GET /v1/stats/activity/recent`): success only, work actions minus
+ * `search`, non-sensitive fields only. `id` is the audit event's stable id — what per-message read
+ * state keys on.
+ */
+export interface RecentActivityEvent {
+  id: string;
+  action: string;
+  /** An id or a route pattern — never content (NFR-7). */
+  target?: string;
+  actor: AuditActor;
+  at: string;
+}
+
+export interface RecentActivityResponse {
+  events: RecentActivityEvent[];
+}
+
 // --- sources (/v1/sources*) — mirrors the @tessera/api sources schemas (F-038/FR-62) ---
 
 /**

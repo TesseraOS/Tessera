@@ -44,8 +44,11 @@ export function useSearch(query: string, limit?: number) {
 
 /** Compile a Context Package (FR-44) — a mutation (explicit submit, not auto-run). */
 export function useCompile() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: CompileBody) => api.compile(body),
+    // A compile writes the trail but emits no SSE event — refresh the Recent activity feed (F-089).
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: RECENT_ACTIVITY_QUERY_KEY }),
   });
 }
 
@@ -54,7 +57,10 @@ export function useCaptureMemory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: CaptureMemoryBody) => api.captureMemory(body),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['memories'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['memories'] });
+      void queryClient.invalidateQueries({ queryKey: RECENT_ACTIVITY_QUERY_KEY });
+    },
   });
 }
 
@@ -86,6 +92,7 @@ export function useEditMemory() {
     onSuccess: (_memory, { lineageId }) => {
       void queryClient.invalidateQueries({ queryKey: ['memories'] });
       void queryClient.invalidateQueries({ queryKey: ['memory-history', lineageId] });
+      void queryClient.invalidateQueries({ queryKey: RECENT_ACTIVITY_QUERY_KEY });
     },
   });
 }
@@ -124,8 +131,11 @@ export function useAuditInfinite(query: AuditExportQuery = {}) {
  * speculatively refetched, retried, or fired on mount.
  */
 export function useAuditExport() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (query: AuditExportQuery) => api.exportAudit(query),
+    // The export itself is an audited work action with no SSE event (F-089).
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: RECENT_ACTIVITY_QUERY_KEY }),
   });
 }
 
@@ -166,6 +176,29 @@ export function useStats() {
   });
 }
 
+// --- recent activity (F-089) ---
+
+/** Query-key prefix for the persisted Recent activity feed — invalidate this to refresh feed + bell. */
+export const RECENT_ACTIVITY_QUERY_KEY = ['activity', 'recent'] as const;
+
+/** How many rows the feed/bell request. One query serves both — they render the same entries. */
+export const RECENT_ACTIVITY_LIMIT = 20;
+
+/**
+ * The persisted Recent activity feed + notifications bell data (F-089) — the last N successful work
+ * actions from the audit trail (`GET /v1/stats/activity/recent`). Replaces F-060's in-memory
+ * session store: a reload now shows the same recent history every other surface shows. Kept fresh
+ * by `ActivitySync` (stream-driven, debounced invalidation) plus the trail-writing mutations above
+ * that emit no SSE event (compile, token/audit-export actions).
+ */
+export function useRecentActivity(limit: number = RECENT_ACTIVITY_LIMIT) {
+  return useQuery({
+    queryKey: [...RECENT_ACTIVITY_QUERY_KEY, limit],
+    queryFn: () => api.getRecentActivity(limit),
+    staleTime: 30_000,
+  });
+}
+
 /**
  * The Overview activity chart's data (F-084). A plain query — it does not self-invalidate on live
  * events like {@link useStats}: the chart is daily-granular, so a new event this second does not
@@ -201,7 +234,11 @@ export function useRegisterSource() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: RegisterSourceBody) => api.registerSource(body),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sources'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['sources'] });
+      // Writes the trail without an SSE event — refresh the Recent activity feed (F-089).
+      void queryClient.invalidateQueries({ queryKey: RECENT_ACTIVITY_QUERY_KEY });
+    },
   });
 }
 
@@ -210,7 +247,10 @@ export function useRemoveSource() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.removeSource(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sources'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['sources'] });
+      void queryClient.invalidateQueries({ queryKey: RECENT_ACTIVITY_QUERY_KEY });
+    },
   });
 }
 
@@ -325,7 +365,10 @@ export function useCreateToken() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: Parameters<typeof api.createToken>[0]) => api.createToken(body),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tokens'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['tokens'] });
+      void queryClient.invalidateQueries({ queryKey: RECENT_ACTIVITY_QUERY_KEY });
+    },
   });
 }
 
@@ -334,7 +377,10 @@ export function useRevokeToken() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.revokeToken(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tokens'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['tokens'] });
+      void queryClient.invalidateQueries({ queryKey: RECENT_ACTIVITY_QUERY_KEY });
+    },
   });
 }
 

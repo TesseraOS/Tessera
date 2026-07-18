@@ -118,6 +118,64 @@ describe('@tessera/api stats', () => {
       const res = await app.inject({ method: 'GET', url: '/v1/openapi.json' });
       const paths = Object.keys((res.json() as { paths: Record<string, unknown> }).paths);
       expect(paths).toContain('/v1/stats');
+      expect(paths).toContain('/v1/stats/activity/recent');
+    });
+
+    // --- recent activity (F-089) ------------------------------------------------------------------
+
+    it('serves recent activity from the real trail: work actions only, non-sensitive fields', async () => {
+      // Generate real trail entries over the HTTP surface: one write, one read.
+      await app.inject({
+        method: 'POST',
+        url: '/v1/memory',
+        payload: { kind: 'decision', title: 'Keep it', body: 'Recorded.' },
+      });
+      await app.inject({ method: 'GET', url: '/v1/memory' }); // memory.read — must not appear
+
+      const res = await app.inject({ method: 'GET', url: '/v1/stats/activity/recent' });
+      expect(res.statusCode).toBe(200);
+      const { events } = res.json() as {
+        events: { id: string; action: string; at: string }[];
+      };
+
+      expect(events.length).toBeGreaterThanOrEqual(1);
+      expect(events.some((e) => e.action === 'memory.write')).toBe(true);
+      // The narrowing: no reads, no search, and no sensitive fields on any row.
+      for (const entry of events) {
+        expect(entry.action.endsWith('.read')).toBe(false);
+        expect(entry.action).not.toBe('search');
+        expect(entry).not.toHaveProperty('outcome');
+        expect(entry).not.toHaveProperty('metadata');
+        expect(entry).not.toHaveProperty('tenantId');
+        expect(entry.id.length).toBeGreaterThan(0);
+        expect(Number.isNaN(Date.parse(entry.at))).toBe(false);
+      }
+    });
+
+    it('honours and clamps the limit', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/v1/memory',
+        payload: { kind: 'lesson', title: 'One', body: 'First.' },
+      });
+      await app.inject({
+        method: 'POST',
+        url: '/v1/memory',
+        payload: { kind: 'lesson', title: 'Two', body: 'Second.' },
+      });
+
+      const limited = await app.inject({
+        method: 'GET',
+        url: '/v1/stats/activity/recent?limit=1',
+      });
+      expect((limited.json() as { events: unknown[] }).events).toHaveLength(1);
+
+      // Beyond the schema's max ⇒ a validation 400, not a silent widening of the window.
+      const tooBig = await app.inject({
+        method: 'GET',
+        url: '/v1/stats/activity/recent?limit=5000',
+      });
+      expect(tooBig.statusCode).toBe(400);
     });
   });
 
@@ -210,6 +268,36 @@ describe('@tessera/api stats', () => {
         headers: { authorization: `Bearer ${viewer}` },
       });
       expect(res.statusCode).toBe(200);
+    });
+
+    it('grants recent activity to a viewer, and keeps denied attempts out of the feed (F-089)', async () => {
+      const owner = await token('acme', ['owner']);
+      const viewer = await token('acme', ['viewer']);
+
+      // The owner writes; the viewer TRIES to (403 ⇒ a `denied` memory.write lands in the trail).
+      await app.inject({
+        method: 'POST',
+        url: '/v1/memory',
+        payload: { kind: 'decision', title: 'Owner wrote this', body: 'Recorded.' },
+        headers: { authorization: `Bearer ${owner}` },
+      });
+      const deniedWrite = await app.inject({
+        method: 'POST',
+        url: '/v1/memory',
+        payload: { kind: 'decision', title: 'Viewer cannot', body: 'Denied.' },
+        headers: { authorization: `Bearer ${viewer}` },
+      });
+      expect(deniedWrite.statusCode).toBe(403);
+
+      // stats:read is enough to read the feed — and the denied attempt must not be in it.
+      const res = await app.inject({
+        method: 'GET',
+        url: '/v1/stats/activity/recent',
+        headers: { authorization: `Bearer ${viewer}` },
+      });
+      expect(res.statusCode).toBe(200);
+      const { events } = res.json() as { events: { action: string; actor: unknown }[] };
+      expect(events.filter((e) => e.action === 'memory.write')).toHaveLength(1);
     });
 
     it('403s a token scoped without stats:read, even though it may read memory', async () => {

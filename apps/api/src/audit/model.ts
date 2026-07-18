@@ -49,6 +49,16 @@ export const ACTIVITY_ACTIONS = AUDIT_ACTIONS.filter(
   (action) => !action.endsWith('.read'),
 ) as readonly AuditAction[];
 
+/**
+ * The actions the Overview "Recent activity" feed + notifications bell list (F-089) —
+ * {@link ACTIVITY_ACTIONS} minus `search`. The chart counts a search as engagement (an aggregate
+ * can afford it); a *feed row per debounced search* is noise that buries the rows that matter —
+ * the actions that changed or produced something. One constant, so the rule is stated once.
+ */
+export const RECENT_ACTIVITY_ACTIONS = ACTIVITY_ACTIONS.filter(
+  (action) => action !== 'search',
+) as readonly AuditAction[];
+
 /** Whether an audited action succeeded or was denied (authz/authn failure). */
 export type AuditOutcome = 'success' | 'denied';
 
@@ -89,6 +99,12 @@ export interface AuditEventInput {
 /** Query filters over the trail. Results are newest-first; `cursor` paginates forward. */
 export interface AuditQuery {
   readonly action?: AuditAction;
+  /**
+   * Restrict to a set of actions (F-089 — the recent-activity feed reads "any work action" in one
+   * query). Combined with `action` both must hold, like every other filter here; callers use one
+   * or the other.
+   */
+  readonly actions?: readonly AuditAction[];
   readonly actor?: string;
   readonly outcome?: AuditOutcome;
   /** Inclusive lower time bound (ISO). */

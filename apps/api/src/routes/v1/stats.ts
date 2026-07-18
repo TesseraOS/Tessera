@@ -4,12 +4,16 @@ import { requirePermission, tenantOf } from '../../auth/index.js';
 import {
   activityQuerySchema,
   activityResponseSchema,
+  recentActivityQuerySchema,
+  recentActivityResponseSchema,
   statsResponseSchema,
   type ActivityQueryString,
+  type RecentActivityQueryString,
 } from '../../schemas/stats.js';
 import type { ApiServices } from '../../services.js';
 import { computeWorkspaceActivity } from '../../stats/activity.js';
 import { computeWorkspaceStats } from '../../stats/core.js';
+import { computeRecentActivity } from '../../stats/recent.js';
 
 /**
  * `GET /v1/stats` — the workspace summary (F-060; FR-38/FR-62): how much this tenant actually has
@@ -66,5 +70,32 @@ export function registerStatsRoutes(app: ZodFastify, services: ApiServices, audi
           ? { tzOffsetMinutes: request.query.tzOffset }
           : {}),
       }),
+  );
+
+  app.get<{ Querystring: RecentActivityQueryString }>(
+    '/stats/activity/recent',
+    {
+      preHandler: requirePermission('stats:read'),
+      schema: {
+        tags: ['stats'],
+        summary:
+          'The last N successful work actions — what the Recent activity feed and the bell render (F-089).',
+        description:
+          'A narrowed, member-visible view of the audit trail: success only, work actions minus ' +
+          'search, non-sensitive fields only (no outcome, no metadata; targets are ids or route ' +
+          'patterns). Newest first; `limit` defaults to 20, max 50. The full trail stays behind ' +
+          '/v1/audit (admin:manage).',
+        querystring: recentActivityQuerySchema,
+        response: { 200: recentActivityResponseSchema },
+      },
+      // Same posture as /stats and /stats/activity: an aggregate-grade read on every page load —
+      // auditing it would flood the very trail it reads.
+    },
+    (request) =>
+      computeRecentActivity(
+        audit,
+        tenantOf(request),
+        request.query.limit !== undefined ? { limit: request.query.limit } : {},
+      ),
   );
 }

@@ -3026,6 +3026,93 @@
         }
       }
     },
+    "/v1/stats/activity/recent": {
+      "get": {
+        "summary": "The last N successful work actions — what the Recent activity feed and the bell render (F-089).",
+        "tags": [
+          "stats"
+        ],
+        "description": "A narrowed, member-visible view of the audit trail: success only, work actions minus search, non-sensitive fields only (no outcome, no metadata; targets are ids or route patterns). Newest first; `limit` defaults to 20, max 50. The full trail stays behind /v1/audit (admin:manage).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 50
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string"
+                          },
+                          "target": {
+                            "type": "string"
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "principalId": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "local",
+                                  "user",
+                                  "token"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "principalId",
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "at": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "action",
+                          "actor",
+                          "at"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "events"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/events": {
       "get": {
         "tags": [

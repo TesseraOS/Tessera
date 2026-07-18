@@ -5,9 +5,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const getStats = vi.hoisted(() => vi.fn());
 const getActivity = vi.hoisted(() => vi.fn());
+const getRecentActivity = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api/client', () => ({
-  api: { getStats, getActivity },
+  api: { getStats, getActivity, getRecentActivity },
   API_ORIGIN: 'http://localhost:3000',
   TesseraApiError: class extends Error {},
 }));
@@ -19,7 +20,6 @@ vi.mock('@/lib/api/events', () => ({
 }));
 
 import { Dashboard } from '@/components/dashboard';
-import { useNotifications } from '@/lib/store/notifications';
 
 const POPULATED = {
   documents: 1234,
@@ -47,18 +47,19 @@ const onboarding = () => screen.queryByText('Get started');
 beforeEach(() => {
   getStats.mockReset();
   getActivity.mockReset();
+  getRecentActivity.mockReset();
   // The chart self-hides on empty history; default it so the dashboard tests stay about onboarding.
   getActivity.mockResolvedValue({ from: '2026-03-01', until: '2026-03-31', points: [] });
-  useNotifications.getState().clear();
+  getRecentActivity.mockResolvedValue({ events: [] });
 });
 
 /**
  * F-080 / ADR-0053: onboarding renders **only while the workspace is provably empty**.
  *
  * The gate is `/v1/stats`, deliberately, and these tests pin down why. The intuitive alternative —
- * "hide it once the activity feed has entries" — is wrong: that feed is session-only by design, so
- * it is empty after every reload and would re-greet an established user on every refresh. The
- * `keeps onboarding hidden … even with an empty activity feed` case is that exact scenario.
+ * "hide it once the activity feed has entries" — is still wrong after F-089 made the feed
+ * persisted: the feed reads the pruned audit trail, and retention can empty it for a workspace
+ * that is anything but empty. The stat counts are the provable emptiness signal.
  */
 describe('Dashboard onboarding gate', () => {
   it('offers onboarding for a provably empty workspace', async () => {
@@ -81,27 +82,39 @@ describe('Dashboard onboarding gate', () => {
     await vi.waitFor(() => expect(onboarding()).not.toBeInTheDocument());
   });
 
-  it('keeps onboarding hidden for a populated workspace even with an empty activity feed', async () => {
-    // The regression the /v1/stats gate exists to prevent: the feed is session-only, so it is empty
-    // after every reload. Gating on it would tell a user with 3 sources to go connect a source.
+  it('keeps onboarding hidden for a populated workspace even when the trail is empty', async () => {
+    // The regression the /v1/stats gate exists to prevent: retention can prune the trail to
+    // nothing for a workspace with 3 connected sources. Gating on the feed would tell that user to
+    // go connect a source.
     getStats.mockResolvedValue(POPULATED);
-    expect(useNotifications.getState().entries).toHaveLength(0);
+    getRecentActivity.mockResolvedValue({ events: [] });
 
     renderWithClient(<Dashboard />);
 
-    await screen.findByText('No activity this session');
+    await screen.findByText('No recorded activity yet');
     expect(onboarding()).not.toBeInTheDocument();
   });
 
-  it('shows onboarding for an empty workspace that has session activity', async () => {
-    // The mirror case: events arrived this session but nothing is indexed yet (a scan that added
-    // nothing). Activity is not data — the workspace is still empty, so onboarding still applies.
+  it('shows onboarding for an empty workspace that has trail activity', async () => {
+    // The mirror case: the trail holds a scan request whose scan added nothing. Activity is not
+    // data — the workspace is still empty, so onboarding still applies.
     getStats.mockResolvedValue(EMPTY);
-    useNotifications.getState().push('source.scan.started', { label: 'acme/repo' });
+    getRecentActivity.mockResolvedValue({
+      events: [
+        {
+          id: 'evt-1',
+          action: 'source.manage',
+          target: '/v1/sources/:id/scan',
+          actor: { principalId: 'local', kind: 'local' },
+          at: '2026-07-18T10:00:00.000Z',
+        },
+      ],
+    });
 
     renderWithClient(<Dashboard />);
 
     expect(await screen.findByText('Get started')).toBeInTheDocument();
+    expect(await screen.findByText('Source scan started')).toBeInTheDocument();
   });
 
   it('does not guess while stats are loading', () => {

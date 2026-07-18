@@ -20,6 +20,7 @@ interface Entry {
 /** Whether an event passes a query's filters. ISO timestamps compare lexicographically (UTC 'Z'). */
 function matches(event: AuditEvent, query: AuditQuery): boolean {
   if (query.action !== undefined && event.action !== query.action) return false;
+  if (query.actions !== undefined && !query.actions.includes(event.action)) return false;
   if (query.actor !== undefined && event.actor.principalId !== query.actor) return false;
   if (query.outcome !== undefined && event.outcome !== query.outcome) return false;
   if (query.since !== undefined && event.at < query.since) return false;

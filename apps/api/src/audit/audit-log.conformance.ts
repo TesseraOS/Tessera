@@ -67,6 +67,20 @@ export function runAuditLogConformance(name: string, makeLog: AuditLogFactory): 
       }
     });
 
+    it('filters by a set of actions, newest-first (F-089)', async () => {
+      const { log, cleanup } = await makeLog();
+      try {
+        await log.record(event({ action: 'compile' }));
+        await log.record(event({ action: 'search' }));
+        await log.record(event({ action: 'memory.write' }));
+
+        const { events } = await log.query({ actions: ['compile', 'memory.write'] });
+        expect(events.map((e) => e.action)).toEqual(['memory.write', 'compile']);
+      } finally {
+        await cleanup?.();
+      }
+    });
+
     it('filters by a time window (since/until, inclusive)', async () => {
       const { log, cleanup } = await makeLog();
       try {

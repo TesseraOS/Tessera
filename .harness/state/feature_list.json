@@ -2941,7 +2941,7 @@
       "package": "@tessera/api",
       "release": "R4",
       "priority": "should",
-      "status": "todo",
+      "status": "done",
       "acceptance": [
         "AuditQuery gains a multi-action filter honoured by BOTH adapters and pinned by the shared conformance suite + focused SQLite tests",
         "GET /v1/stats/activity/recent (stats:read) returns the last N (default 20, max 50) SUCCESSFUL work actions — reads and search excluded by a documented rule; fields are non-sensitive by the recorder’s guarantee (id, action, target?, actor, at); not audited (same posture as /v1/stats); no MCP tool",

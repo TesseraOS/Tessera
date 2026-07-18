@@ -1,4 +1,4 @@
-import type { TenantId } from '@tessera/core';
+import type { ProjectId, TenantId } from '@tessera/core';
 
 /** Distance metric used by a vector index. */
 export type VectorMetric = 'l2' | 'cosine';
@@ -32,9 +32,10 @@ export interface VectorMatch {
  * pgvector adapter implements the same contract for cloud (ADR-0003). Each vector records its
  * embedding `model`; the `dimension` is fixed per store.
  *
- * **Tenancy (FR-52, ADR-0033):** the store the factory returns operates within
- * {@link DEFAULT_TENANT_ID}. {@link VectorStore.forTenant} returns a view whose reads/writes are
- * confined to one tenant, so vectors written under one tenant are never returned to another.
+ * **Scope (FR-52/FR-66, ADR-0033/0037):** the store the factory returns operates within
+ * `(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID)`. {@link VectorStore.forTenant} then
+ * {@link VectorStore.forProject} return views whose reads/writes are confined to one
+ * `(tenant, project)` scope, so vectors written under one scope are never returned to another.
  */
 export interface VectorStore {
   readonly capabilities: VectorStoreCapabilities;
@@ -47,8 +48,15 @@ export interface VectorStore {
   /** Release resources. */
   close(): Promise<void>;
   /**
-   * A view of this store confined to `tenantId` (FR-52). The default view is
-   * {@link DEFAULT_TENANT_ID}; the returned view shares the underlying connection/resources.
+   * A view of this store confined to `tenantId` (FR-52), reset to that tenant's
+   * {@link DEFAULT_PROJECT_ID}. The default view is {@link DEFAULT_TENANT_ID}; the returned view
+   * shares the underlying connection/resources.
    */
   forTenant(tenantId: TenantId): VectorStore;
+  /**
+   * A view of this store confined to `projectId` **within the current tenant** (FR-66, ADR-0037).
+   * The default view is {@link DEFAULT_PROJECT_ID}; chain after {@link VectorStore.forTenant} for a
+   * full `(tenant, project)` scope. Vectors written under one project are never returned to another.
+   */
+  forProject(projectId: ProjectId): VectorStore;
 }

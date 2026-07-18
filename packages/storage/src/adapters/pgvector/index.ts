@@ -1,5 +1,11 @@
 import pg from 'pg';
-import { DEFAULT_TENANT_ID, ValidationError, type TenantId } from '@tessera/core';
+import {
+  DEFAULT_PROJECT_ID,
+  DEFAULT_TENANT_ID,
+  ValidationError,
+  type ProjectId,
+  type TenantId,
+} from '@tessera/core';
 import type {
   VectorMatch,
   VectorMetric,
@@ -40,10 +46,14 @@ interface MatchRow {
  * are created lazily on first use. Vectors are parameterized as `$n::vector` literals — no extra
  * `pgvector` npm dependency (only `pg` is added).
  *
- * **Tenancy (FR-52, ADR-0033):** a `tenant` column (part of the composite primary key `(tenant, id)`)
- * scopes every row. The base store operates in {@link DEFAULT_TENANT_ID}; {@link VectorStore.forTenant}
- * returns a view bound to another tenant over the same pool/table, filtering every read + write by it —
- * so the same id can exist independently per tenant and a query never crosses tenants.
+ * **Scope (FR-52/FR-66, ADR-0033/0037):** `tenant` + `project` columns (the composite primary key
+ * `(tenant, project, id)`) scope every row. The base store operates in
+ * `(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID)`; {@link VectorStore.forTenant} then
+ * {@link VectorStore.forProject} return views bound to another `(tenant, project)` over the same
+ * pool/table, filtering every read + write by both — so the same id can exist independently per scope
+ * and a query never crosses tenants or projects. A pre-project table is upgraded in place (additive
+ * `project` column defaulting to {@link DEFAULT_PROJECT_ID}, PK widened) so existing rows land in the
+ * default project.
  */
 export function createPgVectorStore(options: PgVectorStoreOptions): VectorStore {
   const { connectionString, dimension, metric = 'l2', table = 'vectors' } = options;
@@ -57,15 +67,23 @@ export function createPgVectorStore(options: PgVectorStoreOptions): VectorStore 
   let open = true;
   let ready: Promise<void> | undefined;
 
-  /** Create the extension + table once (idempotent). */
+  /** Create the extension + table once, upgrading a pre-project table in place (idempotent). */
   function ensureReady(): Promise<void> {
     ready ??= (async () => {
       await pool.query('CREATE EXTENSION IF NOT EXISTS vector');
       await pool.query(
         `CREATE TABLE IF NOT EXISTS ${table} ` +
-          `(tenant text NOT NULL DEFAULT '${DEFAULT_TENANT_ID}', id text NOT NULL, ` +
-          `embedding vector(${dimension}), model text NOT NULL, PRIMARY KEY (tenant, id))`,
+          `(tenant text NOT NULL DEFAULT '${DEFAULT_TENANT_ID}', ` +
+          `project text NOT NULL DEFAULT '${DEFAULT_PROJECT_ID}', id text NOT NULL, ` +
+          `embedding vector(${dimension}), model text NOT NULL, PRIMARY KEY (tenant, project, id))`,
       );
+      // Upgrade a table created before projects: add the column (existing rows → default project) and
+      // widen the primary key to include it. Both statements are idempotent.
+      await pool.query(
+        `ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS project text NOT NULL DEFAULT '${DEFAULT_PROJECT_ID}'`,
+      );
+      await pool.query(`ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${table}_pkey`);
+      await pool.query(`ALTER TABLE ${table} ADD PRIMARY KEY (tenant, project, id)`);
     })();
     return ready;
   }
@@ -78,7 +96,7 @@ export function createPgVectorStore(options: PgVectorStoreOptions): VectorStore 
     }
   }
 
-  function storeFor(tenantId: TenantId): VectorStore {
+  function storeFor(tenantId: TenantId, projectId: ProjectId): VectorStore {
     return {
       capabilities,
 
@@ -90,9 +108,9 @@ export function createPgVectorStore(options: PgVectorStoreOptions): VectorStore 
           await client.query('BEGIN');
           for (const item of items) {
             await client.query(
-              `INSERT INTO ${table} (tenant, id, embedding, model) VALUES ($1, $2, $3::vector, $4) ` +
-                `ON CONFLICT (tenant, id) DO UPDATE SET embedding = EXCLUDED.embedding, model = EXCLUDED.model`,
-              [tenantId, item.id, toVectorLiteral(item.vector), item.model],
+              `INSERT INTO ${table} (tenant, project, id, embedding, model) VALUES ($1, $2, $3, $4::vector, $5) ` +
+                `ON CONFLICT (tenant, project, id) DO UPDATE SET embedding = EXCLUDED.embedding, model = EXCLUDED.model`,
+              [tenantId, projectId, item.id, toVectorLiteral(item.vector), item.model],
             );
           }
           await client.query('COMMIT');
@@ -109,8 +127,8 @@ export function createPgVectorStore(options: PgVectorStoreOptions): VectorStore 
         assertDimension(vector);
         const result = await pool.query(
           `SELECT id, embedding ${operator} $1::vector AS distance, model ` +
-            `FROM ${table} WHERE tenant = $2 ORDER BY distance LIMIT $3`,
-          [toVectorLiteral(vector), tenantId, k],
+            `FROM ${table} WHERE tenant = $2 AND project = $3 ORDER BY distance LIMIT $4`,
+          [toVectorLiteral(vector), tenantId, projectId, k],
         );
         return (result.rows as MatchRow[]).map((row): VectorMatch => ({
           id: row.id,
@@ -122,14 +140,14 @@ export function createPgVectorStore(options: PgVectorStoreOptions): VectorStore 
       async delete(ids) {
         if (ids.length === 0) return;
         await ensureReady();
-        await pool.query(`DELETE FROM ${table} WHERE tenant = $1 AND id = ANY($2)`, [
-          tenantId,
-          ids,
-        ]);
+        await pool.query(
+          `DELETE FROM ${table} WHERE tenant = $1 AND project = $2 AND id = ANY($3)`,
+          [tenantId, projectId, ids],
+        );
       },
 
       async close() {
-        // The pool is shared across tenant views; close it once (guarded).
+        // The pool is shared across scoped views; close it once (guarded).
         if (open) {
           open = false;
           await pool.end();
@@ -137,10 +155,14 @@ export function createPgVectorStore(options: PgVectorStoreOptions): VectorStore 
       },
 
       forTenant(next) {
-        return storeFor(next);
+        return storeFor(next, DEFAULT_PROJECT_ID);
+      },
+
+      forProject(next) {
+        return storeFor(tenantId, next);
       },
     };
   }
 
-  return storeFor(DEFAULT_TENANT_ID);
+  return storeFor(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID);
 }

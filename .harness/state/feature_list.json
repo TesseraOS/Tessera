@@ -1634,7 +1634,7 @@
       "package": "@tessera/storage",
       "release": "R4",
       "priority": "must",
-      "status": "backlog",
+      "status": "in_progress",
       "blockedBy": [
         "F-037",
         "F-038",

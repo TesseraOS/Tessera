@@ -127,5 +127,50 @@ export function runVectorConformance(name: string, makeStore: VectorFactory): vo
         await cleanup();
       }
     });
+
+    it('isolates vectors by project (forProject) within a tenant — no cross-project reads, same id per project', async () => {
+      const { store, cleanup } = await makeStore({ dimension: 3 });
+      try {
+        // Two projects within the same tenant, plus that tenant's default project.
+        const tenant = store.forTenant('tenant-a');
+        const p1 = tenant.forProject('project-1');
+        const p2 = tenant.forProject('project-2');
+        const dflt = tenant; // forTenant resets to the tenant's default project
+        // The same id `shared` exists independently in each project, plus a project-only id apiece.
+        await p1.upsert([
+          { id: 'shared', vector: [1, 0, 0], model: 'm1' },
+          { id: 'only-1', vector: [0, 1, 0], model: 'm1' },
+        ]);
+        await p2.upsert([
+          { id: 'shared', vector: [0, 0, 1], model: 'm2' },
+          { id: 'only-2', vector: [0, 1, 0], model: 'm2' },
+        ]);
+        await dflt.upsert([{ id: 'in-default', vector: [1, 0, 0], model: 'md' }]);
+
+        // p1 sees only its own rows; `shared` resolves to p1's vector/model, never p2's or default's.
+        const p1Matches = await p1.query([1, 0, 0], 5);
+        expect(p1Matches.map((m) => m.id).sort()).toEqual(['only-1', 'shared']);
+        expect(p1Matches.find((m) => m.id === 'shared')?.model).toBe('m1');
+
+        // p2 sees only its own rows; the same id `shared` resolves to p2's vector/model.
+        const p2Matches = await p2.query([0, 0, 1], 5);
+        expect(p2Matches.map((m) => m.id).sort()).toEqual(['only-2', 'shared']);
+        expect(p2Matches.find((m) => m.id === 'shared')?.model).toBe('m2');
+
+        // The tenant's default project is a third, disjoint scope.
+        expect((await dflt.query([1, 0, 0], 5)).map((m) => m.id)).toEqual(['in-default']);
+
+        // Deleting in p1 does not touch p2 or the default project.
+        await p1.delete(['shared', 'only-1']);
+        expect(await p1.query([1, 0, 0], 5)).toHaveLength(0);
+        expect((await p2.query([0, 0, 1], 5)).map((m) => m.id).sort()).toEqual([
+          'only-2',
+          'shared',
+        ]);
+        expect((await dflt.query([1, 0, 0], 5)).map((m) => m.id)).toEqual(['in-default']);
+      } finally {
+        await cleanup();
+      }
+    });
   });
 }

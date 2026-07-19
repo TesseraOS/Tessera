@@ -1,5 +1,13 @@
 import { createTesseraClient, TesseraApiError } from '@tessera/sdk';
+import type {
+  CreateProjectRequest,
+  Project,
+  ProjectDeleteResult,
+  ProjectList,
+  RenameProjectRequest,
+} from '@tessera/sdk';
 import { PROXY_BASE } from '@/lib/auth/session';
+import { DEFAULT_PROJECT_ID, getSelectedProjectId } from '@/lib/store/project';
 import type {
   AuditExport,
   AuditExportQuery,
@@ -46,7 +54,21 @@ import type {
  * httpOnly session cookie, so no token ever lives in client JS. The `api` surface + `TesseraApiError`
  * are kept stable so the TanStack Query hooks and views are unchanged.
  */
-const sdk = createTesseraClient({ baseUrl: PROXY_BASE });
+/**
+ * Attach the selected project (F-050, ADR-0037) to every request as `X-Tessera-Project`, read fresh per
+ * call from the project store so a switch takes effect immediately (the default project is sent as no
+ * header, keeping single-project traffic byte-for-byte unchanged). The proxy forwards the header to the
+ * API, which scopes the request's data plane to that project.
+ */
+const projectScopedFetch: typeof fetch = (input, init) => {
+  const projectId = getSelectedProjectId();
+  if (projectId === DEFAULT_PROJECT_ID) return fetch(input, init);
+  const headers = new Headers(init?.headers);
+  headers.set('X-Tessera-Project', projectId);
+  return fetch(input, { ...init, headers });
+};
+
+const sdk = createTesseraClient({ baseUrl: PROXY_BASE, fetch: projectScopedFetch });
 
 export { TesseraApiError };
 export type {
@@ -108,6 +130,13 @@ export const api = {
    * stats:read). A narrowed view of the audit trail; the full trail stays behind getAudit (admin).
    */
   getRecentActivity: (limit?: number): Promise<RecentActivity> => sdk.getRecentActivity(limit),
+
+  // --- multi-project workspaces (F-050; ADR-0037) ---
+  listProjects: (): Promise<ProjectList> => sdk.listProjects(),
+  createProject: (body: CreateProjectRequest): Promise<Project> => sdk.createProject(body),
+  renameProject: (id: string, patch: RenameProjectRequest): Promise<Project> =>
+    sdk.renameProject(id, patch),
+  deleteProject: (id: string): Promise<ProjectDeleteResult> => sdk.deleteProject(id),
 
   listSources: (): Promise<SourceListResponse> => sdk.listSources(),
   registerSource: (body: RegisterSourceBody): Promise<Source> => sdk.registerSource(body),

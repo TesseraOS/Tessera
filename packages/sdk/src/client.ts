@@ -40,6 +40,14 @@ export type SourceList = paths['/v1/sources']['get']['responses'][200]['content'
 export type ScanAccepted =
   paths['/v1/sources/{id}/scan']['post']['responses'][202]['content'][Json];
 export type ScanStatus = paths['/v1/sources/{id}/scan']['get']['responses'][200]['content'][Json];
+export type Project = paths['/v1/projects']['post']['responses'][201]['content'][Json];
+export type ProjectList = paths['/v1/projects']['get']['responses'][200]['content'][Json];
+export type CreateProjectRequest = paths['/v1/projects']['post']['requestBody']['content'][Json];
+export type RenameProjectRequest = NonNullable<
+  paths['/v1/projects/{id}']['patch']['requestBody']
+>['content'][Json];
+export type ProjectDeleteResult =
+  paths['/v1/projects/{id}']['delete']['responses'][200]['content'][Json];
 export type WorkspaceStats = paths['/v1/stats']['get']['responses'][200]['content'][Json];
 export type ActivityQuery = NonNullable<paths['/v1/stats/activity']['get']['parameters']['query']>;
 export type WorkspaceActivity =
@@ -120,6 +128,14 @@ export interface TesseraClient {
   exportTenantData(): Promise<DsrBundle>;
   /** Erase this tenant's data plane; the audit trail is retained by design (admin only; NFR-13). */
   deleteTenantData(): Promise<DsrDeleteResult>;
+  /** List the caller's tenant's projects (the reserved default first). */
+  listProjects(): Promise<ProjectList>;
+  /** Create a project (a new, isolated workspace scope). */
+  createProject(request: CreateProjectRequest): Promise<Project>;
+  /** Rename a project (not the reserved default). */
+  renameProject(id: string, patch: RenameProjectRequest): Promise<Project>;
+  /** Delete a project (not the reserved default). */
+  deleteProject(id: string): Promise<ProjectDeleteResult>;
   /** List the registered ingestion sources. */
   listSources(): Promise<SourceList>;
   /** Register a filesystem/git source for ingestion. */
@@ -257,6 +273,20 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
     },
     async deleteTenantData() {
       return unwrap(await client.POST('/v1/dsr/delete', {}));
+    },
+    async listProjects() {
+      return unwrap(await client.GET('/v1/projects', {}));
+    },
+    async createProject(request) {
+      return unwrap(await client.POST('/v1/projects', { body: request }));
+    },
+    async renameProject(id, patch) {
+      return unwrap(
+        await client.PATCH('/v1/projects/{id}', { params: { path: { id } }, body: patch }),
+      );
+    },
+    async deleteProject(id) {
+      return unwrap(await client.DELETE('/v1/projects/{id}', { params: { path: { id } } }));
     },
     async listSources() {
       return unwrap(await client.GET('/v1/sources', {}));

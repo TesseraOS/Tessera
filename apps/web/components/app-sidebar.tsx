@@ -12,7 +12,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { NewMemoryButton } from '@/components/new-memory-button';
+import { QuickCreateMenu } from '@/components/quick-create-menu';
+import { ProjectSwitcher } from '@/components/project-switcher';
 import { NavGroup } from '@/components/nav-group';
 import { buildFooterNavLinks, buildNavGroups } from '@/components/app-shared';
 
@@ -39,9 +40,13 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup className="pb-1">
+          <ProjectSwitcher />
+        </SidebarGroup>
+
+        <SidebarGroup className="pb-1">
           <SidebarMenu>
             <SidebarMenuItem>
-              <NewMemoryButton />
+              <QuickCreateMenu />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>

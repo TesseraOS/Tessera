@@ -9,9 +9,21 @@ links:
   - apps/server/src/mcp.ts
   - apps/web/lib/api/client.ts
   - apps/web/components/sources/sources-view.tsx
-confidence: 0.9
+confidence: 0.95
 created: 2026-07-06
 ---
+
+**RECURRED 2026-07-19 (F-050):** the exact same trap dropped `projects` — `instrumentServices` was never
+updated when `ApiServices` gained the optional `projects` member, so every `/v1/projects` route answered
+`409` (`project management is not configured`) on the **live** server while all unit + e2e gates were green
+(they inject raw services into `buildServer`, bypassing the wrapper). The regression test from the first
+occurrence (point 1) did **not** catch it because it was a **manual list** (`sources` + `billing`), not
+exhaustive over `ApiServices` keys — so a member added later isn't covered until someone remembers to add
+it. The dashboard's live browser check (switch project → stats re-scope) caught it in one step. **Two
+reinforcements:** (a) make the forwarding invariant *structural* — a `Proxy`/spread that carries unknown
+members, or a test that iterates the actual `ApiServices` keys — not a hand-maintained allow-list; (b) the
+"boot the real server and drive the feature" bar is non-negotiable, precisely because this class of bug is
+invisible to every stub-based gate.
 
 **What happened:** F-041 (the `/sources` dashboard) consumes `GET /v1/sources`. Its unit + e2e tests were
 green (they mock/stub the API at the network boundary), but the **first live run against the real shipped

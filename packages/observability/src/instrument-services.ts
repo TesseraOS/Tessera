@@ -70,6 +70,12 @@ export function instrumentServices(services: ApiServices, obs: Observability): A
     ...(services.sources !== undefined
       ? { sources: traceObject(services.sources, 'sources', obs) }
       : {}),
+    // `projects` (F-050) is traced like the others — its methods are all async (Promise-returning) and
+    // it has no synchronous scoped-view accessor, so the tracing Proxy wraps it cleanly. Dropping it
+    // here silently 409s every `/v1/projects` route on the instrumented server (E-015).
+    ...(services.projects !== undefined
+      ? { projects: traceObject(services.projects, 'projects', obs) }
+      : {}),
     ...(services.billing !== undefined ? { billing: services.billing } : {}),
     ...(services.readiness !== undefined ? { readiness: services.readiness } : {}),
   };

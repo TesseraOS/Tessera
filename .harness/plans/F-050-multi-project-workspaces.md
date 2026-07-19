@@ -35,10 +35,11 @@ No new ADR needed — ADR-0037 pre-decided the model and explicitly delegated th
 > `216f5ec` storage · `2daca6e` data-plane · `65cda61` sources catalog · `34753e4` control plane · (this)
 > selection. Projects are creatable/manageable via REST and a request scopes to one via the header, with
 > real cross-project isolation proven end-to-end (memory/graph). Workspace gates green.
-> **9b + 10 DONE (this session):** DSR/retention span all projects (NFR-13), stats project-scoped; MCP has
-> project CRUD tools + session scoping. **Remaining:** **7b** ingestion-indexing threading (a scan lands in
-> the source's project — entangled with F-071's tenant threading to the DocumentSink); **11** dashboard
-> switcher + '+ New' menu; **12** F-024 migration + full-stack e2e.
+> **9b + 10 + 11 DONE (this session):** DSR/retention span all projects (NFR-13), stats project-scoped; MCP
+> has project CRUD tools + session scoping; dashboard has the project switcher + '+ New' menu + live-verified
+> scoping (and caught/fixed the `instrumentServices` drop). **Remaining:** **7b** ingestion-indexing threading
+> (a scan lands in the source's project — entangled with F-071's tenant threading to the DocumentSink); **12**
+> F-024 migration registration + full-stack cross-project e2e (incl. the Playwright switcher e2e). Then DoD.
 
 1. **[DONE]** **Scope primitive** — `@tessera/core`: add `ProjectId` + `DEFAULT_PROJECT_ID = 'default'` to `tenant.ts`
    (co-located with the tenant primitive); export from `index.ts`. `@tessera/api/auth/model` re-exports.
@@ -85,7 +86,16 @@ No new ADR needed — ADR-0037 pre-decided the model and explicitly delegated th
     option (single-session stdio), else default; validated against the tenant; `.forProject` threaded through
     every data tool (search/compile/effects/query_graph/assert/capture/sources/get_stats/explain). mcp e2e:
     CRUD parity + config-scoped isolation (memory in a project invisible to the default) + unknown-project reject.
-11. **Dashboard** (`apps/web`) — project switcher in the app shell; create/manage projects; evolve the sidebar
+11. **[DONE]** **Dashboard** (`apps/web`) — SDK gains project methods/types; the web client injects the selected
+    project as `X-Tessera-Project` (a persisted Zustand store read by the SDK `fetch` wrapper); switching
+    invalidates the whole query cache so every view re-scopes. `ProjectSwitcher` in the app shell + a
+    `CreateProjectDialog`; the 'New memory' button evolved into a **'+ New'** quick-create menu (memory /
+    source / project). **Live-verified in the browser:** switching to an empty project drops every stat to 0,
+    the create narrative shows in the feed, no console errors. **Bug caught live + fixed:** `instrumentServices`
+    dropped the new `projects` member (409 on the shipped server though all stub gates were green — the E-015
+    recurrence); forwarded it + made the regression test cover it; lesson reinforced. Web e2e (Playwright
+    switcher) folds into increment 12's full-stack pass. *(The original increment-11 text follows.)*
+    project switcher in the app shell; create/manage projects; evolve the sidebar
     'New memory' button into a single **'+ New'** quick-create menu (memory / source / project; contextual
     default) with 'New project' inside the switcher + command palette (2026-07-04 product decision).
 12. **Migration + e2e** — register the additive `project_id` column adds through the F-024 migration runner for

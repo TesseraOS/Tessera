@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
 import { useApiEvent } from './events';
+import { useProjectStore } from '@/lib/store/project';
 import type {
   AuditExportQuery,
   AuditQuery,
@@ -393,4 +394,59 @@ export function useSubscription(enabled = true) {
     retry: false,
     staleTime: 30_000,
   });
+}
+
+// --- multi-project workspaces (F-050; ADR-0037) ---
+
+/** The projects query key — invalidated by every project mutation. */
+export const PROJECTS_QUERY_KEY = ['projects'] as const;
+
+/** The caller's tenant's projects (the reserved default first). Backs the app-shell switcher. */
+export function useProjects() {
+  return useQuery({
+    queryKey: PROJECTS_QUERY_KEY,
+    queryFn: () => api.listProjects(),
+    staleTime: 30_000,
+  });
+}
+
+/** Create a project; the list refreshes on success (the caller switches to it). */
+export function useCreateProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => api.createProject({ name }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: PROJECTS_QUERY_KEY }),
+  });
+}
+
+/** Rename a project; the list refreshes on success. */
+export function useRenameProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => api.renameProject(id, { name }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: PROJECTS_QUERY_KEY }),
+  });
+}
+
+/** Delete a project; the list refreshes on success (the caller falls back to the default). */
+export function useDeleteProject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteProject(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: PROJECTS_QUERY_KEY }),
+  });
+}
+
+/**
+ * Switch the active project (F-050): update the persisted selection, then invalidate the **whole** query
+ * cache so every view refetches for the new project (memory, search, stats, sources, graph are all
+ * project-scoped). The selection is read by the SDK fetch wrapper on the next request.
+ */
+export function useSwitchProject() {
+  const queryClient = useQueryClient();
+  const setSelectedProjectId = useProjectStore((state) => state.setSelectedProjectId);
+  return (projectId: string) => {
+    setSelectedProjectId(projectId);
+    void queryClient.invalidateQueries();
+  };
 }

@@ -1,4 +1,10 @@
-import { ConflictError, NotFoundError, type EventBus, type TenantId } from '@tessera/core';
+import {
+  ConflictError,
+  NotFoundError,
+  type EventBus,
+  type ProjectId,
+  type TenantId,
+} from '@tessera/core';
 import type { Queue } from '@tessera/storage';
 import type { IngestionEvents, ScanSummary, SourceDescriptor, SourceId } from '../domain.js';
 import type { Connector } from '../ports/connector.js';
@@ -116,7 +122,10 @@ export interface SourceService {
    * for a source that was never registered/scanned in this process.
    */
   connectorFor(source: SourceDescriptor): Connector | undefined;
+  /** A view scoped to `tenantId` (reset to its default project) — the catalog is tenant-isolated (ADR-0033). */
   forTenant(tenantId: TenantId): SourceService;
+  /** A view scoped to `projectId` within the current tenant — the catalog is project-isolated (ADR-0037). */
+  forProject(projectId: ProjectId): SourceService;
 }
 
 export function createSourceService(options: SourceServiceOptions): SourceService {
@@ -303,6 +312,10 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
 
       forTenant(tenantId) {
         return viewFor(registry.forTenant(tenantId));
+      },
+
+      forProject(projectId) {
+        return viewFor(registry.forProject(projectId));
       },
     };
   }

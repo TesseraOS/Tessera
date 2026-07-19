@@ -73,5 +73,32 @@ export function runSourceRegistryConformance(name: string, make: SourceRegistryF
         await cleanup?.();
       }
     });
+
+    it('isolates sources by project (forProject) within a tenant — no cross-project reads', async () => {
+      const { registry, cleanup } = await make();
+      try {
+        const tenant = registry.forTenant('tenant-a');
+        const p1 = tenant.forProject('project-1');
+        const p2 = tenant.forProject('project-2');
+        const inP1 = await p1.register({ kind: 'filesystem', config: { root: '/a' } });
+        await p2.register({ kind: 'git', config: { root: '/b' } });
+
+        const p1List = await p1.list();
+        expect(p1List).toHaveLength(1);
+        expect(p1List[0]?.id).toBe(inP1.id);
+        expect(p1List[0]?.tenantId).toBe('tenant-a');
+        expect(p1List[0]?.projectId).toBe('project-1');
+
+        // project-2 cannot see or remove project-1's source.
+        expect(await p2.get(inP1.id)).toBeUndefined();
+        await p2.remove(inP1.id);
+        expect(await p1.get(inP1.id)).toBeDefined();
+
+        // The tenant's default project is a distinct scope and sees neither.
+        expect(await tenant.list()).toHaveLength(0);
+      } finally {
+        await cleanup?.();
+      }
+    });
   });
 }

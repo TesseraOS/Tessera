@@ -1,4 +1,10 @@
-import { DEFAULT_TENANT_ID, newId, type TenantId } from '@tessera/core';
+import {
+  DEFAULT_PROJECT_ID,
+  DEFAULT_TENANT_ID,
+  newId,
+  type ProjectId,
+  type TenantId,
+} from '@tessera/core';
 import type { SourceId } from '../domain.js';
 
 /**
@@ -9,8 +15,9 @@ import type { SourceId } from '../domain.js';
 export type SourceConfig = Readonly<Record<string, unknown>>;
 
 /**
- * A persisted, configured ingestion source (one connector instance the runtime can scan). Tenant-scoped
- * (ADR-0033): a source belongs to exactly one tenant and is only visible/removable within it.
+ * A persisted, configured ingestion source (one connector instance the runtime can scan). Scope-bound
+ * (ADR-0033/0037): a source belongs to exactly one `(tenant, project)` and is only visible/removable
+ * within it.
  */
 export interface SourceRecord {
   readonly id: SourceId;
@@ -20,11 +27,16 @@ export interface SourceRecord {
   readonly label: string;
   readonly config: SourceConfig;
   readonly tenantId: TenantId;
+  /** Project the source belongs to, within the tenant (ADR-0037). */
+  readonly projectId: ProjectId;
   /** ISO-8601 (UTC) registration time. */
   readonly createdAt: string;
 }
 
-/** Input to {@link SourceRegistry.register} — `id`/`tenantId`/`createdAt` are assigned by the registry. */
+/**
+ * Input to {@link SourceRegistry.register} — `id`/`tenantId`/`projectId`/`createdAt` are assigned by the
+ * registry (stamped from the bound scope, not the caller).
+ */
 export interface RegisterSourceInput {
   readonly kind: string;
   readonly label?: string;
@@ -34,15 +46,18 @@ export interface RegisterSourceInput {
 /**
  * The durable catalog of registered sources (FR-62). A relational adapter (F-038, `@tessera/config`)
  * persists them so sources survive restarts; ingestion ships the in-memory reference adapter used by
- * tests. Tenant-scoped via {@link SourceRegistry.forTenant} — the base view is {@link DEFAULT_TENANT_ID}.
+ * tests. Scope-bound via {@link SourceRegistry.forTenant} then {@link SourceRegistry.forProject} — the
+ * base view is `(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID)`.
  */
 export interface SourceRegistry {
   list(): Promise<readonly SourceRecord[]>;
   register(input: RegisterSourceInput): Promise<SourceRecord>;
   get(id: SourceId): Promise<SourceRecord | undefined>;
   remove(id: SourceId): Promise<void>;
-  /** A view scoped to `tenantId` — reads/writes never cross tenants (ADR-0033). */
+  /** A view scoped to `tenantId` (reset to its default project) — reads/writes never cross tenants (ADR-0033). */
   forTenant(tenantId: TenantId): SourceRegistry;
+  /** A view scoped to `projectId` within the current tenant — reads/writes never cross projects (ADR-0037). */
+  forProject(projectId: ProjectId): SourceRegistry;
 }
 
 /** Default label when the caller omits one: the config root if present, else the kind. */
@@ -62,19 +77,23 @@ function byCreatedAtThenId(a: SourceRecord, b: SourceRecord): number {
  * default for tests. A relational-backed adapter adds cross-process durability (F-038).
  */
 export function createInMemorySourceRegistry(): SourceRegistry {
-  const byTenant = new Map<TenantId, Map<SourceId, SourceRecord>>();
+  const byScope = new Map<string, Map<SourceId, SourceRecord>>();
 
-  function store(tenantId: TenantId): Map<SourceId, SourceRecord> {
-    let records = byTenant.get(tenantId);
+  const scopeKey = (tenantId: TenantId, projectId: ProjectId): string =>
+    JSON.stringify([tenantId, projectId]);
+
+  function store(tenantId: TenantId, projectId: ProjectId): Map<SourceId, SourceRecord> {
+    const key = scopeKey(tenantId, projectId);
+    let records = byScope.get(key);
     if (records === undefined) {
       records = new Map();
-      byTenant.set(tenantId, records);
+      byScope.set(key, records);
     }
     return records;
   }
 
-  function viewFor(tenantId: TenantId): SourceRegistry {
-    const records = store(tenantId);
+  function viewFor(tenantId: TenantId, projectId: ProjectId): SourceRegistry {
+    const records = store(tenantId, projectId);
     return {
       list() {
         return Promise.resolve([...records.values()].sort(byCreatedAtThenId));
@@ -86,6 +105,7 @@ export function createInMemorySourceRegistry(): SourceRegistry {
           label: input.label ?? defaultSourceLabel(input),
           config: { ...input.config },
           tenantId,
+          projectId,
           createdAt: new Date().toISOString(),
         };
         records.set(record.id, record);
@@ -99,10 +119,13 @@ export function createInMemorySourceRegistry(): SourceRegistry {
         return Promise.resolve();
       },
       forTenant(next) {
-        return viewFor(next);
+        return viewFor(next, DEFAULT_PROJECT_ID);
+      },
+      forProject(next) {
+        return viewFor(tenantId, next);
       },
     };
   }
 
-  return viewFor(DEFAULT_TENANT_ID);
+  return viewFor(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID);
 }

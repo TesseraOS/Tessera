@@ -43,10 +43,43 @@ sqlite-vec conformance exercises the same contract; run `TESSERA_TEST_POSTGRES=1
 **Decisions** — chained `forProject` (above); `X-Tessera-Project` chosen as the single selection mechanism for the
 control-plane increment (not yet built). No default deviated → no ADR.
 
-**Next step** — F-050 stays `in_progress`. Resume at plan increment **7**: `SourceRegistry.forProject` +
-`SourceRecord.projectId` (kept off the wire like `tenantId`, per `toWire`) + ingestion threading; then **8** the
-`Project` entity + `/v1/projects` CRUD + audit; **9** `X-Tessera-Project` selection threaded through the routes;
-**10** MCP; **11** dashboard switcher + '+ New' menu; **12** F-024 migration + cross-project e2e.
+**Next step** — see the control-plane follow-up below.
+
+### Control plane + selection (same session) — projects are usable end-to-end via REST
+
+Continued straight into the control-plane half. Three more increments landed (commits `65cda61`,
+`34753e4`, `93ff235`):
+
+- **7a — sources catalog project-scoped.** `SourceRegistry`/`SourceService` gain `forProject`;
+  `SourceRecord` carries a `projectId` (stamped from the bound scope, kept off the wire like `tenantId`
+  per `toWire`); sqlite adapter gets a `project_id` column + additive migration; shared conformance gains
+  a project-isolation case. *(7b — making a **scan's indexed content** land in the source's project —
+  is deferred: it's the sink/worker/queue plumbing, entangled with **F-071**'s tenant threading.)*
+- **8 — Project entity + `/v1/projects` control plane.** New `@tessera/api` projects module behind a
+  Fastify-free `./projects` subpath: `Project` domain + `ProjectStore` (in-memory ref + sqlite in config)
+  + `ProjectService` (reserved `default` synthesized/undeletable, names validated + unique per tenant,
+  `exists()` for the selection guard). Audited CRUD (`project.read`/`project.manage`), new perms
+  `projects:read`/`projects:manage` (member+ manages). Wired into the local profile + e2e; SDK/OpenAPI
+  regen; web AuditAction/label mirrors synced + an Overview activity narrative. Shared ProjectStore
+  conformance + sqlite test + service unit + `/v1/projects` e2e.
+- **9a — X-Tessera-Project selection.** `registerProjectSelection` (after auth) validates a non-default
+  header against the tenant (unknown/foreign → 404) and decorates `request.projectId`; `projectOf` +
+  `.forProject()` threaded through search/compile/effects/graph/memory/sources. Documented in the OpenAPI
+  info. **Cross-project isolation proven end-to-end** (a memory in project A is invisible in B and the
+  default). Test fakes across api/sdk/mcp gained `forProject`.
+
+**Evidence** — gates green: `verify-state`, `typecheck` 40/40, `lint` 23/23, `test` 38/38 (api unit 97,
+config 78, web 411, sdk 11), **api e2e 111** (+ project CRUD/RBAC/isolation), **mcp e2e 25**, `format`.
+
+**Decisions** — chained `forProject` view (as data plane); `X-Tessera-Project` as the single selection
+mechanism; `projectId` off the wire (only `Project`/`SourceRecord` are visible entities); no ADR (ADR-0037
+pre-decided the model). **Recorded gaps to close before F-050 is DONE** (in the plan): **7b** ingestion
+threading; **9b** DSR export/erasure must span **all** projects (NFR-13 — today default-project only, a
+compliance gap), stats/retention project-scoping.
+
+**Next step** — F-050 stays `in_progress`. Resume at **7b** (ingestion → sink project threading, with
+F-071) and **9b** (DSR completeness), then **10** MCP project tools + session project, **11** dashboard
+switcher + '+ New' menu, **12** F-024 migration + full-stack cross-project e2e.
 
 ## 2026-07-19 — fix: the api e2e still spoke the pre-F-081 synchronous scan contract
 

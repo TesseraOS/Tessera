@@ -94,10 +94,36 @@ Two more increments (commits `be01e19`, `88743a2`):
 **Evidence** — gates green: `verify-state`, `typecheck` 40/40, `lint` 23/23, `test` 38/38, **api e2e 113**
 (+2 DSR multi-project), **mcp e2e 28** (+3 project), `format`.
 
-**Next step** — F-050 stays `in_progress`. Remaining: **11** dashboard project switcher + '+ New'
-quick-create menu (large frontend — verify by screenshot per the quality bar); **7b** ingestion→sink
-project threading (entangled with F-071); **12** F-024 migration registration + full-stack cross-project
-e2e. Then definition-of-done + mark `done`.
+### Dashboard (same session) — 11: the switcher, the '+ New' menu, and a bug only the live server showed
+
+Commit `9419309`. The dashboard becomes multi-project, built via the `build-ui` skill and **verified live
+in the browser** (per the quality bar):
+
+- **Data layer.** SDK gains project methods/types (from the OpenAPI paths). A persisted Zustand project
+  store; the web SDK `fetch` wrapper attaches the selected project as `X-Tessera-Project` (read fresh per
+  request; default → no header). `useSwitchProject` invalidates the **whole** query cache so every view
+  re-scopes. Project hooks (list/create/rename/delete).
+- **UI.** `ProjectSwitcher` in the sidebar header; `CreateProjectDialog` (creates + switches, 409-dup
+  inline); the dedicated "New memory" button evolved into a single **'+ New'** quick-create menu
+  (memory / source / project) per the 2026-07-04 decision. Component tests (switcher lists + switches;
+  dialog gates + creates + switches).
+- **Live verification.** Ran the real API (`apps/server`, zero-auth Local) + `next dev`, switched to an
+  empty project → **every stat dropped to 0** (documents 282→0, effect-links 13→0, sources 3→0); the
+  "Project created" narrative showed in the Recent feed; zero console errors.
+- **Bug the live check caught (and stubs did not).** `instrumentServices` had never been updated for the
+  new `projects` member, so the **shipped, instrumented** server `409`'d every `/v1/projects` route while
+  all unit/e2e gates were green (they inject raw services, bypassing the wrapper) — the **E-015 recurrence**.
+  Forwarded `projects` (traced) + made the regression test cover it; lesson
+  [[instrument-services-must-forward-every-apiservices-member]] reinforced (make the forwarding structural,
+  not a hand-maintained list). This is exactly why the "boot the real server and drive it" bar exists.
+
+**Evidence** — gates green: `verify-state`, `typecheck` 40/40, `lint` 23/23, `test` 38/38 (web 414),
+`build` 20/20, `format`; plus the live browser run above.
+
+**Next step** — F-050 stays `in_progress`. Remaining: **7b** ingestion→sink project threading (a scan's
+indexed content lands in the source's project — entangled with **F-071**); **12** F-024 migration
+registration + full-stack cross-project e2e (incl. the Playwright switcher e2e). Then definition-of-done +
+mark `done`.
 
 ## 2026-07-19 — fix: the api e2e still spoke the pre-F-081 synchronous scan contract
 

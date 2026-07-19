@@ -3,6 +3,51 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-19 — F-050 (claimed): multi-project workspaces — the whole data plane gains project scope
+
+Claimed **F-050** (Multi-project workspaces, ADR-0037) — the lowest-id eligible R4 `must`, confirmed with the
+user over the smaller candidates (F-071/F-077/F-078). Plan:
+[`F-050-multi-project-workspaces.md`](../plans/F-050-multi-project-workspaces.md) — a 12-increment resumable
+checklist. This session landed the **entire data-plane half** (increments 1–6 + the config wiring); the control
+plane, selection, MCP, dashboard, and migration remain.
+
+### The design — chained `forProject(projectId)`, base = `DEFAULT_PROJECT_ID`
+
+ADR-0037 sanctioned either `forScope(t,p)` or chained `forTenant(t).forProject(p)` and delegated the choice here.
+**Decided: chained `forProject` on every port**, mirroring the proven `forTenant` view (F-037 lesson) — maximally
+additive, so every existing `forTenant` call site is byte-for-byte untouched and keeps operating in the tenant's
+`default` project. Base view = `(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID)`; `forTenant` resets the project to that
+tenant's default (a project belongs to a tenant); `forProject` rebinds the project only. Enforcement lives **in
+the adapter** (a `project_id` column / scoped table / partition), never a bypassable wrapper. No new ADR (ADR-0037
+pre-decided the model). Primitive `ProjectId` + `DEFAULT_PROJECT_ID='default'` added to `@tessera/core`.
+
+### What changed (2 commits, `216f5ec` + `2daca6e`)
+
+- **storage/VectorStore** — sqlite-vec per-`(tenant,project)` `vec0` table (the `(t, default)` name is byte-for-byte
+  the pre-project `${table}__t_<hash>`, so existing tenant tables are preserved); pgvector `project` column +
+  composite PK `(tenant,project,id)` with an in-place upgrade for pre-project tables.
+- **memory / knowledge-graph / retrieval / context-compiler** — `forProject` on every store, service, retriever,
+  and the compiler; sqlite adapters gain a `project_id` column (composite PK on the graph, predicate in **both**
+  `getEffects` CTE arms), keyword/temporal own indices gain a `project` column, the compile cache key folds a
+  non-default project. Shared conformance/integration suites gain project-isolation cases everywhere.
+- **config** — the corpus-indexer indexes through `(tenant,project)`-scoped views; the memory-indexing +
+  search-enrichment decorators gain `forProject`; blob stays a single ref space (per-scope blob keying is F-075).
+- **observability** — the instrument Proxy re-wraps `forProject` as a **synchronous** scoped view (the F-037 Proxy
+  lesson — else the tracer promisifies it) and `traceCompiler` forwards it.
+
+**Evidence/verification** — workspace gates green: `verify-state` valid (91 features), `typecheck` 40/40, `lint`
+23/23, `test` **38/38** (new project-isolation cases across memory/graph/retrieval/compiler/config; web 411),
+`format`. Live pgvector isolation is env-guarded and **not run** (Docker daemon down this session) — the always-on
+sqlite-vec conformance exercises the same contract; run `TESSERA_TEST_POSTGRES=1` storage tests when a daemon is up.
+
+**Decisions** — chained `forProject` (above); `X-Tessera-Project` chosen as the single selection mechanism for the
+control-plane increment (not yet built). No default deviated → no ADR.
+
+**Next step** — F-050 stays `in_progress`. Resume at plan increment **7**: `SourceRegistry.forProject` +
+`SourceRecord.projectId` (kept off the wire like `tenantId`, per `toWire`) + ingestion threading; then **8** the
+`Project` entity + `/v1/projects` CRUD + audit; **9** `X-Tessera-Project` selection threaded through the routes;
+**10** MCP; **11** dashboard switcher + '+ New' menu; **12** F-024 migration + cross-project e2e.
+
 ## 2026-07-19 — fix: the api e2e still spoke the pre-F-081 synchronous scan contract
 
 Two api e2e tests were red on `main` (8317407), **one root cause**. Plan:

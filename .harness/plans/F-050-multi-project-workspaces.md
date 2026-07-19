@@ -30,21 +30,30 @@ Rationale:
 No new ADR needed — ADR-0037 pre-decided the model and explicitly delegated this choice.
 
 ## Increment sequence (each independently verifiable + committable, gates green at every step)
-1. **Scope primitive** — `@tessera/core`: add `ProjectId` + `DEFAULT_PROJECT_ID = 'default'` to `tenant.ts`
+> **Status (2026-07-19):** increments **1–6 DONE + the config data-plane wiring DONE** (commits
+> `216f5ec` storage, `2daca6e` memory/graph/retrieval/compiler/config). The entire data plane now
+> supports `forProject` with adapter-enforced isolation + conformance cases; workspace gates green.
+> **Remaining:** 7 (sources registry + ingestion threading), 8 (Project entity + `/v1/projects`), 9
+> (`X-Tessera-Project` selection + route threading), 10 (MCP), 11 (dashboard), 12 (migration + e2e).
+
+1. **[DONE]** **Scope primitive** — `@tessera/core`: add `ProjectId` + `DEFAULT_PROJECT_ID = 'default'` to `tenant.ts`
    (co-located with the tenant primitive); export from `index.ts`. `@tessera/api/auth/model` re-exports.
-2. **VectorStore** (`@tessera/storage`) — `forProject` on the port; sqlite-vec (partition/scoped table) +
+2. **[DONE]** **VectorStore** (`@tessera/storage`) — `forProject` on the port; sqlite-vec (partition/scoped table) +
    pgvector (`project text NOT NULL DEFAULT 'default'`, in `WHERE` + `ON CONFLICT`); shared conformance gains a
    project-isolation case (write under (A,p1) → invisible under (A,p2) and (A,default), intact under (A,p1)).
-3. **Memory** (`@tessera/memory`) — `forProject` on `MemoryStore`; in-memory + sqlite (`project_id` column,
-   `ensureProjectColumn` additive migration, composite indices); `MemoryService.forProject`; conformance case.
-4. **Knowledge graph** (`@tessera/knowledge-graph`) — `forProject` on `GraphStore`; in-memory + sqlite
+   *(pgvector live isolation deferred — Docker daemon down this session; sqlite-vec conformance covers the contract.)*
+3. **[DONE]** **Memory** (`@tessera/memory`) — `forProject` on `MemoryStore`; in-memory + sqlite (`project_id` column,
+   additive migration, composite indices); `MemoryService.forProject`; conformance case.
+4. **[DONE]** **Knowledge graph** (`@tessera/knowledge-graph`) — `forProject` on `GraphStore`; in-memory + sqlite
    (`project_id` on nodes/edges, composite PK, predicate in **both** CTE arms); `KnowledgeGraphService.forProject`;
    conformance case (incl. `getEffects` isolation).
-5. **Retrieval** (`@tessera/retrieval`) — `forProject` on `Retriever` + all five retrievers; keyword (FTS5)
+5. **[DONE]** **Retrieval** (`@tessera/retrieval`) — `forProject` on `Retriever` + all five retrievers; keyword (FTS5)
    & temporal filter their own indices, semantic/graph/symbolic delegate to the scoped store; `HybridRetriever.forProject`
-   fans out; conformance case.
-6. **Compiler + cache key** (`@tessera/context-compiler`) — `ContextCompiler.forProject`; thread `projectId` into
+   fans out; integration isolation cases.
+6. **[DONE]** **Compiler + cache key** (`@tessera/context-compiler`) — `ContextCompiler.forProject`; thread `projectId` into
    `computeCompilationKey` so the compile cache key **includes the project** (ADR-0037: else it goes ambiguous).
+   *(Also DONE: `@tessera/config` corpus-indexer + memory-indexing + search-enrichment decorators + observability
+   instrument Proxy/`traceCompiler` now thread `forProject`; indexer project-isolation test.)*
 7. **Sources** (`@tessera/ingestion` + `@tessera/config`) — `forProject` on `SourceRegistry`; `SourceRecord` gains a
    visible `projectId` (control-plane entity); in-memory + `sqlite-source-registry`; conformance case. Ingestion/
    corpus-indexer scope threading so a scan lands in the source's project.

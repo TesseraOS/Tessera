@@ -85,6 +85,31 @@ importers:
         specifier: workspace:*
         version: link:../../packages/storage
 
+  apps/cli:
+    dependencies:
+      '@tessera/api':
+        specifier: workspace:*
+        version: link:../api
+      '@tessera/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@tessera/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tessera/ingestion':
+        specifier: workspace:*
+        version: link:../../packages/ingestion
+      '@tessera/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
+      '@tessera/server':
+        specifier: workspace:*
+        version: link:../server
+    devDependencies:
+      tsx:
+        specifier: ^4.22.4
+        version: 4.22.4
+
   apps/marketing:
     dependencies:
       '@tessera/billing':

@@ -1,0 +1,40 @@
+{
+  "name": "@tessera/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tessera CLI — one-command onboarding: init, serve, mcp, source add, token issue, doctor, mcp-config.",
+  "bin": {
+    "tessera": "./dist/bin/tessera.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "dev": "tsx src/bin/tessera.ts"
+  },
+  "dependencies": {
+    "@tessera/api": "workspace:*",
+    "@tessera/config": "workspace:*",
+    "@tessera/core": "workspace:*",
+    "@tessera/ingestion": "workspace:*",
+    "@tessera/observability": "workspace:*",
+    "@tessera/server": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.4"
+  }
+}

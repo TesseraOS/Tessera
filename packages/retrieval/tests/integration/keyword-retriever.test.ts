@@ -76,4 +76,29 @@ describe('keyword retriever (FTS5)', () => {
       await sqlite.close();
     }
   });
+
+  it('isolates the FTS index by project (forProject) within a tenant', async () => {
+    const { sqlite, retriever } = setup();
+    try {
+      const tenant = retriever.forTenant('tenant-a');
+      const p1 = tenant.forProject('project-1');
+      const p2 = tenant.forProject('project-2');
+      p1.index('doc:shared', 'quarterly revenue projections alpha');
+      p2.index('doc:shared', 'unrelated beta content'); // same ref, different project
+
+      expect((await p1.retrieve({ text: 'revenue projections' })).map((c) => c.ref)).toEqual([
+        'doc:shared',
+      ]);
+      // Project 2 never sees project 1's content, even for the same ref.
+      expect(await p2.retrieve({ text: 'revenue projections' })).toEqual([]);
+      expect((await p2.retrieve({ text: 'beta content' })).map((c) => c.ref)).toEqual([
+        'doc:shared',
+      ]);
+      // The tenant's default project is a distinct scope and sees neither.
+      expect(await tenant.retrieve({ text: 'revenue projections' })).toEqual([]);
+      expect(await tenant.retrieve({ text: 'beta content' })).toEqual([]);
+    } finally {
+      await sqlite.close();
+    }
+  });
 });

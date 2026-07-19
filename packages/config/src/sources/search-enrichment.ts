@@ -118,5 +118,10 @@ export function createEnrichedRetriever(
       // Rebind the inner retriever; the corpus lookup stays keyed by refs that view returns.
       return createEnrichedRetriever(inner.forTenant(tenantId), fragments);
     },
+
+    forProject(projectId) {
+      // Rebind to the project scope (ADR-0037); the corpus lookup stays keyed by refs that view returns.
+      return createEnrichedRetriever(inner.forProject(projectId), fragments);
+    },
   };
 }

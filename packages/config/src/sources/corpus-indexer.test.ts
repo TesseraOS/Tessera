@@ -137,4 +137,28 @@ describe('createCorpusIndexer', () => {
     ).toEqual(['doc:a']);
     expect(await keyword.forTenant('tenant-b').retrieve({ text: 'content' })).toEqual([]);
   });
+
+  it('isolates indexed content by project within a tenant', async () => {
+    const { indexer, keyword } = harness();
+    await indexer.indexDocument({
+      ref: 'doc:p1',
+      text: 'project one content',
+      kind: 'text',
+      tenantId: 'tenant-a',
+      projectId: 'project-1',
+    });
+
+    const p1 = keyword.forTenant('tenant-a').forProject('project-1');
+    const p2 = keyword.forTenant('tenant-a').forProject('project-2');
+    expect((await p1.retrieve({ text: 'content' })).map((c) => c.ref)).toEqual(['doc:p1']);
+    // A different project in the same tenant, and the tenant's default project, see nothing.
+    expect(await p2.retrieve({ text: 'content' })).toEqual([]);
+    expect(await keyword.forTenant('tenant-a').retrieve({ text: 'content' })).toEqual([]);
+
+    // removeDocument is scoped too: removing in the default project leaves project-1 intact.
+    await indexer.removeDocument({ ref: 'doc:p1', tenantId: 'tenant-a' });
+    expect((await p1.retrieve({ text: 'content' })).map((c) => c.ref)).toEqual(['doc:p1']);
+    await indexer.removeDocument({ ref: 'doc:p1', tenantId: 'tenant-a', projectId: 'project-1' });
+    expect(await p1.retrieve({ text: 'content' })).toEqual([]);
+  });
 });

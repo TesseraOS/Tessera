@@ -17,6 +17,11 @@ export interface CompilerFingerprint {
    * tenant-safe: identical tasks under different tenants never collide.
    */
   readonly tenantId?: string;
+  /**
+   * The project the compiler is scoped to (FR-66, ADR-0037). Folded into the key so a shared cache is
+   * project-safe: identical tasks under different projects of one tenant never collide.
+   */
+  readonly projectId?: string;
 }
 
 /** The request fields (already normalized to their effective values) that identify a compilation. */
@@ -49,6 +54,7 @@ export function computeCompilationKey(
       dedupThreshold: fingerprint.dedupThreshold ?? null,
       expandDepth: fingerprint.expandDepth ?? null,
       tenant: fingerprint.tenantId ?? null,
+      project: fingerprint.projectId ?? null,
     },
   });
   return createHash('sha256').update(canonical).digest('hex');

@@ -43,5 +43,8 @@ export function createSymbolicRetriever(options: SymbolicRetrieverOptions): Retr
     forTenant(tenantId) {
       return createSymbolicRetriever({ graphStore: options.graphStore.forTenant(tenantId) });
     },
+    forProject(projectId) {
+      return createSymbolicRetriever({ graphStore: options.graphStore.forProject(projectId) });
+    },
   };
 }

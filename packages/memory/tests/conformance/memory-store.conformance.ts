@@ -289,5 +289,44 @@ export function runMemoryStoreConformance(name: string, makeStore: MemoryStoreFa
         await cleanup?.();
       }
     });
+
+    it('isolates memories by project (forProject) within a tenant — no cross-project reads', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const tenant = store.forTenant('tenant-a');
+        const p1 = tenant.forProject('project-1');
+        const p2 = tenant.forProject('project-2');
+        const dflt = tenant; // forTenant resets to the tenant's default project
+        const m1 = memory({ scope: 'shared' });
+        const m2 = memory({ scope: 'shared' });
+        const md = memory({ scope: 'shared' });
+        await p1.add(m1);
+        await p2.add(m2);
+        await dflt.add(md);
+
+        // Reads by id / lineage / listing see only the caller-project's rows.
+        expect(await p1.getById(m1.id)).toEqual(m1);
+        expect(await p1.getById(m2.id)).toBeUndefined();
+        expect(await p1.getById(md.id)).toBeUndefined();
+        expect(await p1.getCurrent(m2.lineageId)).toBeUndefined();
+        expect(await p1.listVersions(m2.lineageId)).toEqual([]);
+        expect((await p1.listCurrent()).map((m) => m.id)).toEqual([m1.id]);
+        expect((await p2.listCurrent()).map((m) => m.id)).toEqual([m2.id]);
+
+        // The tenant's default project is a third, disjoint scope; counts are per-project.
+        expect((await dflt.listCurrent()).map((m) => m.id)).toEqual([md.id]);
+        expect(await p1.countCurrent()).toBe(1);
+        expect(await p2.countCurrent()).toBe(1);
+        expect(await dflt.countCurrent()).toBe(1);
+
+        // Erasure in one project never touches another.
+        await p1.deleteLineage(m1.lineageId);
+        expect(await p1.exportAll()).toEqual([]);
+        expect((await p2.exportAll()).map((m) => m.id)).toEqual([m2.id]);
+        expect((await dflt.exportAll()).map((m) => m.id)).toEqual([md.id]);
+      } finally {
+        await cleanup?.();
+      }
+    });
   });
 }

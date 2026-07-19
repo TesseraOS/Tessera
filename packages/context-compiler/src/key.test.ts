@@ -61,6 +61,22 @@ describe('computeCompilationKey', () => {
     expect(a).not.toBe(b);
   });
 
+  it('changes when the project changes within a tenant (project isolation)', () => {
+    const tenant = { ...FP, tenantId: 'tenant-a' };
+    const base = computeCompilationKey({ task: 't', budget: 100, retrievalLimit: 20 }, tenant);
+    const p1 = computeCompilationKey(
+      { task: 't', budget: 100, retrievalLimit: 20 },
+      { ...tenant, projectId: 'project-1' },
+    );
+    const p2 = computeCompilationKey(
+      { task: 't', budget: 100, retrievalLimit: 20 },
+      { ...tenant, projectId: 'project-2' },
+    );
+    // Same task, same tenant, different projects → distinct keys (and distinct from the default project).
+    expect(p1).not.toBe(base);
+    expect(p1).not.toBe(p2);
+  });
+
   it('is order-independent for filter kinds', () => {
     const a = computeCompilationKey(
       { task: 't', budget: 100, retrievalLimit: 20, kinds: ['code', 'memory'] },

@@ -58,5 +58,11 @@ export function createGraphRetriever(options: GraphRetrieverOptions): Retriever 
         graphStore: options.graphStore.forTenant(tenantId),
       });
     },
+    forProject(projectId) {
+      return createGraphRetriever({
+        ...options,
+        graphStore: options.graphStore.forProject(projectId),
+      });
+    },
   };
 }

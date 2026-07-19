@@ -1,4 +1,4 @@
-import type { TenantId } from '@tessera/core';
+import type { ProjectId, TenantId } from '@tessera/core';
 import type { EdgeKind, EffectHit, GraphEdge, GraphNode, NodeId, NodeKind } from '../domain.js';
 
 /** Default maximum effect-link hops traversed by `get_effects`. */
@@ -25,10 +25,11 @@ export interface GetEffectsOptions {
  * idempotent by deterministic id. `getEffects` walks outgoing `EFFECT_LINK` edges transitively and
  * returns ranked dependents with their paths (FR-19).
  *
- * **Tenancy (FR-52, ADR-0033):** node ids are deterministic from `(kind, key)`, so the same node can
- * exist in different tenants; a store scopes every node/edge by tenant. The base store operates in
- * {@link DEFAULT_TENANT_ID}; {@link GraphStore.forTenant} confines all reads, writes, and effect
- * traversal to one tenant.
+ * **Scope (FR-52/FR-66, ADR-0033/0037):** node ids are deterministic from `(kind, key)`, so the same
+ * node can exist in different `(tenant, project)` scopes; a store scopes every node/edge by both. The
+ * base store operates in `(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID)`;
+ * {@link GraphStore.forTenant}/{@link GraphStore.forProject} confine all reads, writes, and effect
+ * traversal to one scope.
  */
 export interface GraphStore {
   addNode(node: GraphNode): Promise<void>;
@@ -56,6 +57,11 @@ export interface GraphStore {
   /** How many edges match `filter`, without materializing them. See {@link GraphStore.countNodes}. */
   countEdges(filter?: EdgeFilter): Promise<number>;
   getEffects(source: NodeId, options?: GetEffectsOptions): Promise<readonly EffectHit[]>;
-  /** A view of this store confined to `tenantId` (FR-52). */
+  /** A view of this store confined to `tenantId` (FR-52), reset to that tenant's {@link DEFAULT_PROJECT_ID}. */
   forTenant(tenantId: TenantId): GraphStore;
+  /**
+   * A view of this store confined to `projectId` **within the current tenant** (FR-66, ADR-0037); chain
+   * after {@link GraphStore.forTenant} for a full `(tenant, project)` scope.
+   */
+  forProject(projectId: ProjectId): GraphStore;
 }

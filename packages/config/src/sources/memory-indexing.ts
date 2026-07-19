@@ -1,4 +1,9 @@
-import { DEFAULT_TENANT_ID, type TenantId } from '@tessera/core';
+import {
+  DEFAULT_PROJECT_ID,
+  DEFAULT_TENANT_ID,
+  type ProjectId,
+  type TenantId,
+} from '@tessera/core';
 import type { Memory, MemoryService } from '@tessera/memory';
 import type { CorpusIndexer } from './corpus-indexer.js';
 
@@ -26,6 +31,7 @@ export function createIndexingMemoryService(
   inner: MemoryService,
   indexer: CorpusIndexer,
   tenantId: TenantId = DEFAULT_TENANT_ID,
+  projectId: ProjectId = DEFAULT_PROJECT_ID,
 ): MemoryService {
   async function indexMemory(memory: Memory): Promise<void> {
     await indexer.indexDocument({
@@ -35,6 +41,7 @@ export function createIndexingMemoryService(
       timestamp: memory.createdAt,
       metadata: { lineageId: memory.lineageId, kind: memory.kind, title: memory.title },
       tenantId,
+      projectId,
     });
   }
 
@@ -72,7 +79,7 @@ export function createIndexingMemoryService(
       const after = new Set((await inner.list()).map((memory) => memory.lineageId));
       for (const lineageId of before) {
         if (!after.has(lineageId)) {
-          await indexer.removeDocument({ ref: memoryRef(lineageId), tenantId });
+          await indexer.removeDocument({ ref: memoryRef(lineageId), tenantId, projectId });
         }
       }
       return result;
@@ -82,7 +89,10 @@ export function createIndexingMemoryService(
       await indexer.removeDocument({ ref: memoryRef(lineageId), tenantId });
     },
     forTenant(next) {
-      return createIndexingMemoryService(inner.forTenant(next), indexer, next);
+      return createIndexingMemoryService(inner.forTenant(next), indexer, next, DEFAULT_PROJECT_ID);
+    },
+    forProject(next) {
+      return createIndexingMemoryService(inner.forProject(next), indexer, tenantId, next);
     },
   };
 }

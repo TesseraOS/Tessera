@@ -1,6 +1,12 @@
 import { sql } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { DEFAULT_TENANT_ID, ValidationError, type TenantId } from '@tessera/core';
+import {
+  DEFAULT_PROJECT_ID,
+  DEFAULT_TENANT_ID,
+  ValidationError,
+  type ProjectId,
+  type TenantId,
+} from '@tessera/core';
 import { DEFAULT_RETRIEVAL_LIMIT, type Candidate } from '../domain.js';
 import type { Retriever } from '../ports/retriever.js';
 
@@ -29,8 +35,10 @@ export interface TemporalRetriever extends Retriever {
   index(ref: string, timestamp: TemporalTimestamp): void;
   /** Drop an item's timestamp. */
   remove(ref: string): void;
-  /** A view confined to `tenantId` (FR-52); scopes `index`, `remove`, and `retrieve`. */
+  /** A view confined to `tenantId` (FR-52), reset to its default project; scopes index/remove/retrieve. */
   forTenant(tenantId: TenantId): TemporalRetriever;
+  /** A view confined to `projectId` within the current tenant (FR-66); scopes index/remove/retrieve. */
+  forProject(projectId: ProjectId): TemporalRetriever;
 }
 
 /** Normalize a timestamp to epoch milliseconds, rejecting invalid input at the trust boundary. */
@@ -55,10 +63,11 @@ function toEpochMs(timestamp: TemporalTimestamp): number {
  * not matched (recency is query-independent); fusion combines this ordering with the lexical/semantic
  * signals. The clock is injected so scoring is deterministic in tests.
  *
- * **Tenancy (FR-52, ADR-0033):** every row carries a `tenant` (part of the composite primary key
- * `(tenant, ref)`). The base retriever operates in {@link DEFAULT_TENANT_ID};
- * {@link TemporalRetriever.forTenant} rebinds it and filters every read/write by tenant. The index is
- * derived/rebuildable, so a pre-existing table without `tenant` is dropped + recreated.
+ * **Scope (FR-52/FR-66, ADR-0033/0037):** every row carries a `tenant` + `project` (part of the
+ * composite primary key `(tenant, project, ref)`). The base retriever operates in
+ * `(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID)`; {@link TemporalRetriever.forTenant}/
+ * {@link TemporalRetriever.forProject} rebind it and filter every read/write by both. The index is
+ * derived/rebuildable, so a pre-existing table without `project` is dropped + recreated.
  */
 export function createTemporalRetriever(options: TemporalRetrieverOptions): TemporalRetriever {
   const { db } = options;
@@ -74,20 +83,22 @@ export function createTemporalRetriever(options: TemporalRetrieverOptions): Temp
     return 2 ** (-Math.max(0, ageMs) / halfLifeMs);
   }
 
-  function storeFor(tenantId: TenantId): TemporalRetriever {
+  function storeFor(tenantId: TenantId, projectId: ProjectId): TemporalRetriever {
     return {
       kind: 'temporal',
 
       index(ref, timestamp) {
         const ts = toEpochMs(timestamp);
         db.run(
-          sql`INSERT INTO ${table}(ref, tenant, ts) VALUES (${ref}, ${tenantId}, ${ts})
-              ON CONFLICT(tenant, ref) DO UPDATE SET ts = excluded.ts`,
+          sql`INSERT INTO ${table}(ref, tenant, project, ts) VALUES (${ref}, ${tenantId}, ${projectId}, ${ts})
+              ON CONFLICT(tenant, project, ref) DO UPDATE SET ts = excluded.ts`,
         );
       },
 
       remove(ref) {
-        db.run(sql`DELETE FROM ${table} WHERE ref = ${ref} AND tenant = ${tenantId}`);
+        db.run(
+          sql`DELETE FROM ${table} WHERE ref = ${ref} AND tenant = ${tenantId} AND project = ${projectId}`,
+        );
       },
 
       retrieve(query) {
@@ -96,7 +107,7 @@ export function createTemporalRetriever(options: TemporalRetrieverOptions): Temp
         const minTs = windowMs === undefined ? Number.MIN_SAFE_INTEGER : currentMs - windowMs;
         const rows = db.all<{ ref: string; ts: number }>(sql`
           SELECT ref, ts FROM ${table}
-          WHERE tenant = ${tenantId} AND ts >= ${minTs}
+          WHERE tenant = ${tenantId} AND project = ${projectId} AND ts >= ${minTs}
           ORDER BY ts DESC, ref ASC
           LIMIT ${limit}
         `);
@@ -110,32 +121,38 @@ export function createTemporalRetriever(options: TemporalRetrieverOptions): Temp
       },
 
       forTenant(next) {
-        return storeFor(next);
+        return storeFor(next, DEFAULT_PROJECT_ID);
+      },
+
+      forProject(next) {
+        return storeFor(tenantId, next);
       },
     };
   }
 
-  return storeFor(DEFAULT_TENANT_ID);
+  return storeFor(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID);
 }
 
 /**
- * Ensure the temporal table has the tenant-aware schema (composite PK `(tenant, ref)`). A pre-existing
- * table without the `tenant` column is dropped + recreated — the index is derived/rebuildable.
+ * Ensure the temporal table has the scope-aware schema (composite PK `(tenant, project, ref)`). A
+ * pre-existing table without the `project` column is dropped + recreated — the index is
+ * derived/rebuildable.
  */
 function ensureTemporalSchema(
   db: BetterSQLite3Database,
   table: ReturnType<typeof sql.identifier>,
 ): void {
   const columns = db.all<{ name: string }>(sql`PRAGMA table_info(${table})`);
-  if (columns.length > 0 && !columns.some((column) => column.name === 'tenant')) {
+  if (columns.length > 0 && !columns.some((column) => column.name === 'project')) {
     db.run(sql`DROP TABLE ${table}`);
   }
   db.run(
     sql`CREATE TABLE IF NOT EXISTS ${table} (
       ref TEXT NOT NULL,
       tenant TEXT NOT NULL DEFAULT '${sql.raw(DEFAULT_TENANT_ID)}',
+      project TEXT NOT NULL DEFAULT '${sql.raw(DEFAULT_PROJECT_ID)}',
       ts INTEGER NOT NULL,
-      PRIMARY KEY (tenant, ref)
+      PRIMARY KEY (tenant, project, ref)
     )`,
   );
 }

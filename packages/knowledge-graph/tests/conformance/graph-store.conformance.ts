@@ -301,5 +301,46 @@ export function runGraphStoreConformance(name: string, makeStore: GraphStoreFact
         await cleanup?.();
       }
     });
+
+    it('isolates nodes/edges and effects by project (forProject) within a tenant', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const tenant = store.forTenant('tenant-a');
+        const p1 = tenant.forProject('project-1');
+        const p2 = tenant.forProject('project-2');
+        const dflt = tenant; // forTenant resets to the tenant's default project
+        const x = node('symbol', 'x');
+        const y = node('symbol', 'y');
+        // project-1: x -> y effect-link.
+        await p1.addNode(x);
+        await p1.addNode(y);
+        await p1.addEdge(effectLink(x, y, 0.9));
+        // project-2: only x (the SAME deterministic id), different label, no edges.
+        await p2.addNode({ ...x, label: 'p2-label' });
+
+        // The same node id is independent per project.
+        expect((await p1.getNode(x.id))?.label).toBe('x');
+        expect((await p2.getNode(x.id))?.label).toBe('p2-label');
+        expect(await p2.getNode(y.id)).toBeUndefined();
+        expect(await p2.getNodeByKey('symbol', 'y')).toBeUndefined();
+
+        // Listings + counts are project-scoped.
+        expect((await p1.listNodes()).map((n) => n.id).sort()).toEqual([x.id, y.id].sort());
+        expect((await p2.listNodes()).map((n) => n.id)).toEqual([x.id]);
+        expect(await p2.listEdges()).toEqual([]);
+        expect(await p1.countNodes()).toBe(2);
+        expect(await p2.countNodes()).toBe(1);
+
+        // Effect traversal never crosses projects.
+        expect((await p1.getEffects(x.id)).map((hit) => hit.nodeId)).toEqual([y.id]);
+        expect(await p2.getEffects(x.id)).toEqual([]);
+
+        // The tenant's default project is a third, disjoint scope and sees neither.
+        expect(await dflt.getNode(x.id)).toBeUndefined();
+        expect(await dflt.listNodes()).toEqual([]);
+      } finally {
+        await cleanup?.();
+      }
+    });
   });
 }

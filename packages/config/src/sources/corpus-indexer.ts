@@ -1,6 +1,11 @@
 import { createHash } from 'node:crypto';
 import type { Embeddings } from '@tessera/ai';
-import { DEFAULT_TENANT_ID, type TenantId } from '@tessera/core';
+import {
+  DEFAULT_PROJECT_ID,
+  DEFAULT_TENANT_ID,
+  type ProjectId,
+  type TenantId,
+} from '@tessera/core';
 import type { KeywordRetriever, TemporalRetriever } from '@tessera/retrieval';
 import type { BlobStore, VectorStore } from '@tessera/storage';
 import type { SourceFragment } from '@tessera/context-compiler';
@@ -23,16 +28,24 @@ export interface IndexDocumentInput {
   readonly metadata?: Readonly<Record<string, unknown>>;
   /** Tenant to index under (default {@link DEFAULT_TENANT_ID}). */
   readonly tenantId?: TenantId;
+  /** Project to index under, within the tenant (default {@link DEFAULT_PROJECT_ID}, ADR-0037). */
+  readonly projectId?: ProjectId;
 }
 
 /**
  * Writes `(ref, text)` into the blob corpus + every retrieval index so it becomes findable by
- * `search`/`compile` (F-039). One tenant-aware path shared by ingestion (the DocumentSink) and memory
- * capture (a MemoryService decorator), so both share a single ref space (the fusion requirement).
+ * `search`/`compile` (F-039). One scope-aware path shared by ingestion (the DocumentSink) and memory
+ * capture (a MemoryService decorator), so both share a single ref space (the fusion requirement). The
+ * retrieval indices are scoped by `(tenant, project)` (ADR-0033/0037); the content-addressed blob keeps
+ * a single ref space (per-tenant blob keying is the separate F-075).
  */
 export interface CorpusIndexer {
   indexDocument(input: IndexDocumentInput): Promise<void>;
-  removeDocument(input: { readonly ref: string; readonly tenantId?: TenantId }): Promise<void>;
+  removeDocument(input: {
+    readonly ref: string;
+    readonly tenantId?: TenantId;
+    readonly projectId?: ProjectId;
+  }): Promise<void>;
 }
 
 export interface CorpusIndexerOptions {
@@ -59,12 +72,14 @@ export function createCorpusIndexer(options: CorpusIndexerOptions): CorpusIndexe
   const { blob, keyword, temporal, embeddings, vector } = options;
   const indexedHash = new Map<string, string>();
 
-  const cacheKey = (tenantId: TenantId, ref: string): string => `${tenantId}:${ref}`;
+  const cacheKey = (tenantId: TenantId, projectId: ProjectId, ref: string): string =>
+    `${JSON.stringify([tenantId, projectId])}:${ref}`;
 
   return {
     async indexDocument(input) {
       const tenantId = input.tenantId ?? DEFAULT_TENANT_ID;
-      const key = cacheKey(tenantId, input.ref);
+      const projectId = input.projectId ?? DEFAULT_PROJECT_ID;
+      const key = cacheKey(tenantId, projectId, input.ref);
       const hash = textHash(input.text);
       if (indexedHash.get(key) === hash) return; // unchanged → never re-embed (NFR-12)
 
@@ -74,12 +89,16 @@ export function createCorpusIndexer(options: CorpusIndexerOptions): CorpusIndexe
           : { ref: input.ref, text: input.text, kind: input.kind, metadata: { ...input.metadata } };
       await putFragment(blob, fragment);
 
-      keyword.forTenant(tenantId).index(input.ref, input.text);
-      temporal.forTenant(tenantId).index(input.ref, input.timestamp ?? Date.now());
+      keyword.forTenant(tenantId).forProject(projectId).index(input.ref, input.text);
+      temporal
+        .forTenant(tenantId)
+        .forProject(projectId)
+        .index(input.ref, input.timestamp ?? Date.now());
 
       const embedding = await embeddings.embed(input.text);
       await vector
         .forTenant(tenantId)
+        .forProject(projectId)
         .upsert([{ id: input.ref, vector: embedding, model: embeddings.info.model }]);
 
       indexedHash.set(key, hash);
@@ -87,11 +106,12 @@ export function createCorpusIndexer(options: CorpusIndexerOptions): CorpusIndexe
 
     async removeDocument(input) {
       const tenantId = input.tenantId ?? DEFAULT_TENANT_ID;
+      const projectId = input.projectId ?? DEFAULT_PROJECT_ID;
       await blob.delete(input.ref);
-      keyword.forTenant(tenantId).remove(input.ref);
-      temporal.forTenant(tenantId).remove(input.ref);
-      await vector.forTenant(tenantId).delete([input.ref]);
-      indexedHash.delete(cacheKey(tenantId, input.ref));
+      keyword.forTenant(tenantId).forProject(projectId).remove(input.ref);
+      temporal.forTenant(tenantId).forProject(projectId).remove(input.ref);
+      await vector.forTenant(tenantId).forProject(projectId).delete([input.ref]);
+      indexedHash.delete(cacheKey(tenantId, projectId, input.ref));
     },
   };
 }

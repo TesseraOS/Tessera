@@ -1,7 +1,12 @@
 import { and, asc, eq, isNull, sql, type SQL } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import { DEFAULT_TENANT_ID, type TenantId } from '@tessera/core';
+import {
+  DEFAULT_PROJECT_ID,
+  DEFAULT_TENANT_ID,
+  type ProjectId,
+  type TenantId,
+} from '@tessera/core';
 import type { Memory, MemoryId, MemoryKind, MemoryLineageId, MemoryMetadata } from '../domain.js';
 import type { MemoryListFilter, MemoryStore } from '../ports/memory-store.js';
 
@@ -10,6 +15,8 @@ const memories = sqliteTable('memories', {
   id: text('id').$type<MemoryId>().primaryKey(),
   // Tenant scope (FR-52, ADR-0033). Defaults to the single Local-profile tenant for back-compat.
   tenantId: text('tenant_id').$type<TenantId>().notNull().default(DEFAULT_TENANT_ID),
+  // Project scope within the tenant (FR-66, ADR-0037). Defaults to the reserved default project.
+  projectId: text('project_id').$type<ProjectId>().notNull().default(DEFAULT_PROJECT_ID),
   lineageId: text('lineage_id').$type<MemoryLineageId>().notNull(),
   kind: text('kind').$type<MemoryKind>().notNull(),
   title: text('title').notNull(),
@@ -27,6 +34,7 @@ const CREATE_TABLE = sql`
   CREATE TABLE IF NOT EXISTS memories (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL DEFAULT '${sql.raw(DEFAULT_TENANT_ID)}',
+    project_id TEXT NOT NULL DEFAULT '${sql.raw(DEFAULT_PROJECT_ID)}',
     lineage_id TEXT NOT NULL,
     kind TEXT NOT NULL,
     title TEXT NOT NULL,
@@ -61,12 +69,21 @@ function toMemory(row: MemoryRow): Memory {
   };
 }
 
-/** Add the `tenant_id` column to a pre-existing `memories` table (idempotent additive migration). */
-function ensureTenantColumn(db: BetterSQLite3Database): void {
+/**
+ * Add the `tenant_id` / `project_id` scope columns to a pre-existing `memories` table (idempotent
+ * additive migration; existing rows fall into the default tenant + default project — ADR-0033/0037).
+ */
+function ensureScopeColumns(db: BetterSQLite3Database): void {
   const columns = db.all<{ name: string }>(sql`PRAGMA table_info(memories)`);
-  if (!columns.some((column) => column.name === 'tenant_id')) {
+  const has = (name: string): boolean => columns.some((column) => column.name === name);
+  if (!has('tenant_id')) {
     db.run(
       sql`ALTER TABLE memories ADD COLUMN tenant_id TEXT NOT NULL DEFAULT '${sql.raw(DEFAULT_TENANT_ID)}'`,
+    );
+  }
+  if (!has('project_id')) {
+    db.run(
+      sql`ALTER TABLE memories ADD COLUMN project_id TEXT NOT NULL DEFAULT '${sql.raw(DEFAULT_PROJECT_ID)}'`,
     );
   }
 }
@@ -77,24 +94,27 @@ function ensureTenantColumn(db: BetterSQLite3Database): void {
  * tooling is a later feature, F-024). `supersede` runs in a transaction so a lineage never has two
  * current versions.
  *
- * **Tenancy (FR-52, ADR-0033):** every row carries a `tenant_id`; the store the factory returns is
- * bound to {@link DEFAULT_TENANT_ID} and {@link MemoryStore.forTenant} rebinds it. All reads filter by
- * the bound tenant and all writes stamp it, so memories never cross tenants.
+ * **Scope (FR-52/FR-66, ADR-0033/0037):** every row carries a `tenant_id` + `project_id`; the store the
+ * factory returns is bound to `(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID)` and
+ * {@link MemoryStore.forTenant}/{@link MemoryStore.forProject} rebind them. All reads filter by the bound
+ * scope and all writes stamp it, so memories never cross tenants or projects.
  */
 export function createSqliteMemoryStore(db: BetterSQLite3Database): MemoryStore {
   db.run(CREATE_TABLE);
-  ensureTenantColumn(db);
-  db.run(sql`CREATE INDEX IF NOT EXISTS idx_memories_lineage ON memories (tenant_id, lineage_id)`);
+  ensureScopeColumns(db);
   db.run(
-    sql`CREATE INDEX IF NOT EXISTS idx_memories_current ON memories (tenant_id, superseded_by)`,
+    sql`CREATE INDEX IF NOT EXISTS idx_memories_lineage ON memories (tenant_id, project_id, lineage_id)`,
+  );
+  db.run(
+    sql`CREATE INDEX IF NOT EXISTS idx_memories_current ON memories (tenant_id, project_id, superseded_by)`,
   );
 
-  function storeFor(tenantId: TenantId): MemoryStore {
-    const inTenant = eq(memories.tenantId, tenantId);
+  function storeFor(tenantId: TenantId, projectId: ProjectId): MemoryStore {
+    const inScope = and(eq(memories.tenantId, tenantId), eq(memories.projectId, projectId));
     return {
       add(memory) {
         db.insert(memories)
-          .values({ ...memory, tenantId })
+          .values({ ...memory, tenantId, projectId })
           .run();
         return Promise.resolve();
       },
@@ -103,10 +123,10 @@ export function createSqliteMemoryStore(db: BetterSQLite3Database): MemoryStore 
         db.transaction((tx) => {
           tx.update(memories)
             .set({ supersededBy: next.id })
-            .where(and(eq(memories.id, previousId), inTenant))
+            .where(and(eq(memories.id, previousId), inScope))
             .run();
           tx.insert(memories)
-            .values({ ...next, tenantId })
+            .values({ ...next, tenantId, projectId })
             .run();
         });
         return Promise.resolve();
@@ -116,7 +136,7 @@ export function createSqliteMemoryStore(db: BetterSQLite3Database): MemoryStore 
         const row = db
           .select()
           .from(memories)
-          .where(and(eq(memories.id, id), inTenant))
+          .where(and(eq(memories.id, id), inScope))
           .get();
         return Promise.resolve(row === undefined ? undefined : toMemory(row));
       },
@@ -125,7 +145,7 @@ export function createSqliteMemoryStore(db: BetterSQLite3Database): MemoryStore 
         const row = db
           .select()
           .from(memories)
-          .where(and(eq(memories.lineageId, lineageId), isNull(memories.supersededBy), inTenant))
+          .where(and(eq(memories.lineageId, lineageId), isNull(memories.supersededBy), inScope))
           .get();
         return Promise.resolve(row === undefined ? undefined : toMemory(row));
       },
@@ -134,14 +154,14 @@ export function createSqliteMemoryStore(db: BetterSQLite3Database): MemoryStore 
         const rows = db
           .select()
           .from(memories)
-          .where(and(eq(memories.lineageId, lineageId), inTenant))
+          .where(and(eq(memories.lineageId, lineageId), inScope))
           .orderBy(asc(memories.version))
           .all();
         return Promise.resolve(rows.map(toMemory));
       },
 
       listCurrent(filter?: MemoryListFilter) {
-        const conditions: SQL[] = [isNull(memories.supersededBy), inTenant];
+        const conditions: (SQL | undefined)[] = [isNull(memories.supersededBy), inScope];
         if (filter?.kind !== undefined) conditions.push(eq(memories.kind, filter.kind));
         if (filter?.scope !== undefined) conditions.push(eq(memories.scope, filter.scope));
         const rows = db
@@ -154,7 +174,7 @@ export function createSqliteMemoryStore(db: BetterSQLite3Database): MemoryStore 
       },
 
       countCurrent(filter?: MemoryListFilter) {
-        const conditions: SQL[] = [isNull(memories.supersededBy), inTenant];
+        const conditions: (SQL | undefined)[] = [isNull(memories.supersededBy), inScope];
         if (filter?.kind !== undefined) conditions.push(eq(memories.kind, filter.kind));
         if (filter?.scope !== undefined) conditions.push(eq(memories.scope, filter.scope));
         const row = db
@@ -169,7 +189,7 @@ export function createSqliteMemoryStore(db: BetterSQLite3Database): MemoryStore 
         const rows = db
           .select()
           .from(memories)
-          .where(inTenant)
+          .where(inScope)
           .orderBy(asc(memories.createdAt), asc(memories.id))
           .all();
         return Promise.resolve(rows.map(toMemory));
@@ -177,23 +197,27 @@ export function createSqliteMemoryStore(db: BetterSQLite3Database): MemoryStore 
 
       deleteVersion(id: MemoryId) {
         db.delete(memories)
-          .where(and(eq(memories.id, id), inTenant))
+          .where(and(eq(memories.id, id), inScope))
           .run();
         return Promise.resolve();
       },
 
       deleteLineage(lineageId: MemoryLineageId) {
         db.delete(memories)
-          .where(and(eq(memories.lineageId, lineageId), inTenant))
+          .where(and(eq(memories.lineageId, lineageId), inScope))
           .run();
         return Promise.resolve();
       },
 
       forTenant(next) {
-        return storeFor(next);
+        return storeFor(next, DEFAULT_PROJECT_ID);
+      },
+
+      forProject(next) {
+        return storeFor(tenantId, next);
       },
     };
   }
 
-  return storeFor(DEFAULT_TENANT_ID);
+  return storeFor(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID);
 }

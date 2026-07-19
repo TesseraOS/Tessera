@@ -1,4 +1,9 @@
-import { DEFAULT_TENANT_ID, type TenantId } from '@tessera/core';
+import {
+  DEFAULT_PROJECT_ID,
+  DEFAULT_TENANT_ID,
+  type ProjectId,
+  type TenantId,
+} from '@tessera/core';
 import type { Memory, MemoryId, MemoryLineageId } from '../domain.js';
 import type { MemoryListFilter, MemoryStore } from '../ports/memory-store.js';
 
@@ -7,29 +12,36 @@ function byCreatedThenId(a: Memory, b: Memory): number {
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 
+/** A collision-free key for a `(tenant, project)` partition (null byte can't appear in either id). */
+function scopeKey(tenantId: TenantId, projectId: ProjectId): string {
+  return `${tenantId}\u0000${projectId}`;
+}
+
 /**
  * In-memory {@link MemoryStore} — the reference adapter that drives the conformance suite and backs
  * fast unit tests. Versions are immutable; superseding replaces only the previous version's
  * `supersededBy` back-pointer (content is never changed).
  *
- * **Tenancy (FR-52, ADR-0033):** rows are partitioned into a per-tenant map; a store view reads/writes
- * only its bound tenant's partition (base view = {@link DEFAULT_TENANT_ID}). The partitions are shared
- * across views so `forTenant` is a cheap, consistent scoping of the same underlying data.
+ * **Scope (FR-52/FR-66, ADR-0033/0037):** rows are partitioned into a per-`(tenant, project)` map; a
+ * store view reads/writes only its bound scope's partition (base view =
+ * `(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID)`). The partitions are shared across views so
+ * `forTenant`/`forProject` are cheap, consistent scopings of the same underlying data.
  */
 export function createInMemoryMemoryStore(): MemoryStore {
-  const byTenant = new Map<TenantId, Map<MemoryId, Memory>>();
+  const byScope = new Map<string, Map<MemoryId, Memory>>();
 
-  function partition(tenantId: TenantId): Map<MemoryId, Memory> {
-    let map = byTenant.get(tenantId);
+  function partition(tenantId: TenantId, projectId: ProjectId): Map<MemoryId, Memory> {
+    const key = scopeKey(tenantId, projectId);
+    let map = byScope.get(key);
     if (map === undefined) {
       map = new Map<MemoryId, Memory>();
-      byTenant.set(tenantId, map);
+      byScope.set(key, map);
     }
     return map;
   }
 
-  function storeFor(tenantId: TenantId): MemoryStore {
-    const byId = partition(tenantId);
+  function storeFor(tenantId: TenantId, projectId: ProjectId): MemoryStore {
+    const byId = partition(tenantId, projectId);
     return {
       add(memory) {
         byId.set(memory.id, memory);
@@ -108,10 +120,14 @@ export function createInMemoryMemoryStore(): MemoryStore {
       },
 
       forTenant(next) {
-        return storeFor(next);
+        return storeFor(next, DEFAULT_PROJECT_ID);
+      },
+
+      forProject(next) {
+        return storeFor(tenantId, next);
       },
     };
   }
 
-  return storeFor(DEFAULT_TENANT_ID);
+  return storeFor(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID);
 }

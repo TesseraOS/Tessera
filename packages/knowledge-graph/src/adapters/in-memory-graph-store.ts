@@ -1,4 +1,9 @@
-import { DEFAULT_TENANT_ID, type TenantId } from '@tessera/core';
+import {
+  DEFAULT_PROJECT_ID,
+  DEFAULT_TENANT_ID,
+  type ProjectId,
+  type TenantId,
+} from '@tessera/core';
 import {
   EFFECT_LINK_KIND,
   type EffectHit,
@@ -15,10 +20,15 @@ import {
 } from '../ports/graph-store.js';
 import { selectBestRanked, type RawEffectHit } from '../effects/ranking.js';
 
-/** One tenant's isolated node/edge maps. */
-interface TenantGraph {
+/** One `(tenant, project)` scope's isolated node/edge maps. */
+interface ScopeGraph {
   nodes: Map<NodeId, GraphNode>;
   edges: Map<string, GraphEdge>;
+}
+
+/** A collision-free key for a `(tenant, project)` partition (JSON-encoded so no id can alias another). */
+function scopeKey(tenantId: TenantId, projectId: ProjectId): string {
+  return JSON.stringify([tenantId, projectId]);
 }
 
 /**
@@ -26,24 +36,26 @@ interface TenantGraph {
  * is a depth-bounded, cycle-guarded BFS over outgoing `EFFECT_LINK` edges, ranked through the shared
  * {@link selectBestRanked} so it matches the SQLite adapter exactly.
  *
- * **Tenancy (FR-52, ADR-0033):** node ids are deterministic from `(kind, key)`, so nodes/edges are
- * partitioned into a per-tenant graph; a store view reads/writes only its bound tenant (base view =
- * {@link DEFAULT_TENANT_ID}). Partitions are shared across views so `forTenant` is a cheap re-scoping.
+ * **Scope (FR-52/FR-66, ADR-0033/0037):** node ids are deterministic from `(kind, key)`, so nodes/edges
+ * are partitioned into a per-`(tenant, project)` graph; a store view reads/writes only its bound scope
+ * (base view = `(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID)`). Partitions are shared across views so
+ * `forTenant`/`forProject` are cheap re-scopings.
  */
 export function createInMemoryGraphStore(): GraphStore {
-  const byTenant = new Map<TenantId, TenantGraph>();
+  const byScope = new Map<string, ScopeGraph>();
 
-  function graphFor(tenantId: TenantId): TenantGraph {
-    let graph = byTenant.get(tenantId);
+  function graphFor(tenantId: TenantId, projectId: ProjectId): ScopeGraph {
+    const key = scopeKey(tenantId, projectId);
+    let graph = byScope.get(key);
     if (graph === undefined) {
       graph = { nodes: new Map<NodeId, GraphNode>(), edges: new Map<string, GraphEdge>() };
-      byTenant.set(tenantId, graph);
+      byScope.set(key, graph);
     }
     return graph;
   }
 
-  function storeFor(tenantId: TenantId): GraphStore {
-    const { nodes, edges } = graphFor(tenantId);
+  function storeFor(tenantId: TenantId, projectId: ProjectId): GraphStore {
+    const { nodes, edges } = graphFor(tenantId, projectId);
 
     function outgoingEffectEdges(from: NodeId): GraphEdge[] {
       const result: GraphEdge[] = [];
@@ -165,10 +177,14 @@ export function createInMemoryGraphStore(): GraphStore {
       },
 
       forTenant(next) {
-        return storeFor(next);
+        return storeFor(next, DEFAULT_PROJECT_ID);
+      },
+
+      forProject(next) {
+        return storeFor(tenantId, next);
       },
     };
   }
 
-  return storeFor(DEFAULT_TENANT_ID);
+  return storeFor(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID);
 }

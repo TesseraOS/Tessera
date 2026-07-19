@@ -1,4 +1,4 @@
-import type { TenantId } from '@tessera/core';
+import type { ProjectId, TenantId } from '@tessera/core';
 import type { Memory, MemoryId, MemoryKind, MemoryLineageId } from '../domain.js';
 
 /** Filter for listing the current memories. */
@@ -55,8 +55,15 @@ export interface MemoryStore {
    */
   deleteLineage(lineageId: MemoryLineageId): Promise<void>;
   /**
-   * A view of this store confined to `tenantId` (FR-52, ADR-0033). The base store operates in
-   * {@link DEFAULT_TENANT_ID}; memories written under one tenant are never visible to another.
+   * A view of this store confined to `tenantId` (FR-52, ADR-0033), reset to that tenant's
+   * {@link DEFAULT_PROJECT_ID}. The base store operates in {@link DEFAULT_TENANT_ID}; memories written
+   * under one tenant are never visible to another.
    */
   forTenant(tenantId: TenantId): MemoryStore;
+  /**
+   * A view of this store confined to `projectId` **within the current tenant** (FR-66, ADR-0037). The
+   * base store operates in {@link DEFAULT_PROJECT_ID}; chain after {@link MemoryStore.forTenant} for a
+   * full `(tenant, project)` scope. Memories written under one project are never visible to another.
+   */
+  forProject(projectId: ProjectId): MemoryStore;
 }

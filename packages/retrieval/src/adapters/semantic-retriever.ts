@@ -33,5 +33,12 @@ export function createSemanticRetriever(options: SemanticRetrieverOptions): Retr
         vectorStore: options.vectorStore.forTenant(tenantId),
       });
     },
+    forProject(projectId) {
+      // Scope the vector store to the project (FR-66, ADR-0037); embeddings are stateless.
+      return createSemanticRetriever({
+        embeddings: options.embeddings,
+        vectorStore: options.vectorStore.forProject(projectId),
+      });
+    },
   };
 }

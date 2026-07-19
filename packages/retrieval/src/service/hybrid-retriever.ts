@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ValidationError, type TenantId } from '@tessera/core';
+import { ValidationError, type ProjectId, type TenantId } from '@tessera/core';
 import type { FusedCandidate, RetrievalQuery } from '../domain.js';
 import type { Retriever } from '../ports/retriever.js';
 import { fuse, type FusionOptions, type RetrieverResult } from '../fusion/fuse.js';
@@ -15,9 +15,15 @@ export interface HybridRetriever {
   search(query: RetrievalQuery): Promise<readonly FusedCandidate[]>;
   /**
    * A view of the hybrid retriever confined to `tenantId` (FR-52, ADR-0033) — every child retriever
-   * is scoped to the tenant, so fused results never cross tenants. Base = {@link DEFAULT_TENANT_ID}.
+   * is scoped to the tenant (reset to its default project), so fused results never cross tenants.
+   * Base = `(DEFAULT_TENANT_ID, DEFAULT_PROJECT_ID)`.
    */
   forTenant(tenantId: TenantId): HybridRetriever;
+  /**
+   * A view of the hybrid retriever confined to `projectId` **within the current tenant** (FR-66,
+   * ADR-0037) — every child retriever is scoped to the project. Chain after {@link HybridRetriever.forTenant}.
+   */
+  forProject(projectId: ProjectId): HybridRetriever;
 }
 
 /**
@@ -54,6 +60,13 @@ export function createHybridRetriever(
     forTenant(tenantId) {
       return createHybridRetriever(
         retrievers.map((retriever) => retriever.forTenant(tenantId)),
+        options,
+      );
+    },
+
+    forProject(projectId) {
+      return createHybridRetriever(
+        retrievers.map((retriever) => retriever.forProject(projectId)),
         options,
       );
     },

@@ -1,4 +1,4 @@
-import { NotFoundError, ValidationError, type TenantId } from '@tessera/core';
+import { NotFoundError, ValidationError, type ProjectId, type TenantId } from '@tessera/core';
 import type { z } from 'zod';
 import {
   DEFAULT_GRAPH_LIMIT,
@@ -83,10 +83,15 @@ export interface KnowledgeGraphService {
    */
   counts(): Promise<{ readonly nodes: number; readonly effectLinks: number }>;
   /**
-   * A view of this service confined to `tenantId` (FR-52, ADR-0033). The base service operates in
-   * {@link DEFAULT_TENANT_ID}.
+   * A view of this service confined to `tenantId` (FR-52, ADR-0033), reset to that tenant's
+   * {@link DEFAULT_PROJECT_ID}. The base service operates in {@link DEFAULT_TENANT_ID}.
    */
   forTenant(tenantId: TenantId): KnowledgeGraphService;
+  /**
+   * A view of this service confined to `projectId` **within the current tenant** (FR-66, ADR-0037).
+   * Chain after {@link KnowledgeGraphService.forTenant} for a full `(tenant, project)` scope.
+   */
+  forProject(projectId: ProjectId): KnowledgeGraphService;
 }
 
 /** Create a {@link KnowledgeGraphService} backed by a {@link GraphStore}. */
@@ -226,6 +231,10 @@ export function createKnowledgeGraphService(store: GraphStore): KnowledgeGraphSe
 
     forTenant(tenantId) {
       return createKnowledgeGraphService(store.forTenant(tenantId));
+    },
+
+    forProject(projectId) {
+      return createKnowledgeGraphService(store.forProject(projectId));
     },
   };
 }

@@ -35,10 +35,10 @@ No new ADR needed — ADR-0037 pre-decided the model and explicitly delegated th
 > `216f5ec` storage · `2daca6e` data-plane · `65cda61` sources catalog · `34753e4` control plane · (this)
 > selection. Projects are creatable/manageable via REST and a request scopes to one via the header, with
 > real cross-project isolation proven end-to-end (memory/graph). Workspace gates green.
-> **9b DONE (this session):** DSR export/erasure + retention now span all projects (NFR-13); stats counts
-> are project-scoped. **Remaining:** **7b** ingestion-indexing threading (a scan lands in the source's
-> project — entangled with F-071's tenant threading to the DocumentSink); **10** MCP project tools +
-> session project; **11** dashboard switcher + '+ New' menu; **12** F-024 migration + full-stack e2e.
+> **9b + 10 DONE (this session):** DSR/retention span all projects (NFR-13), stats project-scoped; MCP has
+> project CRUD tools + session scoping. **Remaining:** **7b** ingestion-indexing threading (a scan lands in
+> the source's project — entangled with F-071's tenant threading to the DocumentSink); **11** dashboard
+> switcher + '+ New' menu; **12** F-024 migration + full-stack e2e.
 
 1. **[DONE]** **Scope primitive** — `@tessera/core`: add `ProjectId` + `DEFAULT_PROJECT_ID = 'default'` to `tenant.ts`
    (co-located with the tenant primitive); export from `index.ts`. `@tessera/api/auth/model` re-exports.
@@ -79,7 +79,12 @@ No new ADR needed — ADR-0037 pre-decided the model and explicitly delegated th
    left as emptied containers); **retention prune** spans all projects; **stats counts** are project-scoped
    (`computeWorkspaceStats(…, projectId)`, REST passes the selection; MCP passes default until inc. 10).
    Audit trail stays tenant-level (events carry no project — by design). DSR multi-project e2e added.
-10. **MCP** (`@tessera/mcp`) — project CRUD tools (ADR-0036 parity) + session/config project selection.
+10. **[DONE]** **MCP** (`@tessera/mcp`) — project CRUD tools (`list_projects`/`create_project`/`rename_project`/
+    `delete_project`, gateway perms + audit actions, ADR-0036 parity) + session project scoping: `projectOf`
+    resolves the `X-Tessera-Project` header (multi-client gateway), falling back to a `defaultProject` build
+    option (single-session stdio), else default; validated against the tenant; `.forProject` threaded through
+    every data tool (search/compile/effects/query_graph/assert/capture/sources/get_stats/explain). mcp e2e:
+    CRUD parity + config-scoped isolation (memory in a project invisible to the default) + unknown-project reject.
 11. **Dashboard** (`apps/web`) — project switcher in the app shell; create/manage projects; evolve the sidebar
     'New memory' button into a single **'+ New'** quick-create menu (memory / source / project; contextual
     default) with 'New project' inside the switcher + command palette (2026-07-04 product decision).

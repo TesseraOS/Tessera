@@ -13,6 +13,7 @@ import {
   type SourceRecord,
   type SourceService,
 } from '@tessera/ingestion';
+import { createInMemoryProjectStore, createProjectService } from '@tessera/api/projects';
 import { createInMemoryGraphStore, createKnowledgeGraphService } from '@tessera/knowledge-graph';
 import { createInMemoryMemoryStore, createMemoryService } from '@tessera/memory';
 import { createHybridRetriever, type Candidate, type Retriever } from '@tessera/retrieval';
@@ -124,5 +125,12 @@ export async function createInMemoryServices(): Promise<ApiServices> {
   const search = createHybridRetriever([keywordRetriever]);
   const compiler = createContextCompiler({ retriever: search, fragmentSource, graphStore });
 
-  return { search, compiler, graph, memory, sources: createInMemorySourceService() };
+  return {
+    search,
+    compiler,
+    graph,
+    memory,
+    sources: createInMemorySourceService(),
+    projects: createProjectService(createInMemoryProjectStore()),
+  };
 }

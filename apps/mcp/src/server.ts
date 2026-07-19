@@ -11,12 +11,16 @@ import {
 } from '@tessera/api/auth';
 // Likewise Fastify-free: the one workspace-summary implementation REST also serves (ADR-0036).
 import { computeWorkspaceStats } from '@tessera/api/stats';
+// Fastify-free project control-plane (F-066, ADR-0037) — the same service REST's /v1/projects wraps.
+import type { Project, ProjectService } from '@tessera/api/projects';
 import {
   ConflictError,
+  DEFAULT_PROJECT_ID,
   DEFAULT_TENANT_ID,
   ForbiddenError,
   InternalError,
   NotFoundError,
+  type ProjectId,
 } from '@tessera/core';
 import type { CompileRequest } from '@tessera/context-compiler';
 import type { GetEffectsOptions } from '@tessera/knowledge-graph';
@@ -30,13 +34,17 @@ import {
   assertEffectShape,
   captureMemoryShape,
   compileShape,
+  createProjectShape,
+  deleteProjectShape,
   effectsShape,
   explainShape,
   getStatsShape,
   issueTokenShape,
+  listProjectsShape,
   listSourcesShape,
   listTokensShape,
   queryGraphShape,
+  renameProjectShape,
   revokeTokenShape,
   scanSourceShape,
   searchShape,
@@ -115,10 +123,31 @@ export interface BuildMcpServerOptions {
    * token tools answer a clean error. See {@link TokenStore}.
    */
   readonly tokenStore?: TokenStore;
+  /**
+   * The project a **single-session** deployment (stdio) scopes every data tool to when the caller
+   * sends no `X-Tessera-Project` header (FR-66, ADR-0037). Defaults to the reserved default project, so
+   * an unconfigured server is unchanged. Multi-client gateways select per call via the header instead.
+   */
+  readonly defaultProject?: ProjectId;
 }
 
 /** Token budget used by `explain` when the caller does not specify one. */
 const DEFAULT_EXPLAIN_BUDGET = 2000;
+
+/** Project a domain project to the MCP wire shape (tenantId stays off the wire, mirroring REST). */
+function toWireProject(project: Project): {
+  id: string;
+  name: string;
+  createdAt: string;
+  isDefault: boolean;
+} {
+  return {
+    id: project.id,
+    name: project.name,
+    createdAt: project.createdAt,
+    isDefault: project.isDefault,
+  };
+}
 
 function toCompileRequest(args: {
   task: string;
@@ -152,6 +181,7 @@ export function buildMcpServer(
 ): McpServer {
   const server = new McpServer(SERVER_INFO);
   const { gateway, tokenStore } = options;
+  const configuredProject = options.defaultProject ?? DEFAULT_PROJECT_ID;
 
   /** The token store, or a clean error when the deployment wired none (mirrors the REST 409). */
   const requireTokenStore = (): TokenStore => {
@@ -159,6 +189,14 @@ export function buildMcpServer(
       throw new ConflictError('token management requires token auth mode (no token store)');
     }
     return tokenStore;
+  };
+
+  /** The project service, or a clean error when the deployment wired none (mirrors the REST 409). */
+  const requireProjects = (): ProjectService => {
+    if (services.projects === undefined) {
+      throw new ConflictError('project management is not configured for this deployment');
+    }
+    return services.projects;
   };
 
   /**
@@ -171,6 +209,29 @@ export function buildMcpServer(
 
   /** The tenant a call runs in — the gateway's resolved tenant, or the default when ungated. */
   const tenantOf = (ctx: AuthContext | undefined): string => ctx?.tenantId ?? DEFAULT_TENANT_ID;
+
+  /**
+   * The project a data-tool call is scoped to (FR-66, ADR-0037). Multi-client gateways select per call
+   * via the `X-Tessera-Project` header; a single-session (stdio) deployment falls back to the configured
+   * {@link BuildMcpServerOptions.defaultProject}; otherwise the reserved default project. A non-default
+   * selection is validated against the caller's tenant (a foreign/unknown id is rejected, never silently
+   * scoped to — mirroring the REST selection guard).
+   */
+  const projectOf = async (
+    ctx: AuthContext | undefined,
+    extra: McpCallContext,
+  ): Promise<ProjectId> => {
+    const raw = extra.requestInfo?.headers?.['x-tessera-project'];
+    const header = Array.isArray(raw) ? raw[0] : raw;
+    const selected = header !== undefined && header !== '' ? header : configuredProject;
+    if (selected === DEFAULT_PROJECT_ID) return DEFAULT_PROJECT_ID;
+    const known =
+      services.projects !== undefined && (await services.projects.exists(tenantOf(ctx), selected));
+    if (!known) {
+      throw new NotFoundError('project not found', { details: { id: selected } });
+    }
+    return selected;
+  };
 
   server.registerTool(
     'search',
@@ -190,7 +251,10 @@ export function buildMcpServer(
         };
         // The SAME enriched service REST calls (ADR-0036): labels/kinds/nodes come from the one
         // composition-root decorator, so the two surfaces cannot disagree about a hit.
-        return { results: await services.search.forTenant(tenantOf(ctx)).search(query) };
+        const project = await projectOf(ctx, extra);
+        return {
+          results: await services.search.forTenant(tenantOf(ctx)).forProject(project).search(query),
+        };
       }),
   );
 
@@ -203,7 +267,11 @@ export function buildMcpServer(
     (args, extra) =>
       runTool(async () => {
         const ctx = await guard('compile_context', extra);
-        return services.compiler.forTenant(tenantOf(ctx)).compile(toCompileRequest(args));
+        const project = await projectOf(ctx, extra);
+        return services.compiler
+          .forTenant(tenantOf(ctx))
+          .forProject(project)
+          .compile(toCompileRequest(args));
       }),
   );
 
@@ -216,11 +284,13 @@ export function buildMcpServer(
     (args, extra) =>
       runTool(async () => {
         const ctx = await guard('get_effects', extra);
+        const project = await projectOf(ctx, extra);
         const opts: GetEffectsOptions | undefined =
           args.maxDepth === undefined ? undefined : { maxDepth: args.maxDepth };
         return {
           effects: await services.graph
             .forTenant(tenantOf(ctx))
+            .forProject(project)
             .getEffects({ kind: args.kind, key: args.key }, opts),
         };
       }),
@@ -235,11 +305,15 @@ export function buildMcpServer(
     (args, extra) =>
       runTool(async () => {
         const ctx = await guard('query_graph', extra);
-        return services.graph.forTenant(tenantOf(ctx)).queryGraph({
-          ...(args.nodeKinds !== undefined ? { nodeKinds: args.nodeKinds } : {}),
-          ...(args.edgeKinds !== undefined ? { edgeKinds: args.edgeKinds } : {}),
-          ...(args.limit !== undefined ? { limit: args.limit } : {}),
-        });
+        const project = await projectOf(ctx, extra);
+        return services.graph
+          .forTenant(tenantOf(ctx))
+          .forProject(project)
+          .queryGraph({
+            ...(args.nodeKinds !== undefined ? { nodeKinds: args.nodeKinds } : {}),
+            ...(args.edgeKinds !== undefined ? { edgeKinds: args.edgeKinds } : {}),
+            ...(args.limit !== undefined ? { limit: args.limit } : {}),
+          });
       }),
   );
 
@@ -253,13 +327,17 @@ export function buildMcpServer(
     (args, extra) =>
       runTool(async () => {
         const ctx = await guard('assert_effect', extra);
-        return services.graph.forTenant(tenantOf(ctx)).assertEffectLink({
-          from: args.from,
-          to: args.to,
-          rationale: args.rationale,
-          origin: 'manual',
-          ...(args.confidence !== undefined ? { confidence: args.confidence } : {}),
-        });
+        const project = await projectOf(ctx, extra);
+        return services.graph
+          .forTenant(tenantOf(ctx))
+          .forProject(project)
+          .assertEffectLink({
+            from: args.from,
+            to: args.to,
+            rationale: args.rationale,
+            origin: 'manual',
+            ...(args.confidence !== undefined ? { confidence: args.confidence } : {}),
+          });
       }),
   );
 
@@ -272,7 +350,8 @@ export function buildMcpServer(
     (args, extra) =>
       runTool(async () => {
         const ctx = await guard('capture_memory', extra);
-        return services.memory.forTenant(tenantOf(ctx)).capture(args);
+        const project = await projectOf(ctx, extra);
+        return services.memory.forTenant(tenantOf(ctx)).forProject(project).capture(args);
       }),
   );
 
@@ -285,8 +364,10 @@ export function buildMcpServer(
     (args, extra) =>
       runTool(async () => {
         const ctx = await guard('add_source', extra);
+        const project = await projectOf(ctx, extra);
         const record = await requireSources(services)
           .forTenant(tenantOf(ctx))
+          .forProject(project)
           .register({
             kind: args.kind,
             config: { root: args.root },
@@ -305,7 +386,11 @@ export function buildMcpServer(
     (_args, extra) =>
       runTool(async () => {
         const ctx = await guard('list_sources', extra);
-        const sources = await requireSources(services).forTenant(tenantOf(ctx)).list();
+        const project = await projectOf(ctx, extra);
+        const sources = await requireSources(services)
+          .forTenant(tenantOf(ctx))
+          .forProject(project)
+          .list();
         return { sources: sources.map(toWireSource) };
       }),
   );
@@ -320,9 +405,10 @@ export function buildMcpServer(
     (_args, extra) =>
       runTool(async () => {
         const ctx = await guard('get_stats', extra);
+        const project = await projectOf(ctx, extra);
         // The SAME function GET /v1/stats calls (ADR-0036 parity) — the two surfaces cannot report
-        // different numbers for one tenant, because there is only one implementation.
-        return computeWorkspaceStats(services, tenantOf(ctx));
+        // different numbers for one (tenant, project), because there is only one implementation.
+        return computeWorkspaceStats(services, tenantOf(ctx), project);
       }),
   );
 
@@ -335,7 +421,8 @@ export function buildMcpServer(
     (args, extra) =>
       runTool(async () => {
         const ctx = await guard('scan_source', extra);
-        const scoped = requireSources(services).forTenant(tenantOf(ctx));
+        const project = await projectOf(ctx, extra);
+        const scoped = requireSources(services).forTenant(tenantOf(ctx)).forProject(project);
         const { source, summary } = await scoped.scan(args.id as Parameters<typeof scoped.scan>[0]);
         return { source: toWireSource(source), summary };
       }),
@@ -350,11 +437,75 @@ export function buildMcpServer(
     (args, extra) =>
       runTool(async () => {
         const ctx = await guard('explain', extra);
+        const project = await projectOf(ctx, extra);
         const request = toCompileRequest({
           ...args,
           budget: args.budget ?? DEFAULT_EXPLAIN_BUDGET,
         });
-        return buildExplanation(await services.compiler.forTenant(tenantOf(ctx)).compile(request));
+        return buildExplanation(
+          await services.compiler.forTenant(tenantOf(ctx)).forProject(project).compile(request),
+        );
+      }),
+  );
+
+  // --- Multi-project workspaces (F-066; ADR-0036/0037 parity with REST /v1/projects) ---
+
+  server.registerTool(
+    'list_projects',
+    {
+      description: 'List the projects in the caller’s tenant (the reserved default first).',
+      inputSchema: listProjectsShape,
+    },
+    (_args, extra) =>
+      runTool(async () => {
+        const ctx = await guard('list_projects', extra);
+        const projects = await requireProjects().list(tenantOf(ctx));
+        return { projects: projects.map(toWireProject) };
+      }),
+  );
+
+  server.registerTool(
+    'create_project',
+    {
+      description:
+        'Create a project (a new, isolated workspace scope); returns the stored project.',
+      inputSchema: createProjectShape,
+    },
+    (args, extra) =>
+      runTool(async () => {
+        const ctx = await guard('create_project', extra);
+        const project = await requireProjects().create(tenantOf(ctx), { name: args.name });
+        return toWireProject(project);
+      }),
+  );
+
+  server.registerTool(
+    'rename_project',
+    {
+      description: 'Rename a project (not the reserved default).',
+      inputSchema: renameProjectShape,
+    },
+    (args, extra) =>
+      runTool(async () => {
+        const ctx = await guard('rename_project', extra);
+        const project = await requireProjects().rename(tenantOf(ctx), args.id as ProjectId, {
+          name: args.name,
+        });
+        return toWireProject(project);
+      }),
+  );
+
+  server.registerTool(
+    'delete_project',
+    {
+      description: 'Delete a project (not the reserved default).',
+      inputSchema: deleteProjectShape,
+    },
+    (args, extra) =>
+      runTool(async () => {
+        const ctx = await guard('delete_project', extra);
+        await requireProjects().remove(tenantOf(ctx), args.id as ProjectId);
+        return { id: args.id, deleted: true as const };
       }),
   );
 

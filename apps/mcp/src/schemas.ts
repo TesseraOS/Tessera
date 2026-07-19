@@ -1,6 +1,7 @@
 // Value import from the Fastify-free `@tessera/api/auth` subpath — the MCP runtime must never pull
 // Fastify (the F-012 invariant); this subpath carries only the pure auth model.
 import { PERMISSIONS, ROLES } from '@tessera/api/auth';
+import { MAX_PROJECT_NAME_LENGTH } from '@tessera/api/projects';
 import { EDGE_KINDS, NODE_KINDS } from '@tessera/knowledge-graph';
 import { MEMORY_KINDS } from '@tessera/memory';
 import { z } from 'zod';
@@ -121,8 +122,31 @@ export const scanSourceShape = {
   id: z.string().min(1).describe('The source id returned by add_source.'),
 };
 
-/** `get_stats` takes no arguments — the workspace is the caller's tenant (F-060). */
+/** `get_stats` takes no arguments — the workspace is the caller's (tenant, project) scope (F-060). */
 export const getStatsShape = {};
+
+// --- Multi-project workspaces (F-066; ADR-0036/0037 parity with REST /v1/projects) ---
+
+/** `list_projects` takes no arguments — returns the caller's tenant's projects (default first). */
+export const listProjectsShape = {};
+
+export const createProjectShape = {
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(MAX_PROJECT_NAME_LENGTH)
+    .describe('A name for the new project (unique within the tenant).'),
+};
+
+export const renameProjectShape = {
+  id: z.string().min(1).describe('The project id to rename (not the reserved default).'),
+  name: z.string().trim().min(1).max(MAX_PROJECT_NAME_LENGTH).describe('The new project name.'),
+};
+
+export const deleteProjectShape = {
+  id: z.string().min(1).describe('The project id to delete (not the reserved default).'),
+};
 
 // --- API-token self-service (F-046; ADR-0036 parity with REST /v1/tokens) ---
 

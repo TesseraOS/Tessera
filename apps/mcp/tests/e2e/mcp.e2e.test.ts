@@ -39,13 +39,17 @@ describe('@tessera/mcp tools', () => {
       'assert_effect',
       'capture_memory',
       'compile_context',
+      'create_project',
+      'delete_project',
       'explain',
       'get_effects',
       'get_stats',
       'issue_token',
+      'list_projects',
       'list_sources',
       'list_tokens',
       'query_graph',
+      'rename_project',
       'revoke_token',
       'scan_source',
       'search',
@@ -154,5 +158,102 @@ describe('@tessera/mcp tools', () => {
       failed = true;
     }
     expect(failed).toBe(true);
+  });
+});
+
+/** Multi-project workspaces over MCP (F-050; ADR-0036/0037 parity + session project scoping). */
+describe('@tessera/mcp projects', () => {
+  let services: Awaited<ReturnType<typeof createInMemoryServices>>;
+  const clients: Client[] = [];
+  const servers: ReturnType<typeof buildMcpServer>[] = [];
+
+  /** Connect a real client to a server built over the shared services (optionally scoped to a project). */
+  async function connect(options?: { defaultProject?: string }): Promise<Client> {
+    const server = buildMcpServer(services, options ?? {});
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    await client.connect(clientTransport);
+    servers.push(server);
+    clients.push(client);
+    return client;
+  }
+
+  function structured(result: { structuredContent?: unknown }): Record<string, unknown> {
+    return (result.structuredContent ?? {}) as Record<string, unknown>;
+  }
+
+  beforeEach(async () => {
+    services = await createInMemoryServices();
+  });
+  afterEach(async () => {
+    await Promise.all(clients.map((c) => c.close()));
+    await Promise.all(servers.map((s) => s.close()));
+    clients.length = 0;
+    servers.length = 0;
+  });
+
+  it('list/create/rename/delete projects (parity with /v1/projects)', async () => {
+    const client = await connect();
+
+    const initial = structured(await client.callTool({ name: 'list_projects', arguments: {} }));
+    expect((initial.projects as { id: string; isDefault: boolean }[])[0]).toMatchObject({
+      id: 'default',
+      isDefault: true,
+    });
+
+    const created = structured(
+      await client.callTool({ name: 'create_project', arguments: { name: 'Backend' } }),
+    );
+    expect(created).toMatchObject({ name: 'Backend', isDefault: false });
+    const id = created.id as string;
+
+    const renamed = structured(
+      await client.callTool({ name: 'rename_project', arguments: { id, name: 'Service' } }),
+    );
+    expect(renamed.name).toBe('Service');
+
+    const deleted = structured(
+      await client.callTool({ name: 'delete_project', arguments: { id } }),
+    );
+    expect(deleted).toMatchObject({ id, deleted: true });
+
+    const after = structured(await client.callTool({ name: 'list_projects', arguments: {} }));
+    expect((after.projects as unknown[]).length).toBe(1); // just the default
+  });
+
+  it('scopes data tools to the configured project — isolated from the default project', async () => {
+    // A default-scoped client creates a project; a second client is configured to that project.
+    const defaultClient = await connect();
+    const created = structured(
+      await defaultClient.callTool({ name: 'create_project', arguments: { name: 'Backend' } }),
+    );
+    const projectId = created.id as string;
+    const projectClient = await connect({ defaultProject: projectId });
+
+    // Capture a memory in the project.
+    await projectClient.callTool({
+      name: 'capture_memory',
+      arguments: { kind: 'decision', title: 'Scoped', body: 'in the Backend project' },
+    });
+
+    // get_stats reflects the scope: 1 memory in the project, 0 in the default.
+    const projectStats = structured(
+      await projectClient.callTool({ name: 'get_stats', arguments: {} }),
+    );
+    expect(projectStats.memories).toBe(1);
+    const defaultStats = structured(
+      await defaultClient.callTool({ name: 'get_stats', arguments: {} }),
+    );
+    expect(defaultStats.memories).toBe(0);
+  });
+
+  it('rejects an unknown configured project (validated against the tenant)', async () => {
+    const client = await connect({ defaultProject: 'does-not-exist' });
+    const result = await client.callTool({
+      name: 'capture_memory',
+      arguments: { kind: 'decision', title: 'x', body: 'y' },
+    });
+    expect(result.isError).toBe(true);
   });
 });

@@ -35,6 +35,10 @@ export type McpToolName =
   | 'list_sources'
   | 'scan_source'
   | 'get_stats'
+  | 'list_projects'
+  | 'create_project'
+  | 'rename_project'
+  | 'delete_project'
   | 'list_tokens'
   | 'issue_token'
   | 'revoke_token';
@@ -51,6 +55,10 @@ export const TOOL_PERMISSIONS: Readonly<Record<McpToolName, Permission>> = {
   list_sources: 'sources:read',
   scan_source: 'sources:manage',
   get_stats: 'stats:read',
+  list_projects: 'projects:read',
+  create_project: 'projects:manage',
+  rename_project: 'projects:manage',
+  delete_project: 'projects:manage',
   list_tokens: 'admin:manage',
   issue_token: 'admin:manage',
   revoke_token: 'admin:manage',
@@ -77,6 +85,10 @@ export const MCP_AUDIT_ACTIONS: Readonly<Record<McpToolName, AuditAction>> = {
   // exhaustive over McpToolName. One new vocabulary entry for a read that REST does not record would
   // make the two surfaces disagree for no compliance gain.
   get_stats: 'source.read',
+  list_projects: 'project.read',
+  create_project: 'project.manage',
+  rename_project: 'project.manage',
+  delete_project: 'project.manage',
   list_tokens: 'token.read',
   issue_token: 'token.manage',
   revoke_token: 'token.manage',

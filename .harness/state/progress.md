@@ -3,6 +3,70 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-19 — F-052 DONE: `@tessera/cli` — one-command onboarding (`tessera` bin)
+
+Claimed **F-052** (`@tessera/cli`, ADR-0036 / FR-70) — the lowest-id eligible R4 `must` (blockers F-038
+sources + F-034 tokens both done). The prior session's prose suggested F-071, but the `next-feature`
+command is deterministic (**lowest-id eligible**), which is F-052. Plan:
+[`F-052-cli-onboarding.md`](../plans/F-052-cli-onboarding.md). New app **`apps/cli`** (`@tessera/cli`, bin
+`tessera`, `private` — publish lands with F-059).
+
+### The design — a thin, testable composition over the existing engine
+
+The CLI invents **no domain logic** (agent-first rule): every command wraps `@tessera/server`'s boot
+surface (`createServerRuntime`/`startApiServer`/`startMcpServer`) or a service already exposed by
+REST/MCP. Testability spine: commands are `(io, argv) => Promise<number>` over an injected **`Io`** (no
+`process.exit`/`console.*`), a dependency-free **schema-aware arg parser** (declared booleans never
+consume the next token — disambiguates `--json ./repo` from `--port 3000`), a config-file resolver, and
+a single error funnel (`CliError` → exit+hint; `TesseraError` → code; else stack). `run(argv, io)` is
+unit-testable and the integration tests boot the **real Local runtime** in temp dirs.
+
+### Commands (2 code commits: `1235f3c` + `19b567c`)
+
+- **`init`** — writes+validates `tessera.config.json` (fails fast on bad flags) + creates the data dir;
+  an absolute `--data-dir` yields a cwd-independent config; **opt-in `--verify`** boots the profile once.
+  Kept opt-in on purpose: the transformers embeddings adapter loads its model **at runtime creation**, so
+  a default smoke-boot would download ~90MB and break offline. "Boots the Local profile" is realized by
+  `serve`/`source add`/`mcp` (real boots) + the verified integration test.
+- **`serve`** — REST `/v1` API with observability + graceful shutdown (`serveApi` exported for tests).
+- **`mcp`** — the stdio MCP server agents spawn (protocol on stdout, logs on stderr).
+- **`source add <path|git-url>`** — local path → `filesystem`/`git` by `.git` detection; a git URL is
+  shallow-cloned into `<data-dir>/sources/`; register + scan via the **same `SourceService` as
+  `POST /v1/sources`** (ADR-0036 parity).
+- **`token issue`** — wraps the F-034 flow (`runtime.auth.tokenStore.issue`, roles/scopes validated via
+  the Fastify-free `@tessera/api/auth` subpath), mirroring the `tessera-token` bin, with `--json`.
+- **`doctor`** — node/config/storage/embeddings health, table + `--json`, non-zero on fail.
+- **`mcp-config`** — **data-driven** `MCP_CLIENTS` table (Claude Code/Cursor/Cline/Codex/Continue) +
+  two format renderers (json `mcpServers` / toml `mcp_servers`) so new agents are data, not code.
+
+Config precedence documented: **defaults < `tessera.config.json` < `TESSERA_*` env < flags** (the file is
+passed as `loadConfig` overrides, so it wins over env for keys it sets — a deliberate CLI choice).
+
+### "API + MCP" — the stdio reality
+
+MCP stdio is spawned **by the agent client** (it owns stdout), so — like the shipped `tessera-api`/
+`tessera-mcp` two-bin split — one process can't serve HTTP and speak MCP to a client it didn't launch.
+Hence `serve` = REST, `mcp` = stdio server, and `mcp-config` emits `tessera mcp --config <abs>` for each
+agent to spawn. No ADR (ADR-0036 already sanctions the CLI surface); no default deviated.
+
+**Evidence/verification** — workspace gates green: `verify-state` valid (91 features, **25** effect-links),
+`typecheck` **41/41**, `lint` **24/24**, `build` **21/21**, `test` **39/39** (cli **33** unit), cli
+**e2e 4/4** (init→source add ingests +3 docs; `serve` → `GET /v1/openapi.json` 200; `token issue` +
+clean failure without token mode), `format` clean. Built-binary end-to-end smoke on Windows
+(init/source add +3/doctor). Live pgvector/Docker e2e not in scope (unchanged).
+
+**Effects traced** — `effects.json`: **E-014** gains `@tessera/cli` as a config/Local-profile **boot
+consumer** (+ the documented `mcp-config`↔external-client-schema coupling); **E-018** gains
+`token issue` as a **TokenStore consumer**. The CLI changes **no** shared contract (pure consumer).
+
+**Definition-of-done** satisfied: acceptance met (init/serve/source add/token issue/doctor/mcp-config,
+table-driven agents, `--json`, cross-platform, integration test booting the real runtime), gates green
+with evidence, tests added, effects traced, README + root-README updated, ADR (ADR-0036 already
+Accepted), progress recorded, tree clean. **npm publish deferred to F-059** (per acceptance).
+
+**Next:** other R4 candidates — F-053 (docs site, now unblocked by F-052), F-071 (scope-aware ingestion),
+F-054/F-055, F-069, F-077, F-078.
+
 ## 2026-07-19 — F-050 (claimed): multi-project workspaces — the whole data plane gains project scope
 
 Claimed **F-050** (Multi-project workspaces, ADR-0037) — the lowest-id eligible R4 `must`, confirmed with the

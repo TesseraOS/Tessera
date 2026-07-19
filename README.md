@@ -61,6 +61,7 @@ tessera/
 │   ├── api/        # @tessera/api    — Fastify REST /v1 (modular monolith surface)
 │   ├── mcp/        # @tessera/mcp    — MCP server (same services as REST)
 │   ├── server/     # @tessera/server — runnable bins (tessera-api / tessera-mcp / tessera-token)
+│   ├── cli/        # @tessera/cli    — `tessera` one-command onboarding (init/serve/mcp/source add/token issue/doctor/mcp-config)
 │   └── web/        # @tessera/web    — Next.js dashboard (app subdomain; marketing + docs apps arrive in R4, ADR-0035)
 ├── packages/       # @tessera/*      — core, storage, ai, ingestion, memory, knowledge-graph,
 │                   #                   retrieval, context-compiler, config, observability,

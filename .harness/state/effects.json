@@ -623,6 +623,10 @@
         {
           "kind": "module",
           "ref": "createEnrichedRetriever wraps `search` before it reaches ApiServices (F-061/F-073, local.ts): the composition root is the only layer holding BOTH the retriever and the FragmentSource, so this is where a ref becomes a label/kind/node/snippet. The COMPILER deliberately keeps the RAW search — it resolves fragments in its own stage, so enriching its retriever would pay for a second corpus read per candidate and buy nothing. The blob-backed fragmentSource is now hoisted and shared by both, so a snippet and a compiled fragment can never disagree about a ref."
+        },
+        {
+          "kind": "package",
+          "ref": "@tessera/cli (F-052, apps/cli) — a new runnable that boots a Runtime through @tessera/server (createServerRuntime/startApiServer/startMcpServer): `init` writes+validates a tessera.config.json ConfigInput (config precedence: defaults < file < TESSERA_* env < flags; the file is passed as loadConfig overrides so it wins over env by design) and creates the data dir; `serve` runs the REST API; `mcp` the stdio MCP server; `source add` wraps the SourceService (register+scan), `doctor` validates config/storage/embeddings. A pure CONSUMER of the config schema + Local-profile boot contract — no change to it. Because init writes relative storage paths that createLocalRuntime resolves against process.cwd(), init/serve/source add are cwd-sensitive (run from the project dir); an absolute --data-dir makes the config cwd-independent. mcp-config emits agent-client config (Claude Code/Cursor/Cline/Codex/Continue) from a data table — a documented coupling to those clients' EXTERNAL config schemas (json mcpServers / toml mcp_servers)."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -803,6 +807,10 @@
         {
           "kind": "module",
           "ref": "data-plane scope WIDENED to (tenant, project) REALIZED (F-050, ADR-0037): every store/service/retriever/compiler gained a chained `forProject(projectId)` view (base = DEFAULT_PROJECT_ID) on top of forTenant; adapters enforce it with a project column / composite PK / vec0 per-scope table / FTS project column, and each shared conformance suite gained a cross-project isolation case (same ripple set as the tenant dimension: E-001/E-007/E-010/E-011/E-012/E-013). Request-time selection: the X-Tessera-Project header (REST) / session+config (MCP) resolves a projectId VALIDATED against the caller tenant on every request (unknown/foreign → 404); omitted → default project (single-project deployments byte-for-byte unchanged). New permissions projects:read/projects:manage (member+). Tenant-wide operations iterate all projects (DSR export/erasure — NFR-13, retention); stats are project-scoped. Ingestion scan-content-into-project is carved out to F-071 (the source→job→worker→sink seam). Changing the (tenant, project) scope contract ripples across every store + conformance suite + the REST/MCP threading + the dashboard switcher"
+        },
+        {
+          "kind": "package",
+          "ref": "@tessera/cli `token issue` (F-052, apps/cli) — a new consumer of the TokenStore control plane: it boots a Runtime and calls runtime.auth.tokenStore.issue({tenantId,principalId,roles,scopes?,displayName?}), validating roles against ROLES and scopes against PERMISSIONS via the Fastify-free @tessera/api/auth subpath (mirrors the tessera-token bin). Requires auth.mode=token (else a clean error). No change to the auth model — if the AuthContext/RBAC catalog or TokenStore.issue signature changes, this call site + its --json output ripple too."
         }
       ],
       "kind": "EFFECT_LINK",

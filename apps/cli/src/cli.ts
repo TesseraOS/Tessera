@@ -5,14 +5,27 @@ import { runHelp } from './help.js';
 import { errline, line, type Io } from './io.js';
 import { CLI_VERSION } from './version.js';
 import { doctorCommand } from './commands/doctor.js';
+import { initCommand } from './commands/init.js';
+import { mcpCommand } from './commands/mcp.js';
 import { mcpConfigCommand } from './commands/mcp-config.js';
+import { serveCommand } from './commands/serve.js';
+import { sourceCommand } from './commands/source.js';
+import { tokenCommand } from './commands/token.js';
 
 /**
  * The registered commands, in help-listing order. The router dispatches on the first token; each
  * command parses the remaining tokens itself. Adding a command is adding a row here — help stays in
  * sync because it renders from this same list.
  */
-export const COMMANDS: readonly Command[] = [doctorCommand, mcpConfigCommand];
+export const COMMANDS: readonly Command[] = [
+  initCommand,
+  serveCommand,
+  mcpCommand,
+  sourceCommand,
+  tokenCommand,
+  doctorCommand,
+  mcpConfigCommand,
+];
 
 /** Print `error: …` (+ hint) to stderr and map the throw to an exit code — the single error funnel. */
 function reportError(io: Io, error: unknown): number {

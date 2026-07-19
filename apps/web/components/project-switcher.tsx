@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Check, ChevronsUpDown, FolderKanban, Plus } from 'lucide-react';
 import {
   DropdownMenu,
@@ -15,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CreateProjectDialog } from '@/components/project/create-project-dialog';
 import { useProjects, useSwitchProject } from '@/lib/api/hooks';
 import { useProjectStore } from '@/lib/store/project';
+import { useNewProjectDialog } from '@/lib/store/quick-create';
 
 /**
  * The app-shell project switcher (F-050, ADR-0037). Shows the active project and switches between them;
@@ -23,10 +23,10 @@ import { useProjectStore } from '@/lib/store/project';
  * project is always present, so there is no empty state — only loading and the populated list.
  */
 export function ProjectSwitcher() {
-  const [createOpen, setCreateOpen] = useState(false);
   const { data, isPending } = useProjects();
   const selectedProjectId = useProjectStore((state) => state.selectedProjectId);
   const switchProject = useSwitchProject();
+  const newProject = useNewProjectDialog();
 
   const projects = data?.projects ?? [];
   const active = projects.find((project) => project.id === selectedProjectId) ?? projects[0];
@@ -72,14 +72,16 @@ export function ProjectSwitcher() {
               </DropdownMenuItem>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => setCreateOpen(true)} className="gap-2">
+            <DropdownMenuItem onSelect={() => newProject.setOpen(true)} className="gap-2">
               <Plus className="size-4" />
               New project
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
-      <CreateProjectDialog open={createOpen} onOpenChange={setCreateOpen} />
+      {/* Mounted once here (the switcher is always in the shell); opened from the switcher, the '+ New'
+          menu, and the ⌘K palette via the shared store. */}
+      <CreateProjectDialog open={newProject.open} onOpenChange={newProject.setOpen} />
     </SidebarMenu>
   );
 }

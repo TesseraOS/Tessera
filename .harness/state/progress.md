@@ -120,10 +120,33 @@ in the browser** (per the quality bar):
 **Evidence** — gates green: `verify-state`, `typecheck` 40/40, `lint` 23/23, `test` 38/38 (web 414),
 `build` 20/20, `format`; plus the live browser run above.
 
-**Next step** — F-050 stays `in_progress`. Remaining: **7b** ingestion→sink project threading (a scan's
-indexed content lands in the source's project — entangled with **F-071**); **12** F-024 migration
-registration + full-stack cross-project e2e (incl. the Playwright switcher e2e). Then definition-of-done +
-mark `done`.
+### F-050 DONE (increment 12 + definition-of-done)
+
+Per the project-lead decision to **keep 7b/F-071 separate**, F-050 is completed and marked **`done`**:
+
+- **Migration proof.** A test shows a **pre-project row lands in the default project** (additive) and is
+  scoped (invisible to a non-default project) — the sqlite self-migration (`ensureScopeColumns`) is proven;
+  pgvector upgrades in place; derived FTS/temporal indices drop+recreate. The generic F-024 runner stays
+  available for relational schema migrations.
+- **e2e isolation.** api e2e (114) now proves **memory + sources-catalog** cross-project isolation over the
+  real HTTP surface with `X-Tessera-Project`; search/compile isolation is covered by the retrieval
+  conformance + the compile-cache-key test; the dashboard was **live-verified** (switch → every stat
+  re-scopes to 0). The per-project isolation of *scanned* content (full-runtime search/compile over an
+  ingested corpus) rides the source→job→worker→sink seam and is **carved out to F-071** — whose title +
+  acceptance were widened to carry BOTH tenant and project on the queue job (one mechanism, two dimensions).
+- **'New project' everywhere.** Added the ⌘K **command-palette** "New project" action; the switcher, the
+  '+ New' menu, and the palette now open **one** shared dialog (a `useNewProjectDialog` store).
+- **Effects traced.** `effects.json` updated — E-018 (scope widened to `(tenant, project)`), E-003
+  (`/v1/projects` + `X-Tessera-Project` + MCP tools → OpenAPI/SDK/dashboard), E-020 (`project.read`/
+  `project.manage` audit actions); F-050 gains E-020.
+- **Definition-of-done** satisfied: acceptance met (amended to record the F-071 carve-out honestly, not
+  weakened), gates green (`verify-state`, `typecheck` 40/40, `lint` 23/23, `test` 38/38, api e2e 114, mcp
+  e2e 28, `format`), tests added, effects traced, docs/ADR (ADR-0037 already Accepted), progress recorded.
+
+**Total: 16 commits.** The whole of F-050 — data plane, sources catalog, `/v1/projects` control plane,
+`X-Tessera-Project` selection, DSR/retention/stats completeness, MCP parity, and the dashboard — ships and
+is verified end to end. **Next:** F-071 (scope-aware ingestion, now carrying tenant + project) is the natural
+follow-up; other R4 candidates: F-077, F-078, F-052, F-053.
 
 ## 2026-07-19 — fix: the api e2e still spoke the pre-F-081 synchronous scan contract
 

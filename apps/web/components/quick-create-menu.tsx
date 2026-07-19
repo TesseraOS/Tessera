@@ -11,9 +11,9 @@ import {
 import { SidebarMenuButton } from '@/components/ui/sidebar';
 import { MemoryAuthoringDialog } from '@/components/memory/memory-authoring-dialog';
 import { RegisterSourceDialog } from '@/components/sources/register-source-dialog';
-import { CreateProjectDialog } from '@/components/project/create-project-dialog';
+import { useNewProjectDialog } from '@/lib/store/quick-create';
 
-type QuickCreate = 'memory' | 'source' | 'project' | null;
+type QuickCreate = 'memory' | 'source' | null;
 
 /**
  * The sidebar "+ New" quick-create menu (F-050; the 2026-07-04 product decision). The dedicated
@@ -23,6 +23,7 @@ type QuickCreate = 'memory' | 'source' | 'project' | null;
  */
 export function QuickCreateMenu() {
   const [openDialog, setOpenDialog] = useState<QuickCreate>(null);
+  const newProject = useNewProjectDialog();
   const close = () => setOpenDialog(null);
 
   return (
@@ -47,16 +48,16 @@ export function QuickCreateMenu() {
             <Boxes className="text-muted-foreground size-4" />
             New source
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setOpenDialog('project')} className="gap-2">
+          <DropdownMenuItem onSelect={() => newProject.setOpen(true)} className="gap-2">
             <FolderKanban className="text-muted-foreground size-4" />
             New project
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {/* Memory + source dialogs are local; the project dialog is shared (mounted in the switcher). */}
       <MemoryAuthoringDialog open={openDialog === 'memory'} onOpenChange={close} />
       <RegisterSourceDialog open={openDialog === 'source'} onOpenChange={close} />
-      <CreateProjectDialog open={openDialog === 'project'} onOpenChange={close} />
     </>
   );
 }

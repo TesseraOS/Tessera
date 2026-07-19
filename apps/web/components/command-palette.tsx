@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Monitor, Moon, Palette, Sun } from 'lucide-react';
+import { FolderKanban, Monitor, Moon, Palette, Sun } from 'lucide-react';
 import {
   CommandDialog,
   CommandEmpty,
@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/command';
 import { navItems } from '@/lib/nav';
 import { useCommandMenu } from '@/lib/store/command';
+import { useNewProjectDialog } from '@/lib/store/quick-create';
 import { useAppearanceTransition } from '@/lib/theme';
 import { THEMES, THEME_LABELS } from '@/lib/theme-script';
 
@@ -49,6 +50,7 @@ export function CommandPalette() {
   const { open, setOpen, toggle } = useCommandMenu();
   const router = useRouter();
   const { setAppearance } = useAppearanceTransition();
+  const openNewProject = useNewProjectDialog((state) => state.setOpen);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -71,6 +73,13 @@ export function CommandPalette() {
       <CommandInput placeholder="Search or jump to…" />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
+        <CommandGroup heading="Actions">
+          <CommandItem value="New project" onSelect={() => run(() => openNewProject(true))}>
+            <FolderKanban />
+            New project
+          </CommandItem>
+        </CommandGroup>
+        <CommandSeparator />
         <CommandGroup heading="Navigation">
           {navItems.map(({ title, href, icon: Icon }) => (
             <CommandItem key={href} value={title} onSelect={() => run(() => router.push(href))}>

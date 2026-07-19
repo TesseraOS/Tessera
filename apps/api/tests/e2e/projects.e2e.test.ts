@@ -243,6 +243,31 @@ describe('@tessera/api /v1/projects', () => {
       expect(inOther.json().memories).toHaveLength(0);
     });
 
+    it('scopes the sources catalog to the project — a source in one project is invisible in another', async () => {
+      const created = await app.inject({
+        method: 'POST',
+        url: '/v1/projects',
+        payload: { name: 'Infra' },
+      });
+      const projectId = created.json().id as string;
+      const header = { 'x-tessera-project': projectId };
+
+      const registered = await app.inject({
+        method: 'POST',
+        url: '/v1/sources',
+        headers: header,
+        payload: { kind: 'filesystem', config: { root: '/repo/infra' } },
+      });
+      expect(registered.statusCode).toBe(201);
+
+      // Listed inside the project.
+      const inProject = await app.inject({ method: 'GET', url: '/v1/sources', headers: header });
+      expect(inProject.json().sources).toHaveLength(1);
+      // Invisible in the default project.
+      const inDefault = await app.inject({ method: 'GET', url: '/v1/sources' });
+      expect(inDefault.json().sources).toHaveLength(0);
+    });
+
     it('404s a request that selects an unknown/foreign project', async () => {
       const res = await app.inject({
         method: 'GET',

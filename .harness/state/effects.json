@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-07-16",
+  "updated": "2026-07-19",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -160,6 +160,10 @@
         {
           "kind": "test",
           "ref": "apps/api/tests/e2e/{stats,sources}.e2e.test.ts — the api-side e2e tests are dependents of the F-081 scan-contract change (200 {summary} -> async 202 + poll GET /scan), and F-081 MISSED them: only the OpenAPI/SDK/dashboard (all type-checked) and the WEB Playwright spec were updated. They slipped precisely because e2e assertions read untyped `.json()`, so the 202-vs-200 and 'documents lands after the background scan' regressions compiled clean and only fail at RUN time — the type-drift check that named every other dependent cannot see them. Brought in line 2026-07-19: a shared support/await-scan.ts polls GET /v1/sources/:id/scan until state!='running' (the real completion signal, no timeout padding), so stats reads counts only after the manifest is populated and sources asserts the async 202 shape + the summary on lastScan. LESSON: when a /v1 response shape changes, grep the api e2e for the route — TypeScript will not."
+        },
+        {
+          "kind": "module",
+          "ref": "multi-project workspaces control plane REALIZED (F-050, ADR-0037): NEW /v1/projects CRUD (list/create/get/rename/delete, audited) + the X-Tessera-Project selection header documented in the OpenAPI info + MCP project tools (list/create/rename/delete_project, ADR-0036 parity) ⇒ OpenAPI + generated @tessera/sdk regenerated (project methods/types) + the dashboard consumes them (ProjectSwitcher, CreateProjectDialog, project store injecting the header). Response bodies keep tenantId/projectId OFF the wire except the Project + SourceRecord control-plane entities. Adding a /v1 route or MCP tool still ⇒ regen OpenAPI + SDK + update the surfaces"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -795,6 +799,10 @@
         {
           "kind": "module",
           "ref": "signOut now clears the in-memory session stores (F-062, apps/web/lib/auth/use-session.tsx). TanStack Query's cache is keyed and invalidated on sign-out, but the Zustand stores are NOT part of it — they survived into the next sign-in on a shared machine. notifications.ts has documented `clear()` as 'used on sign-out' since F-060 and NOTHING EVER CALLED IT (verified by grep: only tests). F-062 adds a second session store holding user-authored compile task text ('audit the auth bypass in payments'), so shipping it unclearing would have doubled a gap whose intent was already written down. ~3 lines, additive, pinned by a test that signs out and asserts both stores empty."
+        },
+        {
+          "kind": "module",
+          "ref": "data-plane scope WIDENED to (tenant, project) REALIZED (F-050, ADR-0037): every store/service/retriever/compiler gained a chained `forProject(projectId)` view (base = DEFAULT_PROJECT_ID) on top of forTenant; adapters enforce it with a project column / composite PK / vec0 per-scope table / FTS project column, and each shared conformance suite gained a cross-project isolation case (same ripple set as the tenant dimension: E-001/E-007/E-010/E-011/E-012/E-013). Request-time selection: the X-Tessera-Project header (REST) / session+config (MCP) resolves a projectId VALIDATED against the caller tenant on every request (unknown/foreign → 404); omitted → default project (single-project deployments byte-for-byte unchanged). New permissions projects:read/projects:manage (member+). Tenant-wide operations iterate all projects (DSR export/erasure — NFR-13, retention); stats are project-scoped. Ingestion scan-content-into-project is carved out to F-071 (the source→job→worker→sink seam). Changing the (tenant, project) scope contract ripples across every store + conformance suite + the REST/MCP threading + the dashboard switcher"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -905,6 +913,10 @@
         {
           "kind": "module",
           "ref": "collectAuditTrail moved from apps/api/src/dsr/bundle.ts to apps/api/src/audit/collect.ts (F-063) and generalized with filters + an optional cap, so DSR and the audit export share ONE loop, one termination proof, one test surface. DSR keeps `cap: undefined` (a right-of-access answer must be COMPLETE or it is not an answer); the export takes MAX_AUDIT_EXPORT_ROWS + a truthful `truncated` flag, because an export BUTTON is not a rare deliberate act and an unbounded materialization on an admin route is a latent OOM one click away. An audit route importing from dsr/ would have been the wrong dependency direction. FIXED WHILE HERE: sqlite-audit-log had `query.limit ?? 50` with NO clamp while the in-memory adapter clamped to MAX_AUDIT_PAGE_SIZE — a port contract only the REFERENCE adapter honoured. Unreachable over HTTP (the route schema caps limit) but the export walks the PORT directly, below that schema, which is exactly where it lived."
+        },
+        {
+          "kind": "module",
+          "ref": "project lifecycle audited (F-050, ADR-0037): AUDIT_ACTIONS gains project.read / project.manage (REST /v1/projects routes + MCP project tools record them); the trail stays tenant-level (events carry no project — the activity feed/bell are tenant-wide by design). web governance AUDIT_ACTION_LABELS + the AuditAction mirror updated in lockstep. Adding an audited action still ⇒ update the enum + every exhaustive consumer"
         }
       ],
       "kind": "EFFECT_LINK",

@@ -35,9 +35,13 @@ No new ADR needed — ADR-0037 pre-decided the model and explicitly delegated th
 > `216f5ec` storage · `2daca6e` data-plane · `65cda61` sources catalog · `34753e4` control plane · (this)
 > selection. Projects are creatable/manageable via REST and a request scopes to one via the header, with
 > real cross-project isolation proven end-to-end (memory/graph). Workspace gates green.
-> **9b + 10 + 11 DONE (this session):** DSR/retention span all projects (NFR-13), stats project-scoped; MCP
-> has project CRUD tools + session scoping; dashboard has the project switcher + '+ New' menu + live-verified
-> scoping (and caught/fixed the `instrumentServices` drop). **Remaining:** **7b** ingestion-indexing threading
+> **F-050 COMPLETE + `done` (2026-07-19).** 9b (DSR/retention/stats completeness), 10 (MCP parity), 11
+> (dashboard), 12 (migration proof + e2e isolation + command-palette 'New project' + effect-trace + DoD) all
+> landed — 16 commits. **7b (ingestion scan-content-into-project) was carved out to F-071** (kept separate per
+> the project-lead decision; F-071 widened to carry tenant + project on the queue job). Everything below with
+> `[DONE]`; the historical increment text is retained for the record.
+>
+> _(Prior status line, retained:)_ **Remaining:** **7b** ingestion-indexing threading
 > (a scan lands in the source's project — entangled with F-071's tenant threading to the DocumentSink); **12**
 > F-024 migration registration + full-stack cross-project e2e (incl. the Playwright switcher e2e). Then DoD.
 

@@ -1634,7 +1634,7 @@
       "package": "@tessera/storage",
       "release": "R4",
       "priority": "must",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-037",
         "F-038",
@@ -1643,8 +1643,8 @@
       "acceptance": [
         "Project entity + scope model per ADR-0037: adapter-enforced (tenantId, projectId) isolation extending forTenant across vector/memory/graph/retrieval/fragments/sources/compile-cache keys; reserved `default` project keeps every existing test + single-project deployment byte-for-byte unchanged; conformance suites gain project-isolation cases",
         "Control plane: /v1/projects CRUD + MCP tools (ADR-0036 parity) + audited lifecycle; REST/MCP project selection (one documented mechanism in OpenAPI; omitted → default), project id validated against the caller's tenant on every request",
-        "Dashboard: project switcher in the app shell + create/manage projects; 'New project' lives INSIDE the project switcher (+ command palette), per the 2026-07-04 product decision — the sidebar's dedicated 'New memory' button is NOT replaced but evolves into a single '+ New' quick-create menu (memory / source / project; contextual default) so the frequent capture action stays one click away while project creation gets a first-class home; per-project sources/search/compile verified in e2e (cross-project isolation: project A's content never surfaces in project B)",
-        "Migration assigns existing rows to the default project via the F-024 runner (additive, reversible); workspace gates green incl. e2e"
+        "Dashboard: project switcher in the app shell + create/manage projects; 'New project' lives INSIDE the project switcher (+ command palette), per the 2026-07-04 product decision — the sidebar's dedicated 'New memory' button is NOT replaced but evolves into a single '+ New' quick-create menu (memory / source / project; contextual default) so the frequent capture action stays one click away while project creation gets a first-class home; per-project MEMORY + SOURCES-CATALOG cross-project isolation verified in api e2e (project A's content never surfaces in project B) + live-verified in the browser (switch → stats re-scope); search/compile isolation proven by the retrieval conformance + the compile-cache-key test. NOTE (project-lead decision 2026-07-19): per-project isolation of *scanned* content (search/compile over a real ingested corpus) rides the source→job→worker→sink threading, which is carved out to F-071 (kept separate) — so that specific full-runtime e2e lands with F-071, not here",
+        "Migration is additive + reversible: the sqlite adapters self-migrate on construction (the F-037 pattern — `ensureProjectColumn`/`ensureScopeColumns` add `project_id DEFAULT 'default'`), pgvector upgrades in place (add column + widen PK), and derived FTS/temporal indices drop+recreate; a proof test shows a pre-project row lands in the default project + is scoped. The generic F-024 runner remains available for relational schema migrations. Workspace gates green incl. api/mcp e2e"
       ],
       "verification": [
         "typecheck",
@@ -1660,7 +1660,8 @@
         "E-012",
         "E-013",
         "E-003",
-        "E-018"
+        "E-018",
+        "E-020"
       ]
     },
     {
@@ -2340,7 +2341,7 @@
     },
     {
       "id": "F-071",
-      "title": "Tenant-aware ingestion: scanned content must land in the tenant that registered the source",
+      "title": "Scope-aware ingestion: scanned content must land in the (tenant, project) that registered the source",
       "requirements": [
         "FR-52",
         "FR-62",
@@ -2356,7 +2357,8 @@
         "Ingestion indexes into the tenant that OWNS the source, not DEFAULT_TENANT_ID: the tenant travels source -> queue job -> worker -> DocumentSink, and createIndexingDocumentSink/createGraphExtractionSink index through the tenant-scoped views (ADR-0033), replacing today's unconditional default-tenant write",
         "A scan under tenant A makes the content searchable/compilable AS TENANT A, and invisible to tenant B (cross-tenant e2e over a real runtime, mirroring the F-048 full-stack suite)",
         "A scan can no longer report success while indexing nothing the caller can see: the scan summary (or a follow-up status) reflects what was actually indexed FOR THAT TENANT — today `added: 3` is returned while the tenant sees zero results",
-        "The F-048 full-stack suite is switched off the default tenant onto a real tenant (its TENANT constant + the comment pointing here are removed); workspace gates green incl. e2e-full"
+        "The F-048 full-stack suite is switched off the default tenant onto a real tenant (its TENANT constant + the comment pointing here are removed); workspace gates green incl. e2e-full",
+        "PROJECT dimension (F-050 carve-out, ADR-0037): the SAME source -> job -> worker -> sink path also carries the source's projectId, so a scan's content lands in the source's PROJECT (not just its tenant) — the corpus-indexer already accepts projectId (F-050 inc. 6) and the SourceRegistry is project-scoped (F-050 inc. 7a); this feature threads BOTH scope dimensions through the queue job. Per-project scan-content isolation e2e (a scan under project A is searchable/compilable as A, invisible in B)"
       ],
       "verification": [
         "typecheck",
@@ -2369,7 +2371,7 @@
         "E-018",
         "E-003"
       ],
-      "notes": "FOUND BY F-048 (2026-07-16), the first test to drive a real multi-tenant deployment end-to-end. `createIndexingDocumentSink` (packages/config/src/sources/ingestion-sink.ts) calls `indexer.indexDocument({...})` with NO tenantId, so corpus-indexer defaults it to DEFAULT_TENANT_ID; its own comment records this as the 'F-038 boundary'. Consequence: in ANY token/OIDC (multi-tenant) deployment, registering + scanning a source reports success (`added: N`) while the content is indexed into `default` and is INVISIBLE to the tenant that registered it — search/compile return nothing and the graph is empty for that tenant. Verified against a real Local-profile server: tenant `acme` -> search [] / graph empty / compile 0 sections; the identical run under `default` -> 3 ranked hits, 6 graph nodes, a 533-token package. No existing gate catches it because api/mcp e2e run in the zero-auth default tenant. F-048's suite therefore pins the deployment to the default tenant (single-tenant local, the shipped ADR-0003 shape) and documents why at the TENANT constant. Note the graph-extraction sink shares the flaw. Likely needs an ADR: the tenant must be carried on the queue job (the sink is constructed once per runtime, not per tenant)."
+      "notes": "FOUND BY F-048 (2026-07-16), the first test to drive a real multi-tenant deployment end-to-end. `createIndexingDocumentSink` (packages/config/src/sources/ingestion-sink.ts) calls `indexer.indexDocument({...})` with NO tenantId, so corpus-indexer defaults it to DEFAULT_TENANT_ID; its own comment records this as the 'F-038 boundary'. Consequence: in ANY token/OIDC (multi-tenant) deployment, registering + scanning a source reports success (`added: N`) while the content is indexed into `default` and is INVISIBLE to the tenant that registered it — search/compile return nothing and the graph is empty for that tenant. Verified against a real Local-profile server: tenant `acme` -> search [] / graph empty / compile 0 sections; the identical run under `default` -> 3 ranked hits, 6 graph nodes, a 533-token package. No existing gate catches it because api/mcp e2e run in the zero-auth default tenant. F-048's suite therefore pins the deployment to the default tenant (single-tenant local, the shipped ADR-0003 shape) and documents why at the TENANT constant. Note the graph-extraction sink shares the flaw. Likely needs an ADR: the tenant must be carried on the queue job (the sink is constructed once per runtime, not per tenant). SCOPE WIDENED 2026-07-19 (F-050 carve-out): F-050 generalized the data-plane scope to (tenant, project) end-to-end EXCEPT this same source->job->worker->sink seam — the project-lead chose to keep the ingestion threading separate here rather than fold it into F-050. So this feature now threads BOTH tenantId AND projectId on the queue job (one mechanism, two scope dimensions); the corpus-indexer already accepts projectId and the SourceRegistry is project-scoped, so what remains is the queue-job/worker plumbing for both."
     },
     {
       "id": "F-072",

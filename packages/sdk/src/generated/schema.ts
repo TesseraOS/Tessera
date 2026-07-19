@@ -135,7 +135,7 @@ export interface paths {
                                 roles: ("owner" | "admin" | "member" | "viewer")[];
                             };
                             tenantId: string;
-                            permissions: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "stats:read" | "admin:manage")[];
+                            permissions: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
                         };
                     };
                 };
@@ -174,9 +174,9 @@ export interface paths {
                     content: {
                         "application/json": {
                             roles: ("owner" | "admin" | "member" | "viewer")[];
-                            permissions: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "stats:read" | "admin:manage")[];
+                            permissions: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
                             rolePermissions: {
-                                [key: string]: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "stats:read" | "admin:manage")[];
+                                [key: string]: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
                             };
                         };
                     };
@@ -220,7 +220,7 @@ export interface paths {
                                 principalId: string;
                                 displayName?: string;
                                 roles: ("owner" | "admin" | "member" | "viewer")[];
-                                scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "stats:read" | "admin:manage")[];
+                                scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
                                 createdAt: string;
                                 revokedAt: string | null;
                                 expiresAt: string | null;
@@ -246,7 +246,7 @@ export interface paths {
                         principalId: string;
                         displayName?: string;
                         roles: ("owner" | "admin" | "member" | "viewer")[];
-                        scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "stats:read" | "admin:manage")[];
+                        scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
                         /** Format: date-time */
                         expiresAt?: string;
                     };
@@ -265,7 +265,7 @@ export interface paths {
                                 principalId: string;
                                 displayName?: string;
                                 roles: ("owner" | "admin" | "member" | "viewer")[];
-                                scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "stats:read" | "admin:manage")[];
+                                scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
                                 createdAt: string;
                                 revokedAt: string | null;
                                 expiresAt: string | null;
@@ -1221,6 +1221,182 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the projects in the calling tenant (default first). */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            projects: {
+                                id: string;
+                                name: string;
+                                createdAt: string;
+                                isDefault: boolean;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create a project (a new, isolated workspace scope). */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            name: string;
+                            createdAt: string;
+                            isDefault: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/projects/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a project by id. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            name: string;
+                            createdAt: string;
+                            isDefault: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Delete a project (not the reserved default). */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            /** @enum {boolean} */
+                            deleted: true;
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Rename a project (not the reserved default). */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            name: string;
+                            createdAt: string;
+                            isDefault: boolean;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/v1/stats": {
         parameters: {
             query?: never;
@@ -1559,7 +1735,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Filter by action. */
-                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
+                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
                     /** @description Filter by actor principal id. */
                     actor?: string;
                     /** @description Filter by outcome. */
@@ -1594,7 +1770,7 @@ export interface paths {
                                     kind: "local" | "user" | "token";
                                 };
                                 /** @enum {string} */
-                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
                                 target?: string;
                                 /** @enum {string} */
                                 outcome: "success" | "denied";
@@ -1629,7 +1805,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Filter by action. */
-                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
+                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
                     /** @description Filter by actor principal id. */
                     actor?: string;
                     /** @description Filter by outcome. */
@@ -1666,7 +1842,7 @@ export interface paths {
                                     kind: "local" | "user" | "token";
                                 };
                                 /** @enum {string} */
-                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
                                 target?: string;
                                 /** @enum {string} */
                                 outcome: "success" | "denied";
@@ -1869,7 +2045,7 @@ export interface paths {
                                     kind: "local" | "user" | "token";
                                 };
                                 /** @enum {string} */
-                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
                                 target?: string;
                                 /** @enum {string} */
                                 outcome: "success" | "denied";

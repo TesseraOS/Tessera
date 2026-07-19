@@ -210,6 +210,8 @@
                           "effects:write",
                           "sources:read",
                           "sources:manage",
+                          "projects:read",
+                          "projects:manage",
                           "stats:read",
                           "admin:manage"
                         ]
@@ -268,6 +270,8 @@
                           "effects:write",
                           "sources:read",
                           "sources:manage",
+                          "projects:read",
+                          "projects:manage",
                           "stats:read",
                           "admin:manage"
                         ]
@@ -297,6 +301,8 @@
                             "effects:write",
                             "sources:read",
                             "sources:manage",
+                            "projects:read",
+                            "projects:manage",
                             "stats:read",
                             "admin:manage"
                           ]
@@ -370,6 +376,8 @@
                                 "effects:write",
                                 "sources:read",
                                 "sources:manage",
+                                "projects:read",
+                                "projects:manage",
                                 "stats:read",
                                 "admin:manage"
                               ]
@@ -472,6 +480,8 @@
                         "effects:write",
                         "sources:read",
                         "sources:manage",
+                        "projects:read",
+                        "projects:manage",
                         "stats:read",
                         "admin:manage"
                       ]
@@ -536,6 +546,8 @@
                               "effects:write",
                               "sources:read",
                               "sources:manage",
+                              "projects:read",
+                              "projects:manage",
                               "stats:read",
                               "admin:manage"
                             ]
@@ -2873,6 +2885,285 @@
         }
       }
     },
+    "/v1/projects": {
+      "get": {
+        "summary": "List the projects in the calling tenant (default first).",
+        "tags": [
+          "projects"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "projects": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "isDefault": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "createdAt",
+                          "isDefault"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "projects"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a project (a new, isolated workspace scope).",
+        "tags": [
+          "projects"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "isDefault": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "createdAt",
+                    "isDefault"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/projects/{id}": {
+      "get": {
+        "summary": "Get a project by id.",
+        "tags": [
+          "projects"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "isDefault": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "createdAt",
+                    "isDefault"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Rename a project (not the reserved default).",
+        "tags": [
+          "projects"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "isDefault": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "createdAt",
+                    "isDefault"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a project (not the reserved default).",
+        "tags": [
+          "projects"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "deleted": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "deleted"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/stats": {
       "get": {
         "summary": "The workspace summary: indexed documents, memories, graph size, sources, last scan.",
@@ -3375,6 +3666,8 @@
                 "effects.write",
                 "source.read",
                 "source.manage",
+                "project.read",
+                "project.manage",
                 "billing.read",
                 "billing.manage",
                 "audit.read",
@@ -3507,6 +3800,8 @@
                               "effects.write",
                               "source.read",
                               "source.manage",
+                              "project.read",
+                              "project.manage",
                               "billing.read",
                               "billing.manage",
                               "audit.read",
@@ -3597,6 +3892,8 @@
                 "effects.write",
                 "source.read",
                 "source.manage",
+                "project.read",
+                "project.manage",
                 "billing.read",
                 "billing.manage",
                 "audit.read",
@@ -3722,6 +4019,8 @@
                               "effects.write",
                               "source.read",
                               "source.manage",
+                              "project.read",
+                              "project.manage",
                               "billing.read",
                               "billing.manage",
                               "audit.read",
@@ -4237,6 +4536,8 @@
                               "effects.write",
                               "source.read",
                               "source.manage",
+                              "project.read",
+                              "project.manage",
                               "billing.read",
                               "billing.manage",
                               "audit.read",

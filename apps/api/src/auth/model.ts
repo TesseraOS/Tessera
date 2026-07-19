@@ -33,6 +33,8 @@ export const PERMISSIONS = [
   'effects:write',
   'sources:read',
   'sources:manage',
+  'projects:read',
+  'projects:manage',
   'stats:read',
   'admin:manage',
 ] as const;
@@ -45,6 +47,9 @@ const READ_PERMISSIONS: readonly Permission[] = [
   'effects:read',
   'memory:read',
   'sources:read',
+  // Every authenticated user can see the project list (it drives the app-shell switcher); creating,
+  // renaming, and deleting projects is a `projects:manage` mutation (member+).
+  'projects:read',
   // The workspace summary aggregates across documents, memory, graph and sources (F-060), so it is
   // its own permission rather than an existing read: a token scoped to only `memory:read` must not
   // learn graph/document counts through it (scopes are a least-privilege upper bound).
@@ -59,7 +64,13 @@ const READ_PERMISSIONS: readonly Permission[] = [
 export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
   owner: PERMISSIONS,
   admin: PERMISSIONS,
-  member: [...READ_PERMISSIONS, 'memory:write', 'effects:write', 'sources:manage'],
+  member: [
+    ...READ_PERMISSIONS,
+    'memory:write',
+    'effects:write',
+    'sources:manage',
+    'projects:manage',
+  ],
   viewer: READ_PERMISSIONS,
 };
 

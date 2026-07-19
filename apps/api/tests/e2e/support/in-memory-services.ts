@@ -16,6 +16,7 @@ import { createInMemoryGraphStore, createKnowledgeGraphService } from '@tessera/
 import { createInMemoryMemoryStore, createMemoryService } from '@tessera/memory';
 import { createHybridRetriever, type Candidate, type Retriever } from '@tessera/retrieval';
 import { createInProcessQueue } from '@tessera/storage';
+import { createInMemoryProjectStore, createProjectService } from '../../../src/projects/index';
 import type { ApiServices } from '../../../src/services';
 
 /**
@@ -64,9 +65,12 @@ const keywordRetriever: Retriever = {
       .slice(0, limit);
     return Promise.resolve(scored);
   },
-  // The fixed test corpus is tenant-agnostic; scoping is a no-op (memory isolation is proven by the
-  // real tenant-aware memory store — see the cross-tenant e2e).
+  // The fixed test corpus is scope-agnostic; scoping is a no-op (memory isolation is proven by the
+  // real tenant/project-aware memory store — see the cross-tenant e2e).
   forTenant() {
+    return keywordRetriever;
+  },
+  forProject() {
     return keywordRetriever;
   },
 };
@@ -124,5 +128,12 @@ export async function createInMemoryServices(): Promise<ApiServices> {
   const search = createHybridRetriever([keywordRetriever]);
   const compiler = createContextCompiler({ retriever: search, fragmentSource, graphStore });
 
-  return { search, compiler, graph, memory, sources: createInMemorySourceService() };
+  return {
+    search,
+    compiler,
+    graph,
+    memory,
+    sources: createInMemorySourceService(),
+    projects: createProjectService(createInMemoryProjectStore()),
+  };
 }

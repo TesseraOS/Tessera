@@ -4,6 +4,7 @@ import type { SourceService } from '@tessera/ingestion';
 import type { KnowledgeGraphService } from '@tessera/knowledge-graph';
 import type { MemoryService } from '@tessera/memory';
 import type { HybridRetriever } from '@tessera/retrieval';
+import type { ProjectService } from './projects/index.js';
 
 /**
  * Readiness of one downstream dependency, surfaced by `/ready`. `ok: false` makes the endpoint
@@ -43,6 +44,12 @@ export interface ApiServices {
    * return a clean "not configured" error (e.g. doc generation with no runtime).
    */
   readonly sources?: SourceService;
+  /**
+   * Multi-project workspaces (F-066; ADR-0037) — `/v1/projects*`. Optional; the composition root wires
+   * it (a project is a `(tenant, project)` scope under the tenant). When omitted the `/v1/projects`
+   * routes return a clean "not configured" error (e.g. doc generation with no runtime).
+   */
+  readonly projects?: ProjectService;
   /**
    * Billing provider (F-030) — `/v1/billing/*`. Optional; when omitted the routes fall back to the
    * local/free adapter (open-core default), so plans/subscription always answer.

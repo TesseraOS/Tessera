@@ -12,6 +12,10 @@
       "types": "./dist/auth/core.d.ts",
       "import": "./dist/auth/core.js"
     },
+    "./projects": {
+      "types": "./dist/projects/index.d.ts",
+      "import": "./dist/projects/index.js"
+    },
     "./stats": {
       "types": "./dist/stats/core.d.ts",
       "import": "./dist/stats/core.js"

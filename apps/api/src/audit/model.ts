@@ -20,6 +20,10 @@ export const AUDIT_ACTIONS = [
   'effects.write',
   'source.read',
   'source.manage',
+  // Multi-project workspaces (F-066, ADR-0037): reading the project list vs. creating/renaming/deleting
+  // a project. Project lifecycle is audited (a project is a data-isolation boundary).
+  'project.read',
+  'project.manage',
   'billing.read',
   'billing.manage',
   'audit.read',

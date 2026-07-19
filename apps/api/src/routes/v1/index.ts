@@ -13,6 +13,7 @@ import { registerEffectsRoutes } from './effects.js';
 import { registerGraphRoutes } from './graph.js';
 import { registerMemoryRoutes } from './memory.js';
 import { registerSourceRoutes } from './sources.js';
+import { registerProjectRoutes } from './projects.js';
 import { registerStatsRoutes } from './stats.js';
 import { registerEventsRoutes } from './events.js';
 import { registerBillingRoutes } from './billing.js';
@@ -69,6 +70,7 @@ export function registerV1Routes(
       registerGraphRoutes(v1, services);
       registerMemoryRoutes(v1, services, events);
       registerSourceRoutes(v1, services);
+      registerProjectRoutes(v1, services);
       registerStatsRoutes(v1, services, audit);
       registerEventsRoutes(v1, events, hardening.security);
       registerBillingRoutes(v1, services);

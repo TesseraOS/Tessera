@@ -247,6 +247,8 @@ export type AuditAction =
   | 'effects.write'
   | 'source.read'
   | 'source.manage'
+  | 'project.read'
+  | 'project.manage'
   | 'billing.read'
   | 'billing.manage'
   | 'audit.read'

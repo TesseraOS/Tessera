@@ -19,6 +19,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   'effects.write': 'Effects write',
   'source.read': 'Source read',
   'source.manage': 'Source manage',
+  'project.read': 'Project read',
+  'project.manage': 'Project manage',
   'billing.read': 'Billing read',
   'billing.manage': 'Billing manage',
   'audit.read': 'Audit read',

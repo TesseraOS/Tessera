@@ -109,6 +109,23 @@ export {
 } from './audit/index.js';
 export { API_VERSION } from './plugins/openapi.js';
 
+// Multi-project workspaces (F-066; ADR-0037) — the domain/port/in-memory adapter + service are
+// Fastify-free (the composition root builds a persistent store); the `/v1/projects` routes wrap the
+// service. A project is a `(tenant, project)` scope under the tenant.
+export {
+  DEFAULT_PROJECT_NAME,
+  MAX_PROJECT_NAME_LENGTH,
+  createInMemoryProjectStore,
+  createProjectService,
+  defaultProjectFor,
+  isDefaultProject,
+  type CreateProjectInput,
+  type Project,
+  type ProjectService,
+  type ProjectStore,
+  type RenameProjectInput,
+} from './projects/index.js';
+
 // Data-subject rights (NFR-13; F-047, ADR-0049) — Fastify-free export/erasure over the injected
 // services + audit log, surfaced by the admin-only, audited `/v1/dsr/*` routes.
 export {
@@ -133,6 +150,7 @@ export * from './schemas/effects.js';
 export * from './schemas/graph.js';
 export * from './schemas/memory.js';
 export * from './schemas/sources.js';
+export * from './schemas/projects.js';
 export * from './schemas/billing.js';
 export * from './schemas/audit.js';
 export * from './schemas/retention.js';

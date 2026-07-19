@@ -7,6 +7,7 @@ import {
   CreditCard,
   FileDown,
   FileX2,
+  FolderKanban,
   KeyRound,
   Package,
   RefreshCw,
@@ -113,6 +114,12 @@ export function describeEvent(event: Pick<RecentActivityEvent, 'action' | 'targe
         default:
           return base(KeyRound, 'Tokens updated', 'API token settings were changed.');
       }
+    case 'project.manage':
+      // Rename and delete share the `/v1/projects/:id` route pattern (the trail carries no method), so
+      // the item route reads as a neutral update; the collection route is unambiguously a creation.
+      return target === '/v1/projects'
+        ? base(FolderKanban, 'Project created', 'A new workspace project was created.')
+        : base(FolderKanban, 'Project updated', 'A project was renamed or removed.');
     case 'billing.manage':
       return base(CreditCard, 'Billing updated', 'Subscription or payment details were changed.');
     case 'retention.manage':

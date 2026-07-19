@@ -14,6 +14,7 @@ import {
   createOidcAuthProvider,
   createTokenAuthProvider,
 } from '@tessera/api/auth';
+import { createProjectService } from '@tessera/api/projects';
 import {
   createDodoBilling,
   createInMemorySubscriptionStore,
@@ -67,6 +68,7 @@ import { createIndexingDocumentSink } from '../sources/ingestion-sink.js';
 import { createIndexingMemoryService } from '../sources/memory-indexing.js';
 import { createEnrichedRetriever } from '../sources/search-enrichment.js';
 import { createSqliteManifest } from '../sources/sqlite-manifest.js';
+import { createSqliteProjectStore } from '../projects/sqlite-project-store.js';
 import { createSqliteSourceRegistry } from '../sources/sqlite-source-registry.js';
 import { createTreeSitterSymbolExtractor } from '../symbols/tree-sitter-extractor.js';
 import type { Env } from '../load.js';
@@ -382,6 +384,8 @@ export async function createLocalRuntime(
     graph,
     memory: indexedMemory,
     sources,
+    // Multi-project workspaces (F-066, ADR-0037): persistent project catalog under the tenant.
+    projects: createProjectService(createSqliteProjectStore(relational.db)),
     billing,
     readiness: async () => {
       const ok = await relational.healthcheck().catch(() => false);

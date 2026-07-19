@@ -77,9 +77,27 @@ pre-decided the model). **Recorded gaps to close before F-050 is DONE** (in the 
 threading; **9b** DSR export/erasure must span **all** projects (NFR-13 — today default-project only, a
 compliance gap), stats/retention project-scoping.
 
-**Next step** — F-050 stays `in_progress`. Resume at **7b** (ingestion → sink project threading, with
-F-071) and **9b** (DSR completeness), then **10** MCP project tools + session project, **11** dashboard
-switcher + '+ New' menu, **12** F-024 migration + full-stack cross-project e2e.
+### Completeness + agent parity (same session) — 9b + 10
+
+Two more increments (commits `be01e19`, `88743a2`):
+
+- **9b — tenant-wide surfaces span all projects.** New `tenantProjectIds` helper. **DSR export + erasure
+  now iterate every project (NFR-13** — a right-of-access answer / erasure that covered only the default
+  project was a compliance gap); **retention prune** spans all projects; **stats counts** are
+  project-scoped (`computeWorkspaceStats(…, projectId)`). Audit trail stays tenant-level (no project on
+  events, by design). DSR multi-project e2e added.
+- **10 — MCP project parity + scoping.** Project CRUD tools (`list/create/rename/delete_project`, gateway
+  perms + audit actions) + `projectOf` (header → `defaultProject` build option → default, validated
+  against the tenant) threaded through every data tool; `get_stats` passes the project to the shared
+  aggregate. mcp e2e: CRUD parity + config-scoped isolation + unknown-project reject.
+
+**Evidence** — gates green: `verify-state`, `typecheck` 40/40, `lint` 23/23, `test` 38/38, **api e2e 113**
+(+2 DSR multi-project), **mcp e2e 28** (+3 project), `format`.
+
+**Next step** — F-050 stays `in_progress`. Remaining: **11** dashboard project switcher + '+ New'
+quick-create menu (large frontend — verify by screenshot per the quality bar); **7b** ingestion→sink
+project threading (entangled with F-071); **12** F-024 migration registration + full-stack cross-project
+e2e. Then definition-of-done + mark `done`.
 
 ## 2026-07-19 — fix: the api e2e still spoke the pre-F-081 synchronous scan contract
 

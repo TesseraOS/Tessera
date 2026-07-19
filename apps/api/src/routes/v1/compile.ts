@@ -7,6 +7,7 @@ import {
 import type { CompileRequest } from '@tessera/context-compiler';
 import type { ZodFastify } from '../../app-types.js';
 import { requirePermission, tenantOf } from '../../auth/index.js';
+import { projectOf } from '../../projects/selection.js';
 import type { ApiServices } from '../../services.js';
 import {
   compileBodySchema,
@@ -44,8 +45,11 @@ export function registerCompileRoutes(app: ZodFastify, services: ApiServices): v
           ? { filters: filters.kinds !== undefined ? { kinds: filters.kinds } : {} }
           : {}),
       };
-      // Data-plane isolation (FR-52): compile against only the caller-tenant's corpus/graph.
-      return services.compiler.forTenant(tenantId).compile(compileRequest);
+      // Data-plane isolation (FR-52/FR-66): compile against only the caller's (tenant, project) corpus/graph.
+      return services.compiler
+        .forTenant(tenantId)
+        .forProject(projectOf(request))
+        .compile(compileRequest);
     },
   );
 }

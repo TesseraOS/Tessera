@@ -2,6 +2,7 @@ import { NotFoundError } from '@tessera/core';
 import type { MemoryLineageId } from '@tessera/memory';
 import type { ZodFastify } from '../../app-types.js';
 import { requirePermission, tenantOf } from '../../auth/index.js';
+import { projectOf } from '../../projects/selection.js';
 import type { ApiEventBus } from '../../events.js';
 import type { ApiServices } from '../../services.js';
 import {
@@ -42,7 +43,10 @@ export function registerMemoryRoutes(
     },
     async (request, reply) => {
       const tenantId = tenantOf(request);
-      const memory = await services.memory.forTenant(tenantId).capture(request.body);
+      const memory = await services.memory
+        .forTenant(tenantId)
+        .forProject(projectOf(request))
+        .capture(request.body);
       // Live update (FR-38): notify SSE subscribers of the new memory (non-sensitive summary only).
       // Attributed to the capturing tenant so only their stream receives it (ADR-0050) — the title
       // alone is enough to leak what another org is working on.
@@ -74,7 +78,10 @@ export function registerMemoryRoutes(
         ...(kind !== undefined ? { kind } : {}),
         ...(scope !== undefined ? { scope } : {}),
       };
-      const memories = await services.memory.forTenant(tenantOf(request)).list(filter);
+      const memories = await services.memory
+        .forTenant(tenantOf(request))
+        .forProject(projectOf(request))
+        .list(filter);
       return { memories };
     },
   );
@@ -93,7 +100,10 @@ export function registerMemoryRoutes(
     },
     async (request) => {
       const lineageId = request.params.lineageId as MemoryLineageId;
-      const memory = await services.memory.forTenant(tenantOf(request)).getCurrent(lineageId);
+      const memory = await services.memory
+        .forTenant(tenantOf(request))
+        .forProject(projectOf(request))
+        .getCurrent(lineageId);
       if (memory === undefined) {
         throw new NotFoundError('memory lineage not found', { details: { lineageId } });
       }
@@ -116,7 +126,10 @@ export function registerMemoryRoutes(
     },
     (request) => {
       const lineageId = request.params.lineageId as MemoryLineageId;
-      return services.memory.forTenant(tenantOf(request)).edit(lineageId, request.body);
+      return services.memory
+        .forTenant(tenantOf(request))
+        .forProject(projectOf(request))
+        .edit(lineageId, request.body);
     },
   );
 
@@ -134,7 +147,10 @@ export function registerMemoryRoutes(
     },
     async (request) => {
       const lineageId = request.params.lineageId as MemoryLineageId;
-      const versions = await services.memory.forTenant(tenantOf(request)).history(lineageId);
+      const versions = await services.memory
+        .forTenant(tenantOf(request))
+        .forProject(projectOf(request))
+        .history(lineageId);
       return { versions };
     },
   );

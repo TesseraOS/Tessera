@@ -61,9 +61,12 @@ const keywordRetriever: Retriever = {
       .slice(0, limit);
     return Promise.resolve(scored);
   },
-  // The fixed test corpus is tenant-agnostic; scoping is a no-op here (FR-52 isolation is covered by
-  // the tenant-aware stores + the api cross-tenant e2e).
+  // The fixed test corpus is scope-agnostic; scoping is a no-op here (FR-52/FR-66 isolation is covered
+  // by the tenant/project-aware stores + the api cross-tenant/cross-project e2e).
   forTenant() {
+    return keywordRetriever;
+  },
+  forProject() {
     return keywordRetriever;
   },
 };

@@ -19,7 +19,11 @@ export function registerOpenapi(app: FastifyInstance): void {
         title: 'Tessera API',
         version: '0.0.0',
         description:
-          'Context & Memory OS for AI coding agents — search, compile_context, get_effects, and versioned memory.',
+          'Context & Memory OS for AI coding agents — search, compile_context, get_effects, and versioned memory.\n\n' +
+          '**Project scope (multi-project workspaces, ADR-0037):** send the `X-Tessera-Project` header ' +
+          'with a project id (from `GET /v1/projects`) to scope a request — its search, compile, effects, ' +
+          'graph, memory, and sources — to that project. Omit it (or send `default`) for the reserved ' +
+          'default project. An unknown/foreign project id is rejected with `404`.',
       },
       servers: [{ url: '/' }],
       tags: [
@@ -27,6 +31,7 @@ export function registerOpenapi(app: FastifyInstance): void {
         { name: 'compile', description: 'Context compilation.' },
         { name: 'effects', description: 'Knowledge-graph effect-links.' },
         { name: 'memory', description: 'Versioned memory.' },
+        { name: 'projects', description: 'Multi-project workspaces (X-Tessera-Project scope).' },
         { name: 'ops', description: 'Operational endpoints.' },
       ],
     },

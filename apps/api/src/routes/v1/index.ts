@@ -14,6 +14,7 @@ import { registerGraphRoutes } from './graph.js';
 import { registerMemoryRoutes } from './memory.js';
 import { registerSourceRoutes } from './sources.js';
 import { registerProjectRoutes } from './projects.js';
+import { registerProjectSelection } from '../../projects/selection.js';
 import { registerStatsRoutes } from './stats.js';
 import { registerEventsRoutes } from './events.js';
 import { registerBillingRoutes } from './billing.js';
@@ -55,6 +56,9 @@ export function registerV1Routes(
       const v1 = instance.withTypeProvider<ZodTypeProvider>();
       // Authenticate every /v1 request first (per-route authorization is in each route module).
       registerAuth(v1, auth);
+      // Resolve + validate the X-Tessera-Project selection AFTER auth (it needs the tenant), so data
+      // routes can scope to a project (F-066, ADR-0037). Omitted → the default project.
+      registerProjectSelection(v1, services);
       // Rate limit AFTER auth so the key can use the resolved principal (fallback per-IP) (F-044).
       if (hardening.rateLimiter !== undefined) {
         registerRateLimit(v1, { limiter: hardening.rateLimiter });

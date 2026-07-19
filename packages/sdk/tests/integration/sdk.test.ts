@@ -47,8 +47,11 @@ function memoryStub() {
       byLineage.delete(lineageId);
       return Promise.resolve();
     },
-    // Tenant scoping (FR-52) is a no-op for the canned stub — return the same store.
+    // Tenant/project scoping (FR-52/FR-66) is a no-op for the canned stub — return the same store.
     forTenant() {
+      return this;
+    },
+    forProject() {
       return this;
     },
   };
@@ -70,6 +73,9 @@ function stubServices(): ApiServices {
       forTenant() {
         return this;
       },
+      forProject() {
+        return this;
+      },
     },
     compiler: {
       compile: (request: { task: string; budget: number }) =>
@@ -84,12 +90,18 @@ function stubServices(): ApiServices {
       forTenant() {
         return this;
       },
+      forProject() {
+        return this;
+      },
     },
     graph: {
       getEffects: () => Promise.resolve({ effects: [] }),
       exportAll: () => Promise.resolve({ nodes: [], edges: [] }),
       purge: () => Promise.resolve({ nodes: 0, edges: 0 }),
       forTenant() {
+        return this;
+      },
+      forProject() {
         return this;
       },
     },

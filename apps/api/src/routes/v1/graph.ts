@@ -7,6 +7,7 @@ import {
 } from '@tessera/knowledge-graph';
 import type { ZodFastify } from '../../app-types.js';
 import { requirePermission, tenantOf } from '../../auth/index.js';
+import { projectOf } from '../../projects/selection.js';
 import type { ApiServices } from '../../services.js';
 import {
   graphQuerySchema,
@@ -55,7 +56,10 @@ export function registerGraphRoutes(app: ZodFastify, services: ApiServices): voi
         ...(nodeFilter !== undefined ? { nodeKinds: nodeFilter } : {}),
         ...(edgeFilter !== undefined ? { edgeKinds: edgeFilter } : {}),
       };
-      const snapshot = await services.graph.forTenant(tenantOf(request)).queryGraph(filter);
+      const snapshot = await services.graph
+        .forTenant(tenantOf(request))
+        .forProject(projectOf(request))
+        .queryGraph(filter);
       return { nodes: [...snapshot.nodes], edges: [...snapshot.edges] };
     },
   );

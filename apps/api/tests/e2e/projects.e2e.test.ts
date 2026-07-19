@@ -181,6 +181,88 @@ describe('@tessera/api /v1/projects', () => {
     });
   });
 
+  describe('project selection (X-Tessera-Project) + data isolation', () => {
+    let app: ReturnType<typeof buildServer>;
+    beforeEach(async () => {
+      app = buildServer(services);
+      await app.ready();
+    });
+    afterEach(async () => {
+      await app.close();
+    });
+
+    it("scopes memory to the header's project — invisible in other projects and the default", async () => {
+      // Create a project, then capture a memory scoped to it via the header.
+      const created = await app.inject({
+        method: 'POST',
+        url: '/v1/projects',
+        payload: { name: 'Backend' },
+      });
+      const projectId = created.json().id as string;
+      const header = { 'x-tessera-project': projectId };
+
+      const captured = await app.inject({
+        method: 'POST',
+        url: '/v1/memory',
+        headers: header,
+        payload: { kind: 'decision', title: 'Use Fastify', body: 'ADR-0002 picks Fastify.' },
+      });
+      expect(captured.statusCode).toBe(201);
+      const lineageId = captured.json().lineageId as string;
+
+      // Visible inside the project.
+      const inProject = await app.inject({ method: 'GET', url: '/v1/memory', headers: header });
+      expect(inProject.json().memories.map((m: { lineageId: string }) => m.lineageId)).toContain(
+        lineageId,
+      );
+      const byId = await app.inject({
+        method: 'GET',
+        url: `/v1/memory/${lineageId}`,
+        headers: header,
+      });
+      expect(byId.statusCode).toBe(200);
+
+      // Invisible in the default project (no header).
+      const inDefault = await app.inject({ method: 'GET', url: '/v1/memory' });
+      expect(inDefault.json().memories).toHaveLength(0);
+      const byIdDefault = await app.inject({ method: 'GET', url: `/v1/memory/${lineageId}` });
+      expect(byIdDefault.statusCode).toBe(404);
+
+      // Invisible in a different project.
+      const other = await app.inject({
+        method: 'POST',
+        url: '/v1/projects',
+        payload: { name: 'Frontend' },
+      });
+      const otherId = other.json().id as string;
+      const inOther = await app.inject({
+        method: 'GET',
+        url: '/v1/memory',
+        headers: { 'x-tessera-project': otherId },
+      });
+      expect(inOther.json().memories).toHaveLength(0);
+    });
+
+    it('404s a request that selects an unknown/foreign project', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/v1/memory',
+        headers: { 'x-tessera-project': 'does-not-exist' },
+      });
+      expect(res.statusCode).toBe(404);
+      expect(res.json().error.code).toBe('NOT_FOUND');
+    });
+
+    it('treats an explicit `default` header as the default project (unchanged behavior)', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/v1/memory',
+        headers: { 'x-tessera-project': 'default' },
+      });
+      expect(res.statusCode).toBe(200);
+    });
+  });
+
   describe('not configured', () => {
     it('409s when no project service is wired (e.g. doc generation)', async () => {
       const app = buildServer({ ...services, projects: undefined });

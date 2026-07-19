@@ -2,6 +2,7 @@ import { InternalError, NotFoundError } from '@tessera/core';
 import type { SourceId, SourceRecord, SourceService } from '@tessera/ingestion';
 import type { ZodFastify } from '../../app-types.js';
 import { requirePermission, tenantOf } from '../../auth/index.js';
+import { projectOf } from '../../projects/selection.js';
 import type { ApiServices } from '../../services.js';
 import {
   registerSourceBodySchema,
@@ -60,7 +61,10 @@ export function registerSourceRoutes(app: ZodFastify, services: ApiServices): vo
       config: { audit: 'source.read' },
     },
     async (request) => {
-      const sources = await requireSources(services).forTenant(tenantOf(request)).list();
+      const sources = await requireSources(services)
+        .forTenant(tenantOf(request))
+        .forProject(projectOf(request))
+        .list();
       return { sources: sources.map(toWire) };
     },
   );
@@ -81,6 +85,7 @@ export function registerSourceRoutes(app: ZodFastify, services: ApiServices): vo
       const { kind, label, config } = request.body;
       const source = await requireSources(services)
         .forTenant(tenantOf(request))
+        .forProject(projectOf(request))
         .register({ kind, config, ...(label !== undefined ? { label } : {}) });
       return reply.status(201).send(toWire(source));
     },
@@ -100,7 +105,10 @@ export function registerSourceRoutes(app: ZodFastify, services: ApiServices): vo
     },
     async (request) => {
       const id = request.params.id as SourceId;
-      const source = await requireSources(services).forTenant(tenantOf(request)).get(id);
+      const source = await requireSources(services)
+        .forTenant(tenantOf(request))
+        .forProject(projectOf(request))
+        .get(id);
       if (source === undefined) {
         throw new NotFoundError('source not found', { details: { id } });
       }
@@ -122,7 +130,10 @@ export function registerSourceRoutes(app: ZodFastify, services: ApiServices): vo
     },
     async (request) => {
       const id = request.params.id as SourceId;
-      await requireSources(services).forTenant(tenantOf(request)).remove(id);
+      await requireSources(services)
+        .forTenant(tenantOf(request))
+        .forProject(projectOf(request))
+        .remove(id);
       return { id };
     },
   );
@@ -146,7 +157,9 @@ export function registerSourceRoutes(app: ZodFastify, services: ApiServices): vo
     },
     async (request, reply) => {
       const id = request.params.id as SourceId;
-      const scoped = requireSources(services).forTenant(tenantOf(request));
+      const scoped = requireSources(services)
+        .forTenant(tenantOf(request))
+        .forProject(projectOf(request));
 
       // `startScan`, not `scan` (F-081). This used to await the coordinator AND the queue drain, so
       // the client held a request open for the whole ingest — CPU-bound embedding included. The
@@ -180,7 +193,10 @@ export function registerSourceRoutes(app: ZodFastify, services: ApiServices): vo
     },
     async (request) => {
       const id = request.params.id as SourceId;
-      const status = await requireSources(services).forTenant(tenantOf(request)).scanStatus(id);
+      const status = await requireSources(services)
+        .forTenant(tenantOf(request))
+        .forProject(projectOf(request))
+        .scanStatus(id);
       if (status === undefined) {
         throw new NotFoundError('source not found', { details: { id } });
       }

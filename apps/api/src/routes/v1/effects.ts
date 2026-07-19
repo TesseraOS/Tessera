@@ -1,6 +1,7 @@
 import type { GetEffectsOptions } from '@tessera/knowledge-graph';
 import type { ZodFastify } from '../../app-types.js';
 import { requirePermission, tenantOf } from '../../auth/index.js';
+import { projectOf } from '../../projects/selection.js';
 import type { ApiServices } from '../../services.js';
 import {
   assertEffectBodySchema,
@@ -33,9 +34,10 @@ export function registerEffectsRoutes(app: ZodFastify, services: ApiServices): v
       const { kind, key, maxDepth } = request.query;
       const options: GetEffectsOptions | undefined =
         maxDepth === undefined ? undefined : { maxDepth };
-      // Data-plane isolation (FR-52): traverse only the caller-tenant's graph.
+      // Data-plane isolation (FR-52/FR-66): traverse only the caller's (tenant, project) graph.
       const effects = await services.graph
         .forTenant(tenantOf(request))
+        .forProject(projectOf(request))
         .getEffects({ kind, key }, options);
       return { effects };
     },
@@ -55,14 +57,17 @@ export function registerEffectsRoutes(app: ZodFastify, services: ApiServices): v
     },
     async (request, reply) => {
       const { from, to, rationale, confidence, metadata } = request.body;
-      const edge = await services.graph.forTenant(tenantOf(request)).assertEffectLink({
-        from,
-        to,
-        rationale,
-        origin: 'manual', // clients may only assert manual links (static/learned are system-derived)
-        ...(confidence !== undefined ? { confidence } : {}),
-        ...(metadata !== undefined ? { metadata } : {}),
-      });
+      const edge = await services.graph
+        .forTenant(tenantOf(request))
+        .forProject(projectOf(request))
+        .assertEffectLink({
+          from,
+          to,
+          rationale,
+          origin: 'manual', // clients may only assert manual links (static/learned are system-derived)
+          ...(confidence !== undefined ? { confidence } : {}),
+          ...(metadata !== undefined ? { metadata } : {}),
+        });
       return reply.status(201).send(edge);
     },
   );

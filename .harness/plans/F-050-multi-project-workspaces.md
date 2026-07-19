@@ -30,11 +30,16 @@ Rationale:
 No new ADR needed — ADR-0037 pre-decided the model and explicitly delegated this choice.
 
 ## Increment sequence (each independently verifiable + committable, gates green at every step)
-> **Status (2026-07-19):** increments **1–6 DONE + the config data-plane wiring DONE** (commits
-> `216f5ec` storage, `2daca6e` memory/graph/retrieval/compiler/config). The entire data plane now
-> supports `forProject` with adapter-enforced isolation + conformance cases; workspace gates green.
-> **Remaining:** 7 (sources registry + ingestion threading), 8 (Project entity + `/v1/projects`), 9
-> (`X-Tessera-Project` selection + route threading), 10 (MCP), 11 (dashboard), 12 (migration + e2e).
+> **Status (2026-07-19):** increments **1–6 DONE, 7a DONE (sources catalog), 8 DONE (Project entity +
+> `/v1/projects`), 9 DONE (X-Tessera-Project selection + core data-route threading)**. Commits:
+> `216f5ec` storage · `2daca6e` data-plane · `65cda61` sources catalog · `34753e4` control plane · (this)
+> selection. Projects are creatable/manageable via REST and a request scopes to one via the header, with
+> real cross-project isolation proven end-to-end (memory/graph). Workspace gates green.
+> **Remaining:** **7b** ingestion-indexing threading (a scan lands in the source's project — entangled
+> with F-071's tenant threading to the DocumentSink); **9b** project-completeness for the tenant-wide
+> surfaces — **DSR export/erasure MUST span all projects (NFR-13 — currently default-project only, a
+> compliance gap to close before DONE)**, stats counts + retention SHOULD be project-scoped/complete;
+> **10** MCP; **11** dashboard; **12** F-024 migration + full-stack e2e.
 
 1. **[DONE]** **Scope primitive** — `@tessera/core`: add `ProjectId` + `DEFAULT_PROJECT_ID = 'default'` to `tenant.ts`
    (co-located with the tenant primitive); export from `index.ts`. `@tessera/api/auth/model` re-exports.
@@ -54,16 +59,25 @@ No new ADR needed — ADR-0037 pre-decided the model and explicitly delegated th
    `computeCompilationKey` so the compile cache key **includes the project** (ADR-0037: else it goes ambiguous).
    *(Also DONE: `@tessera/config` corpus-indexer + memory-indexing + search-enrichment decorators + observability
    instrument Proxy/`traceCompiler` now thread `forProject`; indexer project-isolation test.)*
-7. **Sources** (`@tessera/ingestion` + `@tessera/config`) — `forProject` on `SourceRegistry`; `SourceRecord` gains a
-   visible `projectId` (control-plane entity); in-memory + `sqlite-source-registry`; conformance case. Ingestion/
-   corpus-indexer scope threading so a scan lands in the source's project.
-8. **Project entity + control plane** (`@tessera/api`) — `Project` domain + `ProjectStore` (in-memory + sqlite) +
-   `ProjectService`; `/v1/projects` CRUD (list/create/get/rename/delete) with audited lifecycle (E-020); OpenAPI +
-   SDK regen; the reserved `default` project is implicit and undeletable.
-9. **Project selection at the boundary** — resolve `projectId` from **`X-Tessera-Project`** header (the one
-   documented mechanism; omitted → `default`), validate it belongs to the caller's tenant on **every** request,
-   thread `services.x.forTenant(t).forProject(p)` through every data route. Special-case `forProject` in the
-   `@tessera/observability` instrument Proxy (as `forTenant` is) so the sync scoped view isn't promisified.
+7. **[7a DONE]** **Sources catalog** (`@tessera/ingestion` + `@tessera/config`) — `forProject` on `SourceRegistry` +
+   `SourceService`; `SourceRecord` gains a `projectId` (stamped, kept off the wire like `tenantId`); in-memory +
+   `sqlite-source-registry` (additive `project_id` column); shared conformance project-isolation case.
+   **[7b TODO]** ingestion-indexing threading — a scan's content lands in the source's project (scan → worker →
+   DocumentSink → corpus-indexer). Entangled with **F-071** (tenant isn't fully threaded to the sink yet); the
+   corpus-indexer already accepts `projectId` (increment 6), so this is the sink/worker/queue-job plumbing.
+8. **[DONE]** **Project entity + control plane** (`@tessera/api`) — `Project` domain + `ProjectStore` (in-memory +
+   sqlite, config) + `ProjectService`; Fastify-free `./projects` subpath; `/v1/projects` CRUD (list/create/get/
+   rename/delete) audited (`project.read`/`project.manage`), gated by new `projects:read`/`projects:manage` perms;
+   reserved `default` implicit + undeletable; wired into the local profile + e2e; OpenAPI + SDK regen; shared
+   ProjectStore conformance (in-memory) + focused sqlite test + service unit + `/v1/projects` e2e.
+9. **[9a DONE]** **Project selection at the boundary** — `registerProjectSelection` resolves + validates
+   `X-Tessera-Project` (omitted/`default` → default; unknown/foreign → 404) after auth; `projectOf(request)` +
+   `.forProject()` threaded through search/compile/effects/graph/memory/sources; documented in the OpenAPI info;
+   cross-project isolation e2e (memory invisible across projects + default). `forProject` special-cased in the
+   observability Proxy (increment 6).
+   **[9b TODO]** project-completeness for tenant-wide surfaces: **DSR export/erasure must iterate all projects**
+   (NFR-13 — `purgeTenant`/DSR bundle currently cover only the default project); stats counts + retention should
+   be project-scoped/complete. Audit trail stays tenant-level (events carry no project — by design).
 10. **MCP** (`@tessera/mcp`) — project CRUD tools (ADR-0036 parity) + session/config project selection.
 11. **Dashboard** (`apps/web`) — project switcher in the app shell; create/manage projects; evolve the sidebar
     'New memory' button into a single **'+ New'** quick-create menu (memory / source / project; contextual

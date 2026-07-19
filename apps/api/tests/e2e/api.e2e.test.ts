@@ -102,6 +102,9 @@ describe('@tessera/api REST /v1', () => {
         forTenant() {
           return spy;
         },
+        forProject() {
+          return spy;
+        },
       };
       const spied = buildServer({ ...services, search: spy as unknown as ApiServices['search'] });
       await spied.ready();

@@ -4,6 +4,7 @@
 import { toRetrievalInclude, type RetrievalQuery } from '@tessera/retrieval';
 import type { ZodFastify } from '../../app-types.js';
 import { requirePermission, tenantOf } from '../../auth/index.js';
+import { projectOf } from '../../projects/selection.js';
 import type { ApiServices } from '../../services.js';
 import { searchBodySchema, searchResponseSchema, type SearchBody } from '../../schemas/search.js';
 
@@ -29,8 +30,11 @@ export function registerSearchRoutes(app: ZodFastify, services: ApiServices): vo
         // Threaded through only when asked for: the default answer stays token-lean (NFR-4).
         ...(include === undefined ? {} : { include: toRetrievalInclude(include) }),
       };
-      // Data-plane isolation (FR-52): search only the caller-tenant's indices.
-      const results = await services.search.forTenant(tenantOf(request)).search(retrievalQuery);
+      // Data-plane isolation (FR-52/FR-66): search only the caller's (tenant, project) indices.
+      const results = await services.search
+        .forTenant(tenantOf(request))
+        .forProject(projectOf(request))
+        .search(retrievalQuery);
       return { results };
     },
   );

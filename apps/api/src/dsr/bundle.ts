@@ -4,6 +4,7 @@ import type { Memory } from '@tessera/memory';
 import type { AuditEvent } from '../audit/model.js';
 import { collectAuditTrail } from '../audit/collect.js';
 import type { AuditLog } from '../audit/port.js';
+import { tenantProjectIds } from '../projects/enumerate.js';
 import type { ApiServices } from '../services.js';
 
 /** A registered source as exported (tenancy stays off the wire — ADR-0033, mirroring `/v1/sources`). */
@@ -54,32 +55,49 @@ function toDsrSource(record: {
 // not an answer, whereas an export button gets a stated bound.
 
 /**
- * Assemble the {@link DsrBundle} for `tenantId` (NFR-13). Every read is tenant-scoped via `forTenant`
- * (ADR-0033), so one tenant's export can never contain another's data. A deployment with no source
- * service (e.g. doc generation) exports an empty `sources` list rather than failing — the rest of the
- * bundle is still complete.
+ * Assemble the {@link DsrBundle} for `tenantId` (NFR-13). A right-of-access answer must be **complete**,
+ * so the data plane is exported across **every project** the tenant owns (FR-66, ADR-0037) — a bare
+ * `forTenant` view would cover only the default project and silently omit the rest. Reads never cross
+ * tenants. The audit trail is tenant-level (events carry no project) and is collected once, unbounded. A
+ * deployment with no source service (e.g. doc generation) exports an empty `sources` list rather than
+ * failing — the rest of the bundle is still complete.
  */
 export async function buildDsrBundle(
   services: ApiServices,
   auditLog: AuditLog,
   tenantId: TenantId,
 ): Promise<DsrBundle> {
-  const [memories, graph, audit] = await Promise.all([
-    services.memory.forTenant(tenantId).exportAll(),
-    services.graph.forTenant(tenantId).exportAll(),
-    // `cap: undefined` keeps DSR unbounded: a right-of-access answer must be COMPLETE or it is not an
-    // answer. The audit export button takes the default cap instead, and says when it applies.
-    collectAuditTrail(auditLog.forTenant(tenantId), {}, undefined),
-  ]);
-  const sources =
-    services.sources === undefined ? [] : await services.sources.forTenant(tenantId).list();
+  const projectIds = await tenantProjectIds(services.projects, tenantId);
+
+  const memories: Memory[] = [];
+  const nodes: GraphNode[] = [];
+  const edges: GraphEdge[] = [];
+  const sources: DsrSource[] = [];
+  for (const projectId of projectIds) {
+    const scope = { tenant: tenantId, project: projectId } as const;
+    const [projectMemories, projectGraph] = await Promise.all([
+      services.memory.forTenant(scope.tenant).forProject(scope.project).exportAll(),
+      services.graph.forTenant(scope.tenant).forProject(scope.project).exportAll(),
+    ]);
+    memories.push(...projectMemories);
+    nodes.push(...projectGraph.nodes);
+    edges.push(...projectGraph.edges);
+    if (services.sources !== undefined) {
+      const list = await services.sources.forTenant(scope.tenant).forProject(scope.project).list();
+      sources.push(...list.map(toDsrSource));
+    }
+  }
+
+  // `cap: undefined` keeps DSR unbounded: a right-of-access answer must be COMPLETE or it is not an
+  // answer. The audit export button takes the default cap instead, and says when it applies.
+  const audit = await collectAuditTrail(auditLog.forTenant(tenantId), {}, undefined);
 
   return {
     tenantId,
     exportedAt: new Date().toISOString(),
     memories,
-    graph: { nodes: graph.nodes, edges: graph.edges },
-    sources: sources.map(toDsrSource),
+    graph: { nodes, edges },
+    sources,
     audit: audit.events,
   };
 }

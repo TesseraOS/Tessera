@@ -7,6 +7,7 @@ export {
   type Project,
 } from './model.js';
 export { createInMemoryProjectStore, type ProjectStore } from './store.js';
+export { tenantProjectIds } from './enumerate.js';
 export {
   createProjectService,
   type CreateProjectInput,

@@ -1,4 +1,4 @@
-import type { TenantId } from '@tessera/core';
+import { DEFAULT_PROJECT_ID, type ProjectId, type TenantId } from '@tessera/core';
 import type { ApiServices } from '../services.js';
 
 /**
@@ -21,8 +21,10 @@ export interface WorkspaceStats {
 }
 
 /**
- * Count everything the given tenant actually has. Every read is tenant-scoped via `forTenant`
- * (ADR-0033) and counted at the store rather than by listing — this runs on every dashboard load.
+ * Count everything the given `(tenant, project)` scope actually has. Every read is scoped via
+ * `forTenant().forProject()` (ADR-0033/0037) and counted at the store rather than by listing — this runs
+ * on every dashboard load, for the currently selected project (`projectId` defaults to the reserved
+ * default project, so a single-project deployment is unchanged).
  *
  * A deployment without runtime source management (`services.sources` unset) still has real memory +
  * graph numbers, so the sources half reports zeros rather than failing the whole summary.
@@ -30,15 +32,16 @@ export interface WorkspaceStats {
 export async function computeWorkspaceStats(
   services: ApiServices,
   tenantId: TenantId,
+  projectId: ProjectId = DEFAULT_PROJECT_ID,
 ): Promise<WorkspaceStats> {
   const sourceSummary =
     services.sources === undefined
       ? { sources: 0, documents: 0, lastScanAt: null }
-      : await services.sources.forTenant(tenantId).summary();
+      : await services.sources.forTenant(tenantId).forProject(projectId).summary();
 
   const [memories, graph] = await Promise.all([
-    services.memory.forTenant(tenantId).count(),
-    services.graph.forTenant(tenantId).counts(),
+    services.memory.forTenant(tenantId).forProject(projectId).count(),
+    services.graph.forTenant(tenantId).forProject(projectId).counts(),
   ]);
 
   return {

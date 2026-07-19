@@ -35,11 +35,10 @@ No new ADR needed — ADR-0037 pre-decided the model and explicitly delegated th
 > `216f5ec` storage · `2daca6e` data-plane · `65cda61` sources catalog · `34753e4` control plane · (this)
 > selection. Projects are creatable/manageable via REST and a request scopes to one via the header, with
 > real cross-project isolation proven end-to-end (memory/graph). Workspace gates green.
-> **Remaining:** **7b** ingestion-indexing threading (a scan lands in the source's project — entangled
-> with F-071's tenant threading to the DocumentSink); **9b** project-completeness for the tenant-wide
-> surfaces — **DSR export/erasure MUST span all projects (NFR-13 — currently default-project only, a
-> compliance gap to close before DONE)**, stats counts + retention SHOULD be project-scoped/complete;
-> **10** MCP; **11** dashboard; **12** F-024 migration + full-stack e2e.
+> **9b DONE (this session):** DSR export/erasure + retention now span all projects (NFR-13); stats counts
+> are project-scoped. **Remaining:** **7b** ingestion-indexing threading (a scan lands in the source's
+> project — entangled with F-071's tenant threading to the DocumentSink); **10** MCP project tools +
+> session project; **11** dashboard switcher + '+ New' menu; **12** F-024 migration + full-stack e2e.
 
 1. **[DONE]** **Scope primitive** — `@tessera/core`: add `ProjectId` + `DEFAULT_PROJECT_ID = 'default'` to `tenant.ts`
    (co-located with the tenant primitive); export from `index.ts`. `@tessera/api/auth/model` re-exports.
@@ -75,9 +74,11 @@ No new ADR needed — ADR-0037 pre-decided the model and explicitly delegated th
    `.forProject()` threaded through search/compile/effects/graph/memory/sources; documented in the OpenAPI info;
    cross-project isolation e2e (memory invisible across projects + default). `forProject` special-cased in the
    observability Proxy (increment 6).
-   **[9b TODO]** project-completeness for tenant-wide surfaces: **DSR export/erasure must iterate all projects**
-   (NFR-13 — `purgeTenant`/DSR bundle currently cover only the default project); stats counts + retention should
-   be project-scoped/complete. Audit trail stays tenant-level (events carry no project — by design).
+   **[9b DONE]** project-completeness for tenant-wide surfaces (helper `tenantProjectIds`): **DSR
+   export/erasure now iterate every project** (NFR-13 — `buildDsrBundle` + `purgeTenant`; project entities
+   left as emptied containers); **retention prune** spans all projects; **stats counts** are project-scoped
+   (`computeWorkspaceStats(…, projectId)`, REST passes the selection; MCP passes default until inc. 10).
+   Audit trail stays tenant-level (events carry no project — by design). DSR multi-project e2e added.
 10. **MCP** (`@tessera/mcp`) — project CRUD tools (ADR-0036 parity) + session/config project selection.
 11. **Dashboard** (`apps/web`) — project switcher in the app shell; create/manage projects; evolve the sidebar
     'New memory' button into a single **'+ New'** quick-create menu (memory / source / project; contextual

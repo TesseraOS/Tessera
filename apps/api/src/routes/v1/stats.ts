@@ -1,6 +1,7 @@
 import type { ZodFastify } from '../../app-types.js';
 import type { AuditLog } from '../../audit/index.js';
 import { requirePermission, tenantOf } from '../../auth/index.js';
+import { projectOf } from '../../projects/selection.js';
 import {
   activityQuerySchema,
   activityResponseSchema,
@@ -22,7 +23,8 @@ import { computeRecentActivity } from '../../stats/recent.js';
  *
  * The aggregation itself lives in {@link computeWorkspaceStats} (Fastify-free), which the `get_stats`
  * MCP tool calls too — so the two surfaces cannot drift into reporting different numbers for the
- * same tenant (ADR-0036). This route is the HTTP shell: authorize, resolve the tenant, serialize.
+ * same scope (ADR-0036). This route is the HTTP shell: authorize, resolve the (tenant, project),
+ * serialize. The counts are for the selected project (X-Tessera-Project; default project when omitted).
  *
  * **Not audited, deliberately.** It is a low-sensitivity aggregate read on every page load; writing
  * an audit row per load would flood the trail F-027 built and degrade the compliance signal it
@@ -40,7 +42,7 @@ export function registerStatsRoutes(app: ZodFastify, services: ApiServices, audi
         response: { 200: statsResponseSchema },
       },
     },
-    (request) => computeWorkspaceStats(services, tenantOf(request)),
+    (request) => computeWorkspaceStats(services, tenantOf(request), projectOf(request)),
   );
 
   app.get<{ Querystring: ActivityQueryString }>(

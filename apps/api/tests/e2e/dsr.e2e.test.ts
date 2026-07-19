@@ -174,6 +174,65 @@ describe('@tessera/api /v1/dsr + /v1/retention', () => {
     });
   });
 
+  describe('spans all projects (F-050, NFR-13)', () => {
+    /** Create a project and capture a memory scoped to it via X-Tessera-Project. */
+    async function seedProject(
+      auth: { authorization: string },
+      name: string,
+    ): Promise<{ projectId: string; lineageId: string }> {
+      const created = await app.inject({
+        method: 'POST',
+        url: '/v1/projects',
+        headers: auth,
+        payload: { name },
+      });
+      const projectId = created.json().id as string;
+      const captured = await app.inject({
+        method: 'POST',
+        url: '/v1/memory',
+        headers: { ...auth, 'x-tessera-project': projectId },
+        payload: { kind: 'lesson', title: `${name} lesson`, body: 'in project' },
+      });
+      expect(captured.statusCode).toBe(201);
+      return { projectId, lineageId: captured.json().lineageId as string };
+    }
+
+    it('export includes every project — not just the default (right of access is complete)', async () => {
+      await seed(owner, 'Default lesson'); // default project
+      const { projectId } = await seedProject(owner, 'Backend'); // a second project
+
+      const bundle = await app.inject({ method: 'GET', url: '/v1/dsr/export', headers: owner });
+      const titles = bundle.json().memories.map((m: { title: string }) => m.title);
+      expect(titles).toContain('Default lesson');
+      expect(titles).toContain('Backend lesson');
+      // Sanity: the project's memory really is in a distinct scope (invisible to the default view).
+      const defaultList = await app.inject({ method: 'GET', url: '/v1/memory', headers: owner });
+      expect(defaultList.json().memories.map((m: { title: string }) => m.title)).toEqual([
+        'Default lesson',
+      ]);
+      void projectId;
+    });
+
+    it('erasure removes data in every project, and reports the total', async () => {
+      await seed(owner, 'Default lesson');
+      const { projectId } = await seedProject(owner, 'Backend');
+
+      const response = await app.inject({ method: 'POST', url: '/v1/dsr/delete', headers: owner });
+      expect(response.statusCode).toBe(200);
+      expect(response.json().memories).toBe(2); // one lineage per project
+
+      // Both scopes are empty afterwards.
+      const inProject = await app.inject({
+        method: 'GET',
+        url: '/v1/memory',
+        headers: { ...owner, 'x-tessera-project': projectId },
+      });
+      expect(inProject.json().memories).toEqual([]);
+      const inDefault = await app.inject({ method: 'GET', url: '/v1/memory', headers: owner });
+      expect(inDefault.json().memories).toEqual([]);
+    });
+  });
+
   describe('/v1/retention', () => {
     it('returns the effective policy and is admin-only', async () => {
       const response = await app.inject({ method: 'GET', url: '/v1/retention', headers: owner });

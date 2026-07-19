@@ -2,6 +2,7 @@ import type { MemoryRetentionPolicy } from '@tessera/memory';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { ZodFastify } from '../../app-types.js';
 import { requirePermission, tenantOf } from '../../auth/index.js';
+import { tenantProjectIds } from '../../projects/enumerate.js';
 import {
   retentionPolicyResponseSchema,
   retentionPruneResponseSchema,
@@ -15,9 +16,11 @@ import type { ApiServices } from '../../services.js';
  * documented seam.
  *
  * `GET` returns the effective policy (`admin:manage`, audited `retention.read`). `POST /prune` runs the
- * pass over the **caller's own tenant** (`admin:manage`, audited `retention.manage`). Retention only
- * deletes — expired lineages and already-superseded versions — so FR-12's never-silently-mutate
- * contract is untouched. Running the pass on a schedule is a seam: this route is the trigger.
+ * pass over the **caller's own tenant, across every project** (`admin:manage`, audited
+ * `retention.manage`): the policy is a tenant-wide lifecycle rule, so a bare `forTenant` view (default
+ * project only) would leave other projects' aged memory unpruned. Retention only deletes — expired
+ * lineages and already-superseded versions — so FR-12's never-silently-mutate contract is untouched.
+ * Running the pass on a schedule is a seam: this route is the trigger.
  */
 export function registerRetentionRoutes(
   app: ZodFastify,
@@ -53,6 +56,20 @@ export function registerRetentionRoutes(
       },
       config: { audit: 'retention.manage' },
     },
-    (request) => services.memory.forTenant(tenantOf(request)).prune(policy),
+    async (request) => {
+      const tenantId = tenantOf(request);
+      const projectIds = await tenantProjectIds(services.projects, tenantId);
+      let expiredLineages = 0;
+      let prunedVersions = 0;
+      for (const projectId of projectIds) {
+        const result = await services.memory
+          .forTenant(tenantId)
+          .forProject(projectId)
+          .prune(policy);
+        expiredLineages += result.expiredLineages;
+        prunedVersions += result.prunedVersions;
+      }
+      return { expiredLineages, prunedVersions };
+    },
   );
 }

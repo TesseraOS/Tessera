@@ -2,6 +2,7 @@ import { Step, Steps } from 'fumadocs-ui/components/steps';
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import type { MDXComponents } from 'mdx/types';
+import { AgentConfig, AgentConfigFile } from '@/components/agent-config';
 
 /**
  * Stock Fumadocs MDX components (DOCS-DESIGN §1.2: no forks — upgrades stay cheap).
@@ -15,6 +16,8 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     Step,
     Tabs,
     Tab,
+    AgentConfig,
+    AgentConfigFile,
     ...components,
   };
 }

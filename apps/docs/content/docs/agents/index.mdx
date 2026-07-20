@@ -1,0 +1,81 @@
+---
+title: Connecting agents
+description: How agents talk to Tessera over MCP — the stdio model, the two launch forms, what tessera mcp-config emits, and how to verify a connection.
+---
+
+Tessera's primary consumer is **your agent**. Any MCP-capable client can connect;
+this section provides exact, copy-paste configuration for the five agents the
+`tessera mcp-config` command supports out of the box:
+
+<Cards>
+  <Card href="/docs/agents/claude-code" title="Claude Code" description="Anthropic's CLI agent — project or user scope." />
+  <Card href="/docs/agents/cursor" title="Cursor" description="The AI editor — project or global MCP config." />
+  <Card href="/docs/agents/cline" title="Cline" description="The VS Code agent extension." />
+  <Card href="/docs/agents/codex" title="Codex CLI" description="OpenAI's terminal agent — TOML config." />
+  <Card href="/docs/agents/continue" title="Continue" description="The open-source IDE assistant." />
+</Cards>
+
+Any other MCP client works the same way — give it the launch command below and it
+has the full [tool catalog](/docs/reference/mcp-tools).
+
+## The connection model
+
+Tessera's MCP server speaks **stdio**: your agent client *spawns* the server process
+and owns its lifetime — there is no daemon to run, no port to open, nothing to keep
+alive. Each connected agent gets its own server process; all of them share the same
+data directory (SQLite in WAL mode makes concurrent processes safe).
+
+The process your agent launches is `tessera mcp --config <path>`, where `<path>`
+points at the [`tessera.config.json` you initialized](/docs/quickstart). Everything
+else — which file to put that in, in which format — is per-agent, and that is what
+the pages above cover.
+
+## Two launch forms
+
+Every per-agent page shows both forms of the launch command:
+
+- **npx form** — `npx -y @tessera/cli mcp --config …` — zero-install, and the form
+  `tessera mcp-config` emits by default. **Works once `@tessera/cli` is published to
+  npm (F-059); it is shown for what your config will look like at launch, and
+  labeled wherever it appears.**
+- **From-source form** — launches the built CLI from your repository checkout. This
+  is the form that works **today**; substitute your absolute paths.
+
+For the from-source form, replace the `tessera` command with `node` plus the path to
+the built binary — the [Quickstart](/docs/quickstart#connect-your-agent-over-mcp)
+shows the exact JSON.
+
+## Generate instead of copying
+
+The snippets in these pages are rendered from the same table and renderer the CLI
+uses — they cannot drift from `tessera mcp-config`'s output. But the CLI can go one
+better than any documentation: it knows your real paths.
+
+```bash
+tessera mcp-config                      # all agents
+tessera mcp-config --agent claude-code  # one agent
+tessera mcp-config --json               # machine-readable, for scripts and agents
+```
+
+Run it from the directory that holds your `tessera.config.json` and paste its output
+directly.
+
+## Verifying a connection
+
+After adding the config and restarting the agent:
+
+1. The agent's MCP/tools listing should show a **tessera** server with 18 tools.
+2. Ask the agent to call `get_stats` — it returns corpus counts and proves the
+   server booted against your data directory.
+3. Ask for a real `search`. If results are empty, the usual cause is no scanned
+   source yet — see [Working with sources](/docs/guides/sources).
+
+If the server fails to start, run `tessera doctor` in the config directory: it
+checks node, config, storage, and embeddings health with real error messages.
+
+## Auth, briefly
+
+The stdio transport inherits your local trust: the spawned server runs as you,
+against your files, under the deployment's [auth mode](/docs/guides/tokens-and-auth).
+There is no per-agent credential in stdio; remote agents connecting over HTTP with
+Bearer tokens is the upcoming remote-MCP transport (F-055).

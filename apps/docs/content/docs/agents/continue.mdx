@@ -1,0 +1,63 @@
+---
+title: Continue
+description: Connect the Continue IDE assistant to Tessera — the config file, the exact snippet, and verification.
+---
+
+Continue configures MCP servers in its JSON config,
+<AgentConfigFile id="continue" />, alongside your models and settings.
+
+## The snippet
+
+<Tabs items={['npx (at launch — F-059)', 'From source (today)']}>
+
+<Tab>
+
+Once `@tessera/cli` is on npm:
+
+<AgentConfig id="continue" variant="npx" />
+
+</Tab>
+
+<Tab>
+
+Until publish, launch the built CLI from your checkout (substitute both absolute
+paths):
+
+```json
+{
+  "mcpServers": {
+    "tessera": {
+      "command": "node",
+      "args": [
+        "/path/to/tessera/apps/cli/dist/bin/tessera.js",
+        "mcp",
+        "--config",
+        "/path/to/your/project/tessera.config.json"
+      ]
+    }
+  }
+}
+```
+
+</Tab>
+
+</Tabs>
+
+`tessera mcp-config --agent continue` prints this with your real paths. Merge the
+`mcpServers` map into your existing config rather than replacing the file — it
+holds the rest of your Continue setup too.
+
+## Steps
+
+1. Edit `~/.continue/config.json` and add the `mcpServers` entry.
+2. Reload Continue (or the IDE window); MCP tools are available to its agent mode.
+3. Verify: **tessera** appears among the tool providers; ask for `get_stats`, then
+   a `search`.
+
+## Working notes
+
+- MCP tools surface in Continue's **agent** mode — plain chat/autocomplete flows
+  do not call tools, so test the connection from agent mode.
+- Continue also supports YAML config in newer setups; the JSON shape above carries
+  over field-for-field if your installation uses `config.yaml` — the
+  `tessera mcp-config` output remains the source of truth for the values.

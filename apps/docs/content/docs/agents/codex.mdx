@@ -1,0 +1,63 @@
+---
+title: Codex CLI
+description: Connect OpenAI's Codex CLI to Tessera — the TOML config, the exact snippet, and verification.
+---
+
+Codex CLI configures MCP servers in **TOML**, in <AgentConfigFile id="codex" /> —
+the one agent of the five whose config is not JSON. The shape is the same idea:
+a `mcp_servers` table naming the launch command.
+
+## The snippet
+
+<Tabs items={['npx (at launch — F-059)', 'From source (today)']}>
+
+<Tab>
+
+Once `@tessera/cli` is on npm:
+
+<AgentConfig id="codex" variant="npx" />
+
+</Tab>
+
+<Tab>
+
+Until publish, launch the built CLI from your checkout (substitute both absolute
+paths):
+
+```toml
+[mcp_servers.tessera]
+command = "node"
+args = [
+  "/path/to/tessera/apps/cli/dist/bin/tessera.js",
+  "mcp",
+  "--config",
+  "/path/to/your/project/tessera.config.json"
+]
+```
+
+</Tab>
+
+</Tabs>
+
+`tessera mcp-config --agent codex` prints the TOML with your real paths — worth
+using here especially, since Windows paths in TOML need their backslashes escaped
+and the CLI does that for you.
+
+## Steps
+
+1. Append the snippet to `~/.codex/config.toml` (create the file if it does not
+   exist).
+2. Start a new Codex session; it spawns the server on demand.
+3. Verify: list the available tools in-session — **tessera** should contribute 18 —
+   then ask for a `get_stats` call.
+
+## Working notes
+
+- The config is user-global. If you work across several Tessera-enabled projects,
+  point `--config` at the project you are currently in, or maintain per-project
+  entries under distinct names (`mcp_servers.tessera-app`,
+  `mcp_servers.tessera-web`, …) — tool names will be prefixed per server, keeping
+  them distinguishable.
+- Codex sessions are often long-lived in a terminal; remember the spawned Tessera
+  server holds the store open — quiesce sessions before a
+  [backup](/docs/guides/backup-and-restore).

@@ -1,0 +1,70 @@
+---
+title: Claude Code
+description: Connect Claude Code to Tessera — project-scoped .mcp.json or user-scoped config, the exact snippet, and how to verify the tools are live.
+---
+
+Claude Code discovers MCP servers from a JSON config with an `mcpServers` map.
+Tessera goes in <AgentConfigFile id="claude-code" /> — the project file commits the
+connection to everyone working in the repo; the user file makes it yours everywhere.
+
+## The snippet
+
+<Tabs items={['npx (at launch — F-059)', 'From source (today)']}>
+
+<Tab>
+
+Once `@tessera/cli` is on npm, this is the whole configuration — no install step:
+
+<AgentConfig id="claude-code" variant="npx" />
+
+</Tab>
+
+<Tab>
+
+Until publish, launch the built CLI from your checkout. Same file, same shape —
+only the launcher changes (substitute both absolute paths):
+
+```json
+{
+  "mcpServers": {
+    "tessera": {
+      "command": "node",
+      "args": [
+        "/path/to/tessera/apps/cli/dist/bin/tessera.js",
+        "mcp",
+        "--config",
+        "/path/to/your/project/tessera.config.json"
+      ]
+    }
+  }
+}
+```
+
+</Tab>
+
+</Tabs>
+
+Replace `/absolute/path/to/tessera.config.json` with the real path from your
+[Quickstart](/docs/quickstart) `init` — or skip the substitution entirely by running
+`tessera mcp-config --agent claude-code` in that directory and pasting its output.
+
+## Steps
+
+1. Create or edit `.mcp.json` at your project root (or the user-scope file) with
+   the snippet above.
+2. Restart Claude Code (or reconnect MCP servers) so it spawns the server.
+3. Verify: `/mcp` should list **tessera** with 18 tools; ask Claude to call
+   `get_stats` for proof-of-life against your data.
+
+## Working notes
+
+- **Project scope is the right default here**: the config names a per-project
+  `tessera.config.json`, and committing `.mcp.json` gives every teammate (and every
+  CI agent) the same context server with zero setup.
+- Claude Code asks for approval before first using a new MCP server's tools —
+  approve the **tessera** server once and the 18 tools are available in-session.
+- Pair the connection with usage guidance in your `CLAUDE.md` (for example:
+  *"before editing a symbol, call `get_effects`; compile context before starting a
+  task; capture decisions with `capture_memory`"*) — the connection provides the
+  tools, the instructions build the habit. See
+  [Search & compile in practice](/docs/guides/search-and-compile).

@@ -1,0 +1,67 @@
+---
+title: Cline
+description: Connect the Cline VS Code extension to Tessera — the MCP settings file, the exact snippet, and verification.
+---
+
+Cline manages MCP servers in a JSON settings file with an `mcpServers` map, stored
+in <AgentConfigFile id="cline" /> (reachable via Cline's MCP Servers panel →
+*Configure MCP Servers*).
+
+## The snippet
+
+<Tabs items={['npx (at launch — F-059)', 'From source (today)']}>
+
+<Tab>
+
+Once `@tessera/cli` is on npm:
+
+<AgentConfig id="cline" variant="npx" />
+
+</Tab>
+
+<Tab>
+
+Until publish, launch the built CLI from your checkout (substitute both absolute
+paths):
+
+```json
+{
+  "mcpServers": {
+    "tessera": {
+      "command": "node",
+      "args": [
+        "/path/to/tessera/apps/cli/dist/bin/tessera.js",
+        "mcp",
+        "--config",
+        "/path/to/your/project/tessera.config.json"
+      ]
+    }
+  }
+}
+```
+
+</Tab>
+
+</Tabs>
+
+`tessera mcp-config --agent cline` prints this with your real paths.
+
+## Steps
+
+1. Open Cline's MCP Servers panel in VS Code and edit the settings file with the
+   snippet (merge into an existing `mcpServers` map if you already have servers).
+2. Cline restarts its servers on save; **tessera** should appear with its tool
+   list.
+3. Verify: ask Cline to call `get_stats`, then a real `search` against your scanned
+   source.
+
+## Working notes
+
+- Cline surfaces each tool call for approval by default; auto-approve the
+  read-only tools (`search`, `compile_context`, `get_effects`, `get_stats`,
+  `list_sources`) once you trust the flow, and keep write-side tools
+  (`capture_memory`, `add_source`, token tools) on manual approval if you prefer a
+  review gate.
+- Because the settings file is per-VS-Code-profile rather than per-project, point
+  the `--config` path at whichever project's Tessera deployment the current window
+  is for — or run one deployment per project and switch configs deliberately.

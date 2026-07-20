@@ -1,0 +1,67 @@
+---
+title: Cursor
+description: Connect Cursor to Tessera — project .cursor/mcp.json or global config, the exact snippet, and verification.
+---
+
+Cursor reads MCP servers from an `mcpServers` JSON map in
+<AgentConfigFile id="cursor" /> — the project file scopes the connection to one
+workspace; the home-directory file applies it everywhere.
+
+## The snippet
+
+<Tabs items={['npx (at launch — F-059)', 'From source (today)']}>
+
+<Tab>
+
+Once `@tessera/cli` is on npm:
+
+<AgentConfig id="cursor" variant="npx" />
+
+</Tab>
+
+<Tab>
+
+Until publish, launch the built CLI from your checkout (substitute both absolute
+paths):
+
+```json
+{
+  "mcpServers": {
+    "tessera": {
+      "command": "node",
+      "args": [
+        "/path/to/tessera/apps/cli/dist/bin/tessera.js",
+        "mcp",
+        "--config",
+        "/path/to/your/project/tessera.config.json"
+      ]
+    }
+  }
+}
+```
+
+</Tab>
+
+</Tabs>
+
+`tessera mcp-config --agent cursor` prints this with your real paths filled in.
+
+## Steps
+
+1. Create `.cursor/mcp.json` in your project (or `~/.cursor/mcp.json` globally)
+   with the snippet.
+2. Cursor detects the change (or toggle the server under **Settings → MCP**); it
+   spawns the process on demand.
+3. Verify: the MCP settings list shows **tessera** green with its tools; ask the
+   agent to call `get_stats`.
+
+## Working notes
+
+- In Agent mode, Cursor decides when to call MCP tools; you can direct it
+  explicitly ("use tessera's `compile_context` for this task") until the habit is
+  established in your project rules.
+- Add Tessera guidance to your Cursor rules file the same way you would for any
+  standing instruction — tools available ≠ tools used.
+- One Tessera deployment per project (its own `tessera.config.json` and data dir)
+  keeps retrieval scoped; the global config file makes sense only if you genuinely
+  want one shared corpus across everything you open.

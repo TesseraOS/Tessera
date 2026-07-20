@@ -1,0 +1,60 @@
+---
+title: Hybrid retrieval
+description: Five retrieval signals — semantic, keyword, graph, temporal, symbolic — fused into one ranked, attributed candidate set.
+---
+
+Most RAG systems are one retriever: a vector index. Tessera runs **five retrievers**
+behind a common interface and fuses their results, because the questions agents ask
+are not all the same shape — and no single signal answers them all well.
+
+## The five signals
+
+| Retriever | Question it answers | Backend |
+|-----------|---------------------|---------|
+| **Semantic** | "What *means* something like this?" | Vector store (sqlite-vec / pgvector) |
+| **Keyword** | "Where does this exact term appear?" | Full-text search in the relational store |
+| **Graph** | "What is *connected* to this?" | Knowledge-graph traversal (incl. effect-links) |
+| **Temporal** | "What changed recently / in this window?" | Timestamps in the relational store |
+| **Symbolic** | "Where is this symbol defined and used?" | The extracted symbol index |
+
+Each is strong exactly where the others are weak. Semantic search finds the
+conceptually related code that shares no vocabulary with your query; keyword search
+finds the error string verbatim; symbolic lookup is exact where embeddings are fuzzy;
+temporal ranking surfaces the file that changed yesterday; graph traversal brings
+what is *structurally* implicated regardless of wording.
+
+## Fusion
+
+The five candidate lists are merged by a **fusion ranker** (reciprocal-rank-fusion
+style, with configurable weights) into a single ranked set. Rank-based fusion means no
+single retriever's raw scores dominate by scale — a candidate that appears
+mid-list in three signals beats one that tops a single signal.
+
+Crucially, fusion preserves **signal attribution**: every result records *which*
+retrievers surfaced it. A hit backed by `keyword + symbolic` is a different kind of
+evidence than one backed by `semantic` alone, and both agents and the
+[compilation trace](/docs/concepts/context-compiler#the-compilation-trace) can see
+the difference. Attribution is also how search results stay
+[explainable](/docs/concepts/provenance) — nothing arrives unexplained.
+
+## Where retrieval shows up
+
+- **`search`** (MCP) / **`POST /v1/search`** — direct hybrid retrieval: a query in, a
+  ranked, attributed result list out. The lightweight path when an agent just needs
+  to find something.
+- **Inside the compiler** — each planned need runs retrieval, and the results then
+  pass through expand/rank/dedup/compress. `search` shows you the raw material;
+  `compile_context` delivers the finished argument.
+
+## Practical notes
+
+- **Embedding model choice matters only for the semantic signal** — the other four
+  signals keep working (and keep the system useful) even with the `fake` embeddings
+  provider in tests. Switching embedding models requires a rescan so the vector space
+  stays consistent (see [Local deployment](/docs/deployment/local#embeddings-choices)).
+- **Recency is a live signal**: retrieval ranks fresher knowledge higher, all else
+  equal — one reason [scans](/docs/guides/sources) after meaningful changes keep
+  answers sharp.
+- Performance is a stated requirement, not a hope: the repository's benchmark gate
+  asserts committed latency thresholds for search and compile on every release
+  verification.

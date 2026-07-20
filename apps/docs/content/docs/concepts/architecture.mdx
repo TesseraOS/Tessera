@@ -1,0 +1,81 @@
+---
+title: Architecture
+description: A modular monolith on ports and adapters — how one codebase serves local, self-hosted, and cloud deployments with identical behavior.
+---
+
+Tessera is a **modular monolith** built on **ports and adapters** (hexagonal
+architecture). Understanding those two choices explains almost every property of the
+system — including why the Local profile is not a demo but the same engine the larger
+deployments run.
+
+## The principles
+
+1. **Compile, don't dump** — context is a built artifact with provenance, not a pile
+   of chunks.
+2. **Ports & adapters** — domain code depends on interfaces; infrastructure is
+   swappable; deployment is configuration.
+3. **Modular monolith** — strong internal boundaries now, splittable into services
+   later without a rewrite.
+4. **Local-first** — full capability with zero external services or keys; cloud is
+   the same code with different adapters.
+5. **Event-driven ingestion** — sources emit changes; workers process them
+   incrementally and idempotently.
+6. **Everything explainable and observable** — provenance on data, OpenTelemetry on
+   execution.
+7. **Plugin-extensible** — connectors, processors, providers, and strategies sit
+   behind stable contracts.
+
+## The package layout
+
+One workspace, strict boundaries (enforced by lint rules, not convention):
+
+| Layer | Packages | Role |
+|-------|----------|------|
+| Surfaces | `@tessera/api` (REST `/v1`), `@tessera/mcp` (MCP tools), `@tessera/web` (dashboard), `@tessera/cli` | Thin doors into the same services |
+| Engine | `@tessera/context-compiler`, `@tessera/retrieval`, `@tessera/knowledge-graph`, `@tessera/memory`, `@tessera/ingestion` | The domain — no I/O of its own |
+| Infrastructure | `@tessera/storage` (relational/vector/blob/queue ports + adapters), `@tessera/ai` (embeddings port + adapters) | Swappable backends |
+| Cross-cutting | `@tessera/core`, `@tessera/config`, `@tessera/observability`, `@tessera/plugin-host`, `@tessera/billing`, `@tessera/sdk` | Types, profiles, telemetry, contracts |
+
+The boundary rules: domain packages never import adapters directly — only ports;
+`@tessera/core` imports nothing internal; apps compose packages, never the reverse.
+
+## Ports and their adapters
+
+| Port | Local adapter | Self-hosted / cloud adapter |
+|------|---------------|------------------------------|
+| `RelationalStore` | SQLite (Drizzle) | Postgres (Drizzle) |
+| `VectorStore` | sqlite-vec | pgvector |
+| `BlobStore` | filesystem | S3-compatible object store |
+| `Queue` | in-process | Redis-backed workers |
+| `Embeddings` | Transformers.js / Ollama | hosted provider (optional) |
+| `AuthProvider` | none / token | token / OIDC + RBAC |
+
+The guarantee that makes this honest: **every port ships a conformance test suite,
+and every adapter must pass it.** The pgvector adapter passes the same suite as
+sqlite-vec; behavior parity across deployments is tested, not promised.
+
+## One process locally, many in the cloud
+
+In the Local profile, the API, the ingestion workers, and storage all live in **one
+process** — that is what makes `tessera serve` a single command. In larger
+deployments the same code splits across process boundaries (worker pools, replicated
+API nodes) purely through the deployment profile. No domain code changes between
+modes; that property is why the documentation can describe behavior once.
+
+## Two surfaces, one engine — as a rule
+
+Every product operation is available through REST `/v1` **and**, where it makes sense
+for an agent, an MCP tool — before or together with any dashboard UI. The dashboard
+is a client of the same API, never a privileged surface. This parity is a binding
+engineering rule in the repository (agents reviewing changes reject UI-only
+operations), which is why the [REST reference](/docs/reference/api) and the
+[MCP tools reference](/docs/reference/mcp-tools) describe the same capabilities in
+two shapes.
+
+## What Tessera deliberately is not
+
+Tessera is the **context and memory layer** — not an agent, not an orchestrator, not
+a sandbox. It sits beneath agent harnesses and beside IDE agents, serving all of them
+the same compiled context over MCP and REST. Orchestration, agent runtimes, and
+live-session infrastructure are explicit non-goals; the investment goes into
+compilation, memory, the graph, and effect-links.

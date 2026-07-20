@@ -1,0 +1,103 @@
+---
+title: Context Compiler
+description: The seven-stage pipeline that turns a task and a token budget into an ordered, deduplicated, compressed, fully cited context package.
+---
+
+The Context Compiler is Tessera's core: it treats context as a **compiled artifact**.
+Where naive RAG retrieves chunks and pastes them into a prompt, the compiler runs a
+pipeline whose output is an ordered, sectioned, budget-bounded **context package** in
+which every item carries [provenance](/docs/concepts/provenance).
+
+An agent invokes it as the `compile_context` MCP tool or `POST /v1/compile`; both are
+the same engine.
+
+## The pipeline
+
+```
+compile_context(task, budget, filters)
+  │
+  ├─ plan      → decompose the task into needs, allocate budget per need
+  ├─ retrieve  → hybrid retrieval per need (five signals + fusion)
+  ├─ expand    → follow graph edges and effect-links to pull in dependents
+  ├─ rank      → relevance × recency × authority × task-fit
+  ├─ dedup     → collapse near-duplicates (embedding + shingle similarity)
+  ├─ compress  → budget-aware summarization that preserves citations
+  └─ assemble  → the ordered, sectioned ContextPackage + provenance + trace
+```
+
+Each stage is a swappable strategy behind a stable interface — the pipeline shape is
+architecture, the stage internals are implementation.
+
+### plan
+
+The task description is decomposed into **needs** — the distinct kinds of knowledge
+the task will consume (the code being changed, its dependents, prior decisions in the
+area, conventions that apply). The token budget is allocated across needs so a large
+code region cannot crowd out the one decision memory that would have prevented a
+mistake.
+
+### retrieve
+
+Each need runs [hybrid retrieval](/docs/concepts/retrieval): semantic, keyword,
+graph, temporal, and symbolic signals fused into one ranked candidate set, with
+per-candidate attribution of *which* signals fired — attribution that survives into
+the final package.
+
+### expand
+
+The stage that most separates compilation from search. Raw hits are expanded along
+the [knowledge graph](/docs/concepts/knowledge-graph): the function you asked about
+brings its call sites; the module brings the decision memory that shaped it; and
+[effect-links](/docs/concepts/effect-links) bring the places a change would ripple
+into. The result set now reflects what the task *implies*, not just what the query
+matched.
+
+### rank
+
+Candidates are scored against the **task**, not the query string: relevance from
+retrieval, recency (stale knowledge decays), authority (an accepted decision outranks
+a stray comment), and task-fit. Scores are recorded, not discarded — they are part of
+the trace.
+
+### dedup
+
+Repositories say the same thing in many places. Near-duplicates are collapsed by
+embedding and shingle similarity so the budget is never spent twice on one fact; the
+surviving item keeps the merged provenance.
+
+### compress
+
+The package must fit the caller's budget. Compression summarizes lower-ranked
+material rather than truncating it mid-thought, and **citations survive
+compression** — a summarized paragraph still points at its sources. Highest-ranked
+items stay verbatim.
+
+### assemble
+
+The output is a sectioned package: ordered content, per-item provenance, the score
+summary, and the **compilation trace**.
+
+## The compilation trace
+
+Every stage writes its inputs, candidates, scores, and drops into a trace carried
+with the package. The trace answers *why is this here?* and — as important — *why is
+that not here?* The dashboard's package inspector renders it; over REST/MCP the
+`explain` path serves the same purpose. Compilation is **reproducible**: the same
+inputs produce the same package, which makes packages cacheable and diffs meaningful.
+
+## Budgets are a contract
+
+The `budget` parameter (tokens) is enforced, not advisory — the compiler treats
+fitting the budget as part of correctness. Token-efficiency is a stated performance
+requirement for the whole product: responses stay compact, and the verbose path is
+explicit (`explain`), not the default. The repository's benchmark gates track
+tokens-per-answer alongside latency so regressions fail builds rather than reaching
+you.
+
+## Using it well
+
+See the [search & compile guide](/docs/guides/search-and-compile) for practical
+budget choices, when to use `search` versus `compile_context`, and how to read a
+package; the exact request/response schemas are in the
+[REST reference](/docs/reference/api) and the
+[MCP tools reference](/docs/reference/mcp-tools).

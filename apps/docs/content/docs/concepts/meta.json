@@ -1,0 +1,15 @@
+{
+  "title": "Concepts",
+  "pages": [
+    "index",
+    "architecture",
+    "context-compiler",
+    "effect-links",
+    "memory",
+    "knowledge-graph",
+    "retrieval",
+    "provenance",
+    "tenancy-and-projects",
+    "glossary"
+  ]
+}

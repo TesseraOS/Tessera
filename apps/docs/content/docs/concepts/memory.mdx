@@ -1,0 +1,72 @@
+---
+title: Memory
+description: Versioned, supersedable project knowledge — the seven memory kinds, lineages and history, scope and confidence, and how memory reaches retrieval.
+---
+
+Code answers *what*; memory answers *why*. Tessera's **memory** subsystem stores the
+knowledge that is not derivable from the repository — decisions, lessons, incidents,
+conventions — as first-class, versioned records that flow into
+[retrieval](/docs/concepts/retrieval) and compiled packages like any other source.
+
+## The seven kinds
+
+Each memory has a `kind`, because different knowledge deserves different treatment in
+retrieval, display, and retention:
+
+| Kind | What it holds |
+|------|----------------|
+| `decision` | A choice that was made and its reasoning — the ADR-shaped knowledge. |
+| `lesson` | Something learned the hard way that should not be relearned. |
+| `incident` | What broke, why, and what fixed it. |
+| `failure` | An approach that was tried and did not work — negative knowledge that prevents repeats. |
+| `architecture` | A structural fact about the system that code alone does not state. |
+| `glossary` | A term of art and its canonical meaning in this project. |
+| `task` | Working notes attached to a task in flight. |
+
+## Versioned, never silently mutated
+
+Memories are **append-only with lineage**. Every memory version has its own id;
+versions of the same underlying fact share a **lineage id**. Updating a memory writes
+a new version that *supersedes* the old one — nothing is edited in place, and history
+is always retrievable (`GET /v1/memory/{lineageId}/history`). When knowledge changes
+("we moved from X to Y"), the record shows both the current truth and the path to it.
+
+Three more fields shape how a memory behaves:
+
+- **scope** — where the memory applies (how broadly it should surface).
+- **confidence** — how settled the knowledge is; a hunch and a ratified decision are
+  both worth storing but not worth equal weight in ranking.
+- **metadata** — provenance: `source` (for example `manual`, an ADR reference, or a
+  commit SHA), `author`, and related references (files, symbols, other memories).
+
+## How memory is captured
+
+- **Explicitly** — the `capture_memory` MCP tool or `POST /v1/memory`, by a human or
+  (more often) by an agent at the moment a decision is made or a lesson lands. The
+  [capturing memory guide](/docs/guides/capturing-memory) covers the habit and the
+  shapes.
+- **By extraction** — ingestion can derive memory candidates from sources during
+  scans (for example, from commit history). Extraction produces candidates with
+  appropriate confidence, not silent facts.
+
+## How memory comes back
+
+Memories are embedded and indexed like every other knowledge unit, so they surface
+through the same [hybrid retrieval](/docs/concepts/retrieval) — a search for
+"retry policy" finds the decision memory alongside the code. In compiled packages the
+plan stage explicitly budgets for decision-shaped knowledge, which is how *"add a
+logout endpoint"* arrives accompanied by the six-month-old session-handling decision
+that constrains it.
+
+Retention is governed, not accidental: per-kind retention rules exist in
+configuration, deletion is an explicit governed operation (delete-only retention, the
+audit trail records it), and data-subject export/erasure flows exist for compliance —
+see [Governance & audit](/docs/guides/governance-and-audit).
+
+## What belongs in memory
+
+The test is simple: **would a competent newcomer (human or agent) make a worse change
+without this?** If yes, capture it. The highest-value memories in practice: decisions
+with their *why*, constraints that are invisible in code ("this endpoint is called by
+the mobile app's v1 release"), failure records ("we tried streaming here; it
+deadlocked under X"), and project-specific vocabulary.

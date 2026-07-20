@@ -1,0 +1,72 @@
+---
+title: Tenancy & projects
+description: Two scoping axes — tenants isolate organizations, projects partition a tenant's workspaces — and how enforcement lives in the storage layer, not in query filters.
+---
+
+Every read and write in Tessera happens inside a scope with two axes: a **tenant**
+(whose data is this?) and a **project** (which workspace within that tenant?).
+Understanding the two axes explains how one deployment can serve a solo developer,
+a team, and a multi-organization cloud with the same code.
+
+## Tenants — the isolation boundary
+
+A tenant is the hard wall: an organization or account whose data must never blend
+with another's. Tenant isolation is **enforced in the data plane** — scoped storage
+views bind the tenant into the adapter itself (a column predicate, a scoped table, a
+partition), rather than relying on every query remembering a `WHERE` clause. There is
+no cross-tenant retrieval; the vector index itself is tenant-scoped.
+
+Where the tenant comes from depends on [auth mode](/docs/guides/tokens-and-auth):
+
+- **`none`** (local default) — every call belongs to the configured local tenant
+  (`default` unless you set `TESSERA_AUTH_TENANT`).
+- **`token`** — the tenant is bound into the token at issuance.
+- **`oidc`** — the tenant arrives in a configured JWT claim from your identity
+  provider.
+
+A solo Local user never has to think about any of this — and loses nothing by it,
+because the enforcement machinery is identical whether one tenant exists or ten
+thousand.
+
+## Projects — workspaces within a tenant
+
+Within a tenant, **projects** partition knowledge into workspaces: distinct
+repositories, products, or clients whose contexts should not blur. Search in one
+project does not surface another project's chunks; memories, graph nodes, and
+compiled packages are all project-scoped.
+
+- Every tenant has a **`default` project**, which is where everything lands until
+  you say otherwise — projects are invisible until the moment you need them.
+- Projects are managed over every surface, per the parity rule: `GET/POST/PATCH/
+  DELETE /v1/projects` over REST, and the `list_projects` / `create_project` /
+  `rename_project` / `delete_project` MCP tools — see the
+  [tenants & projects guide](/docs/guides/tenants-and-projects) for workflows and
+  the [reference](/docs/reference) for exact shapes.
+
+The same data-plane principle applies: project scope binds into the storage view
+(chained under the tenant view — a project belongs to exactly one tenant), so a
+mis-scoped query is structurally hard rather than merely discouraged.
+
+## How the axes compose
+
+```
+(tenant, project)  →  the scope of every operation
+   │        │
+   │        └─ partitions workspaces WITHIN a boundary  (organization's choice)
+   └─ the isolation boundary itself                     (never crossed)
+```
+
+Rule of thumb: **tenants are about *who may see*, projects are about *what belongs
+together*.** Use separate projects for codebases whose knowledge should not
+cross-pollinate; separate tenants only where an actual trust boundary exists.
+
+## What this means in practice
+
+- **Local, one repo:** ignore all of it — you are the `default` tenant's `default`
+  project.
+- **Local, several unrelated repos:** create a project per repo so retrieval never
+  bleeds between them.
+- **A team self-hosting:** one tenant, projects per product area, tokens scoped by
+  role — quotas and the [audit trail](/docs/guides/governance-and-audit) apply
+  per-tenant.
+- **Multi-organization:** one tenant per organization; everything above per tenant.

@@ -1,0 +1,67 @@
+---
+title: Glossary
+description: The canonical definitions for every term of art in Tessera and this documentation.
+---
+
+Canonical vocabulary for Tessera. The documentation, the API, and the dashboard use
+these terms consistently; where a term has its own page, it is linked.
+
+## Core artifacts
+
+| Term | Definition |
+|------|------------|
+| **Context package** | The compiled output: an ordered, sectioned, provenance-tagged, budget-bounded bundle of context produced for a specific task. |
+| **[Context Compiler](/docs/concepts/context-compiler)** | The pipeline that produces a context package: `plan → retrieve → expand → rank → dedup → compress → assemble`. |
+| **Compilation trace** | The recorded inputs, candidates, scores, and drops of each compiler stage; the substance behind `explain` and the dashboard's package inspector. |
+| **[Provenance](/docs/concepts/provenance)** | The recorded source and lineage of any fragment — where it came from, when, from whom — attached to every item in a context package. |
+| **Budget** | The caller-set token ceiling a compiled package must fit; enforced by the compiler, not advisory. |
+
+## Knowledge & structure
+
+| Term | Definition |
+|------|------------|
+| **[Knowledge graph](/docs/concepts/knowledge-graph)** | The typed graph of project entities — files, symbols, modules, people, decisions, memories — and their relationships. |
+| **[Effect-link](/docs/concepts/effect-links)** | A typed graph edge meaning "changing A requires reviewing/changing B", carrying `rationale`, `confidence`, and `origin` (`static` / `manual` / `learned`). |
+| **[Memory](/docs/concepts/memory)** | A first-class stored unit of project knowledge with a kind (`decision`, `lesson`, `incident`, `failure`, `architecture`, `glossary`, `task`), scope, confidence, and version lineage. |
+| **Lineage** | The stable identity of a memory across its versions; updating writes a new superseding version rather than mutating. |
+| **Symbol** | A code entity (function, class, type, variable) extracted during scanning and indexed for exact lookup. |
+| **Chunk** | A normalized unit of ingested content — the granularity at which text is embedded and retrieved. |
+
+## Retrieval
+
+| Term | Definition |
+|------|------------|
+| **[Hybrid retrieval](/docs/concepts/retrieval)** | Combining semantic, keyword, graph, temporal, and symbolic retrievers rather than vector-only search. |
+| **Fusion ranker** | The component that merges the five retrievers' results into one ranked candidate set with per-hit signal attribution. |
+| **Signal attribution** | The record of *which* retrievers surfaced a result — evidence quality, preserved into traces and packages. |
+
+## Ingestion
+
+| Term | Definition |
+|------|------------|
+| **Source** | A registered origin of knowledge (a filesystem directory or git repository today), scanned into the stores. |
+| **Connector** | The plugin that reads a kind of source (`filesystem`, `git`). |
+| **Scan** | The ingestion run over a source: normalize → chunk → extract → redact → embed → upsert → graph-update. Incremental after the first pass. |
+| **Processor** | A pluggable stage inside the ingestion pipeline. |
+
+## Platform
+
+| Term | Definition |
+|------|------------|
+| **MCP** | The Model Context Protocol — the agent-facing tool interface. Tessera's MCP server is spawned by agent clients over stdio. |
+| **Parity rule** | The binding rule that every product operation is available over REST `/v1` and (where agent-relevant) MCP — the dashboard is never a privileged surface. |
+| **Port** | A domain-defined interface (hexagonal architecture) that infrastructure implements. |
+| **Adapter** | A concrete implementation of a port for a backend (sqlite-vec vs. pgvector, SQLite vs. Postgres). |
+| **Conformance suite** | The shared test suite every adapter of a port must pass — the tested guarantee of cross-deployment parity. |
+| **Deployment profile** | The configuration that selects adapters and providers for a mode (`local` today; `self-hosted` / `cloud` wiring lands with F-056). |
+| **[Tenant](/docs/concepts/tenancy-and-projects)** | The hard isolation boundary — an organization or account whose data never mixes with another's. |
+| **[Project](/docs/concepts/tenancy-and-projects)** | A workspace partition within a tenant; every tenant has a `default` project. |
+| **Token** | A scoped, revocable API credential (Bearer) carrying roles; see [Tokens & auth](/docs/guides/tokens-and-auth). |
+| **Audit trail** | The persistent, tenant-scoped record of sensitive actions; see [Governance & audit](/docs/guides/governance-and-audit). |
+
+## Naming
+
+| Term | Definition |
+|------|------------|
+| **Tessera** | The product. A *tessera* is a single mosaic tile — the metaphor for assembling scattered knowledge into one picture. |
+| **`@tessera/*`** | The package scope; the CLI package is `@tessera/cli`, the SDK `@tessera/sdk`, and so on. |

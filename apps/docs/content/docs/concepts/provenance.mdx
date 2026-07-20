@@ -1,0 +1,59 @@
+---
+title: Provenance & citations
+description: Every fragment knows where it came from — provenance on data, citations in packages, signal attribution in search, and the explain path.
+---
+
+A context system an agent cannot audit is a rumor mill. Tessera's answer is
+**provenance everywhere**: every stored fragment records where it came from, every
+compiled package cites its sources, and every ranking records why it ranked.
+
+## Provenance on data
+
+Everything ingested or captured carries its origin:
+
+- **Chunks and documents** know their source, file path, and content version — a
+  scan is not a blender; a fragment is always traceable back to the bytes it came
+  from.
+- **[Memories](/docs/concepts/memory)** carry `metadata.source` (a commit SHA, an ADR
+  reference, `manual`), an author, related references — and their full **version
+  history**, since memories supersede rather than overwrite.
+- **Graph edges** record their origin — for
+  [effect-links](/docs/concepts/effect-links), whether an edge is `static` analysis,
+  a `manual` assertion, or `learned`, plus the written rationale.
+
+## Citations in compiled packages
+
+The [Context Compiler](/docs/concepts/context-compiler) keeps provenance through
+every stage — including the destructive ones. Deduplication merges provenance from
+collapsed duplicates; **compression preserves citations**, so a summarized passage
+still points at the exact sources it summarizes. The assembled package pairs each
+section's content with its citation list.
+
+For an agent, this changes behavior: a claim in a package is checkable ("open the
+cited file"), attributable ("this constraint comes from ADR-0031"), and
+contradiction-resistant (two conflicting fragments carry the dates and sources that
+resolve them).
+
+## Attribution in search
+
+Even plain [search](/docs/concepts/retrieval) results carry evidence: every hit
+records which of the five signals surfaced it. `keyword + symbolic` on the same hit
+means the term literally exists at a definition site; a lone `semantic` hit is a
+softer lead. Agents can and should weigh results accordingly.
+
+## The explain path
+
+Compactness and explainability pull in opposite directions, so Tessera separates
+them. Default responses are token-lean; when the *why* is needed, the **`explain`**
+tool walks a result or package decision — what was considered, what scored how, what
+was dropped and why. The dashboard's package inspector is the same trace rendered
+visually. You pay for verbosity only when you ask for it.
+
+## Why this is a big deal for trust
+
+Provenance turns every downstream artifact into something reviewable. A human
+reviewing an agent's change can follow the citations in the package that informed it;
+an incident review can reconstruct *what the agent knew*; a compliance process can
+answer *where did this information come from* — all from recorded structure rather
+than reconstruction. This is also why provenance coverage is part of the product's
+own definition of context quality.

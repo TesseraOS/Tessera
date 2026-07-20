@@ -1,0 +1,47 @@
+---
+title: Concepts overview
+description: The mental model behind Tessera — how the compiler, effect-links, memory, the knowledge graph, and retrieval fit together into one engine.
+---
+
+Tessera's parts are easiest to understand as one loop: **knowledge goes in, structure
+is extracted, and compiled context comes out** — with every step recorded.
+
+## The loop
+
+1. **Ingestion** — you register [sources](/docs/guides/sources) (repositories today;
+   the connector model generalizes further). A scan normalizes files, chunks them,
+   extracts code symbols, redacts secrets, embeds content, and updates the stores.
+   Scans are incremental: only changed content is reprocessed.
+2. **Structure** — from what was ingested, Tessera maintains a
+   [knowledge graph](/docs/concepts/knowledge-graph) of entities and typed relations,
+   including [effect-links](/docs/concepts/effect-links): edges that say *"changing
+   this implies reviewing that"*. Alongside it, [memory](/docs/concepts/memory) holds
+   the knowledge that is not derivable from code — decisions, lessons, conventions —
+   versioned and supersedable.
+3. **Answering** — when an agent asks, [hybrid retrieval](/docs/concepts/retrieval)
+   gathers candidates through five signals, and the
+   [Context Compiler](/docs/concepts/context-compiler) plans, expands, ranks,
+   deduplicates, and compresses them into a budget-bounded package where every item
+   carries [provenance](/docs/concepts/provenance).
+
+Around the loop sit the operational concerns: [tenancy & projects](/docs/concepts/tenancy-and-projects)
+scope every read and write, auth/RBAC guards the API boundary, and an audit trail
+records sensitive actions — covered in the [guides](/docs/guides).
+
+## Why "compile" and not "search"?
+
+A search result is a list of hits; a **compiled package** is an argument for a task.
+The difference is everything after retrieval: expanding along the graph to pull in
+what the hits *imply* (the function you found plus the three call sites that break
+when it changes), ranking against the task rather than the query string, dropping
+near-duplicates instead of paying for them twice, compressing to fit the budget the
+caller set, and citing sources so nothing has to be taken on faith. That pipeline is
+the product's core and has its own page: [Context Compiler](/docs/concepts/context-compiler).
+
+## Where to start
+
+If you read only two pages, read [Context Compiler](/docs/concepts/context-compiler)
+and [Effect-links](/docs/concepts/effect-links) — they are the two differentiators the
+rest of the system exists to serve. The [architecture](/docs/concepts/architecture)
+page explains how it all stays deployment-agnostic; the
+[glossary](/docs/concepts/glossary) pins down every term this documentation uses.

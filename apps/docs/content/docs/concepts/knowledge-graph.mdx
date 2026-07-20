@@ -1,0 +1,66 @@
+---
+title: Knowledge graph
+description: The typed graph of files, symbols, modules, decisions, and memories — how it is built during ingestion, stored relationally, and queried by agents and the compiler.
+---
+
+The **knowledge graph** is Tessera's structural spine: a graph of typed nodes and
+edges over everything ingested. Where the vector index answers *"what is similar to
+this?"*, the graph answers *"what is connected to this, and how?"* — the question
+that matters most when planning a change.
+
+## The model
+
+```
+Node (kind: file | symbol | module | person | decision | memory)
+Edge (typed: imports, calls, references, owns, supersedes, EFFECT_LINK, …)
+```
+
+Nodes represent the entities of a project: files and modules, extracted code symbols
+(functions, classes, types), people, decisions, and [memories](/docs/concepts/memory).
+Edges are **typed** — `imports` is not `calls`, and neither is
+[`EFFECT_LINK`](/docs/concepts/effect-links), the edge kind important enough to have
+its own page. Every node and edge carries stable ids, timestamps, and
+[provenance](/docs/concepts/provenance).
+
+## How it is built
+
+The graph is maintained by ingestion, not by hand:
+
+1. **Scanning a source** parses files and extracts **code symbols** using tree-sitter
+   grammars — real parsing, not regex — so functions, classes, and types become nodes
+   with their definition sites.
+2. **Relationship extraction** derives edges from the code: imports, call
+   relationships, references. These also seed `static`-origin effect-links.
+3. **Memories and decisions** join the graph as nodes when captured, linked to the
+   files and symbols they reference.
+4. **Rescans are incremental** — only changed content is re-extracted, and the
+   affected subgraph is updated.
+
+## How it is stored
+
+Relationally — nodes and edges tables with recursive-CTE traversal — in SQLite
+locally and Postgres in larger deployments, behind the same storage port. This keeps
+the zero-dependency Local promise (no graph database to install) while leaving the
+door open: storage sits behind a port, so a dedicated graph engine is an adapter
+decision, not a rewrite.
+
+## How it is queried
+
+- **`query_graph`** (MCP) — direct graph queries: neighbors of a node, paths between
+  entities, nodes of a kind. `GET /v1/graph` is the REST equivalent.
+- **`get_effects`** — the ranked effect-link traversal (see
+  [Effect-links](/docs/concepts/effect-links)).
+- **Inside retrieval** — the graph retriever is one of the five
+  [retrieval signals](/docs/concepts/retrieval), and the compiler's expand stage
+  walks the graph to pull in what raw hits imply.
+
+The dashboard renders the same graph visually; agents get it as structured data. Both
+read the same store — there is no "visualization copy" that can drift.
+
+## Why a graph at all?
+
+Vector similarity is blind to structure: it can tell you two functions look alike,
+but not that one calls the other, that a decision governs both, or that changing a
+type ripples into nine files. Those are edges, not embeddings. Tessera keeps both
+representations because agents need both questions answered — and the compiler's
+strength is precisely that it consults them together.

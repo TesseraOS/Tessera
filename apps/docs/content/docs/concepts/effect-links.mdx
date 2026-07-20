@@ -1,0 +1,76 @@
+---
+title: Effect-links
+description: A first-class graph of "changing A implies reviewing B" — where the edges come from, what they carry, and how agents consult them before editing.
+---
+
+The most expensive agent failure mode is not writing bad code — it is writing good
+code in one place and silently breaking three others. **Effect-links** exist for that
+failure mode: they are first-class graph edges that say *"a change here implies a
+review or change there"*, and they are queryable before an edit is made.
+
+## What an effect-link is
+
+An effect-link is a typed edge in the [knowledge graph](/docs/concepts/knowledge-graph)
+carrying three fields beyond its endpoints:
+
+| Field | Meaning |
+|-------|---------|
+| `rationale` | Why the dependency exists, in words — the part a human or agent actually reads. |
+| `confidence` | How sure the system (or author) is that the edge is real. |
+| `origin` | Where the edge came from: `static`, `manual`, or `learned`. |
+
+The three origins matter:
+
+- **`static`** — derived by analysis during ingestion: import graphs, call
+  relationships, symbol references. Cheap, broad, and automatically refreshed by
+  rescans.
+- **`manual`** — asserted by a person or an agent (`assert_effect` /
+  `POST /v1/effects`) because they know something analysis cannot see: *"the
+  retry budget here must match the timeout there"*, *"this JSON shape is mirrored in
+  the mobile client"*. These encode tribal knowledge that otherwise lives in
+  someone's head.
+- **`learned`** — inferred from observed history (changes that repeatedly travel
+  together). This origin exists in the model today and grows more automatic over
+  time.
+
+## Consulting the graph
+
+`get_effects` (MCP) or `GET /v1/effects` (REST) takes a reference — a symbol or a
+file — and runs a **ranked traversal**: not just direct neighbors but transitive
+impact, returned with paths and the rationale for each hop, ranked so the most
+consequential dependents come first.
+
+The intended agent workflow is a habit, not an API subtlety:
+
+1. Before editing symbol `X`, call `get_effects(X)`.
+2. Read the ranked list — it is the reviewer's checklist for the change.
+3. Make the change, touching or consciously clearing each implied site.
+4. If the work revealed a dependency the graph did not know, record it with
+   `assert_effect` — the graph gets smarter with every task.
+
+The [Context Compiler](/docs/concepts/context-compiler) also traverses effect-links
+during its expand stage, so a compiled package for *"change the token TTL"* already
+contains the places the TTL is assumed — even if you never called `get_effects`
+yourself.
+
+## Practicing what it preaches
+
+Tessera's own repository is developed under an in-repo harness whose rules require
+the building agents to consult and update an effects file before completing any
+change — the same discipline the product offers its users, applied to building the
+product. The effect-link model is not speculative: it is how this codebase has been
+kept coherent across a hundred features.
+
+## Honest limits
+
+- Static extraction sees what static analysis can see. Cross-service contracts,
+  config↔code couplings, and convention-level dependencies enter the graph through
+  `manual` assertions — budget a little time for them; they pay back on every
+  subsequent task.
+- An effect-link is a claim, not a proof: `confidence` exists precisely because some
+  edges are hypotheses. Treat low-confidence dependents as *"check this"*, not
+  *"change this"*.
+
+The API shapes are in the [REST reference](/docs/reference/api) (`GET/POST
+/v1/effects`) and the [MCP tools reference](/docs/reference/mcp-tools)
+(`get_effects`, `assert_effect`, `query_graph`).

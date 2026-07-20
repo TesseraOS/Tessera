@@ -1157,7 +1157,7 @@
       "id": "E-026",
       "from": {
         "kind": "contract",
-        "ref": "the docs generated-reference inputs (F-053, ADR-0054 §4): packages/sdk/openapi.json (the SDK-captured spec), @tessera/cli COMMANDS (name/summary/usage — the help table) + MCP_CLIENTS + renderMcpClientConfig (apps/cli), the MCP server's tools/list answer (apps/server dist mcp bin over stdio), and .env.example (whose completeness verify-state's env-docs guard already enforces)"
+        "ref": "the docs generated-reference inputs (F-053, ADR-0054 §4): packages/sdk/openapi.json (the SDK-captured spec), @tessera/cli COMMANDS (name/summary/usage — the help table) + MCP_CLIENTS + renderMcpClientConfig (apps/cli), the MCP server's tools/list answer (apps/server dist mcp bin over stdio), and .env.example (whose completeness verify-state's env-docs guard already enforces); PLUS the repo-root docker-compose.yml — the one deployment fact authored INLINE in the MDX (kept in-source so it survives verbatim into llms-full.txt and keeps its filename chip / highlighting, which a server component rendering a string would lose) rather than emitted by generate.mjs, and gated by its own targeted drift test instead of the byte-compare over generate()"
       },
       "to": [
         {
@@ -1175,10 +1175,14 @@
         {
           "kind": "test",
           "ref": "apps/docs/tests/e2e/docs.spec.ts — asserts all 18 tool headings render and the /v1/search playground page serves; the e2e webServer builds the app, so a stale artifact that survives drift (it cannot) would still surface here"
+        },
+        {
+          "kind": "test",
+          "ref": "apps/docs/tests/compose-doc-drift.test.ts — asserts the ```yaml title=\"docker-compose.yml\" fenced block in content/docs/deployment/self-host-docker.mdx is byte-identical to the compose file's body (leading comment header stripped, since the public page omits the internal F-023/FR-51 refs). Adding a service to docker-compose.yml or editing its definition now reddens this gate until the MDX block follows"
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "The docs' no-fake-data guarantee is this coupling: every machine fact on the public docs derives from a source of truth through generate.mjs, and the drift gate makes staleness a red build. The flip side is a standing obligation — changing the CLI's commands/help/MCP_CLIENTS, the MCP tool registry, a /v1 route, or .env.example now requires `pnpm --filter @tessera/docs generate` + committing the diff (turbo's ^build ordering guarantees fresh dists for the gate; the generator spawns the BUILT server mcp bin and imports the BUILT cli, so a stale dist regenerates old truth — the E-003 SDK trap, inherited).",
+      "rationale": "The docs' no-fake-data guarantee is this coupling: every machine fact on the public docs derives from a source of truth through generate.mjs, and the drift gate makes staleness a red build. The flip side is a standing obligation — changing the CLI's commands/help/MCP_CLIENTS, the MCP tool registry, a /v1 route, or .env.example now requires `pnpm --filter @tessera/docs generate` + committing the diff (turbo's ^build ordering guarantees fresh dists for the gate; the generator spawns the BUILT server mcp bin and imports the BUILT cli, so a stale dist regenerates old truth — the E-003 SDK trap, inherited). The lone inline exception, the self-host docker-compose.yml block, carries the same obligation via a different mechanism: no regeneration, but editing the compose service definition reddens compose-doc-drift.test.ts until the MDX fence is reconciled (Option-B over a generate-and-render component was chosen because rendering the YAML from a generated string would strip it out of llms-full.txt — which emits raw MDX bodies — and drop the filename chip).",
       "confidence": 1,
       "origin": "manual"
     }

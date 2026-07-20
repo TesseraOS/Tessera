@@ -3,6 +3,39 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-20 — docs: compose YAML block is now drift-gated (closes F-053's last hand-copy)
+
+**What changed**
+- The self-host page's `docker-compose.yml` fenced block was the one machine fact on the docs
+  site not covered by the drift pipeline (flagged in the F-053 entry below: "noted, not
+  drift-gated"). Added [`apps/docs/tests/compose-doc-drift.test.ts`](../../apps/docs/tests/compose-doc-drift.test.ts):
+  it extracts the ```yaml title="docker-compose.yml" fence from
+  `content/docs/deployment/self-host-docker.mdx` and asserts byte-identity with the repo-root
+  [`docker-compose.yml`](../../docker-compose.yml) body (leading comment header stripped — the
+  public page intentionally omits the internal F-023/FR-51 refs). Runs in the standard `test`
+  gate (auto-included by `tests/**/*.test.ts`).
+- Updated effect-link **E-026** ([`effects.json`](effects.json)): docker-compose.yml added as an
+  input, the new test added to the outputs, rationale extended with the standing obligation.
+
+**Evidence/verification**
+- `npx vitest run` in apps/docs — **4 files / 21 tests pass** (new compose gate + design-lint +
+  link-check + generated-drift). Manually verified the gate has teeth: a `pg16→pg17` edit reddens
+  it; a header-comment-only edit does not (no false drift).
+- `node scripts/generate.mjs` — all artifacts regenerate byte-identically (git clean; change is
+  one new test file, additive).
+- `node scripts/verify-state.mjs` — state valid, 26 effect-links, env-docs ok.
+
+**Decisions**
+- Chose the **targeted drift assertion** over a generate-and-render server component (both were
+  on the table). Decisive reason: `llms-full.txt`/`llms.txt` emit each prose page's **raw MDX
+  body**, so rendering the YAML from a generated string would delete the compose stack from the
+  machine-ingest dump and drop the `docker-compose.yml` filename chip. Keeping the YAML authored
+  inline + gating it preserves both. No ADR — this extends ADR-0054 §4, doesn't deviate from it.
+
+**Next step**
+- None required. If F-056 later adds API-server compose artifacts, extend this gate (or generate)
+  to cover them; E-026 now records the coupling.
+
 ## 2026-07-20 — F-053 DONE: `@tessera/docs` — the documentation site (Fumadocs, docs subdomain)
 
 Claimed **F-053** (lowest-id eligible R4 `must`; F-052 blocker done). Plan:

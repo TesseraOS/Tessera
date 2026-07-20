@@ -8,7 +8,7 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 **What changed**
 - Added `GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}` to the `secret-scan` job's gitleaks step env block in `.github/workflows/ci.yml`. This explicitly binds the GitHub Organization secret to the environment variable required by the `gitleaks/gitleaks-action@v2` action.
 - Fixed strict null check / `noUncheckedIndexedAccess: true` compilation errors in `apps/docs/tests/compose-doc-drift.test.ts` by safely checking for `undefined` on index and regular expression group accesses.
-- Added a bug fix plan file [fix-gitleaks-license.md](file:///E:/ContextOS/.harness/plans/fix-gitleaks-license.md).
+- Added a bug fix plan file [fix-gitleaks-license.md](../plans/fix-gitleaks-license.md).
 
 **Evidence/verification**
 - Running `node scripts/verify-state.mjs` returns `✓ state valid`.

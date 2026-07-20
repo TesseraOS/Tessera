@@ -1,0 +1,105 @@
+---
+title: Working with sources
+description: Registering filesystem and git sources, the scan lifecycle, incremental rescans, autoscan, and clean removal — over CLI, REST, and MCP.
+---
+
+A **source** is a registered origin of knowledge — today, a directory or a git
+repository. This guide covers the full lifecycle: register, scan, rescan, inspect,
+remove. Per the parity rule, everything here works identically over three surfaces;
+examples show all of them where the shape differs.
+
+## Registering a source
+
+The two connectors:
+
+| Connector | Chosen when | Behavior |
+|-----------|------------|-----------|
+| `git` | The path contains a `.git` directory, or you registered a git URL | Commit-aware ingestion of the working tree |
+| `filesystem` | Any other directory | Content ingestion of the tree |
+
+**CLI** (detects the connector for you; a git URL is shallow-cloned into
+`<data-dir>/sources/` first):
+
+```bash
+tessera source add /path/to/repo
+tessera source add https://github.com/you/repo.git
+```
+
+**REST**:
+
+```bash
+curl -X POST http://127.0.0.1:3000/v1/sources \
+  -H 'content-type: application/json' \
+  -d '{"kind": "git", "root": "/path/to/repo", "label": "my-repo"}'
+```
+
+**MCP** — the `add_source` tool with the same `kind` / `root` / `label` arguments.
+An agent with MCP access can onboard a repository into Tessera without you touching
+anything — that is the intended workflow, not a party trick.
+
+`label` is a display name (defaults to the root path). Registration returns the
+stored source with its `id`; keep it — every other operation takes it.
+
+## Scans
+
+A scan runs the ingestion pipeline over the source: normalize → chunk → extract
+symbols → redact secrets → embed → index → update the graph.
+
+- **First scan** does the full tree, and downloads the embedding model (~90 MB,
+  one-time) if the Transformers.js provider hasn't run before on the machine.
+- **Rescans are incremental and idempotent**: content is hash-diffed, and only
+  changed units are reprocessed and re-embedded. Rescanning an unchanged source is
+  cheap and safe.
+
+Trigger and inspect over any surface:
+
+```bash
+# REST: trigger, then poll status
+curl -X POST http://127.0.0.1:3000/v1/sources/<id>/scan
+curl http://127.0.0.1:3000/v1/sources/<id>/scan     # scan state / progress
+```
+
+The MCP `scan_source` tool takes the source `id` and reports what changed; the CLI's
+`source add` scans on registration.
+
+**When to rescan:** after meaningful change lands — a merged branch, a refactor, a
+dependency bump you'll be asking about. Retrieval ranks fresh knowledge higher, so
+scan cadence directly shapes answer quality. By default, registration is the only
+automatic scan; set `TESSERA_SOURCES_AUTOSCAN=true` if you want registration-time
+scans when driving the REST API directly (the agent-first default leaves the agent
+in charge of when to scan).
+
+## Inspecting
+
+```bash
+curl http://127.0.0.1:3000/v1/sources          # list, with per-source state
+curl http://127.0.0.1:3000/v1/sources/<id>     # one source
+curl http://127.0.0.1:3000/v1/stats            # corpus-wide counts
+```
+
+`list_sources` and `get_stats` are the MCP twins. Stats are the quick sanity check
+that a scan actually ingested what you expected (documents, chunks, symbols,
+memories by kind).
+
+## Removing a source
+
+```bash
+curl -X DELETE http://127.0.0.1:3000/v1/sources/<id>
+```
+
+Removal deregisters the source and removes its indexed knowledge from retrieval —
+it does not touch the original files on disk. For a git-URL source, the shallow clone
+under `<data-dir>/sources/` belongs to Tessera's data directory and is cleaned with
+it.
+
+## Practical patterns
+
+- **One source per repository**, and one [project](/docs/guides/tenants-and-projects)
+  per group of repositories that belong together in retrieval.
+- **Monorepos are one source** — the graph and retrieval handle the internal
+  structure; splitting a monorepo into many sources buys nothing.
+- **Secrets:** redaction runs during ingestion *before* anything persists, but the
+  right posture is still to keep real secrets out of tracked files — redaction is a
+  net, not a license.
+- Registering a path you later move breaks rescans for that source (the root is the
+  identity); remove and re-add under the new path.

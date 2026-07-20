@@ -1,0 +1,87 @@
+---
+title: Capturing memory
+description: The habit that compounds — what to capture, which kind to use, writing bodies that retrieve well, and updating knowledge without losing history.
+---
+
+Every ingested repository makes Tessera useful; captured
+[memory](/docs/concepts/memory) is what makes it *compound*. This guide is the
+working discipline: what to capture, when, in which shape.
+
+## The moment to capture
+
+Capture at the **moment knowledge exists and is about to evaporate**:
+
+- A decision just got made (in a review, a discussion, an agent session) — capture
+  it with its *why* before the thread scrolls away.
+- Something failed in a non-obvious way — capture the failure and the fix while the
+  stack trace is still in front of you.
+- You discovered a constraint that code cannot express ("the mobile client pins
+  this JSON shape") — capture it, then also consider an
+  [effect-link assertion](/docs/concepts/effect-links#consulting-the-graph), which
+  makes the constraint *actionable* at edit time.
+
+For agents, the rule composes with the workflow: **after non-trivial work, record
+what was decided and learned.** An agent that captures as it goes leaves every
+future session (its own or another agent's) starting warm.
+
+## Choosing the kind
+
+| You have… | Kind |
+|-----------|------|
+| A choice with reasoning ("we use X because Y") | `decision` |
+| A hard-won insight that prevents a repeat mistake | `lesson` |
+| A production/development incident and its resolution | `incident` |
+| An approach that was tried and abandoned | `failure` |
+| A structural fact about the system | `architecture` |
+| A term with a project-specific meaning | `glossary` |
+| Working notes scoped to an in-flight task | `task` |
+
+Kinds are not decoration — retrieval and governance treat them differently, and
+`failure` is the quietly valuable one: negative knowledge ("we tried streaming here;
+it deadlocks under load") is invisible in code by definition.
+
+## The call
+
+MCP:
+
+```json
+{
+  "kind": "decision",
+  "title": "Retry policy for outbound webhooks",
+  "body": "Webhook deliveries retry 5 times with exponential backoff + jitter (base 2s, cap 5m). Chosen over a dead-letter-first design because deliveries are idempotent on the receiver side (verified for all current consumers). Revisit if a non-idempotent consumer is added.",
+  "scope": "services/webhooks",
+  "confidence": 0.9,
+  "metadata": { "source": "manual", "author": "asha", "refs": ["services/webhooks/deliver.ts"] }
+}
+```
+
+`capture_memory` over MCP, `POST /v1/memory` over REST — same fields. The example
+shows the shape of a body that retrieves well:
+
+- **Title** is the searchable headline — name the subject, not the meeting.
+- **Body** states the fact, the *why*, and the boundary ("revisit if…"). Aim for
+  the paragraph a competent newcomer needs, not an essay — memories are retrieved
+  into budgeted packages, and focused ones rank and compress better.
+- **Scope** narrows where it applies; **confidence** says how settled it is (a
+  ratified decision ≠ a strong hunch — record both, weight them honestly).
+- **Metadata** carries provenance: a commit SHA, an ADR id, related files.
+
+## Updating without erasing
+
+Knowledge changes. Memories are **versioned by lineage**: a `PATCH
+/v1/memory/{lineageId}` writes a new version that supersedes the old — nothing is
+destroyed, and `GET /v1/memory/{lineageId}/history` shows the whole arc. When a
+decision is reversed, update the lineage rather than capturing a competing memory:
+one lineage telling the true story beats two memories arguing.
+
+## Anti-patterns
+
+- **Journaling** — "worked on auth today" helps no one. Capture *conclusions*, not
+  activity.
+- **Duplicating the repo** — if code or an ADR file already states it, don't
+  restate it as memory; the scan already indexed it. Memory is for what is *not*
+  written down.
+- **Vague scope-less truisms** — "be careful with timeouts" retrieves everywhere
+  and helps nowhere. Bind claims to subjects.
+- **Set-and-forget confidence** — when a hunch is confirmed, update the lineage
+  with raised confidence; stale uncertainty misprices good knowledge.

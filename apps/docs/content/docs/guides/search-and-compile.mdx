@@ -1,0 +1,79 @@
+---
+title: Search & compile in practice
+description: When to search versus compile, choosing token budgets, reading a context package, and using explain — the working rhythm of a Tessera-connected agent.
+---
+
+Tessera gives an agent two knowledge calls with different jobs. Using them well —
+and knowing which one a moment calls for — is most of what "connected to Tessera"
+means in practice.
+
+## Two calls, two jobs
+
+| | `search` | `compile_context` |
+|---|----------|-------------------|
+| Question | *"Find me things about X"* | *"Prepare me to do task X"* |
+| Output | A ranked, attributed hit list | A budgeted, sectioned, cited package |
+| Cost | Cheap, fast | Heavier — runs the full pipeline |
+| Use when | Locating, verifying, exploring | Starting real work on a task |
+
+The rule of thumb an agent should follow: **search to orient, compile to act.**
+Exploratory pokes ("where is the retry logic?") are searches. The moment a concrete
+change is on the table ("add jitter to the retry backoff"), one `compile_context`
+call replaces what would otherwise be a dozen file reads — that trade is the
+product's entire economic argument.
+
+## Search well
+
+`search` takes a `query`, an optional `limit`, and an `include` selector. Results
+come back as one ranked set across code, [memory](/docs/concepts/memory), and the
+graph, each hit carrying its [signal attribution](/docs/concepts/retrieval#fusion)
+and a readable label and snippet.
+
+Reading attribution is worth teaching your habits: a `keyword`-backed hit means the
+term literally occurs (great for error strings); `semantic`-only hits are conceptual
+neighbors (great leads, weaker proof); `symbolic` hits are definition sites. When a
+search that should hit doesn't, check that the source was
+[scanned recently](/docs/guides/sources#scans) before doubting the query.
+
+## Compile well
+
+`compile_context` takes the `task` (a real task description, not two keywords — the
+plan stage feeds on it), a `budget` in tokens, an optional `retrievalLimit`, and
+`filters`.
+
+**Choosing a budget.** The configured default is 8000 tokens
+(`TESSERA_CONTEXT_BUDGET`). Calibrate to what the package is *for*:
+
+- **2–4k** — a focused, single-symbol change; forces aggressive compression, best
+  when you already know the area.
+- **8k (default)** — a normal feature task touching several files plus its
+  decisions.
+- **16k+** — unfamiliar-territory tasks where breadth beats depth of compression;
+  still cheaper than reading the directory tree raw.
+
+The budget is enforced: raising it buys more verbatim content and less
+summarization; lowering it buys the opposite. It never buys unrelated content —
+relevance is the rank stage's job, not the budget's.
+
+**Reading a package.** Sections arrive ordered by the compiler's ranking; every item
+carries citations. Two agent habits pay for themselves: follow a citation before
+distrusting a claim, and treat the package's [effect-link](/docs/concepts/effect-links)
+material as the review checklist for the change.
+
+## When the answer surprises you
+
+The `explain` tool exists for exactly this: it walks the
+[compilation trace](/docs/concepts/context-compiler#the-compilation-trace) — what
+was retrieved, how candidates scored, what was dropped and at which stage. Ask it
+*why is X not in the package?* before assuming the corpus lacks X; the usual answers
+are "outranked at the budget" (raise it or narrow the task) or "never retrieved"
+(the query/task wording, or a stale scan).
+
+`explain` is deliberately the verbose path — default responses stay token-lean, and
+you opt into depth when you need it.
+
+## The REST equivalents
+
+`POST /v1/search` and `POST /v1/compile` take the same parameters and return the
+same shapes — see the [REST reference](/docs/reference/api). Everything above
+applies unchanged; the surfaces are the same engine.

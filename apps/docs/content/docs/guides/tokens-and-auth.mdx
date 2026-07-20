@@ -1,0 +1,108 @@
+---
+title: Tokens & auth
+description: The three auth modes, the four-role RBAC model, issuing and revoking scoped tokens over CLI/REST/MCP, and the loopback rule that keeps none-mode safe.
+---
+
+Tessera's API boundary supports three auth modes. The Local default is deliberately
+trustful — and safe only because of where it binds. This guide covers the modes, the
+role model, and the token lifecycle.
+
+## The three modes
+
+| Mode | Who is the caller? | Use |
+|------|--------------------|-----|
+| `none` (default) | Everyone is the configured local principal (full access, tenant `default`) | Solo local use, loopback only |
+| `token` | Whoever presents a valid Bearer token; roles/scopes/tenant bound at issuance | Anything beyond one trusted user |
+| `oidc` | Whoever presents a valid JWT from your identity provider; roles/tenant from configured claims | Teams with an IdP |
+
+Set the mode at `init` (`--auth token`) or in config/env (`TESSERA_AUTH_MODE`).
+
+<Callout type="warn" title="The loopback rule">
+  `none` mode means every caller has full access. It is safe **only** while the API
+  binds `127.0.0.1` (the default). The moment the API is reachable by anything that
+  is not you — another user, a container network, a reverse proxy — switch to
+  `token` mode first. This ordering is not optional.
+</Callout>
+
+## The role model
+
+Four roles, checked at the API boundary:
+
+| Role | Intent |
+|------|--------|
+| `owner` | Full control, including token administration |
+| `admin` | Operational control — sources, projects, governance surfaces (audit, retention, DSR) |
+| `member` | The working role — search, compile, memory, effects |
+| `viewer` | Read-only |
+
+`GET /v1/me` shows the current principal (identity, roles, tenant) — the first call
+to make when debugging a 403. `GET /v1/rbac` returns the machine-readable
+role/permission catalog, so tooling never has to hardcode this table.
+
+## Issuing tokens
+
+Token mode must be enabled (`auth.mode: "token"`). Then, per the parity rule, three
+doors:
+
+**CLI:**
+
+```bash
+tessera token issue --roles member --display-name "asha laptop"
+```
+
+**REST** (`owner`-side administration):
+
+```bash
+curl -X POST http://127.0.0.1:3000/v1/tokens \
+  -H "authorization: Bearer <admin-token>" \
+  -H 'content-type: application/json' \
+  -d '{"principalId": "asha", "roles": ["member"], "displayName": "asha laptop"}'
+```
+
+**MCP** — the `issue_token` tool (same fields: `principalId`, `roles`, `scopes`,
+`displayName`, `expiresAt`).
+
+Two properties to internalize:
+
+- **The plaintext secret is returned exactly once**, at issuance. Store it in your
+  secret manager immediately; Tessera keeps only a hash and cannot show it again.
+- **Bind the narrowest role that does the job** — an agent that searches and
+  compiles needs `member`, not `admin`. Scopes narrow further within a role, and
+  `expiresAt` puts a clock on credentials that should not be eternal.
+
+Bootstrapping note: the very first token (before any admin token exists to call the
+API with) comes from the machine itself — `tessera token issue` runs against the
+local store directly, which is why it needs no Bearer of its own.
+
+## Using and revoking
+
+Callers send `authorization: Bearer <secret>` on every request.
+
+```bash
+curl http://127.0.0.1:3000/v1/tokens \
+  -H "authorization: Bearer <admin-token>"          # list (metadata only)
+curl -X DELETE http://127.0.0.1:3000/v1/tokens/<id> \
+  -H "authorization: Bearer <admin-token>"          # revoke, effective immediately
+```
+
+`list_tokens` / `revoke_token` are the MCP twins. Listing shows metadata (display
+name, roles, issuance/expiry) — never secrets. Issuance and revocation are sensitive
+actions and land in the [audit trail](/docs/guides/governance-and-audit).
+
+## OIDC in brief
+
+`oidc` mode verifies JWTs against your IdP: configure `TESSERA_AUTH_OIDC_ISSUER` and
+`TESSERA_AUTH_OIDC_AUDIENCE` (JWKS discovery is derived from the issuer unless you
+override it), plus the claim names that carry roles and tenant
+(`TESSERA_AUTH_OIDC_ROLES_CLAIM`, default `roles`;
+`TESSERA_AUTH_OIDC_TENANT_CLAIM`, default `tenant_id`). Full variable documentation
+is in the [configuration reference](/docs/reference/configuration).
+
+## MCP and auth — the stdio special case
+
+The stdio MCP server is spawned by your agent on your machine and inherits the
+deployment's config. There is no credential prompt in the stdio transport — a local
+agent is the machine's user, which is exactly the `none`-mode trust model. Locking
+agents down independently of humans becomes meaningful with the remote MCP
+transport (HTTP + Bearer through the gateway), which is its own upcoming feature
+(F-055) and will ride the same token model documented here.

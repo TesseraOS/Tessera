@@ -1,0 +1,70 @@
+---
+title: Tenants & projects
+description: Creating and managing projects over REST and MCP, scoping work to a project, the default project, and when a second tenant is the right tool.
+---
+
+The [concepts page](/docs/concepts/tenancy-and-projects) explains the two scoping
+axes; this guide is the operational side: creating projects, working inside them,
+and choosing between a project and a tenant.
+
+## You already have a project
+
+Every tenant is born with a **`default` project**, and everything you have done so
+far — sources, scans, memories, searches — happened inside it. Projects only need
+your attention when a second body of knowledge shouldn't blend with the first.
+
+## Managing projects
+
+Per the parity rule, both machine surfaces expose full project management:
+
+**REST:**
+
+```bash
+curl http://127.0.0.1:3000/v1/projects                       # list
+curl -X POST http://127.0.0.1:3000/v1/projects \
+  -H 'content-type: application/json' \
+  -d '{"name": "mobile-app"}'                                # create
+curl -X PATCH http://127.0.0.1:3000/v1/projects/<id> \
+  -H 'content-type: application/json' \
+  -d '{"name": "mobile-app-v2"}'                             # rename
+curl -X DELETE http://127.0.0.1:3000/v1/projects/<id>        # delete
+```
+
+**MCP** — `list_projects`, `create_project`, `rename_project`, `delete_project`.
+An agent can organize its own workspaces; nothing here needs a dashboard.
+
+Deletion is the governed, deliberate end of a workspace's indexed knowledge — it
+does not touch source files on disk, and (like every sensitive action) it lands in
+the [audit trail](/docs/guides/governance-and-audit).
+
+## Working inside a project
+
+Knowledge operations are project-scoped: a search in one project does not see
+another project's chunks, memories, or graph. Sources register *into* a project;
+memories are captured *into* one; compiled packages draw only from one. The exact
+parameter shapes per call are in the [REST reference](/docs/reference/api) and
+[MCP tools reference](/docs/reference/mcp-tools) — the model to hold onto is that
+**scope is resolved per call against the caller's tenant**, with the `default`
+project as the standing fallback, so single-project users never pass anything.
+
+## Project or tenant?
+
+| Situation | Tool |
+|-----------|------|
+| Two unrelated codebases on your laptop | Two **projects** |
+| Client work that must never surface in another client's context | Two **projects** (same trust domain: you) — or two tenants if the isolation must be structural |
+| Two organizations sharing one deployment | Two **tenants** — this is a trust boundary |
+| Same product, several repos that reference each other | **One project**, several sources — cross-repo retrieval is the point |
+
+The last row deserves emphasis: don't over-partition. Projects exist to prevent
+*unwanted* knowledge bleed; splitting repos that genuinely inform each other robs
+the compiler of exactly the cross-references it is best at.
+
+## Tenants, operationally
+
+Tenants are not created through a self-serve API on this surface — they arrive with
+your auth mode: the configured local tenant in `none` mode, the tenant bound into
+tokens at issuance, or the tenant claim in OIDC JWTs (see
+[Tokens & auth](/docs/guides/tokens-and-auth)). Governance surfaces — the audit
+trail, retention, quotas, DSR — all operate per-tenant, which is what makes a
+tenant the unit of accountability as well as isolation.

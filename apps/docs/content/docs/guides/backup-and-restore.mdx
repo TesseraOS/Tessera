@@ -1,0 +1,106 @@
+---
+title: Backup & restore
+description: Everything is files — the supported snapshot and recovery procedure for a Local deployment, what each file holds, and how migrations keep restores safe.
+---
+
+A Local deployment's entire state lives in its **data directory**. That single fact
+makes backup honest and simple: snapshot the directory, and you have snapshotted the
+deployment. This guide is the supported procedure and its sharp edges.
+
+## What you are backing up
+
+| Path | Holds |
+|------|-------|
+| `tessera.config.json` | The deployment's configuration (no secrets — secrets live in env or your secrets provider) |
+| `<data-dir>/tessera.sqlite` | The relational store: documents, chunks, symbols, memories, graph, audit trail, tokens (hashed) |
+| `<data-dir>/vectors.sqlite` | The vector index |
+| `<data-dir>/blobs/` | Content blobs |
+| `<data-dir>/sources/` | Shallow clones of git-URL sources (recreatable, but include them for a turnkey restore) |
+
+The default data directory is `.tessera/` beside the config; yours may be elsewhere
+if you initialized with `--data-dir`.
+
+## The procedure
+
+<Steps>
+
+<Step>
+
+### Quiesce
+
+Stop `tessera serve` and close agent sessions (each spawned `tessera mcp` process
+holds the store open). SQLite runs in WAL mode, and a **cold copy — no writers — is
+the guarantee that the `-wal`/`-shm` sidecar files and the database agree.** A copy
+taken under live writes is where corrupted restores come from.
+
+</Step>
+
+<Step>
+
+### Snapshot
+
+Copy the config and the data directory, timestamped, to somewhere that is not the
+same disk:
+
+```bash
+tar -czf tessera-backup-$(date +%Y%m%d-%H%M%S).tar.gz \
+  tessera.config.json .tessera/
+```
+
+(Any file-level tool works — `tar`, `robocopy`, restic, your snapshotting
+filesystem. Tessera adds no requirements beyond "copy the files while nothing
+writes".)
+
+</Step>
+
+<Step>
+
+### Restore
+
+To the same machine or a new one:
+
+1. Stop anything running against the target directory.
+2. Unpack the archive so `tessera.config.json` and the data directory land in the
+   same relative shape (or fix `--data-dir` paths in the config if you relocate).
+3. If the data directory carries stale `tessera.sqlite-wal` / `-shm` sidecars from
+   the source machine, delete them — the database file itself is the snapshot.
+4. Run `tessera doctor` to verify config/storage health, then start `serve` as
+   usual.
+
+</Step>
+
+<Step>
+
+### Verify — a backup is not a backup until restored
+
+Do one real restore drill: restore into a scratch directory, run
+`tessera doctor`, start `serve`, and hit `GET /v1/stats` — the counts should match
+the source deployment. Five minutes, once, buys certainty forever.
+
+</Step>
+
+</Steps>
+
+## Version skew and migrations
+
+Storage schema changes ship as **versioned, idempotent migrations** that run
+automatically and record what has been applied inside the database. Restoring an
+older snapshot into a newer Tessera build is therefore supported: pending
+migrations apply on first boot. The reverse — opening a *newer* snapshot with an
+*older* build — is not supported; restore onto a build at least as new as the one
+that wrote the snapshot.
+
+## Notes for larger deployments
+
+- The `backupSqlite` facility inside the storage layer uses SQLite's **online
+  backup API** (a consistent snapshot while the store is in use) — that is the
+  library primitive the product itself builds on. The cold-copy procedure above
+  stays the recommended operational path because it also captures blobs and config
+  atomically with the databases.
+- Postgres-backed deployments back up like any Postgres: `pg_dump` or your managed
+  provider's snapshots. That is deliberately an ops-tooling concern, not a Tessera
+  reimplementation — full guidance ships with the self-hosted profile (F-056).
+- What secrets? None: the config file holds no secrets, token secrets are stored
+  only as hashes, and env-provided secrets never persist. A Tessera backup is
+  sensitive for its *content* (your code and memories), not for credentials —
+  encrypt it accordingly anyway.

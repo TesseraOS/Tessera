@@ -1,0 +1,13 @@
+{
+  "title": "Guides",
+  "pages": [
+    "index",
+    "sources",
+    "search-and-compile",
+    "capturing-memory",
+    "tokens-and-auth",
+    "tenants-and-projects",
+    "governance-and-audit",
+    "backup-and-restore"
+  ]
+}

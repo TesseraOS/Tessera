@@ -1,0 +1,101 @@
+---
+title: Governance & audit
+description: The persistent audit trail, retention rules and pruning, data-subject export and erasure, and per-principal quotas — the accountability layer of a deployment.
+---
+
+Governance is where Tessera answers to operators and regulators rather than to
+agents: who did what, how long data lives, and how a person's data is exported or
+erased. All of it is per-[tenant](/docs/concepts/tenancy-and-projects), and the
+operational surfaces require an `admin`-grade principal
+(see [Tokens & auth](/docs/guides/tokens-and-auth)).
+
+## The audit trail
+
+Sensitive actions — token issuance and revocation, source and project changes,
+memory writes and deletions, governance operations themselves — are recorded in a
+**persistent, tenant-scoped audit trail**. It is on by default
+(`TESSERA_AUDIT_ENABLED=true`); disabling it falls back to a non-durable in-memory
+sink, which is a development posture, not an operating one.
+
+```bash
+curl "http://127.0.0.1:3000/v1/audit?limit=50" \
+  -H "authorization: Bearer <admin-token>"
+```
+
+The trail is **chronological by design** — it paginates by cursor in time order and
+deliberately offers no column re-sorting: an audit log whose order can be rearranged
+is a weaker witness. For analysis in other tooling, export it:
+
+```bash
+curl "http://127.0.0.1:3000/v1/audit/export" \
+  -H "authorization: Bearer <admin-token>" -o audit-export.json
+```
+
+MCP tool calls made through the server are audited on the same taxonomy — an agent
+operating your deployment leaves the same trail an operator does.
+
+## Retention
+
+Two independent knobs bound the trail's growth, both optional:
+
+```bash
+TESSERA_AUDIT_RETENTION_MAX_AGE_DAYS=90      # prune events older than N days
+TESSERA_AUDIT_RETENTION_MAX_ENTRIES=100000   # and/or beyond N entries per tenant
+```
+
+Memory retention is **delete-only** by policy: rules can expire material, but
+nothing rewrites history — a superseded memory version is still a version. Pruning
+runs on demand:
+
+```bash
+curl -X POST http://127.0.0.1:3000/v1/retention/prune \
+  -H "authorization: Bearer <admin-token>"
+curl http://127.0.0.1:3000/v1/retention \
+  -H "authorization: Bearer <admin-token>"          # current rules
+```
+
+Pruning is itself an audited action — the trail records its own trimming.
+
+## Data-subject requests (DSR)
+
+For GDPR-shaped obligations, two dedicated flows, both scoped to **the calling
+tenant** (the tenant is the data-controller unit; identify the tenant via the
+credential you call with):
+
+```bash
+# Export: everything held for the tenant — memories (all versions), graph,
+# sources, and the complete audit trail — as one machine-readable bundle
+curl "http://127.0.0.1:3000/v1/dsr/export" \
+  -H "authorization: Bearer <admin-token>" -o dsr-export.json
+
+# Erasure: delete the tenant's data plane
+curl -X POST http://127.0.0.1:3000/v1/dsr/delete \
+  -H "authorization: Bearer <admin-token>"
+```
+
+Erasure honors a deliberate exception: **the audit trail is retained** — erasing
+content must not erase the record that governance acted, which is the standard
+compliance posture (the trail holds action records, not content bodies). The
+erasure response itemizes what was deleted: memory lineages, graph nodes and edges,
+sources.
+
+## Quotas
+
+Per-principal MCP quotas exist for deployments where agents share a server:
+
+```bash
+TESSERA_AUTH_QUOTA_ENABLED=1
+TESSERA_AUTH_QUOTA_LIMIT=120          # tool calls per window
+TESSERA_AUTH_QUOTA_WINDOW_MS=60000
+```
+
+REST-side rate limiting is separate (`TESSERA_API_RATE_LIMIT_*`) — both are in the
+[configuration reference](/docs/reference/configuration). Off by default locally;
+turn them on wherever more than one identity shares the deployment.
+
+## A working posture
+
+For a solo Local deployment, the defaults are already right: audit on, generous
+retention, no quotas. For anything shared: token mode, quotas on, retention bounds
+set consciously, and `GET /v1/audit` in your weekly routine — the trail is only as
+useful as the habit of reading it.

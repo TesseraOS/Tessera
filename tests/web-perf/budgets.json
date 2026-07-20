@@ -28,6 +28,16 @@
       "public": false,
       "firstLoadJsGzipKb": 300,
       "$firstLoadSource": "Established by measurement (F-049), not inherited: the dashboard legitimately ships more than the marketing site (React Query, the app shell, next-themes). /signin is the measured route because it is the only dashboard page reachable unauthenticated, and it is the real first paint for every user. Heavy views (Monaco, React Flow) are code-split and must never reach this number — if they do, the split regressed, which is precisely what ADR-0021 asked to be caught."
+    },
+    {
+      "name": "docs",
+      "packageName": "@tessera/docs",
+      "dir": "apps/docs",
+      "port": 3312,
+      "path": "/",
+      "public": true,
+      "firstLoadJsGzipKb": 250,
+      "$firstLoadSource": "Established by measurement (F-053): the docs home measured ~206KB gzipped over the wire (fumadocs-ui shell + next-themes + the search client), budgeted with ~20% headroom. The REST-reference playground (fumadocs-openapi client) is route-split and must never reach the home number."
     }
   ]
 }

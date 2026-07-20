@@ -55,21 +55,28 @@ async function generateCliReference(cli) {
 // --- agent-clients.json — MCP_CLIENTS through the CLI's own renderer ----------------------------
 
 /**
- * Snippets use a placeholder config path (machine-specific at runtime — the docs tell
- * readers to run `tessera mcp-config` for resolved values) in both launch forms the CLI
- * supports: npx (the published-package default, pending F-059) and a local `tessera` bin.
+ * Snippets use placeholder paths (machine-specific at runtime — the docs tell readers to
+ * run `tessera mcp-config` for resolved values) in both launch forms: npx (the
+ * published-package default, pending F-059) and the from-source form that works today
+ * (node + the built CLI entry — the honest pre-publish launcher; the docs render THIS,
+ * never a hand-copied block, so a client-config shape change cannot drift past the gate).
  */
 async function generateAgentClients(cli) {
-  const CONFIG_PLACEHOLDER = '/absolute/path/to/tessera.config.json';
+  const CONFIG_PLACEHOLDER = '/path/to/your/project/tessera.config.json';
+  const CLI_BIN_PLACEHOLDER = '/path/to/tessera/apps/cli/dist/bin/tessera.js';
   const npxSpec = {
     command: 'npx',
     args: ['-y', '@tessera/cli', 'mcp', '--config', CONFIG_PLACEHOLDER],
   };
-  const localSpec = { command: 'tessera', args: ['mcp', '--config', CONFIG_PLACEHOLDER] };
+  const localSpec = {
+    command: 'node',
+    args: [CLI_BIN_PLACEHOLDER, 'mcp', '--config', CONFIG_PLACEHOLDER],
+  };
   return serialize({
     $source:
       'apps/cli/src/mcp-clients.ts MCP_CLIENTS + renderMcpClientConfig — regenerate with `pnpm --filter @tessera/docs generate`',
     configPlaceholder: CONFIG_PLACEHOLDER,
+    cliBinPlaceholder: CLI_BIN_PLACEHOLDER,
     clients: cli.MCP_CLIENTS.map((client) => ({
       id: client.id,
       label: client.label,

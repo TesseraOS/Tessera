@@ -1079,7 +1079,7 @@
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "The mascot is a cross-frontend contract: slot names, mood names, component props, and the --mascot-* variables are consumed by marketing AND the dashboard (F-070) today and docs later, while the brand masters are build artifacts of the same data. Renaming a mood or variable therefore ripples across every consuming app, the design-lint patterns that pin usage, and the checked-in brand SVGs — the drift test and the manifest patterns turn silent divergence into gate failures.",
+      "rationale": "The mascot is a cross-frontend contract: slot names, mood names, component props, and the --mascot-* variables are consumed by marketing, the dashboard (F-070), AND the docs (F-053), while the brand masters are build artifacts of the same data. Renaming a mood or variable therefore ripples across every consuming app, the design-lint patterns that pin usage, and the checked-in brand SVGs — the drift test and the manifest patterns turn silent divergence into gate failures.",
       "confidence": 0.9,
       "origin": "manual"
     },

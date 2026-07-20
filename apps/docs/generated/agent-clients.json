@@ -1,46 +1,47 @@
 {
   "$source": "apps/cli/src/mcp-clients.ts MCP_CLIENTS + renderMcpClientConfig — regenerate with `pnpm --filter @tessera/docs generate`",
-  "configPlaceholder": "/absolute/path/to/tessera.config.json",
+  "configPlaceholder": "/path/to/your/project/tessera.config.json",
+  "cliBinPlaceholder": "/path/to/tessera/apps/cli/dist/bin/tessera.js",
   "clients": [
     {
       "id": "claude-code",
       "label": "Claude Code",
       "file": ".mcp.json (project) or ~/.claude.json",
       "format": "json-mcpservers",
-      "snippetNpx": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"@tessera/cli\",\n        \"mcp\",\n        \"--config\",\n        \"/absolute/path/to/tessera.config.json\"\n      ]\n    }\n  }\n}",
-      "snippetLocal": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"tessera\",\n      \"args\": [\n        \"mcp\",\n        \"--config\",\n        \"/absolute/path/to/tessera.config.json\"\n      ]\n    }\n  }\n}"
+      "snippetNpx": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"@tessera/cli\",\n        \"mcp\",\n        \"--config\",\n        \"/path/to/your/project/tessera.config.json\"\n      ]\n    }\n  }\n}",
+      "snippetLocal": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"node\",\n      \"args\": [\n        \"/path/to/tessera/apps/cli/dist/bin/tessera.js\",\n        \"mcp\",\n        \"--config\",\n        \"/path/to/your/project/tessera.config.json\"\n      ]\n    }\n  }\n}"
     },
     {
       "id": "cursor",
       "label": "Cursor",
       "file": ".cursor/mcp.json (project) or ~/.cursor/mcp.json",
       "format": "json-mcpservers",
-      "snippetNpx": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"@tessera/cli\",\n        \"mcp\",\n        \"--config\",\n        \"/absolute/path/to/tessera.config.json\"\n      ]\n    }\n  }\n}",
-      "snippetLocal": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"tessera\",\n      \"args\": [\n        \"mcp\",\n        \"--config\",\n        \"/absolute/path/to/tessera.config.json\"\n      ]\n    }\n  }\n}"
+      "snippetNpx": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"@tessera/cli\",\n        \"mcp\",\n        \"--config\",\n        \"/path/to/your/project/tessera.config.json\"\n      ]\n    }\n  }\n}",
+      "snippetLocal": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"node\",\n      \"args\": [\n        \"/path/to/tessera/apps/cli/dist/bin/tessera.js\",\n        \"mcp\",\n        \"--config\",\n        \"/path/to/your/project/tessera.config.json\"\n      ]\n    }\n  }\n}"
     },
     {
       "id": "cline",
       "label": "Cline",
       "file": "cline_mcp_settings.json (VS Code settings dir)",
       "format": "json-mcpservers",
-      "snippetNpx": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"@tessera/cli\",\n        \"mcp\",\n        \"--config\",\n        \"/absolute/path/to/tessera.config.json\"\n      ]\n    }\n  }\n}",
-      "snippetLocal": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"tessera\",\n      \"args\": [\n        \"mcp\",\n        \"--config\",\n        \"/absolute/path/to/tessera.config.json\"\n      ]\n    }\n  }\n}"
+      "snippetNpx": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"@tessera/cli\",\n        \"mcp\",\n        \"--config\",\n        \"/path/to/your/project/tessera.config.json\"\n      ]\n    }\n  }\n}",
+      "snippetLocal": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"node\",\n      \"args\": [\n        \"/path/to/tessera/apps/cli/dist/bin/tessera.js\",\n        \"mcp\",\n        \"--config\",\n        \"/path/to/your/project/tessera.config.json\"\n      ]\n    }\n  }\n}"
     },
     {
       "id": "codex",
       "label": "Codex CLI",
       "file": "~/.codex/config.toml",
       "format": "toml-mcp-servers",
-      "snippetNpx": "[mcp_servers.tessera]\ncommand = \"npx\"\nargs = [\"-y\", \"@tessera/cli\", \"mcp\", \"--config\", \"/absolute/path/to/tessera.config.json\"]",
-      "snippetLocal": "[mcp_servers.tessera]\ncommand = \"tessera\"\nargs = [\"mcp\", \"--config\", \"/absolute/path/to/tessera.config.json\"]"
+      "snippetNpx": "[mcp_servers.tessera]\ncommand = \"npx\"\nargs = [\"-y\", \"@tessera/cli\", \"mcp\", \"--config\", \"/path/to/your/project/tessera.config.json\"]",
+      "snippetLocal": "[mcp_servers.tessera]\ncommand = \"node\"\nargs = [\"/path/to/tessera/apps/cli/dist/bin/tessera.js\", \"mcp\", \"--config\", \"/path/to/your/project/tessera.config.json\"]"
     },
     {
       "id": "continue",
       "label": "Continue",
       "file": "~/.continue/config.json",
       "format": "json-mcpservers",
-      "snippetNpx": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"@tessera/cli\",\n        \"mcp\",\n        \"--config\",\n        \"/absolute/path/to/tessera.config.json\"\n      ]\n    }\n  }\n}",
-      "snippetLocal": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"tessera\",\n      \"args\": [\n        \"mcp\",\n        \"--config\",\n        \"/absolute/path/to/tessera.config.json\"\n      ]\n    }\n  }\n}"
+      "snippetNpx": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"@tessera/cli\",\n        \"mcp\",\n        \"--config\",\n        \"/path/to/your/project/tessera.config.json\"\n      ]\n    }\n  }\n}",
+      "snippetLocal": "{\n  \"mcpServers\": {\n    \"tessera\": {\n      \"command\": \"node\",\n      \"args\": [\n        \"/path/to/tessera/apps/cli/dist/bin/tessera.js\",\n        \"mcp\",\n        \"--config\",\n        \"/path/to/your/project/tessera.config.json\"\n      ]\n    }\n  }\n}"
     }
   ]
 }

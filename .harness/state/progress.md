@@ -36,7 +36,10 @@ over stdio**, fake embeddings, temp dir — 18 tools with schemas), `cli-referen
 table `tessera help` renders), `agent-clients.json` (MCP_CLIENTS through the CLI's own renderer),
 `env-reference.json` (parsed .env.example). `tests/generated-drift.test.ts` regenerates in the test
 gate and byte-compares (+ an orphan check on the api tree). Render components (AgentConfig,
-McpToolCatalog, CliReference, EnvReference) mean no fact is ever hand-copied — even the tool count.
+McpToolCatalog, CliReference, EnvReference) mean no machine fact is hand-copied — even the tool
+count; both agent-snippet launch forms (npx + from-source) render from the registry after the
+evaluator flagged the from-source blocks as hand-authored. Known remaining hand-copy: the compose
+YAML on the self-host page (diffed accurate at close; noted, not drift-gated).
 
 ### Content (~45 pages) + agent-readability
 

@@ -309,6 +309,70 @@
 }
 
 /*
+ * Ambient tile motion (DOCS-DESIGN §5) — FIELD-rate thermal drift (9–14s, transform/
+ * opacity only), used solely by the sanctioned art placements. The arriving tile seats
+ * itself once per cycle — the brand's one recurring gesture.
+ */
+.tile-drift {
+  animation: docs-tile-drift 12s ease-in-out infinite;
+}
+
+.tile-drift[data-phase='b'] {
+  animation-duration: 14s;
+  animation-delay: -4s;
+}
+
+.tile-drift[data-phase='c'] {
+  animation-duration: 10s;
+  animation-delay: -7s;
+}
+
+.tile-arrive {
+  animation: docs-tile-arrive 11s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes docs-tile-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(0, -4px) rotate(1.2deg);
+  }
+}
+
+@keyframes docs-tile-arrive {
+  0%,
+  12% {
+    transform: translate(26px, -30px) rotate(8deg);
+    opacity: 0;
+  }
+  30%,
+  82% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  94%,
+  100% {
+    transform: translate(26px, -30px) rotate(8deg);
+    opacity: 0;
+  }
+}
+
+/* Section cards (docs home): calm at rest, a lifted ember seam in hand. */
+.docs-card {
+  transition:
+    border-color 200ms ease,
+    background-color 200ms ease,
+    transform 200ms ease;
+}
+
+.docs-card:hover {
+  border-color: color-mix(in oklab, var(--rose) 45%, transparent);
+  transform: translateY(-2px);
+}
+
+/*
  * Theme-change propagation (ADR-0054, ported from marketing §5) — the new theme sweeps
  * out radially from the toggle via the View Transitions API; the JS animates the circle
  * clip on ::view-transition-new(root), so the default crossfade is disabled here.
@@ -326,8 +390,14 @@
   }
 
   .tile-drift,
-  .tile-arrive {
+  .tile-arrive,
+  .docs-card {
     animation: none !important;
     transition: none !important;
+  }
+
+  .tile-arrive {
+    opacity: 1;
+    transform: none;
   }
 }

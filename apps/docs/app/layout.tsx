@@ -1,3 +1,4 @@
+import '@tessera/mascot/styles.css';
 import './globals.css';
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import type { Metadata, Viewport } from 'next';

@@ -58,6 +58,13 @@
         "reason": "No hardcoded domains (§3): cross-surface URLs come from lib/site.ts (NEXT_PUBLIC_*); the production domain is not yet decided"
       },
       {
+        "id": "mascot-placements-budgeted",
+        "pattern": "from ['\"]@tessera/mascot['\"]",
+        "files": ["app/**/*.tsx", "app/**/*.ts", "components/**/*.tsx", "lib/**/*.ts", "lib/**/*.tsx"],
+        "allowIn": ["app/(home)/page.tsx", "app/not-found.tsx"],
+        "reason": "Tess appears only in the sanctioned placements (§5): the docs home and the 404 — never inside content, reference tables, or chrome"
+      },
+      {
         "id": "no-hype-vocabulary",
         "pattern": "\\b(?:[Bb]lazing|[Rr]evolutionary|[Gg]ame-chang\\w+|[Ss]upercharge\\w*|[Nn]ext-generation)\\b",
         "files": ["content/**/*.mdx", "app/**/*.tsx", "components/**/*.tsx"],

@@ -1,0 +1,108 @@
+{
+  "name": "tessera-docs-design",
+  "version": "1.0.0",
+  "doc": "DOCS-DESIGN.md",
+  "adr": "docs/adr/0054-docs-surface-terra-mosaic-reading-chrome-and-generated-reference.md",
+  "scope": "apps/docs",
+  "$note": "Machine-readable projection of DOCS-DESIGN.md, compiled into hard failures by apps/docs/tests/design-lint.test.ts. Editing a pattern or allowIn is a design decision: update DOCS-DESIGN.md and this file together, with review. Never weaken the contract to make a build pass.",
+  "enforcement": {
+    "bannedPatterns": [
+      {
+        "id": "no-raw-hex-in-components",
+        "pattern": "#[0-9a-fA-F]{3,8}\\b",
+        "files": ["app/**/*.tsx", "app/**/*.ts", "components/**/*.tsx", "lib/**/*.ts", "lib/**/*.tsx"],
+        "allowIn": ["app/layout.tsx"],
+        "reason": "Tokens only (§1.1): color values live in globals.css; app/layout.tsx carries the two viewport themeColor mirrors of --background"
+      },
+      {
+        "id": "no-dark-variant",
+        "pattern": "[\"'\\s{:]dark:",
+        "files": ["app/**/*.tsx", "components/**/*.tsx", "lib/**/*.tsx"],
+        "reason": "Both themes come from the same semantic tokens (§1.1); per-theme styling in components defeats the token architecture"
+      },
+      {
+        "id": "no-arbitrary-color-utilities",
+        "pattern": "(?:bg|text|border|ring|fill|stroke|outline|shadow)-\\[(?:#|rgb|hsl|oklch)",
+        "files": ["app/**/*.tsx", "components/**/*.tsx", "lib/**/*.tsx"],
+        "reason": "Arbitrary color brackets bypass the token contract (§1.1)"
+      },
+      {
+        "id": "no-framer-motion",
+        "pattern": "from ['\"]framer-motion['\"]",
+        "files": ["app/**/*.tsx", "app/**/*.ts", "components/**/*.tsx", "lib/**/*.ts", "lib/**/*.tsx"],
+        "reason": "Docs motion is CSS-only (§1.5, ADR-0054); no animation library on this surface"
+      },
+      {
+        "id": "no-3d-engines",
+        "pattern": "from ['\"](?:three|@react-three/)",
+        "files": ["app/**/*.tsx", "app/**/*.ts", "components/**/*.tsx", "lib/**/*.ts", "lib/**/*.tsx"],
+        "reason": "No 3D engines on public surfaces (MARKETING-DESIGN §0, inherited)"
+      },
+      {
+        "id": "theme-state-single-seam",
+        "pattern": "from ['\"](?:next-themes|fumadocs-ui/provider/base)['\"]",
+        "files": ["app/**/*.tsx", "app/**/*.ts", "components/**/*.tsx", "lib/**/*.ts", "lib/**/*.tsx"],
+        "allowIn": ["lib/theme.tsx"],
+        "reason": "Theme state lives in lib/theme.tsx alone (§1.3); every switch must go through the radial ripple"
+      },
+      {
+        "id": "no-transition-all",
+        "pattern": "transition-all",
+        "files": ["app/**/*.tsx", "app/**/*.css", "components/**/*.tsx", "lib/**/*.tsx"],
+        "reason": "Transitions declare specific properties (§4); transition-all animates surprises"
+      },
+      {
+        "id": "no-hardcoded-tessera-domains",
+        "pattern": "https?://(?:www\\.)?tessera\\.[a-z]+",
+        "files": ["app/**/*.tsx", "app/**/*.ts", "components/**/*.tsx", "lib/**/*.ts", "lib/**/*.tsx", "content/**/*.mdx"],
+        "reason": "No hardcoded domains (§3): cross-surface URLs come from lib/site.ts (NEXT_PUBLIC_*); the production domain is not yet decided"
+      },
+      {
+        "id": "no-hype-vocabulary",
+        "pattern": "\\b(?:[Bb]lazing|[Rr]evolutionary|[Gg]ame-chang\\w+|[Ss]upercharge\\w*|[Nn]ext-generation)\\b",
+        "files": ["content/**/*.mdx", "app/**/*.tsx", "components/**/*.tsx"],
+        "reason": "Docs prose is direct and honest (§6); no marketing superlatives"
+      }
+    ],
+    "requiredPatterns": [
+      {
+        "id": "ripple-mechanism-present",
+        "pattern": "startViewTransition",
+        "files": ["lib/theme.tsx"],
+        "reason": "The radial theme propagation (§4) must exist in the seam file — its silent removal is a design regression"
+      },
+      {
+        "id": "reduced-motion-kill-switch",
+        "pattern": "prefers-reduced-motion",
+        "files": ["app/globals.css"],
+        "reason": "Reduced motion means complete stillness for our own motion (§1.5)"
+      },
+      {
+        "id": "fd-seam-rose-primary",
+        "pattern": "--color-fd-primary: var\\(--rose\\)",
+        "files": ["app/globals.css"],
+        "reason": "Rose is the interactive voice through the fd seam (§2); losing the binding silently reverts the surface to fumadocs defaults"
+      },
+      {
+        "id": "visible-focus-ring",
+        "pattern": ":focus-visible",
+        "files": ["app/globals.css"],
+        "reason": "Keyboard focus is always visible (§1.7, WCAG 2.4.7)"
+      }
+    ]
+  },
+  "budgets": {
+    "decorativeGoldMomentsPerViewport": 1,
+    "mascotPlacements": [
+      "docs-home greeting",
+      "404 (lost)",
+      "search empty state (searching)"
+    ],
+    "artPlacements": [
+      "docs-home hero band",
+      "docs-home section cards",
+      "404",
+      "search empty state"
+    ]
+  }
+}

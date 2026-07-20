@@ -69,6 +69,7 @@ Format: a lightweight [MADR](https://adr.github.io/madr/)-style template
 | [0051](0051-audit-trail-is-chronological-no-column-sorting.md) | The audit trail is chronological: cursor pagination instead of column sorting, and no table library — the cursor *is* the sort order, so client-side sorting would lie; `aria-rowcount={-1}` because the total is genuinely unknown | Accepted |
 | [0052](0052-dependency-audit-via-trivy-not-pnpm-audit.md) | The dependency audit runs on Trivy over `pnpm-lock.yaml` at HIGH+, not `pnpm audit` (npm retired the legacy endpoints; the fix exists only in pnpm 11) — the gate had been failing open over a real critical + high, now fixed | Accepted |
 | [0053](0053-overview-leads-with-state-not-a-greeting-band.md) | The Overview leads with state: the greeting hero retires (supersedes 0047's hero-band budget in part), onboarding gates on `/v1/stats` rather than the session-only feed, and the activity chart starts no earlier than the oldest event the audit trail actually holds — so a pruned day cannot render as "nothing happened" | Accepted |
+| [0054](0054-docs-surface-terra-mosaic-reading-chrome-and-generated-reference.md) | Docs surface (apps/docs): Terra Mosaic reading chrome (dual themes + radial ripple, mono returns), Fumadocs themed only through the `--color-fd-*` seam (no forks), and the generated-reference pipeline (prose authored, facts generated + drift-gated) | Accepted |
 
 ## Conventions
 

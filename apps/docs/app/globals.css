@@ -1,6 +1,331 @@
 @import 'tailwindcss';
-@import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
 
 /* Tailwind v4: scan fumadocs-ui so its utility classes are generated. */
 @source '../node_modules/fumadocs-ui/dist/**/*.js';
+
+/*
+ * Terra Mosaic tokens — the docs surface reading of docs/design/DOCS-DESIGN.md
+ * (ADR-0054; values from MARKETING-DESIGN.md §2, the public-surface source of truth).
+ * Dual themes, one architecture: Desert Rose dusk (:root, default) and Modern
+ * Minimalist noon (.light via next-themes). Components reference semantic tokens only —
+ * the design-lint gate compiles the manifest and fails the build otherwise. Fumadocs
+ * receives the palette exclusively through the --color-fd-* binding seam below; its
+ * components stay stock.
+ */
+:root {
+  --radius: 0.65rem;
+
+  /* dusk ground */
+  --background: #161013;
+  --surface: #1e1519;
+  --card: #251a20;
+  --card-foreground: #f4ede7;
+  --foreground: #f4ede7;
+  --muted-foreground: #b7a8a8;
+  --faint-foreground: #968690;
+  --primary: #f4ede7;
+  --primary-foreground: #261720;
+  --secondary: #2a1e24;
+  --secondary-foreground: #f4ede7;
+  --rose: #e2a3a8;
+  --rose-foreground: #2b1218;
+  --gold: #e4b65a;
+  --clay: #c8836c;
+  --burgundy: #5d2e46;
+  --border: rgba(244, 237, 231, 0.1);
+  --border-strong: rgba(244, 237, 231, 0.18);
+  --input: rgba(244, 237, 231, 0.14);
+  --ring: #e2a3a8;
+  --code: #120d10;
+  --error: #e79a94;
+  --overlay: rgba(18, 13, 16, 0.65);
+
+  /* sanctioned decoration (DOCS-DESIGN §2.3) */
+  --gradient-ember: linear-gradient(120deg, #e2a3a8, #e4b65a);
+  --gradient-dusk: radial-gradient(
+    100% 80% at 50% 0%,
+    rgba(93, 46, 70, 0.4),
+    rgba(226, 163, 168, 0.06) 45%,
+    transparent 72%
+  );
+}
+
+/*
+ * Light theme — Modern Minimalist noon. next-themes toggles the .light class on <html>;
+ * components stay tokens-only, so the whole surface re-lights from here.
+ */
+.light {
+  color-scheme: light;
+
+  --background: #fbfbfc;
+  --surface: #f2f4f6;
+  --card: #ffffff;
+  --card-foreground: #2a353f;
+  --foreground: #2a353f;
+  --muted-foreground: #55636f;
+  --faint-foreground: #61707c;
+  --primary: #2a353f;
+  --primary-foreground: #ffffff;
+  --secondary: #e9ecef;
+  --secondary-foreground: #2a353f;
+  --rose: #9e4a56;
+  --rose-foreground: #fbf3ee;
+  --gold: #8a6a24;
+  --clay: #a05f45;
+  --burgundy: #5d2e46;
+  --border: rgba(42, 53, 63, 0.12);
+  --border-strong: rgba(42, 53, 63, 0.22);
+  --input: rgba(42, 53, 63, 0.16);
+  --ring: #9e4a56;
+  --error: #a63d3d;
+  --overlay: rgba(42, 53, 63, 0.35);
+
+  --gradient-ember: linear-gradient(120deg, #9e4a56, #8a6a24);
+  --gradient-dusk: radial-gradient(
+    100% 80% at 50% 0%,
+    rgba(158, 74, 86, 0.1),
+    rgba(110, 124, 136, 0.05) 45%,
+    transparent 72%
+  );
+}
+
+/*
+ * Mascot binding (ADR-0046, the sanctioned docs adoption) — the closed --mascot-*
+ * contract from @tessera/mascot bound to Terra Mosaic tokens; var() indirection resolves
+ * against <html>'s current theme, so one block covers dusk and noon. The sheen must stay
+ * light on both grounds, hence its per-theme source.
+ */
+:root {
+  --mascot-tile: var(--foreground);
+  --mascot-tile-warm: var(--rose);
+  --mascot-tile-deep: var(--clay);
+  --mascot-heart: var(--gold);
+  --mascot-sheen: var(--foreground); /* ivory glint on dusk */
+  --mascot-ink: var(--background);
+
+  /* @tessera/brand bound to the docs palette (same binding marketing renders). */
+  --brand-ember-from: var(--rose);
+  --brand-ember-to: var(--gold);
+  --brand-wordmark-font: var(--font-serif);
+}
+
+.light {
+  --mascot-sheen: var(--card); /* white glint on noon */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint-foreground: var(--faint-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-rose: var(--rose);
+  --color-rose-foreground: var(--rose-foreground);
+  --color-gold: var(--gold);
+  --color-clay: var(--clay);
+  --color-burgundy: var(--burgundy);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-error: var(--error);
+  --color-code: #120d10;
+
+  /*
+   * The Fumadocs seam (ADR-0054): every --color-fd-* role resolves to a Terra Mosaic
+   * token. This block is the ONLY place Fumadocs learns our palette — components are
+   * stock, so framework upgrades never touch brand decisions. Rose is the interactive
+   * voice (links, active nav, active TOC); like focus rings, interactive rose is
+   * functional and sits outside the decorative accent budget.
+   */
+  --color-fd-background: var(--background);
+  --color-fd-foreground: var(--foreground);
+  --color-fd-muted: var(--surface);
+  --color-fd-muted-foreground: var(--muted-foreground);
+  --color-fd-popover: var(--card);
+  --color-fd-popover-foreground: var(--card-foreground);
+  --color-fd-card: var(--card);
+  --color-fd-card-foreground: var(--card-foreground);
+  --color-fd-border: var(--border);
+  --color-fd-primary: var(--rose);
+  --color-fd-primary-foreground: var(--rose-foreground);
+  --color-fd-secondary: var(--secondary);
+  --color-fd-secondary-foreground: var(--secondary-foreground);
+  --color-fd-accent: var(--secondary);
+  --color-fd-accent-foreground: var(--secondary-foreground);
+  --color-fd-ring: var(--ring);
+  --color-fd-error: var(--error);
+  --color-fd-overlay: var(--overlay);
+
+  /*
+   * Functional semantics (callouts, code diffs) — vendored Fumadocs defaults, NOT brand
+   * hues: like the dashboard's emerald/red rule, semantic color must stay semantic.
+   * These are the only non-token colors on the surface and live nowhere else.
+   */
+  --color-fd-info: oklch(62.3% 0.214 259.815);
+  --color-fd-warning: oklch(76.9% 0.188 70.08);
+  --color-fd-success: oklch(72.3% 0.219 149.579);
+  --color-fd-idea: oklch(70.5% 0.209 60.849);
+  --color-fd-diff-remove: rgba(200, 10, 100, 0.12);
+  --color-fd-diff-remove-symbol: rgb(230, 10, 100);
+  --color-fd-diff-add: rgba(14, 180, 100, 0.1);
+  --color-fd-diff-add-symbol: rgb(10, 200, 100);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* soft elevation — light-ground cards only (DOCS-DESIGN §2.3) */
+  --shadow-soft: 0 1px 2px rgba(43, 30, 37, 0.05), 0 8px 32px rgba(43, 30, 37, 0.08);
+  --shadow-lift: 0 2px 6px rgba(43, 30, 37, 0.08), 0 16px 48px rgba(43, 30, 37, 0.14);
+
+  /*
+   * Three faces (ADR-0054): the two brand voices plus the mono voice — code is CONTENT
+   * on this surface, so unlike marketing (mono retired, v4.1) the docs speak Geist Mono
+   * in code blocks, keys, and identifiers.
+   */
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), Georgia, 'Times New Roman', serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'Cascadia Code', monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
+  }
+
+  /* The serif voice: statements are Instrument Serif; emphasis is italic, never bold. */
+  h1,
+  h2 {
+    font-family: var(--font-serif);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  button,
+  [role='button'] {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--rose);
+    color: var(--rose-foreground);
+  }
+
+  /* Branded scrollbar — clay at rest, rose in hand. */
+  html {
+    scrollbar-color: color-mix(in oklab, var(--clay) 60%, transparent) transparent;
+    scrollbar-width: thin;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--clay) 55%, transparent);
+    border-radius: 8px;
+    border: 2px solid var(--background);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklab, var(--rose) 75%, transparent);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Sanctioned decoration (DOCS-DESIGN §2.3) — defined once, consumed as classes.
+ * ------------------------------------------------------------------------- */
+
+/* Display-only gradient text — counts as the viewport's single gold moment. */
+.text-ember {
+  background: var(--gradient-ember);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Dusk atmosphere backdrop (home hero) — position absolute behind content. */
+.atmosphere {
+  background: var(--gradient-dusk);
+}
+
+/* Film grain over dark grounds — kills flat-black lifelessness (~2.8%). */
+.grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* SVG art animates its own box, not the canvas (marketing art idiom). */
+.tile-drift,
+.tile-arrive {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/*
+ * Theme-change propagation (ADR-0054, ported from marketing §5) — the new theme sweeps
+ * out radially from the toggle via the View Transitions API; the JS animates the circle
+ * clip on ::view-transition-new(root), so the default crossfade is disabled here.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Reduced motion: the still, final layout — a global kill-switch for our own motion. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .tile-drift,
+  .tile-arrive {
+    animation: none !important;
+    transition: none !important;
+  }
+}

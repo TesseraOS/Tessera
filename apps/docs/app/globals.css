@@ -1,8 +1,10 @@
 @import 'tailwindcss';
 @import 'fumadocs-ui/css/preset.css';
+@import 'fumadocs-openapi/css/preset.css';
 
-/* Tailwind v4: scan fumadocs-ui so its utility classes are generated. */
+/* Tailwind v4: scan fumadocs packages so their utility classes are generated. */
 @source '../node_modules/fumadocs-ui/dist/**/*.js';
+@source '../node_modules/fumadocs-openapi/dist/**/*.js';
 
 /*
  * Terra Mosaic tokens — the docs surface reading of docs/design/DOCS-DESIGN.md

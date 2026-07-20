@@ -23,3 +23,5 @@ docs/
 scripts/*.ps1
 scripts/*.sh
 **/.source/
+# Docs content: hand-authored MDX prose + generated reference pages (drift-gated byte-identical)
+apps/docs/content/

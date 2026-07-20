@@ -1,0 +1,22 @@
+---
+title: Reference overview
+description: The generated reference set — REST API, MCP tools, CLI commands, and configuration — and the guarantee that keeps it accurate.
+---
+
+Four reference sets, one property: **everything here is generated from the running
+system and drift-checked in CI.** The REST pages render from the server's own
+OpenAPI document; the MCP catalog is what the real server answered to `tools/list`;
+the CLI pages render from the same table `tessera help` prints; the configuration
+tables parse the repository's canonical `.env.example`. If code changes and the docs
+don't, the build goes red — these pages cannot quietly lie.
+
+<Cards>
+  <Card href="/docs/reference/api" title="REST API" description="Every /v1 endpoint with schemas and an interactive playground, from the server's OpenAPI document." />
+  <Card href="/docs/reference/mcp-tools" title="MCP tools" description="The full tool catalog with input schemas, as the server reports it." />
+  <Card href="/docs/reference/cli" title="CLI" description="Every tessera command with its complete usage text." />
+  <Card href="/docs/reference/configuration" title="Configuration" description="tessera.config.json, precedence, and every TESSERA_* environment variable." />
+</Cards>
+
+Looking for narrative documentation instead? The [concepts](/docs/concepts) explain
+the system; the [guides](/docs/guides) show workflows; [agents](/docs/agents) has
+copy-paste MCP setup.

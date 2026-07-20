@@ -1,0 +1,55 @@
+---
+title: REST API
+description: The /v1 HTTP surface — base URL, authentication, versioning, errors, and the generated per-endpoint reference.
+---
+
+The REST API is one of Tessera's two equivalent surfaces (the other is
+[MCP](/docs/reference/mcp-tools) — same services, different door). Everything the
+dashboard does goes through these endpoints; nothing is UI-only.
+
+The per-endpoint pages in this section are **generated from the server's own OpenAPI
+document** and include request/response schemas and an interactive playground. The
+live server serves the same document at `GET /v1/openapi.json` — the generated
+TypeScript SDK is built from it too.
+
+## Base URL & versioning
+
+A Local deployment serves `http://127.0.0.1:3000` by default (`tessera serve`;
+host/port configurable). The API is **additively versioned** under the `/v1` prefix:
+new fields and endpoints may appear; breaking changes require a new version prefix.
+Liveness and readiness live outside the version: `GET /health` and `GET /ready`.
+
+## Authentication
+
+Depends on the deployment's [auth mode](/docs/guides/tokens-and-auth):
+
+- `none` — no header required; every call acts as the configured local principal.
+- `token` — send `authorization: Bearer <secret>`; roles/scopes/tenant come from
+  the token.
+- `oidc` — send a JWT from your identity provider as the Bearer.
+
+`GET /v1/me` returns the authenticated principal; `GET /v1/rbac` returns the
+role/permission catalog.
+
+## Errors
+
+Errors are structured JSON with a stable machine-readable code, an HTTP status that
+means what it says (`400` validation, `401` unauthenticated, `403` unauthorized,
+`404` unknown resource, `429` rate-limited), and a human message. Validation happens
+at the boundary on every input.
+
+## Endpoint groups
+
+| Group | Endpoints |
+|-------|-----------|
+| Knowledge | `POST /v1/search`, `POST /v1/compile`, `GET /v1/graph`, `GET/POST /v1/effects` |
+| Memory | `GET/POST /v1/memory`, `GET/PATCH /v1/memory/{lineageId}`, `GET /v1/memory/{lineageId}/history` |
+| Sources | `GET/POST /v1/sources`, `GET/DELETE /v1/sources/{id}`, `GET/POST /v1/sources/{id}/scan` |
+| Projects | `GET/POST /v1/projects`, `GET/PATCH/DELETE /v1/projects/{id}` |
+| Auth & tokens | `GET /v1/me`, `GET /v1/rbac`, `GET/POST /v1/tokens`, `DELETE /v1/tokens/{id}` |
+| Governance | `GET /v1/audit`, `GET /v1/audit/export`, `GET /v1/retention`, `POST /v1/retention/prune`, `GET /v1/dsr/export`, `POST /v1/dsr/delete` |
+| Stats & events | `GET /v1/stats`, `GET /v1/stats/activity`, `GET /v1/stats/activity/recent`, `GET /v1/events` (SSE) |
+| Billing | `GET /v1/billing/plans`, `GET /v1/billing/subscription`, `POST /v1/billing/checkout`, `POST /v1/billing/webhook` |
+| Meta | `GET /health`, `GET /ready`, `GET /v1/openapi.json` |
+
+Browse the sidebar for the full per-endpoint pages.

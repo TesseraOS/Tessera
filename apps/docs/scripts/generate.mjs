@@ -12,6 +12,7 @@
  *   @tessera/cli MCP_CLIENTS + renderMcpClientConfig                → generated/agent-clients.json
  *   the REAL MCP server's tools/list (spawned over stdio)           → generated/mcp-tools.json
  *   .env.example (completeness guarded by verify-state)             → generated/env-reference.json
+ *   fumadocs-openapi pages over generated/openapi.json              → content/docs/reference/api/** (MDX)
  *
  * Requires `@tessera/cli` and `@tessera/server` to be built (both are devDependencies, so
  * turbo's `^build` ordering guarantees it for the gates).
@@ -24,7 +25,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = resolve(SCRIPT_DIR, '..');
 const REPO_ROOT = resolve(APP_ROOT, '..', '..');
-const OUT_DIR = join(APP_ROOT, 'generated');
 
 /** Stable serialization: 2-space indent + trailing newline, so diffs stay readable. */
 function serialize(value) {
@@ -182,19 +182,45 @@ function generateEnvReference() {
   });
 }
 
+// --- REST reference pages — fumadocs-openapi over the same spec ---------------------------------
+
+/**
+ * One MDX page per operation under `content/docs/reference/api/`, produced in-memory so
+ * the drift gate covers them like every other artifact. The pages delegate rendering to
+ * the `OpenAPIPage` MDX component; `lib/openapi.ts` preloads the same spec file.
+ */
+async function generateApiPages() {
+  const { generateFilesOnly } = await import('fumadocs-openapi');
+  const { createOpenAPI } = await import('fumadocs-openapi/server');
+  const openapi = createOpenAPI({
+    // Resolve from the app root so generation works from any cwd; the MDX output still
+    // records the './generated/openapi.json' key the runtime binding uses.
+    input: { './generated/openapi.json': join(APP_ROOT, 'generated', 'openapi.json') },
+    disableCache: true,
+  });
+  const files = await generateFilesOnly({ input: openapi, per: 'operation' });
+  const pages = {};
+  for (const file of files) {
+    const path = `content/docs/reference/api/${file.path.replaceAll('\\', '/')}`;
+    pages[path] = file.content.endsWith('\n') ? file.content : `${file.content}\n`;
+  }
+  return pages;
+}
+
 // --- entry ---------------------------------------------------------------------------------------
 
-/** Generate every artifact; returns { filename → content }. */
+/** Generate every artifact; returns { app-root-relative path → content }. */
 export async function generate() {
   const cli = await import(
     pathToFileURL(join(REPO_ROOT, 'apps', 'cli', 'dist', 'index.js')).href
   );
   return {
-    'openapi.json': generateOpenapi(),
-    'cli-reference.json': await generateCliReference(cli),
-    'agent-clients.json': await generateAgentClients(cli),
-    'mcp-tools.json': await generateMcpTools(),
-    'env-reference.json': generateEnvReference(),
+    'generated/openapi.json': generateOpenapi(),
+    'generated/cli-reference.json': await generateCliReference(cli),
+    'generated/agent-clients.json': await generateAgentClients(cli),
+    'generated/mcp-tools.json': await generateMcpTools(),
+    'generated/env-reference.json': generateEnvReference(),
+    ...(await generateApiPages()),
   };
 }
 
@@ -204,9 +230,10 @@ const invokedDirectly =
 
 if (invokedDirectly) {
   const artifacts = await generate();
-  mkdirSync(OUT_DIR, { recursive: true });
   for (const [name, content] of Object.entries(artifacts)) {
-    writeFileSync(join(OUT_DIR, name), content, 'utf8');
-    console.log(`generated/${name}  (${content.length} bytes)`);
+    const target = join(APP_ROOT, name);
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, content, 'utf8');
+    console.log(`${name}  (${content.length} bytes)`);
   }
 }

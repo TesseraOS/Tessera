@@ -1,0 +1,24 @@
+---
+title: CLI
+description: Every tessera command with its complete usage text, rendered from the same table the CLI's own help prints.
+---
+
+The `tessera` CLI (`@tessera/cli`) wraps the engine's boot surface for one-command
+onboarding — it invents no logic of its own, so everything it does is also available
+over [REST](/docs/reference/api) and [MCP](/docs/reference/mcp-tools).
+
+This reference renders from the CLI's own command table — the same source
+`tessera help` prints. Global flags: `--version`, `--help`, and per-command
+`<command> --help`; commands supporting machine-readable output take `--json`.
+
+<Callout title="Install status">
+  `@tessera/cli` publishes to npm with F-059; until then run it from a repository
+  checkout as shown in the [Quickstart](/docs/quickstart) — every command below works
+  identically either way.
+</Callout>
+
+Configuration precedence for all commands:
+`built-in defaults < tessera.config.json < TESSERA_* environment < flags` — see the
+[configuration reference](/docs/reference/configuration).
+
+<CliReference />

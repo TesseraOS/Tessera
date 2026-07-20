@@ -1,0 +1,31 @@
+---
+title: Configuration
+description: tessera.config.json, the precedence chain, and every TESSERA_* environment variable — parsed from the repository's canonical .env.example.
+---
+
+Tessera is configured through one validated surface with a strict precedence chain:
+
+```
+built-in defaults  <  tessera.config.json  <  TESSERA_* environment  <  flags
+```
+
+The config file is written by [`tessera init`](/docs/reference/cli#init) and
+validated on every load — a bad value fails fast with a real message, never at first
+use. Storage paths in the file resolve **relative to the working directory at
+runtime**; initialize with an absolute `--data-dir` if you want a
+location-independent config.
+
+<Callout title="Secrets are not configuration">
+  The config file holds no secrets. Secrets flow through the secrets provider
+  (environment variables under `TESSERA_SECRET_*` by default, or a JSON file via
+  `TESSERA_SECRETS_PROVIDER=file`) and are never logged or persisted.
+</Callout>
+
+## Environment variables
+
+Grouped as in the repository's `.env.example` — the canonical, CI-guarded inventory
+(every `TESSERA_*` variable the server reads must be documented there, enforced by
+the repository's own verification). A dash means the variable has no default and is
+unset unless you set it; variables marked with a default are active out of the box.
+
+<EnvReference />

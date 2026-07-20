@@ -55,7 +55,7 @@ for (const file of files) {
   const content = readFileSync(file, 'utf8');
   const anchors = new Set<string>();
   for (const match of content.matchAll(/^#{1,6}\s+(.+)$/gm)) {
-    anchors.add(slugify(match[1]));
+    anchors.add(slugify(match[1] ?? ''));
   }
   pages.set(urlOf(file), { file, anchors });
 }
@@ -78,10 +78,10 @@ for (const file of files) {
   const source = relative(APP_ROOT, file).replaceAll('\\', '/');
   // Markdown links + JSX href attributes, internal only.
   for (const match of content.matchAll(/\]\((\/[^)\s]*)\)/g)) {
-    links.push({ source, href: match[1] });
+    if (match[1] !== undefined) links.push({ source, href: match[1] });
   }
   for (const match of content.matchAll(/href="(\/[^"]*)"/g)) {
-    links.push({ source, href: match[1] });
+    if (match[1] !== undefined) links.push({ source, href: match[1] });
   }
 }
 
@@ -92,7 +92,7 @@ describe('internal links resolve', () => {
 
   it('every internal link targets an existing page', () => {
     const broken = links.filter(({ href }) => {
-      const path = href.split('#')[0];
+      const path = href.split('#')[0] ?? href;
       return !pages.has(path) && !STATIC_ROUTES.has(path);
     });
     expect(
@@ -105,7 +105,7 @@ describe('internal links resolve', () => {
     const broken = links.filter(({ href }) => {
       const [path, anchor] = href.split('#');
       if (anchor === undefined || anchor === '') return false;
-      const target = pages.get(path);
+      const target = pages.get(path ?? '');
       if (target === undefined) return false; // caught by the page check above
       return !target.anchors.has(anchor);
     });

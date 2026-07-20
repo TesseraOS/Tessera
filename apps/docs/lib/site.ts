@@ -16,4 +16,9 @@ export const siteConfig = {
   marketingUrl: process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3002',
   /** The dashboard. */
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+  /**
+   * The public repository — unset until it exists (open-core publish lands with F-059;
+   * no fabricated URL before then). When set, the chrome grows its GitHub link.
+   */
+  githubUrl: process.env.NEXT_PUBLIC_GITHUB_URL,
 } as const;

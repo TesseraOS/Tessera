@@ -3,6 +3,78 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-20 — F-053 DONE: `@tessera/docs` — the documentation site (Fumadocs, docs subdomain)
+
+Claimed **F-053** (lowest-id eligible R4 `must`; F-052 blocker done). Plan:
+[`F-053-docs-site.md`](../plans/F-053-docs-site.md) — approach, quickstart honesty (from-source first,
+npx labeled pending F-059), and the Terra Mosaic theme choice all stakeholder-confirmed up front.
+New app **`apps/docs`** (`@tessera/docs`): **Fumadocs v16** (core/ui 16.11.5, mdx 15.2.0, openapi
+11.2.2) on the workspace's own Next 16 / React 19 / Tailwind v4; dev port 3003, e2e 3400/3500,
+web-perf 3312. **ADR-0054** records the surface decisions; **DOCS-DESIGN.md v1 +
+docs-design.manifest.json** are the enforced contract (design-lint compiles the manifest — 10 banned
++ 4 required patterns).
+
+### The design — Terra Mosaic reading surface, stock Fumadocs, one seam
+
+Dusk/noon token values vendored from MARKETING-DESIGN §2 into `app/globals.css` and bound onto
+Fumadocs **exclusively through `--color-fd-*`** (rose = the interactive voice; callout/diff
+semantics keep vendored functional colors — the emerald/red rule). No component forks. The radial
+theme ripple ported into `lib/theme.tsx` (useTheme via `fumadocs-ui/provider/base` so the toggle
+shares RootProvider's next-themes context; custom ThemeToggle through the `themeSwitch` slot). Three
+faces: Instrument Serif / Manrope / **Geist Mono — the mono voice returns because code is content
+here** (the marketing retirement stays a marketing rule). Tess adopted per ADR-0046's sanctioned
+follow-up: home greeting + 404 lost, design-lint-scoped; the home hero art (a mosaic breathing at
+field rate, one tile endlessly seating itself) carries no gold — Tess's heart is the viewport's gold
+moment.
+
+### Prose authored, facts generated (the stakeholder's static-JSON idea, refined)
+
+`scripts/generate.mjs` derives every machine fact from its source of truth: `generated/openapi.json`
+(verbatim SDK capture) + **43 per-operation REST MDX pages** (fumadocs-openapi `generateFilesOnly`,
+folded into the same artifact map), `mcp-tools.json` (**tools/list asked of the real tessera-mcp
+over stdio**, fake embeddings, temp dir — 18 tools with schemas), `cli-reference.json` (the COMMANDS
+table `tessera help` renders), `agent-clients.json` (MCP_CLIENTS through the CLI's own renderer),
+`env-reference.json` (parsed .env.example). `tests/generated-drift.test.ts` regenerates in the test
+gate and byte-compares (+ an orphan check on the api tree). Render components (AgentConfig,
+McpToolCatalog, CliReference, EnvReference) mean no fact is ever hand-copied — even the tool count.
+
+### Content (~45 pages) + agent-readability
+
+Introduction · Quickstart (from-source path stated plainly; real defaults 127.0.0.1:3000) ·
+Concepts ×10 (compiler stages, effect-links origins, memory lineage, graph, 5-signal retrieval,
+provenance, tenancy/projects, glossary — all sourced from ARCHITECTURE/ADRs/domain code) ·
+Guides ×8 (sources, search & compile budgets, memory habits, tokens/RBAC with the loopback rule,
+projects, governance/audit — **DSR corrected against the spec during writing: tenant-scoped, no
+subject param**, backup cold-copy procedure) · Agents ×6 (snippets rendered from the registry) ·
+Reference (REST overview + generated pages, MCP, CLI, configuration) · Deployment ×3 (Local in
+depth; self-host page draws the shipped/landing line precisely — compose Postgres + conformance-
+tested adapters shipped, `self-hosted` profile wiring lands with F-056, single-node Local-on-a-VM
+documented honestly). `llms.txt` (index from the source loader) + `llms-full.txt` (114KB full text)
++ sitemap/robots/OG plate. Search = local Orama, zero third-party requests (NFR-17).
+
+**Evidence/verification** — workspace gates green (evidence in this session's runs): `verify-state`
+valid (91 features, 26 effect-links), `typecheck` green, `lint` green, `format` clean, `test` green
+(docs: design-lint + drift + link-check = 20), `build` green, docs `e2e` **20/20** (axe WCAG AA
+on BOTH themes across a 7-page battery reached through the real ripple toggle; search journey;
+MCP page asserts all 18 tool headings; llms/sitemap), `web-perf` **docs measured 206KB gz / budget
+250** (marketing 204.1/240, web 266.5/300 unchanged). Two fixes en route, both captured as lessons:
+fumadocs Tabs labels leak spaces into Radix IDREFs (axe critical; labels made slug-safe) and PS 5.1
+Get/Set-Content mojibakes UTF-8 (recovered via git, redone with Edit).
+
+**Effects traced** — `effects.json`: **E-003** + docs as a public-reference dependent (a /v1 or MCP
+contract change now also means `docs generate` + commit), **E-022** + the docs token vendoring (the
+two public surfaces re-light together), **E-023** docs mascot adoption realized (was "future
+consumer"), new **E-026** — the generated-reference pipeline coupling (CLI/MCP/env/openapi → docs
+artifacts + drift/link-check/e2e dependents, incl. the inherited rebuild-first trap).
+
+**Decisions** (stakeholder, session start): approve plan · quickstart from-source first · Terra
+Mosaic dual themes over the dashboard catalog. ADR-0054 Accepted; ADR index updated; root README
+gains the marketing/docs rows; `.claude/launch.json` gains the docs dev server.
+
+**Next:** R4 candidates — F-071 (scope-aware ingestion), F-054 (skills registry), F-055 (remote
+MCP), F-069, F-077, F-078; F-056 completes the deployment section's cloud pages; F-059 flips the
+docs install paths to npm.
+
 ## 2026-07-19 — F-052 DONE: `@tessera/cli` — one-command onboarding (`tessera` bin)
 
 Claimed **F-052** (`@tessera/cli`, ADR-0036 / FR-70) — the lowest-id eligible R4 `must` (blockers F-038

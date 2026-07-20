@@ -1,0 +1,63 @@
+---
+title: Deployment overview
+description: One architecture, configuration-selected — what the Local, self-hosted, and cloud deployment modes are, what ships today, and what is still landing.
+---
+
+Tessera is **deployment-agnostic by architecture**: the engine is written against
+storage, embedding, queue, and auth *ports*, and each deployment mode is a set of
+*adapters* selected by configuration. Deployment is configuration, not a fork — the
+same REST `/v1` and MCP surfaces behave identically everywhere.
+
+## The modes
+
+| Mode | Storage | Auth | Intended user |
+|------|---------|------|---------------|
+| **Local** | SQLite + sqlite-vec, in-process | none / token | an individual developer |
+| **Self-hosted** | Postgres + pgvector + object store | token / OIDC | a team on its own infrastructure |
+| **Managed cloud** | multi-tenant Postgres + pgvector | OIDC + org RBAC | hosted SaaS |
+| **Enterprise** | dedicated / VPC | SSO + audit + retention | regulated organizations |
+
+## What ships today — stated precisely
+
+This documentation does not blur shipped and planned. As of this writing:
+
+- **Local is the shipped, default profile.** Everything in the
+  [Local deployment](/docs/deployment/local) page works today and is exercised by the
+  repository's own end-to-end gates on every change.
+- **The self-hosted storage layer is shipped:** the Postgres + pgvector adapters
+  exist, run behind the same storage ports as SQLite, and pass the same conformance
+  suites — against the exact Postgres service defined in the repository's
+  `docker-compose.yml`. What has **not** shipped yet is the runtime *profile wiring*:
+  setting `profile: "self-hosted"` in configuration is rejected by the server today.
+  The wiring and complete self-host/cloud deployment guides land with **F-056**
+  (deployment artifacts). The [self-hosting page](/docs/deployment/self-host-docker)
+  documents both what you can run now and what F-056 completes.
+- **Managed cloud and enterprise are in development** and are not documented beyond
+  this table until they are real.
+
+## Which mode should I use?
+
+Use **Local**. It is the shipped path, it is zero-configuration, and nothing about it
+is a toy: the same engine, the same API, the same MCP tools that the other modes will
+serve. A single developer working across several repositories needs nothing else —
+and a Local deployment on a VM you own is a legitimate lightweight "self-host" for a
+single trusted user (see the [self-hosting page](/docs/deployment/self-host-docker)
+for where the line is).
+
+Move up when you need what the bigger modes exist for: several people sharing one
+context store, OIDC single sign-on, organizational RBAC, or Postgres-grade
+operational tooling (replication, managed backups, monitoring).
+
+## The shape of every deployment
+
+Whatever the mode, a Tessera deployment is two long-lived concerns and one on-demand
+one:
+
+1. **The REST API** (`tessera serve`, or the `tessera-api` bin) — serves `/v1` to
+   dashboards, scripts, and remote callers. Liveness at `GET /health`, readiness at
+   `GET /ready`.
+2. **The MCP server** (`tessera mcp`) — *not* a daemon you run: each agent client
+   spawns it over stdio and owns its lifetime. One process per connected agent, all
+   sharing the same store.
+3. **Scans** — triggered when you add a source or ask for a rescan; incremental
+   after the first pass.

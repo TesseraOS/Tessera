@@ -1,0 +1,212 @@
+---
+title: Quickstart
+description: From a repository checkout to an agent compiling budgeted, cited context — initialize a Local deployment, ingest a repo, and connect your agent.
+---
+
+This walkthrough takes you from nothing to a working Local deployment with your first
+repository ingested and your coding agent connected over MCP. Everything runs on your
+machine: SQLite for storage, in-process embeddings, no accounts, no keys, no network
+calls.
+
+<Callout title="Install paths today vs. at launch">
+  The `@tessera/cli` package is not published to npm yet (publishing lands with the
+  launch-readiness feature, F-059, together with the public repository). Until then,
+  Tessera runs **from a checkout of the repository**, which is what this page
+  documents. Where a step will become a one-liner after publish (`npx @tessera/cli …`),
+  the future form is shown alongside and labeled.
+</Callout>
+
+## Prerequisites
+
+| Tool | Version | Notes |
+|------|---------|-------|
+| Node.js | `22.16.0` | The pinned LTS line (`.nvmrc` in the repo — `nvm use` picks it up). |
+| pnpm | `>= 9` | Workspace package manager (`corepack enable` or `npm i -g pnpm`). |
+| Git | `>= 2.34` | Used by the git source connector. |
+
+Roughly 2 GB of free disk is comfortable: dependencies, build output, and the ~90 MB
+embedding model the Local profile downloads on first real use.
+
+## Step by step
+
+<Steps>
+
+<Step>
+
+### Install and build
+
+From the root of your Tessera checkout:
+
+```bash
+pnpm install
+pnpm -w build
+```
+
+The workspace build compiles every package including the `tessera` CLI, whose built
+entry point now lives at `apps/cli/dist/bin/tessera.js`. The rest of this page calls
+it through `node`; if you prefer, shell-alias it once:
+
+```bash
+alias tessera="node /absolute/path/to/tessera/apps/cli/dist/bin/tessera.js"
+```
+
+*After F-059 publishes the package, this whole step collapses to nothing — every
+command below becomes `npx -y @tessera/cli <command>`.*
+
+</Step>
+
+<Step>
+
+### Initialize a deployment
+
+Change into the directory where you want Tessera to keep its data — typically the
+project you are working on, or a dedicated folder — and run `init`:
+
+```bash
+node /path/to/tessera/apps/cli/dist/bin/tessera.js init
+```
+
+This writes two things:
+
+- **`tessera.config.json`** — a validated configuration file. Defaults: the `local`
+  profile, `auth.mode: none` (full access, loopback-only), Transformers.js
+  embeddings.
+- **`.tessera/`** — the data directory: `tessera.sqlite` (relational store),
+  `vectors.sqlite` (vector index), and `blobs/` (content storage).
+
+Useful flags (see `init --help` for all of them):
+
+| Flag | Effect |
+|------|--------|
+| `--data-dir <path>` | Put the data directory elsewhere. An **absolute** path makes the config location-independent — with a relative path, run later commands from this same directory. |
+| `--auth token` | Require Bearer tokens on the REST API (see [Tokens & auth](/docs/guides/tokens-and-auth)). |
+| `--embeddings fake` | Deterministic no-model embeddings — only for tests and offline smoke runs, never for real retrieval quality. |
+| `--verify` | Boot the profile once to prove the wiring. Off by default because the first boot downloads the ~90 MB embedding model. |
+
+Configuration precedence, lowest to highest:
+`built-in defaults < tessera.config.json < TESSERA_* environment < flags`. Every
+variable is documented in the [configuration reference](/docs/reference/configuration).
+
+</Step>
+
+<Step>
+
+### Ingest your first repository
+
+```bash
+node /path/to/tessera/apps/cli/dist/bin/tessera.js source add /path/to/your/project
+```
+
+`source add` registers the path as a **source** and scans it immediately:
+
+- A directory with a `.git` folder is registered through the **git** connector
+  (commit-aware); any other directory goes through the **filesystem** connector.
+- A **git URL** (`https://…` or `git@…`) is shallow-cloned into
+  `<data-dir>/sources/` first, then registered and scanned.
+
+The scan chunks and embeds your files, indexes them for keyword and vector search,
+and extracts code symbols into the knowledge graph. On the very first scan the
+Transformers.js embedding model (~90 MB) is downloaded and cached; subsequent runs are
+offline. This is the same operation the REST `POST /v1/sources` endpoint and the MCP
+`add_source` tool perform — one engine, several doors. See the
+[sources guide](/docs/guides/sources) for scan lifecycles and rescanning.
+
+</Step>
+
+<Step>
+
+### Check the installation
+
+```bash
+node /path/to/tessera/apps/cli/dist/bin/tessera.js doctor
+```
+
+`doctor` verifies your Node version, the config file, storage paths, and the
+embeddings provider, and exits non-zero if anything is wrong — useful in scripts and
+CI as well as interactively. Add `--json` for machine-readable output.
+
+</Step>
+
+<Step>
+
+### Connect your agent over MCP
+
+Agents talk to Tessera through a **stdio MCP server** that the agent itself spawns.
+Print the ready-to-paste configuration for every supported agent:
+
+```bash
+node /path/to/tessera/apps/cli/dist/bin/tessera.js mcp-config
+```
+
+For a from-source checkout, the launcher in the emitted config needs to be the `node`
+invocation rather than the (not-yet-published) npx form — a Claude Code project
+config (`.mcp.json`) looks like this:
+
+```json
+{
+  "mcpServers": {
+    "tessera": {
+      "command": "node",
+      "args": [
+        "/path/to/tessera/apps/cli/dist/bin/tessera.js",
+        "mcp",
+        "--config",
+        "/path/to/your/project/tessera.config.json"
+      ]
+    }
+  }
+}
+```
+
+Every agent's exact file location and format — Claude Code, Cursor, Cline, Codex CLI,
+Continue — is covered with copy-paste snippets in the
+[per-agent setup guides](/docs/agents).
+
+</Step>
+
+<Step>
+
+### First contact
+
+Restart your agent so it picks up the MCP config, then ask it to use Tessera —
+for example:
+
+> Use the tessera `search` tool to find where authentication is configured, then
+> `compile_context` for the task "add a logout endpoint".
+
+Behind those two calls: [hybrid retrieval](/docs/concepts/retrieval) over everything
+you ingested, and the [Context Compiler](/docs/concepts/context-compiler) assembling a
+budgeted, cited package. The full tool catalog — 18 tools with input schemas — is in
+the [MCP tools reference](/docs/reference/mcp-tools).
+
+Prefer to see the HTTP surface? Serve the REST API (defaults to
+`127.0.0.1:3000`):
+
+```bash
+node /path/to/tessera/apps/cli/dist/bin/tessera.js serve
+```
+
+```bash
+curl http://127.0.0.1:3000/health
+curl -X POST http://127.0.0.1:3000/v1/search \
+  -H 'content-type: application/json' \
+  -d '{"query": "authentication", "limit": 5}'
+```
+
+The [REST API reference](/docs/reference/api) documents all endpoints, generated from
+the server's own OpenAPI document.
+
+</Step>
+
+</Steps>
+
+## Where to go next
+
+- [Search & compile in practice](/docs/guides/search-and-compile) — budgets, the
+  `explain` path, and how to read a compiled package.
+- [Capturing memory](/docs/guides/capturing-memory) — make decisions stick across
+  sessions.
+- [Tokens & auth](/docs/guides/tokens-and-auth) — lock the API down before exposing
+  it beyond localhost.
+- [Deployment](/docs/deployment) — what Local means precisely, and the self-hosting
+  picture.

@@ -1,11 +1,90 @@
 ---
 title: Introduction
-description: What Tessera is, what problem it solves, and where to go next.
+description: What Tessera is, the problem it solves, how the documentation is organized, and where to start.
 ---
 
-Tessera is a **context & memory OS for AI coding agents** — it ingests your
-repositories and decisions, remembers them across sessions, and compiles budgeted,
-cited context packages served to any MCP-capable agent.
+Tessera is a **context & memory operating system for AI coding agents**. It ingests
+your repositories and decisions, remembers them across sessions, and compiles
+**budgeted, cited context packages** that it serves to any MCP-capable agent — Claude
+Code, Cursor, Cline, Codex CLI, Continue, or anything else that speaks the Model
+Context Protocol.
 
-This is the scaffold page; the full documentation set lands with the content
-increments of F-053.
+> A *tessera* is a single tile in a mosaic. Tessera assembles thousands of scattered
+> fragments of project knowledge into one coherent picture, on demand, per task.
+
+## The problem
+
+AI coding agents fail less from weak models and more from **bad context**: stale
+snippets, missing decisions, and no awareness that changing one function breaks three
+others. The common workaround — re-reading large parts of a repository on every task —
+is slow, expensive in tokens, and still blind to history: *why* something is the way it
+is, *what* was decided last month, and *what else* moves when this file moves.
+
+Tessera treats context as a **compiled artifact**. Instead of dumping raw search hits
+into a prompt, it plans, retrieves, ranks, deduplicates, and compresses knowledge into
+a package that fits a caller-set token budget — and every item in the package carries
+provenance, so an agent (or a human) can see exactly where each claim came from.
+
+## What Tessera gives an agent
+
+- **The Context Compiler** — ask for context on a task and receive a budgeted,
+  deduplicated, cited package instead of raw retrieval output. See
+  [Context Compiler](/docs/concepts/context-compiler).
+- **Effect-links** — a first-class graph of "a change here implies a change there".
+  Before editing a symbol, an agent calls `get_effects` and learns what else must
+  move. See [Effect-links](/docs/concepts/effect-links).
+- **Memory** — decisions, lessons, and conventions captured once and recalled in every
+  later session, with history and provenance. See [Memory](/docs/concepts/memory).
+- **A knowledge graph** — entities and relations extracted from your sources,
+  queryable directly. See [Knowledge graph](/docs/concepts/knowledge-graph).
+- **Hybrid retrieval** — five ranking signals fused together, not a single vector
+  lookup. See [Retrieval](/docs/concepts/retrieval).
+- **Governance** — token auth, role-based access control, tenant isolation, quotas,
+  and a persistent audit trail at the API boundary. See
+  [Governance & audit](/docs/guides/governance-and-audit).
+
+Everything is exposed through **two equivalent surfaces**: a REST `/v1` API and an MCP
+server backed by the same services — plus a dashboard that is itself just a client of
+the same API. Whatever an operator can do in the dashboard, an agent can do over
+REST or MCP; that parity is a binding engineering rule, not an aspiration.
+
+## Deployment posture
+
+One architecture, configuration-selected — deployment is configuration, not a fork:
+
+| Mode | Storage | Status |
+|------|---------|--------|
+| **Local** | SQLite + sqlite-vec, in-process, zero external services | Shipped — the default profile |
+| **Self-hosted** | Postgres + pgvector (adapters shipped and conformance-tested) | Storage layer shipped; profile wiring and deploy guides complete in F-056 |
+| **Managed cloud / Enterprise** | Multi-tenant Postgres, OIDC, org RBAC | In development |
+
+The Local profile runs entirely on your machine: no accounts, no API keys, no network
+calls (embeddings run in-process via Transformers.js). See
+[Deployment](/docs/deployment) for the full picture.
+
+## Project status
+
+Tessera is **in build and not yet released**. The engine — ingestion, memory,
+knowledge graph, retrieval, compiler, REST + MCP surfaces, auth/RBAC, audit — is built
+and behind green verification gates; the launch surface (published npm packages,
+public repository, deployment artifacts) is in progress. Where the documentation
+describes an install path that is not live yet, it says so explicitly. Everything else
+on this site describes what the code does **today** — reference pages are generated
+from the running system and drift-checked in CI.
+
+## How this documentation is organized
+
+- **[Quickstart](/docs/quickstart)** — from a repository checkout to an agent
+  compiling context, step by step.
+- **[Concepts](/docs/concepts)** — what each part of the system is and why it exists:
+  the compiler, effect-links, memory, the graph, retrieval, provenance, tenancy.
+- **[Guides](/docs/guides)** — task-oriented how-tos: registering sources, issuing
+  tokens, capturing memory, auditing, backups.
+- **[Agents](/docs/agents)** — copy-paste MCP setup for Claude Code, Cursor, Cline,
+  Codex CLI, and Continue.
+- **[Reference](/docs/reference)** — the generated REST API reference, every MCP tool
+  with its full input schema, every CLI command, and every configuration variable.
+- **[Deployment](/docs/deployment)** — running Tessera locally and self-hosting.
+
+If you are new, start with the [Quickstart](/docs/quickstart). If you are wiring an
+agent, jump to [Agents](/docs/agents).

@@ -1,0 +1,89 @@
+---
+title: Local deployment
+description: The shipped default — SQLite + sqlite-vec + in-process embeddings on your machine, with zero external services, and how to run it well.
+---
+
+The **Local profile** is Tessera's shipped default: everything runs in one process on
+your machine, storage is a pair of SQLite files plus a blob directory, and embeddings
+are computed in-process by Transformers.js. There are no accounts, no API keys, and no
+network calls (after the one-time embedding-model download).
+
+If you followed the [Quickstart](/docs/quickstart), you already have a Local
+deployment. This page is the fuller operational picture.
+
+## What the profile wires
+
+| Concern | Adapter | Where it lives |
+|---------|---------|----------------|
+| Relational store | SQLite | `<data-dir>/tessera.sqlite` |
+| Vector index | sqlite-vec | `<data-dir>/vectors.sqlite` |
+| Blob store | filesystem | `<data-dir>/blobs/` |
+| Job queue | in-process | — |
+| Embeddings | Transformers.js (`Xenova/all-MiniLM-L6-v2`, 384 dimensions) | model cached on first use |
+| Auth | `none` by default (loopback trust) — `token` mode available | — |
+
+The data directory defaults to `.tessera/` next to your `tessera.config.json`; `init
+--data-dir <absolute path>` relocates it and makes the config location-independent.
+
+<Callout title="Relative paths resolve against the working directory">
+  Storage paths in `tessera.config.json` are resolved **at runtime against the
+  directory you run commands from**. Either always run `tessera` commands from the
+  directory that holds the config, or initialize with an absolute `--data-dir` once
+  and stop thinking about it.
+</Callout>
+
+## Running the surfaces
+
+**REST API** — long-running, on demand:
+
+```bash
+node /path/to/tessera/apps/cli/dist/bin/tessera.js serve
+# Tessera REST API listening on http://127.0.0.1:3000
+```
+
+Defaults are `--host 127.0.0.1 --port 3000` (or `HOST` / `PORT` environment
+variables). The server binds loopback by default on purpose: with `auth.mode: none`,
+anyone who can reach the port has full access — do not re-bind to `0.0.0.0` without
+switching to [token auth](/docs/guides/tokens-and-auth) first.
+
+**MCP** — you never run this yourself: each agent client spawns `tessera mcp` over
+stdio per its config (see [Agents](/docs/agents)). Multiple agents can run
+concurrently; SQLite runs in WAL mode, so several processes share the store safely.
+
+## Embeddings choices
+
+| Provider | When to use |
+|----------|-------------|
+| `transformers` (default) | Real local semantic search. First use downloads the ~90 MB model to the machine's cache; afterwards fully offline. |
+| `ollama` | You already run [Ollama](https://ollama.com) and want your embedding model choice; set `TESSERA_OLLAMA_URL` if not on `127.0.0.1:11434`. |
+| `fake` | Deterministic hash-based vectors for tests and offline smoke runs. Never for real use — retrieval quality is meaningless. |
+
+Switching providers (or models) changes the vector space — previously indexed
+embeddings do not match the new model's. After a switch, rescan your sources so
+content re-embeds.
+
+## Operational notes
+
+- **Resource profile:** ingestion is the heavy moment (chunking + embedding);
+  afterwards the process idles near zero. The embedding model holds roughly a few
+  hundred MB of memory while loaded; `TESSERA_EMBEDDINGS_WORKERS` moves that work to
+  worker threads if you need the main thread responsive.
+- **Everything is files:** stop the process and the `.tessera/` directory *is* your
+  deployment state. Copy it and you have copied the deployment — see
+  [Backup & restore](/docs/guides/backup-and-restore) for the supported way.
+- **Observability:** structured logs go to stderr; `TESSERA_LOG_LEVEL` sets the
+  level (`trace|debug|info|warn|error`), and `TESSERA_TELEMETRY=1` enables
+  OpenTelemetry traces and metrics. See the
+  [configuration reference](/docs/reference/configuration).
+- **Health:** `GET /health` (liveness) and `GET /ready` (readiness, checks the
+  stores) on the REST server; `tessera doctor` for the offline equivalent.
+
+## Limits worth knowing
+
+- One machine, one process family — there is no clustering story in the Local
+  profile; that is what the self-hosted profile is for.
+- `auth.mode: none` trusts the loopback. The moment anything other than you can
+  reach the API, issue tokens and switch modes.
+- SQLite is remarkably capable, but tens of gigabytes of vectors or heavy concurrent
+  scan load is Postgres territory — see
+  [self-hosting](/docs/deployment/self-host-docker).

@@ -1,0 +1,95 @@
+---
+title: Self-hosting with Docker
+description: The Postgres + pgvector stack from the repository's docker-compose.yml, what is shipped versus landing with F-056, and an honest single-node option you can run today.
+---
+
+Self-hosting Tessera for a team means Postgres + pgvector behind the same storage
+ports the Local profile serves with SQLite. This page is precise about the line
+between **shipped** and **landing**, because half-true deployment guides cost real
+outages.
+
+## Status, stated plainly
+
+| Piece | Status |
+|-------|--------|
+| `docker-compose.yml` with a pgvector-enabled Postgres 16 service | **Shipped** (in the repository root) |
+| Postgres + pgvector storage adapters behind the same ports as SQLite | **Shipped** — they pass the same conformance suites as the SQLite adapters, run against this exact compose service |
+| `profile: "self-hosted"` runtime wiring in the server | **Not yet** — the server rejects the profile today; wiring plus complete self-host and cloud deployment guides land with **F-056** |
+| A single-node deployment you fully own | **Available today** — the Local profile on your own host, within the limits below |
+
+## The compose stack (shipped)
+
+The repository root carries the self-hosted data layer:
+
+```yaml title="docker-compose.yml"
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: tessera-postgres
+    environment:
+      POSTGRES_USER: tessera
+      POSTGRES_PASSWORD: tessera
+      POSTGRES_DB: tessera
+    ports:
+      - '5432:5432'
+    volumes:
+      - tessera-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U tessera -d tessera']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  tessera-postgres-data:
+```
+
+```bash
+docker compose up -d postgres
+```
+
+<Callout type="warn" title="Change the credentials">
+  The `tessera`/`tessera` credentials exist for local development of the adapters.
+  Any instance that outlives an afternoon gets real credentials and a
+  `DATABASE_URL` of the form
+  `postgres://<user>:<password>@<host>:5432/tessera`.
+</Callout>
+
+Today this stack backs the Postgres/pgvector **conformance suites** — the repository's
+own verification runs against it (`TESSERA_TEST_POSTGRES=1`). That is the guarantee
+that when F-056 flips the profile switch, the storage layer under it is not new code
+but code that has been tested against this compose file all along.
+
+## What you can run today: a single-node deployment
+
+A **Local-profile deployment on a host you own** is a real option for a single
+trusted user (or a fully trusting team) — it is the same shipped engine, just on a
+server:
+
+1. Provision a host with Node 22.16 and pnpm ≥ 9; build the repository as in the
+   [Quickstart](/docs/quickstart).
+2. `init` with an absolute `--data-dir` on durable storage, and **`--auth token`** —
+   never expose `auth.mode: none` beyond loopback.
+3. [Issue tokens](/docs/guides/tokens-and-auth) for each caller.
+4. Run `tessera serve` under your process supervisor of choice (systemd, for
+   example), keeping the default loopback bind and putting your TLS-terminating
+   reverse proxy in front. Set `TESSERA_API_HSTS=1` once TLS is on, and configure
+   `TESSERA_API_CORS_ALLOWED_ORIGINS` if a browser app will call it. Wire the
+   supervisor's health check to `GET /ready`.
+5. Point remote agents and dashboards at the proxied HTTPS origin.
+
+Know the boundaries: SQLite-backed storage on one node, agent MCP access is
+stdio-on-that-host today (the HTTP/streamable MCP transport for remote agents is its
+own upcoming feature, F-055), and horizontal scale is exactly what the self-hosted
+profile completes.
+
+## What F-056 completes
+
+- The `self-hosted` profile wired end-to-end: Postgres/pgvector selected by
+  configuration (`DATABASE_URL`), object storage, migrations on boot.
+- Container images and complete compose/deployment artifacts for the API server —
+  not only the database.
+- Cloud deployment guides alongside this page.
+
+Until then, this page will not pretend: if you need multi-user Postgres-backed
+Tessera **now**, you are early — track F-056 in the repository's feature list.

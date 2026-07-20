@@ -3,6 +3,24 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-21 — fix: expose GITLEAKS_LICENSE to CI workflow + fix docs typecheck
+
+**What changed**
+- Added `GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}` to the `secret-scan` job's gitleaks step env block in `.github/workflows/ci.yml`. This explicitly binds the GitHub Organization secret to the environment variable required by the `gitleaks/gitleaks-action@v2` action.
+- Fixed strict null check / `noUncheckedIndexedAccess: true` compilation errors in `apps/docs/tests/compose-doc-drift.test.ts` by safely checking for `undefined` on index and regular expression group accesses.
+- Added a bug fix plan file [fix-gitleaks-license.md](file:///E:/ContextOS/.harness/plans/fix-gitleaks-license.md).
+
+**Evidence/verification**
+- Running `node scripts/verify-state.mjs` returns `✓ state valid`.
+- Ran full workspace gates: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, and `pnpm build` all pass green without errors.
+
+**Decisions**
+- Kept the action version to `@v2` as requested/defined, resolving the license issue by explicitly forwarding the secret to the environment.
+- Fixed the typecheck error directly in the test file as it blocks the typecheck gate in the monorepo workspace.
+
+**Next step**
+- None. Changes are verified and ready for commit.
+
 ## 2026-07-20 — docs: compose YAML block is now drift-gated (closes F-053's last hand-copy)
 
 **What changed**

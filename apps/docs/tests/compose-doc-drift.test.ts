@@ -34,8 +34,13 @@ function normalize(text: string): string {
 function composeBody(raw: string): string {
   const lines = normalize(raw).split('\n');
   let start = 0;
-  while (start < lines.length && (lines[start].trim() === '' || lines[start].trimStart().startsWith('#'))) {
-    start += 1;
+  while (start < lines.length) {
+    const line = lines[start];
+    if (line !== undefined && (line.trim() === '' || line.trimStart().startsWith('#'))) {
+      start += 1;
+    } else {
+      break;
+    }
   }
   return lines.slice(start).join('\n');
 }
@@ -43,7 +48,7 @@ function composeBody(raw: string): string {
 /** The contents of the ```yaml title="docker-compose.yml" fence in the MDX page. */
 function docFencedBlock(mdx: string): string {
   const match = /```yaml title="docker-compose\.yml"\n([\s\S]*?)\n```/.exec(normalize(mdx));
-  if (match === null) {
+  if (match === null || match[1] === undefined) {
     throw new Error(
       'no ```yaml title="docker-compose.yml" fence found in self-host-docker.mdx — ' +
         'the compose block was renamed or removed; update this drift gate',

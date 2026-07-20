@@ -18,6 +18,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@tessera/marketing", "exec", "next", "dev", "-p", "3300"],
       "port": 3300
+    },
+    {
+      "name": "docs",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@tessera/docs", "exec", "next", "dev", "-p", "3400"],
+      "port": 3400
     }
   ]
 }

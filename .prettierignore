@@ -22,3 +22,4 @@ docs/
 # Non-JS scripts
 scripts/*.ps1
 scripts/*.sh
+**/.source/

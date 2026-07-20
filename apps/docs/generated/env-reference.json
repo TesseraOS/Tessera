@@ -1,0 +1,395 @@
+{
+  "$source": ".env.example — regenerate with `pnpm --filter @tessera/docs generate`",
+  "sections": [
+    {
+      "section": "Deployment profile: local | self-hosted | cloud (ADR-0003)",
+      "vars": [
+        {
+          "name": "TESSERA_PROFILE",
+          "default": "local",
+          "optional": false
+        }
+      ]
+    },
+    {
+      "section": "Runtime / server (apps/server)",
+      "vars": [
+        {
+          "name": "NODE_ENV",
+          "default": "development",
+          "optional": false
+        },
+        {
+          "name": "HOST",
+          "default": "127.0.0.1",
+          "optional": true
+        },
+        {
+          "name": "PORT",
+          "default": "3000",
+          "optional": true
+        },
+        {
+          "name": "TESSERA_ENV",
+          "default": "development",
+          "optional": true
+        },
+        {
+          "name": "TESSERA_LOG_LEVEL",
+          "default": "info",
+          "optional": true,
+          "note": "trace | debug | info | warn | error"
+        },
+        {
+          "name": "TESSERA_TELEMETRY",
+          "default": "0",
+          "optional": true,
+          "note": "1 enables OpenTelemetry traces/metrics (off by default)"
+        }
+      ]
+    },
+    {
+      "section": "Local storage paths (local profile; defaults are sensible)",
+      "vars": [
+        {
+          "name": "TESSERA_SQLITE_PATH",
+          "default": "./.data/tessera.sqlite",
+          "optional": true
+        },
+        {
+          "name": "TESSERA_VECTOR_PATH",
+          "default": "./.data/vectors.sqlite",
+          "optional": true
+        },
+        {
+          "name": "TESSERA_BLOB_ROOT",
+          "default": "./.data/blobs",
+          "optional": true
+        }
+      ]
+    },
+    {
+      "section": "Embeddings (local default = Transformers.js, no key)",
+      "vars": [
+        {
+          "name": "TESSERA_EMBEDDINGS_PROVIDER",
+          "default": "transformers",
+          "optional": true,
+          "note": "transformers | ollama | fake"
+        },
+        {
+          "name": "TESSERA_EMBEDDINGS_MODEL",
+          "default": "Xenova/all-MiniLM-L6-v2",
+          "optional": true
+        },
+        {
+          "name": "TESSERA_EMBEDDINGS_DIMENSION",
+          "default": "384",
+          "optional": true
+        },
+        {
+          "name": "TESSERA_EMBEDDINGS_WORKERS",
+          "default": "1",
+          "optional": true,
+          "note": "transformers: worker threads (0 = in-process). Each loads its own ~90MB model."
+        },
+        {
+          "name": "TESSERA_OLLAMA_URL",
+          "default": "http://127.0.0.1:11434",
+          "optional": true,
+          "note": "only for the ollama provider"
+        }
+      ]
+    },
+    {
+      "section": "Context compiler budgets",
+      "vars": [
+        {
+          "name": "TESSERA_CONTEXT_BUDGET",
+          "default": "8000",
+          "optional": true
+        },
+        {
+          "name": "TESSERA_RETRIEVAL_LIMIT",
+          "default": "20",
+          "optional": true
+        }
+      ]
+    },
+    {
+      "section": "Auth (F-025 RBAC / F-034 wiring)",
+      "vars": [
+        {
+          "name": "TESSERA_AUTH_MODE",
+          "default": "none",
+          "optional": true,
+          "note": "none = zero-auth local (full access) | token = Bearer required"
+        },
+        {
+          "name": "TESSERA_AUTH_TENANT",
+          "default": "default",
+          "optional": true,
+          "note": "tenant assigned to the local principal in \"none\" mode"
+        },
+        {
+          "name": "TESSERA_AUTH_QUOTA_ENABLED",
+          "default": "0",
+          "optional": true,
+          "note": "1 enables per-principal MCP quotas (F-026)"
+        },
+        {
+          "name": "TESSERA_AUTH_QUOTA_LIMIT",
+          "default": "120",
+          "optional": true,
+          "note": "max tool calls per principal per window"
+        },
+        {
+          "name": "TESSERA_AUTH_QUOTA_WINDOW_MS",
+          "default": "60000",
+          "optional": true
+        },
+        {
+          "name": "TESSERA_AUTH_OIDC_ISSUER",
+          "default": "https://idp.example.com/realms/tessera",
+          "optional": true,
+          "note": "required for oidc",
+          "description": "Token mode: issue tokens with `pnpm --filter @tessera/server exec tessera-token --roles owner` (secret shown once). TESSERA_AUTH_MODE (above) may be `oidc` — verify JWTs from an external OIDC IdP (F-036):"
+        },
+        {
+          "name": "TESSERA_AUTH_OIDC_AUDIENCE",
+          "default": "tessera-api",
+          "optional": true,
+          "note": "required for oidc"
+        },
+        {
+          "name": "TESSERA_AUTH_OIDC_JWKS_URI",
+          "default": "",
+          "optional": true,
+          "note": "default: <issuer>/.well-known/jwks.json"
+        },
+        {
+          "name": "TESSERA_AUTH_OIDC_ROLES_CLAIM",
+          "default": "roles",
+          "optional": true,
+          "note": "JWT claim carrying RBAC roles"
+        },
+        {
+          "name": "TESSERA_AUTH_OIDC_TENANT_CLAIM",
+          "default": "tenant_id",
+          "optional": true,
+          "note": "JWT claim carrying the tenant/org id"
+        }
+      ]
+    },
+    {
+      "section": "Secrets provider (packages/config/src/secrets)",
+      "vars": [
+        {
+          "name": "TESSERA_SECRETS_PROVIDER",
+          "default": "env",
+          "optional": true,
+          "note": "env | file"
+        },
+        {
+          "name": "TESSERA_SECRETS_FILE",
+          "default": "./secrets.json",
+          "optional": true,
+          "note": "for the \"file\" provider (a JSON map)"
+        },
+        {
+          "name": "TESSERA_SECRET_PREFIX",
+          "default": "TESSERA_SECRET_",
+          "optional": true,
+          "note": "env provider reads process.env under this prefix"
+        }
+      ]
+    },
+    {
+      "section": "Billing (F-030; open-core — local/free by default, no external service)",
+      "vars": [
+        {
+          "name": "TESSERA_BILLING_PROVIDER",
+          "default": "none",
+          "optional": true,
+          "note": "none = local/free (OSS) | dodo = Dodo Payments (cloud)"
+        },
+        {
+          "name": "TESSERA_BILLING_DODO_BASE_URL",
+          "default": "https://api.dodopayments.com",
+          "optional": true,
+          "note": "override for sandbox"
+        },
+        {
+          "name": "TESSERA_SECRET_BILLING_DODO_API_KEY",
+          "default": "",
+          "optional": true,
+          "description": "Dodo secrets go through the SecretsProvider (prefixed for the \"env\" provider):"
+        },
+        {
+          "name": "TESSERA_SECRET_BILLING_DODO_WEBHOOK_SECRET",
+          "default": "",
+          "optional": true
+        }
+      ]
+    },
+    {
+      "section": "Self-hosted / cloud only (leave unset for local)",
+      "vars": [
+        {
+          "name": "DATABASE_URL",
+          "default": "postgres://tessera:tessera@127.0.0.1:5432/tessera",
+          "optional": true,
+          "description": "Postgres + pgvector (F-023; see docker-compose.yml). Required for the self-hosted/cloud profiles."
+        },
+        {
+          "name": "REDIS_URL",
+          "default": "",
+          "optional": true
+        },
+        {
+          "name": "OBJECT_STORE_ENDPOINT",
+          "default": "",
+          "optional": true
+        },
+        {
+          "name": "OBJECT_STORE_BUCKET",
+          "default": "",
+          "optional": true
+        },
+        {
+          "name": "OIDC_ISSUER_URL",
+          "default": "",
+          "optional": true
+        }
+      ]
+    },
+    {
+      "section": "Optional hosted AI providers (local uses Transformers.js, no key needed)",
+      "vars": [
+        {
+          "name": "OPENAI_API_KEY",
+          "default": "",
+          "optional": true
+        },
+        {
+          "name": "COHERE_API_KEY",
+          "default": "",
+          "optional": true
+        }
+      ]
+    },
+    {
+      "section": "Local integration-test guards (DEV / CI only — NOT for production)",
+      "vars": [
+        {
+          "name": "TESSERA_TEST_POSTGRES",
+          "default": "1",
+          "optional": true,
+          "note": "run the Postgres/pgvector conformance (needs DATABASE_URL)"
+        },
+        {
+          "name": "TESSERA_TEST_TRANSFORMERS",
+          "default": "1",
+          "optional": true,
+          "note": "run the real Transformers.js embeddings test"
+        },
+        {
+          "name": "TESSERA_TEST_OLLAMA",
+          "default": "1",
+          "optional": true,
+          "note": "run the Ollama embeddings test"
+        },
+        {
+          "name": "TESSERA_TEST_GITHUB",
+          "default": "1",
+          "optional": true,
+          "note": "run the live GitHub connector smoke test"
+        },
+        {
+          "name": "GITHUB_TOKEN",
+          "default": "",
+          "optional": true,
+          "note": "GitHub token (live GitHub test; also the production GitHub connector)"
+        },
+        {
+          "name": "GITHUB_TEST_OWNER",
+          "default": "octocat",
+          "optional": true
+        },
+        {
+          "name": "GITHUB_TEST_REPO",
+          "default": "Hello-World",
+          "optional": true
+        }
+      ]
+    },
+    {
+      "section": "Audit trail & governance (F-027; FR-55/NFR-13)",
+      "vars": [
+        {
+          "name": "TESSERA_AUDIT_ENABLED",
+          "default": "true",
+          "optional": false,
+          "description": "Record sensitive actions into a persistent, tenant-scoped audit trail (GET /v1/audit, admin-only). Default enabled; disable to fall back to the non-durable in-memory sink."
+        },
+        {
+          "name": "TESSERA_AUDIT_RETENTION_MAX_AGE_DAYS",
+          "default": "90",
+          "optional": false,
+          "description": "Retention (NFR-13): prune events older than N days and/or beyond N entries per tenant (optional)."
+        },
+        {
+          "name": "TESSERA_AUDIT_RETENTION_MAX_ENTRIES",
+          "default": "100000",
+          "optional": false
+        }
+      ]
+    },
+    {
+      "section": "Ingestion sources (F-038; FR-62)",
+      "vars": [
+        {
+          "name": "TESSERA_SOURCES_AUTOSCAN",
+          "default": "false",
+          "optional": true,
+          "description": "Sources (filesystem/git repos) are registered at runtime via /v1/sources or the MCP add_source tool. When true, registering a source scans it immediately; default false (the agent triggers scans)."
+        }
+      ]
+    },
+    {
+      "section": "API hardening (F-044; NFR-1/NFR-2) — REST /v1 surface",
+      "vars": [
+        {
+          "name": "TESSERA_API_RATE_LIMIT_ENABLED",
+          "default": "0",
+          "optional": true,
+          "note": "1 turns on the in-memory fixed-window limiter",
+          "description": "Per-principal (fallback per-IP) rate limiting on /v1. Off by default; enable per profile."
+        },
+        {
+          "name": "TESSERA_API_RATE_LIMIT",
+          "default": "120",
+          "optional": true,
+          "note": "max requests per key per window"
+        },
+        {
+          "name": "TESSERA_API_RATE_LIMIT_WINDOW_MS",
+          "default": "60000",
+          "optional": true
+        },
+        {
+          "name": "TESSERA_API_CORS_ALLOWED_ORIGINS",
+          "default": "https://app.example.com,https://admin.example.com",
+          "optional": true,
+          "description": "Per-profile CORS allowlist (ADR-0035). Empty = loopback-permissive local default; otherwise a comma-separated list of exact browser origins allowed to call the API cross-origin."
+        },
+        {
+          "name": "TESSERA_API_HSTS",
+          "default": "0",
+          "optional": true,
+          "description": "Strict-Transport-Security. Enable ONLY when the API is served over TLS (directly or via a proxy)."
+        }
+      ]
+    }
+  ]
+}

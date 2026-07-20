@@ -1,0 +1,41 @@
+{
+  "$source": "apps/cli/src/cli.ts COMMANDS — regenerate with `pnpm --filter @tessera/docs generate`",
+  "bin": "tessera",
+  "commands": [
+    {
+      "name": "init",
+      "summary": "Scaffold config + data dir for a Local deployment.",
+      "usage": "Usage: tessera init [--dir <path>] [--data-dir <path>] [--auth none|token]\n                   [--embeddings transformers|ollama|fake] [--verify] [--force] [--json]\n\nWrites tessera.config.json and creates the data directory (default .tessera).\nConfig precedence: built-in defaults < tessera.config.json < TESSERA_* env < flags.\n--verify boots the profile once to prove it wires (may download the embedding model).\nIt does NOT start a long-running server — use `tessera serve` (REST) and `tessera mcp`."
+    },
+    {
+      "name": "serve",
+      "summary": "Run the REST /v1 API (long-running).",
+      "usage": "Usage: tessera serve [--host <host>] [--port <port>] [--config <path>]\n\nBoots the Local profile and serves the REST API until interrupted (Ctrl+C).\nDefaults: host 127.0.0.1, port 3000 (or HOST/PORT env). The MCP server is separate —\nagents launch `tessera mcp` over stdio; run `tessera mcp-config` to emit their config."
+    },
+    {
+      "name": "mcp",
+      "summary": "Run the MCP server over stdio (agents spawn this).",
+      "usage": "Usage: tessera mcp [--config <path>]\n\nServes the Tessera MCP tools over stdio — the transport agent clients launch. stdout carries\nthe MCP protocol only; logs go to stderr. Normally you do not run this by hand: paste the\noutput of `tessera mcp-config` into your agent and it spawns this for you."
+    },
+    {
+      "name": "source",
+      "summary": "Register + scan a repository (filesystem or git).",
+      "usage": "Usage: tessera source add <path|git-url> [--label <name>] [--kind filesystem|git]\n                          [--no-scan] [--config <path>] [--json]\n\nA local path is added as git when it contains a .git, else filesystem. A git URL is\nshallow-cloned into <data-dir>/sources/ and added as git. The source is scanned into the\ncorpus unless --no-scan is passed. Uses the same service as POST /v1/sources (ADR-0036)."
+    },
+    {
+      "name": "token",
+      "summary": "Issue a scoped API token (auth.mode=token).",
+      "usage": "Usage: tessera token issue --roles <owner|admin|member|viewer>[,...] [options]\n\nOptions:\n  --tenant <id>       tenant the token belongs to (default: default)\n  --principal <id>    principal id (default: admin)\n  --roles <list>      comma-separated roles (required)\n  --scopes <list>     optional permission scopes (least-privilege upper bound)\n  --name <label>      human label for the token\n  --config <path>     config file (default: ./tessera.config.json)\n  --json              print the token + record as JSON\n\nRequires auth.mode=token. Prints the secret once — it is not recoverable."
+    },
+    {
+      "name": "doctor",
+      "summary": "Check node, config, storage, and embeddings health.",
+      "usage": "Usage: tessera doctor [--config <path>] [--json]\n\nRuns read-only health checks and exits non-zero if any fails:\n  node        the running Node version is in the supported range (>=22.16.0 <23)\n  config      tessera.config.json (or --config) loads and validates\n  storage     the sqlite/blob data directories are writable\n  embeddings  the configured provider is usable (ollama is pinged briefly)"
+    },
+    {
+      "name": "mcp-config",
+      "summary": "Emit ready-to-paste MCP client config for the major agents.",
+      "usage": "Usage: tessera mcp-config [--agent <id>] [--config <path>] [--command <cmd>] [--json]\n\nAgents: claude-code, cursor, cline, codex, continue\n\nPrints the connection snippet each agent needs to launch the Tessera stdio MCP server.\nBy default every agent is emitted; --agent selects one. --command overrides the launcher\n(default 'npx -y @tessera/cli mcp'); --config sets the config path passed to the server."
+    }
+  ]
+}

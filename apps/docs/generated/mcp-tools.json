@@ -1,0 +1,611 @@
+{
+  "$source": "tools/list from the real tessera-mcp stdio server — regenerate with `pnpm --filter @tessera/docs generate`",
+  "toolCount": 18,
+  "tools": [
+    {
+      "name": "add_source",
+      "description": "Register a filesystem or git source for ingestion; returns the stored source.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Connector kind: \"filesystem\" or \"git\"."
+          },
+          "root": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Working-tree path to ingest."
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Human-readable label (defaults to the root)."
+          }
+        },
+        "required": [
+          "kind",
+          "root"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "assert_effect",
+      "description": "Assert an effect-link: changing `from` may require reviewing `to` (rationale-backed).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "file",
+                  "symbol",
+                  "module",
+                  "person",
+                  "decision",
+                  "memory"
+                ]
+              },
+              "key": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "kind",
+              "key"
+            ],
+            "additionalProperties": false,
+            "description": "The node that, when changed, has consequences."
+          },
+          "to": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "$ref": "#/properties/from/properties/kind"
+              },
+              "key": {
+                "$ref": "#/properties/from/properties/key"
+              }
+            },
+            "required": [
+              "kind",
+              "key"
+            ],
+            "additionalProperties": false,
+            "description": "The dependent that may need reviewing."
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Why this effect-link holds."
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "rationale"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "capture_memory",
+      "description": "Capture a new memory (decision/lesson/incident/…); returns the stored version.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "decision",
+              "lesson",
+              "incident",
+              "failure",
+              "architecture",
+              "glossary",
+              "task"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string",
+                "minLength": 1
+              },
+              "author": {
+                "type": "string",
+                "minLength": 1
+              },
+              "links": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "kind",
+          "title",
+          "body"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "compile_context",
+      "description": "Compile a provenance-tagged, token-budget-bounded Context Package for a task.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The task context is being compiled for."
+          },
+          "budget": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Max tokens the package may occupy."
+          },
+          "retrievalLimit": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 200
+          },
+          "filters": {
+            "type": "object",
+            "properties": {
+              "kinds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "additionalProperties": false,
+            "description": "Restrict fragments to these kinds."
+          }
+        },
+        "required": [
+          "task",
+          "budget"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "create_project",
+      "description": "Create a project (a new, isolated workspace scope); returns the stored project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "A name for the new project (unique within the tenant)."
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "delete_project",
+      "description": "Delete a project (not the reserved default).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The project id to delete (not the reserved default)."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "explain",
+      "description": "Explain context selection for a task: per-fragment \"why included\" + the trace.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "task": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The task to explain context selection for."
+          },
+          "budget": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Token budget (a default applies)."
+          },
+          "retrievalLimit": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 200
+          },
+          "filters": {
+            "type": "object",
+            "properties": {
+              "kinds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "additionalProperties": false,
+            "description": "Restrict fragments to these kinds."
+          }
+        },
+        "required": [
+          "task"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_effects",
+      "description": "What is affected if a node changes — ranked dependents with their paths.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "file",
+              "symbol",
+              "module",
+              "person",
+              "decision",
+              "memory"
+            ],
+            "description": "Kind of the node whose dependents to find."
+          },
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Natural key of the node (e.g. a file path or symbol)."
+          },
+          "maxDepth": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 20
+          }
+        },
+        "required": [
+          "kind",
+          "key"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_stats",
+      "description": "The workspace summary: indexed documents, memories, graph nodes + effect-links, sources, last scan.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "issue_token",
+      "description": "Issue a scoped API token; the plaintext secret is returned once.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "principalId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "The principal the token acts as."
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "owner",
+                "admin",
+                "member",
+                "viewer"
+              ]
+            },
+            "minItems": 1,
+            "description": "Roles granting the token its permissions."
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "search:read",
+                "compile:read",
+                "effects:read",
+                "memory:read",
+                "memory:write",
+                "effects:write",
+                "sources:read",
+                "sources:manage",
+                "projects:read",
+                "projects:manage",
+                "stats:read",
+                "admin:manage"
+              ]
+            },
+            "description": "Cap the token to these permissions (least privilege)."
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Human-readable label."
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO expiry; omit for a non-expiring token."
+          }
+        },
+        "required": [
+          "principalId",
+          "roles"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "list_projects",
+      "description": "List the projects in the caller’s tenant (the reserved default first).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "list_sources",
+      "description": "List the registered ingestion sources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "list_tokens",
+      "description": "List the calling tenant's API tokens (no secrets).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "query_graph",
+      "description": "A bounded subgraph of the knowledge graph (nodes + edges) for exploration.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodeKinds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "file",
+                "symbol",
+                "module",
+                "person",
+                "decision",
+                "memory"
+              ]
+            },
+            "description": "Restrict to these node kinds."
+          },
+          "edgeKinds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "imports",
+                "calls",
+                "references",
+                "contains",
+                "owns",
+                "defines",
+                "supersedes",
+                "EFFECT_LINK"
+              ]
+            },
+            "description": "Restrict to these edge kinds."
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 5000,
+            "description": "Max nodes to return (LOD cap)."
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "rename_project",
+      "description": "Rename a project (not the reserved default).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The project id to rename (not the reserved default)."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "The new project name."
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "revoke_token",
+      "description": "Revoke an API token by id.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The token id to revoke."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "scan_source",
+      "description": "Scan a source (incremental + idempotent); returns what changed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The source id returned by add_source."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "search",
+      "description": "Hybrid search across code, memory, and the knowledge graph; one ranked set.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Natural-language or symbol query."
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 100,
+            "description": "Max candidates to return."
+          },
+          "include": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "boolean",
+                "description": "Classify each hit as `file`, `memory`, or `symbol` (+35 tokens / 10 hits)."
+              },
+              "node": {
+                "type": "boolean",
+                "description": "Attach the graph node to pass to `get_effects`, when the hit has one (+135)."
+              },
+              "snippet": {
+                "type": "object",
+                "properties": {
+                  "maxChars": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 2000,
+                    "description": "Ceiling on the excerpt length (default 240)."
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Attach a query-relevant excerpt (~+200)."
+              }
+            },
+            "additionalProperties": false,
+            "description": "Extras to attach per hit. Ask only for what you will use — each costs tokens."
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    }
+  ]
+}

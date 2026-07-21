@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-07-19",
+  "updated": "2026-07-21",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -168,6 +168,10 @@
         {
           "kind": "module",
           "ref": "@tessera/docs PUBLIC REFERENCE (F-053, ADR-0054): the docs site renders the REST reference from a drift-gated copy of packages/sdk/openapi.json (apps/docs/generated/openapi.json + 43 generated per-operation MDX pages under content/docs/reference/api/**) and the MCP reference from the real server's tools/list (generated/mcp-tools.json, 18 tools with input schemas). A /v1 or MCP contract change therefore also means `pnpm --filter @tessera/docs generate` + commit — the docs drift test (regenerate + byte-compare + orphan check) fails the standard test gate until the public reference matches the shipped contract. Same rebuild-first trap as the SDK: the generator spawns the BUILT server mcp bin and imports the BUILT cli dist"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/mcp list_skills + get_skill (F-054, FR-69, ADR-0036 §3) — the FIRST tools that wrap NO ApiServices: they serve the static @tessera/skills registry, identical on every deployment, so no tenant/project scoping applies and projectOf is deliberately not called. Tool count 18 -> 20, which means all THREE exhaustive maps in gateway.ts (McpToolName, TOOL_PERMISSIONS, MCP_AUDIT_ACTIONS) plus src/gateway.test.ts's sorted-name assertion and tests/e2e/mcp.e2e.test.ts's advertised-set assertion move together. RBAC/audit REUSE search:read + search rather than minting skills:read — the registry is public first-party content (the same bytes the marketing site serves unauthenticated), so a new permission would ripple the RBAC catalog through /v1/rbac -> OpenAPI -> the generated SDK -> the dashboard token-scope UI for content no scope protects, and would leave a search:read token unable to read a public document (the get_stats precedent, argued inline). NO REST ROUTE AND NO SDK/OPENAPI REGEN: the /v1 surface is untouched — do not go looking for one. get_skill's input is z.enum(SKILL_NAMES), so adding a skill changes this tool's JSON Schema and therefore apps/docs generated/mcp-tools.json (E-026/E-027)"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -249,6 +253,10 @@
         {
           "kind": "module",
           "ref": "components/ui/data-table.tsx (F-063) — the virtualized data-table pattern. A virtualized table CANNOT be a <table>: absolutely-positioned rows leave the table row-box algorithm (columns stop aligning) and `display:block` strips the implicit ARIA roles — so the grid roles are DECLARED. Two deliberate structural collapses: the role=table element IS the scroll container (a div between it and the rowgroups breaks aria-required-children, and it is also what makes `sticky top-0` work — the clean chain and the sticky header are ONE structure), and the virtualizer's height spacer IS the body rowgroup (rows become direct children; no role=presentation gymnastics). `aria-rowcount={-1}` is load-bearing: cursor pagination means the total is genuinely unknown (AuditPage is {events, nextCursor?} — no count exists anywhere), and announcing the LOADED count would say 'row 50 of 50' while nextCursor proves otherwise — the 'narrow the filters' lie whispered to the users least able to detect it. `aria-rowindex` is ABSOLUTE (+2 for the 1-based header), which axe CANNOT check — a window-relative index is structurally valid ARIA and totally broken for AT, so it gets an explicit RTL assertion at a scrolled window. components/ui/table.tsx stays for small STATIC tables (native semantics, no ARIA to get wrong) and its three consumers are NOT migrated. NO @tanstack/react-table: it is headless (no DOM, no ARIA — the hard part is ours either way) and every row model it provides (sort/filter/paginate) is bypassed by the server; what remained would be a dependency for `.map()`."
+        },
+        {
+          "kind": "artifact",
+          "ref": "docs/design/MARKETING-DESIGN.md §3.15 skills-catalog + §2.3 .skill-filter, manifest -> 4.11.0 (F-054). The manifest adds a REQUIRED pattern (skills-filter-device-defined) asserting app/globals.css defines .skill-filter, because the archetype filter rail is CSS-only: a native radio group + :has() rules hiding cards whose data-skill-category does not match. It lives in globals.css rather than as a Tailwind variant because :has() needs arbitrary-value brackets, which the closed token set bans — so doc, manifest, and CSS are ONE change. tests/design-lint.test.ts compiles the manifest, so a manifest edit without the CSS is a red build. Zero first-load JS added (gate measured marketing at 204.1 KB gz against the 240 budget)"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -1179,10 +1187,55 @@
         {
           "kind": "test",
           "ref": "apps/docs/tests/compose-doc-drift.test.ts — asserts the ```yaml title=\"docker-compose.yml\" fenced block in content/docs/deployment/self-host-docker.mdx is byte-identical to the compose file's body (leading comment header stripped, since the public page omits the internal F-023/FR-51 refs). Adding a service to docker-compose.yml or editing its definition now reddens this gate until the MDX block follows"
+        },
+        {
+          "kind": "artifact",
+          "ref": "F-054 moved BOTH generated artifacts, each regenerated in the increment that changed its input (never a red intermediate): generated/mcp-tools.json toolCount 18 -> 20 (+ list_skills/get_skill, with get_skill's enum-of-skill-names input schema baked in), and generated/cli-reference.json gained the 'skills' row (list/show/install usage). NOTE on the '18 tool headings' wording in the sibling entry below: it is historical — the docs e2e derives its headings FROM the artifact rather than hardcoding a count, which is why it followed silently"
         }
       ],
       "kind": "EFFECT_LINK",
       "rationale": "The docs' no-fake-data guarantee is this coupling: every machine fact on the public docs derives from a source of truth through generate.mjs, and the drift gate makes staleness a red build. The flip side is a standing obligation — changing the CLI's commands/help/MCP_CLIENTS, the MCP tool registry, a /v1 route, or .env.example now requires `pnpm --filter @tessera/docs generate` + committing the diff (turbo's ^build ordering guarantees fresh dists for the gate; the generator spawns the BUILT server mcp bin and imports the BUILT cli, so a stale dist regenerates old truth — the E-003 SDK trap, inherited). The lone inline exception, the self-host docker-compose.yml block, carries the same obligation via a different mechanism: no regeneration, but editing the compose service definition reddens compose-doc-drift.test.ts until the MDX fence is reconciled (Option-B over a generate-and-render component was chosen because rendering the YAML from a generated string would strip it out of llms-full.txt — which emits raw MDX bodies — and drop the filename chip).",
+      "confidence": 1,
+      "origin": "manual"
+    },
+    {
+      "id": "E-027",
+      "from": {
+        "kind": "package",
+        "ref": "@tessera/skills — the first-party agent skills registry (F-054, FR-69, ADR-0036 §3): registry/<name>/SKILL.md is the hand-authored source of truth; src/generated/{catalog,documents}.ts are COMMITTED derivations emitted by scripts/generate.mjs; SKILL_TARGETS is the per-agent install-path table"
+      },
+      "to": [
+        {
+          "kind": "module",
+          "ref": "apps/mcp list_skills + get_skill (see E-003) — get_skill's input is z.enum(SKILL_NAMES), so the tool SCHEMA embeds the catalog"
+        },
+        {
+          "kind": "module",
+          "ref": "apps/cli tessera skills list|show|install (src/commands/skills.ts) — install writes to SKILL_TARGETS paths; the command row lands in the docs cli-reference artifact"
+        },
+        {
+          "kind": "module",
+          "ref": "apps/marketing /skills + /skills/<name> + /skills/<name>/skill.md (force-static, one prerendered file per skill) + app/sitemap.ts + app/llms.txt/route.ts — all enumerate SKILL_NAMES/SKILLS, never a literal list"
+        },
+        {
+          "kind": "test",
+          "ref": "packages/skills/src/registry.test.ts — Agent Skills spec conformance, prose-field Markdown ban, and the byte-compare drift gate over the committed generated modules"
+        },
+        {
+          "kind": "test",
+          "ref": "apps/mcp/src/skills.test.ts — every tool a skill TEACHES must be a registered McpToolName (the only place that can see both sides; packages/skills must not depend on apps/mcp)"
+        },
+        {
+          "kind": "test",
+          "ref": "apps/marketing/tests/skills-content.test.ts — scans the page sources for registry strings, so the catalog cannot start duplicating what it should render"
+        },
+        {
+          "kind": "artifact",
+          "ref": "apps/docs/generated/{mcp-tools,cli-reference}.json — regenerate after any registry change that reaches a tool schema or the CLI help (E-026)"
+        }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "One engine, three surfaces: the marketing catalog, the CLI, and the MCP tools all serve the SAME SKILL.md bytes, which is what makes 'installed by download == installed by CLI == fetched by an agent' provable rather than promised (asserted byte-for-byte in all three suites, plus against the prerendered file Next emits). The obligations that follow, in increasing blast radius: (1) EDITING a SKILL.md requires `pnpm --filter @tessera/skills generate` + committing src/generated/*, or the package's own drift gate reddens; (2) ADDING OR RENAMING a skill additionally moves the marketing static params + sitemap + llms.txt, get_skill's z.enum input schema, and therefore apps/docs's generated reference — two different drift gates in two packages fail if either regeneration is skipped; (3) RENAMING AN MCP TOOL breaks the skills that teach it, caught by apps/mcp/src/skills.test.ts. Two deliberate structural choices worth preserving: MANIFESTS AND BODIES SIT BEHIND SEPARATE ENTRY POINTS ('.' and './content'), so a listing surface importing the root CANNOT ship bodies — NFR-4 enforced by the module graph instead of by review; and the format is the Agent Skills spec verbatim with the FRONTMATTER AS THE MANIFEST (no sibling skill.json), so the artifact an agent installs cannot disagree with the catalog that advertised it. Manifest PROSE fields (description/compatibility/headline/why) are gated against Markdown syntax because they render as plain text on the public page, in `tessera skills list`, and in a list_skills response — a defect the screenshot review actually caught, not a hypothetical.",
       "confidence": 1,
       "origin": "manual"
     }

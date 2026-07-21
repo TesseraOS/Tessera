@@ -3,6 +3,91 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-21 — F-054 DONE: the skills registry — one engine, three install paths
+
+Claimed **F-054** (lowest-id eligible R4; blocker F-051 done) by the deterministic
+[`next-feature`](../commands/next-feature.md) rule. Plan:
+[`F-054-skills-registry.md`](../plans/F-054-skills-registry.md) — written by the planner subagent,
+persisted verbatim, and followed except where reality contradicted it (below). **No ADR:** ADR-0036
+§3 already decides the registry, the SKILL.md format ("adopt the emerging convention; zero new
+protocol"), the three install paths, and the `/skills` surface — everything here is implementation
+inside that decision. The marketing design change rode the established doc+manifest mechanism.
+
+### The shape: one registry, three surfaces, provably the same bytes
+
+New **`packages/skills`** (`@tessera/skills`) holds four hand-authored `registry/<name>/SKILL.md`
+files — `compile-before-coding`, `effects-before-editing`, `capture-memory`, `project-onboarding` —
+in the **Agent Skills spec verbatim**, where the **frontmatter IS the manifest** (no sibling
+`skill.json`): the artifact an agent installs cannot disagree with the catalog that advertised it.
+`scripts/generate.mjs` parses + strictly validates them into **committed** `src/generated/*` modules,
+so a Next static build, a published CLI, and the MCP server all just `import` — zero runtime
+dependencies, nothing to file-trace. The staleness cost is paid by a byte-compare drift gate.
+
+Two structural choices worth keeping: **manifests and bodies sit behind separate entry points**
+(`.` and `./content`), which makes NFR-4's "a listing must not ship bodies" a property of the module
+graph rather than a rule someone remembers; and **lookups guard with `Object.hasOwn`**, because the
+name arrives from an MCP argument, a CLI token, or a URL segment.
+
+Surfaces: **MCP** `list_skills`/`get_skill` (18 → 20 tools; `get_skill`'s input is
+`z.enum(SKILL_NAMES)` so `tools/list` publishes the catalog and a typo is refused by a message that
+names every valid skill); **CLI** `tessera skills list|show|install` (idempotent — identical bytes are
+a no-op success, differing bytes are refused without `--force`); **marketing** `/skills` +
+`/skills/<name>` + a **force-static `/skills/<name>/skill.md`** that `next build` confirms prerenders
+as SSG, one file per skill.
+
+### Where the plan was wrong, and why
+
+- **No per-skill `agents` compatibility list.** The plan made it load-bearing in the CLI. But these
+  skills are pure instructions — no scripts, no `allowed-tools` — so the list would have been
+  identical for all four and unverifiable per skill: fabricated precision. Dropped; the spec's
+  `compatibility` field already states the real requirement (a connected MCP server).
+- **`.agents/skills` added as a target.** Verified against each vendor's own documentation rather
+  than the relayed blog citations in the plan: it is the **cross-agent standard** location that
+  Cursor and Codex CLI both scan (Claude Code does not). A wrong install path fails *silently* — the
+  agent simply never loads the skill — so guessing was not acceptable.
+- **RBAC:** reused `search:read`/`search` rather than minting `skills:read`, argued inline in
+  `gateway.ts` (the `get_stats` precedent). The registry is public content the marketing site serves
+  unauthenticated; a new permission would ripple the RBAC catalog → `/v1/rbac` → OpenAPI → SDK → the
+  dashboard token UI for content no scope protects.
+
+### The gate that earned its keep
+
+**The screenshot review caught a defect no test did:** manifest prose carried Markdown backticks,
+which rendered literally as `` `tessera init` `` on the public detail page. Fixed at the source (the
+body is markdown; those four fields are prose) and **gated** — the generator now rejects Markdown
+syntax in description/compatibility/headline/why. Two other verification notes: a full-page
+screenshot photographs `Reveal` sections blank, because they start at `opacity: 0` and animate
+`whileInView` while a fullPage capture never scrolls — the capture script now walks the page first;
+and the washed-out hero band in those captures **reproduces identically on the untouched `/pricing`
+page**, so it is a WebGL-canvas capture artifact, not this change (F-074 territory).
+
+### Evidence
+
+- `packages/skills` 39/39 · `apps/mcp` 25 unit + 39 e2e · `apps/cli` 52/52 (was 33) ·
+  `apps/marketing` 133 unit + **65 e2e** (axe WCAG 2.1 AA clean on **both themes** for the catalog and
+  all four detail pages; no 375px overflow).
+- Workspace: `verify-state` valid (27 effect-links) · typecheck 45/45 · lint 26/26 · format:check
+  clean · build 23/23 · test 43/43 · **e2e 25/25** · **web-perf passed** (marketing first-load
+  **204.1 KB gz** against the 240 budget — the CSS-only filter added zero JS).
+- Gates proven to have teeth, not just green: a version bump in one SKILL.md reddens the drift gate
+  with the regenerate instruction; the prerendered `.md` files were compared byte-for-byte against
+  the registry; the no-JS filter is asserted with `javaScriptEnabled: false`.
+- **One flake, investigated not waved away:** `@tessera/api` e2e failed once under parallel load with
+  the marketing dev server running; it passes 114/114 in isolation and 25/25 in a clean full run.
+
+### Decisions
+
+- Marketing design contract: **MARKETING-DESIGN.md v4.11** adds §3.15 `skills-catalog` + the §2.3
+  `.skill-filter` device; manifest → **4.11.0** with a new REQUIRED pattern asserting the CSS exists.
+  The filter is a native radio group + `:has()` — the FAQ's `details/summary` reasoning applied to
+  filtering, and it works before hydration.
+- Effects: **E-027 added** (registry → three surfaces + the drift gates), E-003/E-004/E-026 extended.
+- **F-059 gains a publish note:** `@tessera/skills` must ship with `@tessera/cli` — the published CLI
+  imports it at runtime.
+
+**Next step:** none required for F-054. Next eligible feature by the ordering rule is **F-055**
+(remote MCP), with F-056/F-059 the `must` items behind it.
+
 ## 2026-07-21 — fix: expose GITLEAKS_LICENSE to CI workflow + fix docs typecheck
 
 **What changed**

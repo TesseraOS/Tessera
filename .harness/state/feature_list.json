@@ -1770,7 +1770,7 @@
       "package": "—",
       "release": "R4",
       "priority": "should",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-051"
       ],
@@ -1790,7 +1790,7 @@
         "E-004",
         "E-003"
       ],
-      "notes": "PLACEHOLDER DEBT (F-051 v4.4/v4.5, 2026-07-11): apps/marketing/app/skills/page.tsx ships a designed placeholder — the four first-party skills are hard-listed with 'planned' badges and a SkillLoop hero art. When this feature lands, REPLACE the PLANNED_SKILLS list with the real registry-rendered catalog (acceptance: no hand-copied content) and drop the 'registry in development' badge; keep the hero + loop art."
+      "notes": "DONE 2026-07-21. Placeholder debt from F-051 DISCHARGED: PLANNED_SKILLS and the 'registry in development' badge are gone; the hero + SkillLoop art were kept as instructed. Registry is packages/skills (@tessera/skills) — Agent Skills spec verbatim, frontmatter IS the manifest, committed generated modules behind a byte-compare drift gate, manifests and bodies behind SEPARATE entry points so a listing cannot ship a body. Surfaces: MCP list_skills/get_skill (18->20 tools, reusing search:read rather than minting skills:read), `tessera skills list|show|install`, and /skills + /skills/<name> + a force-static /skills/<name>/skill.md. Two deviations from the plan, both for honesty: no per-skill `agents` compatibility list (identical for all four and unverifiable per skill), and .agents/skills added as the cross-agent standard location Cursor and Codex scan — every install path verified against the vendor's own docs. See E-027 for the standing regeneration obligations."
     },
     {
       "id": "F-055",
@@ -1959,7 +1959,8 @@
       ],
       "effects": [
         "E-005"
-      ]
+      ],
+      "notes": "PUBLISH SET (from F-054, 2026-07-21): @tessera/skills must ship alongside @tessera/cli — the published CLI imports it at RUNTIME for `tessera skills`, so a release that omits it produces a CLI that crashes on that command. It is `private: true` today and ships only dist/ (the SKILL.md bytes are compiled into the generated modules, so no extra files entry is needed)."
     },
     {
       "id": "F-060",

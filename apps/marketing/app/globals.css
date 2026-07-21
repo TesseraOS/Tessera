@@ -404,6 +404,21 @@
   -webkit-mask-composite: source-in;
 }
 
+/* Skills catalog category filter (§2.3 device, §3.15 archetype) — CSS only, zero JS.
+   A native radio group drives it; these rules hide the cards whose data-skill-category
+   does not match the checked value. It has to live here rather than as a Tailwind
+   variant because `:has()` needs arbitrary-value brackets, which the closed token set
+   bans. One rule per category, and tests/skills-content.test.ts asserts a rule exists
+   for every SKILL_CATEGORIES member — so adding a category cannot silently ship a
+   filter chip that filters nothing.
+   `all` needs no rule: nothing is hidden when it is checked. */
+.skill-filter:has(input[value='workflow']:checked)
+  [data-skill-category]:not([data-skill-category='workflow']),
+.skill-filter:has(input[value='setup']:checked)
+  [data-skill-category]:not([data-skill-category='setup']) {
+  display: none;
+}
+
 /* Draw-in link underline (micro-interaction, §5). */
 .link-underline {
   position: relative;

@@ -4,7 +4,7 @@ description: >-
   Bootstrap a repository into Tessera end to end — register the source, scan it, verify the index
   is real, and leave an anchor memory behind. Use the first time you work in a repository that
   Tessera has not indexed yet, or when search and compile come back empty.
-compatibility: Requires a connected Tessera MCP server (run `tessera init`, or `npx @tessera/cli init`).
+compatibility: Requires a connected Tessera MCP server (tessera init, or npx @tessera/cli init).
 metadata:
   tessera.version: '1.0.0'
   tessera.category: setup

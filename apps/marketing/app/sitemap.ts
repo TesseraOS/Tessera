@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { SKILL_NAMES } from '@tessera/skills';
 import { siteConfig } from '@/lib/site';
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -34,6 +35,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    // Mapped from the registry, never hand-listed — a new skill is indexed by adding the
+    // SKILL.md, nothing else (F-054).
+    ...SKILL_NAMES.map((skill) => ({
+      url: `${siteConfig.siteUrl}/skills/${skill}`,
+      lastModified,
+      changeFrequency: 'monthly' as const,
+      priority: 0.4,
+    })),
     {
       url: `${siteConfig.siteUrl}/legal/privacy`,
       lastModified,

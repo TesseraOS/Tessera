@@ -16,6 +16,7 @@
     "@tessera/billing": "workspace:*",
     "@tessera/brand": "workspace:*",
     "@tessera/mascot": "workspace:*",
+    "@tessera/skills": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.42.0",

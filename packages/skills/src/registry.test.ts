@@ -207,6 +207,17 @@ describe('the parser refuses malformed skills', () => {
     ).toThrow(/never mentions it/);
   });
 
+  it('rejects Markdown in prose fields, which render as plain text everywhere', () => {
+    // Regression guard: the F-054 screenshot review caught `tessera init` rendering WITH its
+    // backticks on the public detail page. The body is markdown; these fields are not.
+    expect(() => parseSkill('example', valid.replace('Do the thing', 'Do the `thing`'))).toThrow(
+      /Markdown syntax/,
+    );
+    expect(() => parseSkill('example', valid.replace('Not doing it', 'Not **doing** it'))).toThrow(
+      /Markdown syntax/,
+    );
+  });
+
   it('rejects an over-long headline', () => {
     const wordy = valid.replace(
       'headline: Do the thing',

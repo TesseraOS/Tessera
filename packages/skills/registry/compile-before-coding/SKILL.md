@@ -4,7 +4,7 @@ description: >-
   Pull a compiled, cited, token-budgeted context package from Tessera instead of reading whole
   files into the window. Use at the start of any task that needs knowledge of a repository —
   before opening files, before grepping the tree, before planning a change.
-compatibility: Requires a connected Tessera MCP server (run `tessera init`, or `npx @tessera/cli init`).
+compatibility: Requires a connected Tessera MCP server (tessera init, or npx @tessera/cli init).
 metadata:
   tessera.version: '1.0.0'
   tessera.category: workflow

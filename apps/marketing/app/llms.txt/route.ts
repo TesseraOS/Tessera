@@ -1,3 +1,4 @@
+import { SKILLS } from '@tessera/skills';
 import { siteConfig } from '@/lib/site';
 
 /**
@@ -22,7 +23,7 @@ export function GET(): Response {
 ## MCP tools
 
 compile_context, search, get_effects, capture_memory, query_graph, explain,
-add_source, scan_source, list_sources, assert_effect
+add_source, scan_source, list_sources, assert_effect, list_skills, get_skill
 
 ## Pages
 
@@ -33,7 +34,13 @@ add_source, scan_source, list_sources, assert_effect
   Free (local, forever), Pro, Enterprise (contact sales).
 - [Enterprise](${siteConfig.siteUrl}/enterprise): security posture — tenant isolation,
   RBAC, OIDC SSO, quotas, audit trail, deployment sovereignty.
-- [Skills](${siteConfig.siteUrl}/skills): first-party agent skills registry (in development).
+- [Skills](${siteConfig.siteUrl}/skills): the first-party agent skills registry — versioned
+  SKILL.md instructions, installable by download, CLI, or the list_skills/get_skill MCP tools.
+${SKILLS.map(
+  (skill) =>
+    `  - [${skill.name}](${siteConfig.siteUrl}/skills/${skill.name}): ${skill.description.replace(/\s+/g, ' ')}
+    Raw: ${siteConfig.siteUrl}/skills/${skill.name}/skill.md`,
+).join('\n')}
 
 ## Legal
 

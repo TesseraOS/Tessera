@@ -14,7 +14,7 @@ export const SKILLS = [
     headline: "Write down what the code cannot say",
     why: "A reason not recorded is re-derived, or worse, reversed.",
     tools: ["capture_memory", "search"],
-    compatibility: "Requires a connected Tessera MCP server (run `tessera init`, or `npx @tessera/cli init`).",
+    compatibility: "Requires a connected Tessera MCP server (tessera init, or npx @tessera/cli init).",
   },
   {
     name: "compile-before-coding",
@@ -24,7 +24,7 @@ export const SKILLS = [
     headline: "Compile context, do not dump files",
     why: "Reading whole files spends the window on text the task never needed.",
     tools: ["compile_context", "search", "explain"],
-    compatibility: "Requires a connected Tessera MCP server (run `tessera init`, or `npx @tessera/cli init`).",
+    compatibility: "Requires a connected Tessera MCP server (tessera init, or npx @tessera/cli init).",
   },
   {
     name: "effects-before-editing",
@@ -34,7 +34,7 @@ export const SKILLS = [
     headline: "Know the blast radius before the diff",
     why: "A dependent found in review costs more than one found before the edit.",
     tools: ["get_effects", "query_graph", "assert_effect", "search"],
-    compatibility: "Requires a connected Tessera MCP server (run `tessera init`, or `npx @tessera/cli init`).",
+    compatibility: "Requires a connected Tessera MCP server (tessera init, or npx @tessera/cli init).",
   },
   {
     name: "project-onboarding",
@@ -44,7 +44,7 @@ export const SKILLS = [
     headline: "Make a new repository answerable",
     why: "An unindexed repository silently returns nothing, which reads like nothing exists.",
     tools: ["list_sources", "add_source", "scan_source", "get_stats", "search", "compile_context", "capture_memory"],
-    compatibility: "Requires a connected Tessera MCP server (run `tessera init`, or `npx @tessera/cli init`).",
+    compatibility: "Requires a connected Tessera MCP server (tessera init, or npx @tessera/cli init).",
   },
 ] as const satisfies readonly SkillManifest[];
 

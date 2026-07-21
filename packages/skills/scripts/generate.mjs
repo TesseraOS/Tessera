@@ -183,6 +183,23 @@ export function parseSkill(name, document) {
 
   const why = metadata['tessera.why'].trim();
 
+  // Manifest prose is rendered as PLAIN TEXT — on the marketing catalog, in `tessera skills list`,
+  // and in a `list_skills` response. Markdown syntax there does not render, it just shows up as
+  // literal punctuation (caught in the F-054 screenshot review: `tessera init` printed with its
+  // backticks). The BODY is markdown; these four fields are prose.
+  for (const [label, value] of [
+    ['description', description],
+    ['compatibility', compatibility],
+    ['tessera.headline', headline],
+    ['tessera.why', why],
+  ]) {
+    if (/[`*_]|\[[^\]]*\]\(/.test(value)) {
+      throw new Error(
+        `${source}: ${label} contains Markdown syntax — it renders as plain text on every surface, so write plain prose`,
+      );
+    }
+  }
+
   const tools = metadata['tessera.tools']
     .split(',')
     .map((tool) => tool.trim())

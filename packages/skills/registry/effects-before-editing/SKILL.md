@@ -4,7 +4,7 @@ description: >-
   Ask Tessera what depends on a file, symbol, or module before you change it, and record the
   couplings the graph cannot infer. Use before editing any shared contract, exported symbol, or
   configuration value — while the change is still a plan, not a diff.
-compatibility: Requires a connected Tessera MCP server (run `tessera init`, or `npx @tessera/cli init`).
+compatibility: Requires a connected Tessera MCP server (tessera init, or npx @tessera/cli init).
 metadata:
   tessera.version: '1.0.0'
   tessera.category: workflow

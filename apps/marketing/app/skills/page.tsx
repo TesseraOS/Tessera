@@ -4,42 +4,45 @@ import { CtaBand } from '@/components/home/cta-band';
 import { PageHeader } from '@/components/page-header';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteNav } from '@/components/site-nav';
+import { SkillCard } from '@/components/skills/skill-card';
+import { SkillFilter } from '@/components/skills/skill-filter';
 import { Badge } from '@/components/ui/badge';
 import { Container } from '@/components/ui/container';
+import { Panel } from '@/components/ui/panel';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { Reveal } from '@/lib/motion';
+import { categoryFilters, skillDisplays } from '@/lib/skills';
 
 export const metadata: Metadata = {
   title: 'Agent skills',
   description:
-    'First-party skills that teach any agent the Tessera workflow — compile before coding, check effects before editing, capture memory after work. In development.',
+    'First-party skills that teach any agent the Tessera workflow — compile before coding, check effects before editing, capture memory after work. Install by download, CLI, or MCP.',
   alternates: { canonical: '/skills' },
 };
 
-/**
- * Placeholder until the skills registry ships (F-054) — the four planned first-party
- * skills, honestly labeled as planned (§1.5: nothing presented as available before it is).
- */
-const PLANNED_SKILLS = [
+/** The three install paths (ADR-0036 §3). Commands render as inline code, never a terminal. */
+const INSTALL_PATHS = [
   {
-    name: 'compile-before-coding',
-    body: 'Pull a compiled, cited context package instead of reading whole files into the window.',
+    title: 'Download',
+    body: 'Take the raw SKILL.md and drop it into your agent’s skills directory — .claude/skills, .agents/skills, or your agent’s own.',
+    command: null,
   },
   {
-    name: 'effects-before-editing',
-    body: 'Call get_effects before touching a symbol — know the blast radius before the diff exists.',
+    title: 'CLI',
+    body: 'Writes the file where your agent will find it, and does nothing if it is already there.',
+    command: 'tessera skills install compile-before-coding',
   },
   {
-    name: 'capture-memory',
-    body: 'Record decisions and lessons back to Tessera when the work lands, so the next session starts warm.',
-  },
-  {
-    name: 'project-onboarding',
-    body: 'Bootstrap a new repository into Tessera: register sources, scan, and run the first compile.',
+    title: 'MCP',
+    body: 'A connected agent fetches skills itself — no browser, no copy-paste. get_skill returns the document and the path to write it to.',
+    command: 'list_skills · get_skill',
   },
 ] as const;
 
 export default function SkillsPage() {
+  const skills = skillDisplays();
+  const filters = categoryFilters();
+
   return (
     <>
       <SiteNav />
@@ -51,47 +54,75 @@ export default function SkillsPage() {
               Teach your agents the <em className="text-rose">workflow</em>.
             </>
           }
-          lead="Skills are small, versioned instructions any agent can follow. The first-party set teaches the Tessera loop; the registry that serves them is in development."
+          lead="Skills are small, versioned instructions any agent can follow. The first-party set teaches the Tessera loop: context in, effects checked, memory out."
           art={<SkillLoop />}
         >
-          <Badge>registry in development</Badge>
+          <Badge>
+            {skills.length} first-party {skills.length === 1 ? 'skill' : 'skills'}
+          </Badge>
         </PageHeader>
 
         <section
-          id="planned"
-          aria-labelledby="planned-title"
+          id="catalog"
+          aria-labelledby="catalog-title"
           className="scroll-mt-16 py-24 md:py-32"
         >
           <Container>
             <Reveal>
               <SectionHeading
-                id="planned-title"
+                id="catalog-title"
                 title="The first-party set"
-                lead="Four skills, one discipline: context in, effects checked, memory out."
+                lead="One discipline, in four instructions an agent can load on demand."
               />
             </Reveal>
-            <ul className="mt-12 grid gap-5 md:mt-16 md:grid-cols-2 md:gap-6">
-              {PLANNED_SKILLS.map((skill, index) => (
-                <li key={skill.name} className="h-full">
-                  <Reveal
-                    delay={(index % 2) * 90}
-                    className="bg-card shadow-soft h-full rounded-lg border p-6"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h3 className="text-label text-foreground">{skill.name}</h3>
-                      <Badge>planned</Badge>
-                    </div>
-                    <p className="text-body text-muted-foreground mt-4">{skill.body}</p>
+            <div className="skill-filter mt-12 md:mt-16">
+              <Reveal>
+                <SkillFilter filters={filters} />
+              </Reveal>
+              <ul className="mt-8 grid gap-5 md:gap-6 lg:grid-cols-2">
+                {skills.map((skill, index) => (
+                  <li key={skill.name} data-skill-category={skill.category} className="h-full">
+                    <Reveal delay={(index % 2) * 90} className="h-full">
+                      <SkillCard skill={skill} />
+                    </Reveal>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Container>
+        </section>
+
+        <section
+          id="install"
+          aria-labelledby="install-title"
+          data-band="chapter"
+          className="bg-background text-foreground scroll-mt-16 py-24 md:py-32"
+        >
+          <Container>
+            <Reveal>
+              <SectionHeading
+                id="install-title"
+                title="Three ways to install"
+                lead="Same file every way in — the registry is one source, and every surface serves it byte for byte."
+              />
+            </Reveal>
+            <ul className="mt-12 grid gap-5 md:mt-16 md:grid-cols-3 md:gap-6">
+              {INSTALL_PATHS.map((path, index) => (
+                <li key={path.title} className="h-full">
+                  <Reveal delay={index * 90} className="h-full">
+                    <Panel className="flex h-full flex-col p-7">
+                      <h3 className="text-label text-foreground uppercase">{path.title}</h3>
+                      <p className="text-body text-muted-foreground mt-4 flex-1">{path.body}</p>
+                      {path.command ? (
+                        <p className="text-small text-faint-foreground mt-5 border-t pt-4">
+                          <code>{path.command}</code>
+                        </p>
+                      ) : null}
+                    </Panel>
                   </Reveal>
                 </li>
               ))}
             </ul>
-            <Reveal delay={120}>
-              <p className="text-small text-faint-foreground mt-8 max-w-xl">
-                When the registry ships, each skill installs by download, by CLI, or straight over
-                MCP — and this page becomes the catalog.
-              </p>
-            </Reveal>
           </Container>
         </section>
 

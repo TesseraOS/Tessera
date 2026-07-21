@@ -4,7 +4,7 @@ description: >-
   Write decisions, lessons, and incidents back to Tessera when work lands, so the next session
   starts warm instead of re-deriving them. Use after making a non-obvious choice, fixing a
   surprising bug, or learning something the code does not state.
-compatibility: Requires a connected Tessera MCP server (run `tessera init`, or `npx @tessera/cli init`).
+compatibility: Requires a connected Tessera MCP server (tessera init, or npx @tessera/cli init).
 metadata:
   tessera.version: '1.0.0'
   tessera.category: workflow

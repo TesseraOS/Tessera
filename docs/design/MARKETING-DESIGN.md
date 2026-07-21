@@ -2,8 +2,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Status** | Accepted v4.10 — F-067 v2 (legal pages: expressive frame, calm document — §3.12 heroes + five legal signature arts + /legal/gdpr; v4.9 introduced legal-prose, v4.8 Tess acts) |
-| **Last updated** | 2026-07-12 |
+| **Status** | Accepted v4.11 — F-054 (skills catalog: the `skills-catalog` archetype + the `.skill-filter` CSS-only device; v4.10 legal pages, v4.9 legal-prose, v4.8 Tess acts) |
+| **Last updated** | 2026-07-21 |
 | **Scope** | `apps/marketing` (apex domain). Later: the public chrome of `apps/docs`. |
 | **Brand** | [`BRAND.md`](./BRAND.md) + [Terra Mosaic philosophy](./brand/terra-mosaic-philosophy.md) — read both first |
 | **Authority** | [ADR-0046](../adr/0046-brand-mascot-tess.md) (mascot) · [ADR-0045](../adr/0045-marketing-v4-constellation-shader-hero-theme-true-chapters.md) (v4 directives) · [ADR-0044](../adr/0044-marketing-v3-dual-themes-illustration-first-live-graph.md) (dual themes / illustration-first) · [ADR-0043](../adr/0043-terra-mosaic-brand-and-marketing-overhaul.md) (brand) · [ADR-0042](../adr/0042-marketing-site-design-direction.md) (enforcement mechanism) |
@@ -129,6 +129,12 @@ Light chapter (`.light [data-band='chapter']`): `--background #f2f4f6`, `--card 
   `scrollbar-color`) — part of the brand surface.
 - Shadows `soft/lift`: light-ground cards only (light base + light chapter); dark grounds
   stay flat with hairlines.
+- **`.skill-filter`** (v4.11): the skills catalog's category filter — `:has()` rules over
+  a native radio group that hide the cards whose `data-skill-category` does not match.
+  Defined once in `globals.css` because `:has()` needs arbitrary-value brackets, which
+  §1.1 bans; one rule per category, gate-asserted against `SKILL_CATEGORIES`. The same
+  reasoning as the FAQ's native `details/summary`: zero JavaScript, works before
+  hydration, costs nothing against the first-load budget.
 
 ### 2.4 Typography (closed scale — same seven names)
 
@@ -227,6 +233,21 @@ checklist enforces).
     article body stays a static server component; the arts are client islands through
     the motion seam. Content lives as typed `LegalBlock` data in `lib/legal/*.ts`;
     `LegalArticle` renders the body, the page composes the hero.
+
+15. **`skills-catalog`** (v4.11, F-054 — `/skills` and `/skills/<name>`) — a **filtered
+    card catalog**, rendered entirely from the `@tessera/skills` registry (the
+    `lib/pricing.ts` rule applied to skills: nothing hand-copied, proven by a source
+    scan). **Index:** the §3.12 `page-header` hero (SkillLoop art retained, a derived
+    `N first-party skills` Badge as children), then a **filter rail** — a native radio
+    group of chips with counts, using the `.skill-filter` device (§2.3), **never a JS
+    filter** — over a two-column card grid; each card is name (h3) · category Badge ·
+    headline · description · the `why` line on a hairline rule · links to the detail
+    page and the raw `.md`. Then a three-card "ways to install" row. **Detail:** the
+    same hero (h1 = the skill's `headline`, lead = its `why`, Download CTA), a
+    what-it-does row with a tools Panel, and an install chapter band whose commands are
+    inline `<code>` on the `small` token plus a token table of per-agent install paths.
+    **Commands never become terminal windows or code-block panels** — the banned
+    archetypes stand, and a command is a line of text, not a fake shell.
 
 **Banned archetypes:** terminal windows, code-block panels, file trees, fake dashboards,
 browser-chrome screenshots.

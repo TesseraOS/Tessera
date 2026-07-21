@@ -375,12 +375,25 @@
 /*
  * Theme-change propagation (ADR-0054, ported from marketing §5) — the new theme sweeps
  * out radially from the toggle via the View Transitions API; the JS animates the circle
- * clip on ::view-transition-new(root), so the default crossfade is disabled here.
+ * clip on ::view-transition-new(root), so every default animation is disabled here
+ * (including the group's 250ms no-op, which otherwise races the clip for the
+ * transition's lifetime) and the snapshot stacking is pinned: the new theme always
+ * reveals OVER the old, in every Chrome version.
  */
 ::view-transition-old(root),
-::view-transition-new(root) {
+::view-transition-new(root),
+::view-transition-group(root),
+::view-transition-image-pair(root) {
   animation: none;
   mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
 }
 
 /* Reduced motion: the still, final layout — a global kill-switch for our own motion. */

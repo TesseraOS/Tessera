@@ -2,7 +2,7 @@ import { HomeLayout } from 'fumadocs-ui/layouts/home';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Mascot } from '@tessera/mascot';
-import { baseOptions } from '@/app/layout.config';
+import { homeOptions } from '@/app/layout.config';
 
 export const metadata: Metadata = {
   title: 'Page not found',
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
  */
 export default function NotFound() {
   return (
-    <HomeLayout {...baseOptions}>
+    <HomeLayout {...homeOptions}>
       <main className="flex flex-1 items-center">
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-6 py-24 md:grid-cols-12 md:gap-8">
           <div className="md:col-span-7">

@@ -10,7 +10,29 @@ dashboard does goes through these endpoints; nothing is UI-only.
 The per-endpoint pages in this section are **generated from the server's own OpenAPI
 document** and include request/response schemas and an interactive playground. The
 live server serves the same document at `GET /v1/openapi.json` — the generated
-TypeScript SDK is built from it too.
+TypeScript SDK is built from it too. The docs copy carries one documented transform
+for the playground: real server entries, the Bearer security scheme, and the optional
+`X-Tessera-Project` header — all things the server already honors.
+
+## Using the playground
+
+Every endpoint page has a **Send** panel that makes real requests from your browser:
+
+1. **Pick the server.** The default targets a Local deployment at
+   `http://127.0.0.1:3000` — start one with `tessera serve`. The second entry takes
+   any base URL for a self-hosted or remote deployment.
+2. **Authorization.** In Local `none` mode (the default) leave the token field empty.
+   In `token`/`oidc` mode paste a Bearer credential — see
+   [Tokens & auth](/docs/guides/tokens-and-auth).
+3. **Project scope.** The optional `X-Tessera-Project` header scopes data-plane
+   requests to a [project](/docs/guides/tenants-and-projects); omit it for the
+   default project.
+
+Requests go straight from your browser to the server you picked, so its CORS policy
+applies: a Local deployment permits loopback origins out of the box, while a
+self-hosted deployment must list this docs origin in
+`TESSERA_API_CORS_ALLOWED_ORIGINS` (see the
+[configuration reference](/docs/reference/configuration)).
 
 ## Base URL & versioning
 

@@ -33,12 +33,15 @@ export function ThemeToggle({ className }: ThemeSwitchProps) {
         aria-label={label}
         title={label}
         data-theme-toggle
-        onClick={(event) =>
+        onClick={(event) => {
+          // The ripple anchors to the control's center — deterministic for mouse,
+          // keyboard, and assistive tech alike (the dashboard convention).
+          const rect = event.currentTarget.getBoundingClientRect();
           setThemeWithTransition(isLight ? 'dark' : 'light', {
-            x: event.clientX || event.currentTarget.getBoundingClientRect().x,
-            y: event.clientY || event.currentTarget.getBoundingClientRect().y,
-          })
-        }
+            x: rect.x + rect.width / 2,
+            y: rect.y + rect.height / 2,
+          });
+        }}
         className="text-muted-foreground hover:text-foreground hover:bg-secondary inline-flex size-7 items-center justify-center rounded-md transition-colors duration-200"
       >
         {/* One glyph pair, both always in the DOM (SSR-identical markup); CSS shows one. */}

@@ -31,11 +31,79 @@ function serialize(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
-// --- openapi.json — verbatim copy of the SDK's captured spec ------------------------------------
+// --- openapi.json — the SDK's captured spec + the docs playground transform ---------------------
 
+/**
+ * The SDK spec is captured from the real Fastify app, where `servers: [{url:'/'}]` is
+ * correct (the live doc is served BY the API). On the docs site "/" would aim the
+ * playground at the docs origin, so the copy gets a documented transform — nothing the
+ * server does not actually honor:
+ *
+ * - `servers`: the Local default (tessera serve → 127.0.0.1:3000) + a variable entry for
+ *   any self-hosted/remote deployment.
+ * - `bearerAuth` security scheme: `authorization: Bearer` exactly as token/oidc modes
+ *   verify it; the description records that Local `none` mode needs no token.
+ * - an optional `X-Tessera-Project` header parameter on every /v1 operation — the
+ *   project-scope header (ADR-0037) the server resolves on scoped routes.
+ */
 function generateOpenapi() {
-  const spec = readFileSync(join(REPO_ROOT, 'packages', 'sdk', 'openapi.json'), 'utf8');
-  return spec.endsWith('\n') ? spec : `${spec}\n`;
+  const spec = JSON.parse(readFileSync(join(REPO_ROOT, 'packages', 'sdk', 'openapi.json'), 'utf8'));
+
+  spec.servers = [
+    {
+      url: 'http://127.0.0.1:3000',
+      description: 'Local deployment (`tessera serve` default)',
+    },
+    {
+      url: '{baseUrl}',
+      description: 'Self-hosted / remote deployment',
+      variables: {
+        baseUrl: {
+          default: 'http://127.0.0.1:3000',
+          description: "Your deployment's base URL (scheme + host + port)",
+        },
+      },
+    },
+  ];
+
+  spec.components = {
+    ...(spec.components ?? {}),
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        description:
+          'A scoped API token (`tessera token issue` / POST /v1/tokens) or an OIDC JWT, ' +
+          'depending on the deployment auth mode. Local `none` mode (the default) needs ' +
+          'no token — leave the field empty there.',
+      },
+    },
+  };
+  spec.security = [{ bearerAuth: [] }];
+
+  const projectHeader = {
+    name: 'X-Tessera-Project',
+    in: 'header',
+    required: false,
+    schema: { type: 'string' },
+    description:
+      'Project workspace scope (ADR-0037): a project id from GET /v1/projects. Omit (or ' +
+      "send `default`) for the tenant's default project; ignored by routes that are not " +
+      'project-scoped.',
+  };
+  const HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options']);
+  for (const [path, pathItem] of Object.entries(spec.paths ?? {})) {
+    if (!path.startsWith('/v1/') || path === '/v1/openapi.json') continue;
+    for (const [method, operation] of Object.entries(pathItem)) {
+      if (!HTTP_METHODS.has(method)) continue;
+      const params = operation.parameters ?? [];
+      if (!params.some((p) => p?.name === projectHeader.name && p?.in === 'header')) {
+        operation.parameters = [...params, projectHeader];
+      }
+    }
+  }
+
+  return serialize(spec);
 }
 
 // --- cli-reference.json — the same COMMANDS table `tessera help` renders ------------------------

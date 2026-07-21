@@ -54,6 +54,38 @@ Each entry: date · what changed · evidence/verification · decisions · next s
 - None required. If F-056 later adds API-server compose artifacts, extend this gate (or generate)
   to cover them; E-026 now records the coupling.
 
+## 2026-07-21 — F-053 polish: chrome redesign, probe-diagnosed ripple hardening, the API playground
+
+Stakeholder review (8 points) on the shipped docs site. **Ripple (the deep one):** neither browser
+automation surface could render it — hidden documents abort every view transition by spec (both
+panes report `visibilityState: hidden`; recorded as the probe finding inside the new gate). A
+Playwright probe in a VISIBLE Chromium then showed the mechanism was CORRECT (full 550ms clip from
+the control, transition properly extended — a screencast frame proved the circle) and found the real
+defects: ~850ms cold-start freeze before the first circle, and **rapid toggling hard-aborting the
+in-flight transition mid-screen** (`finished` 13ms after `ready` — the user's "stops midway +
+flicker"). Hardened: `skipTransition()` settles an in-flight ripple before starting the next; origin
+is the CONTROL'S CENTER (keyboard-deterministic, the dashboard convention); the group/image-pair
+default animations are disabled and old/new stacking pinned in globals. Permanently gated by
+`tests/e2e/ripple.spec.ts` (full-length clip from center + rapid-toggle settling + persistence).
+
+**Chrome:** home nav is transparent-at-top (marketing pattern) with Documentation / a Dashboard
+button CTA / Website globe / env-gated GitHub / the ripple toggle; the docs sidebar drops fumadocs'
+stock footer pill (themeSwitch slot disabled, icon links kept out of the docs link list) for a
+custom hairline footer row — ghost icon links left (Website, Dashboard, GitHub when set), toggle
+right — rendered in the mobile drawer too. Layout config split into base/home/docs options.
+
+**API playground (points 6–8):** the docs copy of openapi.json gains a documented transform in
+generate.mjs — real `servers` (Local 127.0.0.1:3000 default + a `{baseUrl}` variable entry for any
+deployment), the `bearerAuth` scheme (with the Local-none note), and an optional `X-Tessera-Project`
+header parameter on every /v1 operation (ADR-0037) — nothing the server does not already honor; the
+source spec's `servers:[{url:'/'}]` stays correct for the live-served doc. The api index page gains
+a "Using the playground" section incl. the CORS line for self-hosted origins. Verified in Playwright
+screenshots: server select + Authorization + project header + Send with per-language samples.
+
+**Evidence:** docs typecheck/lint green, tests 21/21 (drift regenerated), e2e **22/22** (the 20
+existing + 2 ripple gates), build green. Screenshots reviewed: home top/scrolled, sidebar footer,
+playground.
+
 ## 2026-07-20 — F-053 DONE: `@tessera/docs` — the documentation site (Fumadocs, docs subdomain)
 
 Claimed **F-053** (lowest-id eligible R4 `must`; F-052 blocker done). Plan:

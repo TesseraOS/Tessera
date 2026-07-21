@@ -72,8 +72,39 @@ page**, so it is a WebGL-canvas capture artifact, not this change (F-074 territo
 - Gates proven to have teeth, not just green: a version bump in one SKILL.md reddens the drift gate
   with the regenerate instruction; the prerendered `.md` files were compared byte-for-byte against
   the registry; the no-JS filter is asserted with `javaScriptEnabled: false`.
-- **One flake, investigated not waved away:** `@tessera/api` e2e failed once under parallel load with
-  the marketing dev server running; it passes 114/114 in isolation and 25/25 in a clean full run.
+- **Two flakes, investigated not waved away:** `@tessera/api` e2e failed once with the marketing dev
+  server also running (114/114 in isolation, 25/25 in a clean full run), and `@tessera/web` unit
+  failed once during a 43-task parallel run (414/414 in isolation and on a clean re-run). Both are
+  contention on this machine — the working tree lives on a slow external drive, and `@tessera/web`
+  alone spends ~210s of environment time — not regressions from this change. Worth watching: if
+  either recurs on a quiet machine, it is a real defect.
+- **All 11 `gates.json` gates run** (the evaluator re-ran them independently): the eight above plus
+  `a11y`, `e2e-full` (2/2, 20 assertions) and `perf` (`bench` — "every NFR-4 threshold met"). The
+  last three are untouched by a registry/marketing change but were run rather than assumed.
+
+### Evaluator findings, and what changed
+
+An independent evaluator pass **failed** the first submission on one blocking finding, now fixed:
+**five hand-written docs sentences still told the reader to expect "18 tools"** after this change
+took the surface to 20 — and they are the *verify* steps a user follows right after connecting an
+agent. The generated artifact was regenerated correctly; the prose around it was not. Neither the
+drift gate (prose is not generated) nor the docs e2e (it derives headings from the artifact) could
+see it. The five spots now use the existing `<McpToolCount />` component, and
+[`apps/docs/tests/prose-counts.test.ts`](../../apps/docs/tests/prose-counts.test.ts) makes a
+hand-copied tool/command count in MDX a red build — verified to redden by re-inlining "20 tools".
+**The lesson is about the scan, not the number:** E-026's trace stopped at the tests that consume the
+artifact and never reached the prose that quotes it.
+
+Four non-blocking findings taken in the same pass: the marketing install-paths block hard-coded a
+skill name and two directories *past the very test that forbids it* (the scan matched quoted names
+only — it is now a bare-substring scan, and the block derives from the registry); the plan file still
+specified an `agents` manifest field that never shipped (an **Amendments** section now records what
+actually shipped and what that cost); `apps/marketing/AGENTS.md` still called F-054 upcoming; and an
+inline comment in `server.ts` claimed a structural guarantee the module itself breaks (it imports
+both entry points — the *projection* is what keeps bodies out of a listing, and it now says so).
+`resolveInstallRoot` was extracted and parameterized so `--global` is unit-tested **without** writing
+into a real home directory — the obvious test there would have deleted a genuine user skill on
+cleanup.
 
 ### Decisions
 

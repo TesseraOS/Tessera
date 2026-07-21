@@ -39,7 +39,7 @@ Replace `/absolute/path/to/tessera.config.json` with the real path from your
 1. Create or edit `.mcp.json` at your project root (or the user-scope file) with
    the snippet above.
 2. Restart Claude Code (or reconnect MCP servers) so it spawns the server.
-3. Verify: `/mcp` should list **tessera** with 18 tools; ask Claude to call
+3. Verify: `/mcp` should list **tessera** with <McpToolCount /> tools; ask Claude to call
    `get_stats` for proof-of-life against your data.
 
 ## Working notes
@@ -48,7 +48,7 @@ Replace `/absolute/path/to/tessera.config.json` with the real path from your
   `tessera.config.json`, and committing `.mcp.json` gives every teammate (and every
   CI agent) the same context server with zero setup.
 - Claude Code asks for approval before first using a new MCP server's tools —
-  approve the **tessera** server once and the 18 tools are available in-session.
+  approve the **tessera** server once and all <McpToolCount /> tools are available in-session.
 - Pair the connection with usage guidance in your `CLAUDE.md` (for example:
   *"before editing a symbol, call `get_effects`; compile context before starting a
   task; capture decisions with `capture_memory`"*) — the connection provides the

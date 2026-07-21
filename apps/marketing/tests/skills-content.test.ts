@@ -108,8 +108,19 @@ describe('nothing is hand-copied into the pages', () => {
 
   it('does not hard-list skill names either', () => {
     for (const skill of SKILLS) {
-      expect(sources).not.toContain(`'${skill.name}'`);
-      expect(sources).not.toContain(`"${skill.name}"`);
+      // A BARE substring scan, deliberately. The first version of this test looked for the name
+      // in quotes, and a name embedded mid-string — `tessera skills install compile-before-coding`
+      // in the install-paths block — walked straight past it. A rename would then have shipped a
+      // stale command with every gate green.
+      expect(sources, `${skill.name} is written into a page source`).not.toContain(skill.name);
+    }
+  });
+
+  it('does not hard-list install directories either', () => {
+    for (const target of SKILL_TARGETS) {
+      expect(sources, `${target.projectDir} is written into a page source`).not.toContain(
+        target.projectDir,
+      );
     }
   });
 

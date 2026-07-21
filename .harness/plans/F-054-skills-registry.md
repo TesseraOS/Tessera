@@ -441,3 +441,43 @@ Open questions and risks, each with its resolution point:
 - **OQ-6 — generated-artifact ordering.** Two generators now exist in the chain (`@tessera/skills` → `@tessera/mcp`/`@tessera/cli` → `@tessera/docs`). A skill edit that is not followed by *both* regenerations reddens two different drift gates. Mitigation: state the obligation in the E-027 rationale and in the package's module doc comments, exactly as E-026 does today.
 - **Risk — cross-platform bytes.** `.gitattributes` sets `eol=lf` globally, but the generator must still normalize CRLF→LF when reading, or a Windows working tree could produce generated content that differs from CI's and fail the drift test for a reason unrelated to the change.
 - **Risk — scope pressure on the marketing page.** Rendering skill bodies, adding search, or building a "submit your skill" path are all adjacent and all out of scope; the acceptance list is what ships.
+
+---
+
+## Amendments (what actually shipped, 2026-07-21)
+
+This plan was written before implementation. Where the build diverged, **the entries below win** —
+the sections above are left intact as the original reasoning.
+
+1. **`SKILL_AGENTS` / `SkillManifest.agents` were NOT built** (contradicts §A.4, §A.5 item 3, §D).
+   The four skills are pure instructions — no scripts, no `allowed-tools` — so a per-skill
+   compatible-agents list would have been identical for all four and unverifiable per skill:
+   fabricated precision. The spec's `compatibility` field carries the real requirement (a connected
+   MCP server), and per-skill install destinations are delivered by `skillInstallLocations(name)` on
+   every surface (`get_skill`'s `install` array, the detail page's "Where it goes" table, the CLI's
+   `--agent`). Consequence, stated plainly: **`install` no longer validates per-skill
+   compatibility** — `--agent` validates against `SKILL_TARGETS` only, and §D's "that is what makes
+   the manifest field load-bearing" no longer applies to anything.
+2. **`SKILL_TARGETS` gained a fifth entry, `agents` (`.agents/skills`)**, and the paths were taken
+   from each vendor's own documentation rather than the third-party sources this plan cited:
+   `.agents/skills` is the **cross-agent standard** that Cursor and Codex CLI scan (Claude Code does
+   not). A wrong skills directory fails silently, so this was verified, not inferred.
+3. **`SkillTarget` gained a `note` field** (what actually reads each location) — the detail page and
+   the CLI both state it, because "Cursor also reads `.claude/skills`" is the kind of fact a reader
+   needs and a table alone cannot carry.
+4. **Prose fields are gated against Markdown syntax.** Not in the plan; added after the screenshot
+   review caught `` `tessera init` `` rendering with literal backticks on the public page.
+   `description`/`compatibility`/`tessera.headline`/`tessera.why` render as plain text on every
+   surface, so the generator now rejects Markdown in them.
+5. **OQ-1 resolved, no fallback needed:** `next build` prerenders
+   `/skills/[skill]/skill.md` as SSG (● in the route table, one file per skill). The
+   `public/skills/**` + `prebuild` fallback was not used.
+6. **OQ-2 resolved:** the CSS-only `:has()` filter shipped and works with JavaScript disabled
+   (asserted); no client island was needed. Measured first-load 204.1 KB gz against the 240 budget.
+7. **Post-review additions (evaluator findings, same day):** `apps/docs/tests/prose-counts.test.ts`
+   gates hand-copied tool/command counts in MDX prose — five pages still said "18 tools" after the
+   surface went to 20, an effect-link miss under E-026 that no existing gate could see. The
+   marketing install-paths block now derives from the registry, and its no-hand-copy test does a
+   bare-substring scan (the quote-delimited version walked past a name embedded mid-string).
+   `resolveInstallRoot` was extracted and parameterized so the `--global` branch is unit-tested
+   without writing into a real home directory.

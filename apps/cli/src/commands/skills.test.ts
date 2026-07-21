@@ -1,11 +1,12 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { SKILLS, SKILL_TARGETS } from '@tessera/skills';
 import { getSkillDocument } from '@tessera/skills/content';
 import { captureIo } from '../../tests/support/capture-io.js';
 import { run } from '../cli.js';
+import { resolveInstallRoot } from './skills.js';
 
 /**
  * `tessera skills` (F-054). Every path here is pure static data + the filesystem — no runtime boot —
@@ -169,6 +170,49 @@ describe('skills install', () => {
     const io = captureIo();
     expect(await run(['skills', 'install'], io)).toBe(1);
     expect(io.err()).toContain('skills install needs a <name>');
+  });
+});
+
+describe('install root resolution', () => {
+  const [claudeCode] = SKILL_TARGETS;
+
+  it('resolves --global through the home directory, never a literal "~"', () => {
+    const root = resolveInstallRoot({
+      cwd: '/repo',
+      home: '/home/dev',
+      target: claudeCode,
+      global: true,
+    });
+    expect(root).toBe(join('/home/dev', '.claude', 'skills'));
+    expect(root).not.toContain('~');
+  });
+
+  it('defaults to the project directory under cwd', () => {
+    expect(resolveInstallRoot({ cwd: '/repo', home: '/home/dev', target: claudeCode })).toBe(
+      join('/repo', '.claude', 'skills'),
+    );
+  });
+
+  it('lets --dir win over both, resolving a relative path against cwd', () => {
+    expect(
+      resolveInstallRoot({
+        cwd: '/repo',
+        home: '/home/dev',
+        target: claudeCode,
+        explicitDir: './out',
+        global: true,
+      }),
+      // `resolve`, not `join`: on Windows a bare POSIX root resolves against the current drive,
+      // so the expectation has to go through the same platform rule the code does.
+    ).toBe(resolve('/repo', 'out'));
+  });
+
+  it('resolves every target to its own documented directory', () => {
+    for (const target of SKILL_TARGETS) {
+      expect(resolveInstallRoot({ cwd: '/repo', home: '/home/dev', target, global: true })).toBe(
+        join('/home/dev', ...target.homeDir.replace(/^~\//, '').split('/')),
+      );
+    }
   });
 });
 

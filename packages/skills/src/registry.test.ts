@@ -96,8 +96,11 @@ describe('manifest conformance', () => {
   );
 
   it.each(registryDirectories())('%s round-trips: the document IS the manifest', (name) => {
-    // Nothing in SKILLS may be invented by the generator — every field must be readable from the
-    // committed markdown, which is the artifact an agent installs.
+    // The DOCUMENT half is the independent check: the shipped bytes must equal the file on disk,
+    // so the artifact an agent installs is the artifact in the repo. The manifest half re-parses
+    // with the same parser the generator used, so it proves the committed catalog matches a fresh
+    // parse (staleness) — NOT that the parser invents nothing. Field-level honesty is covered by
+    // the conformance assertions above.
     const document = readFileSync(join(REGISTRY_DIR, name, 'SKILL.md'), 'utf8').replace(
       /\r\n/g,
       '\n',
@@ -170,7 +173,6 @@ describe('the parser refuses malformed skills', () => {
   });
 
   it('rejects a duplicate key rather than silently taking the last', () => {
-    expect(() => parseSkill('example', valid.replace('# Example', '')).name).not.toThrow();
     const duplicated = valid.replace('name: example', 'name: example\nname: other');
     expect(() => parseSkill('example', duplicated)).toThrow(/not valid YAML/);
   });

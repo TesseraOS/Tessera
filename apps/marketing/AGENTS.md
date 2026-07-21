@@ -44,5 +44,13 @@ pattern.** Pattern/allowIn edits are design decisions — doc + manifest togethe
 
 ## Relevant features
 
-**F-051** (this site — plan: [`.harness/plans/F-051-marketing-site.md`](../../.harness/plans/F-051-marketing-site.md)),
-then **F-054** (`/skills` registry page). Pricing must render from the F-030 PLANS catalog.
+**F-051** (this site — plan: [`.harness/plans/F-051-marketing-site.md`](../../.harness/plans/F-051-marketing-site.md))
+and **F-054** (the `/skills` catalog — plan:
+[`.harness/plans/F-054-skills-registry.md`](../../.harness/plans/F-054-skills-registry.md)), both done.
+
+Two surfaces here render from a catalog, never from hand-written copy, and each has a test that
+fails on a hand-copy: **pricing** from the F-030 `@tessera/billing` PLANS
+([`tests/pricing.test.ts`](tests/pricing.test.ts)) and **`/skills`** from `@tessera/skills`
+([`tests/skills-content.test.ts`](tests/skills-content.test.ts) — a bare-substring scan of the page
+sources). Adding or renaming a skill also moves `app/sitemap.ts` and `app/llms.txt/route.ts`, which
+enumerate the registry; see effect-link **E-027**.

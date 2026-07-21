@@ -68,23 +68,30 @@ function requireTarget(value: string | undefined): SkillTarget {
 
 /**
  * The directory the skill folder is created under. `--dir` wins (an explicit root, resolved against
- * the caller's cwd); otherwise the target's home or project directory. The `~/` prefix in
- * {@link SkillTarget.homeDir} is a DISPLAY form — it is resolved through `os.homedir()` here, never
- * passed to the filesystem, because no shell expands it for us.
+ * `cwd`); otherwise the target's home or project directory. The `~/` prefix in
+ * {@link SkillTarget.homeDir} is a DISPLAY form — it is resolved through `home` here, never passed
+ * to the filesystem, because nothing expands it for a Node write (a regression would silently
+ * create a directory literally named `~`).
+ *
+ * Exported and fully parameterized so the home branch is unit-testable WITHOUT writing into the
+ * real home directory — a test that installed there for real could delete someone's own skill on
+ * cleanup.
  */
-function installRoot(
-  io: Io,
-  target: SkillTarget,
-  explicitDir: string | undefined,
-  global: boolean,
-): string {
+export function resolveInstallRoot(options: {
+  readonly cwd: string;
+  readonly home: string;
+  readonly target: SkillTarget;
+  readonly explicitDir?: string | undefined;
+  readonly global?: boolean;
+}): string {
+  const { cwd, home, target, explicitDir, global = false } = options;
   if (explicitDir !== undefined) {
-    return isAbsolute(explicitDir) ? explicitDir : resolve(io.cwd, explicitDir);
+    return isAbsolute(explicitDir) ? explicitDir : resolve(cwd, explicitDir);
   }
   if (global) {
-    return join(homedir(), ...target.homeDir.replace(/^~\//, '').split('/'));
+    return join(home, ...target.homeDir.replace(/^~\//, '').split('/'));
   }
-  return join(io.cwd, ...target.projectDir.split('/'));
+  return join(cwd, ...target.projectDir.split('/'));
 }
 
 function runList(io: Io, argv: readonly string[]): number {
@@ -140,7 +147,14 @@ function runInstall(io: Io, argv: readonly string[]): number {
     throw new CliError(`skill '${skill.name}' has no document`);
   }
 
-  const directory = join(installRoot(io, target, flagStr(args, 'dir'), global), skill.name);
+  const root = resolveInstallRoot({
+    cwd: io.cwd,
+    home: homedir(),
+    target,
+    explicitDir: flagStr(args, 'dir'),
+    global,
+  });
+  const directory = join(root, skill.name);
   const path = join(directory, 'SKILL.md');
 
   // Idempotent by design: re-running an install is a no-op, so it is safe in a bootstrap script.

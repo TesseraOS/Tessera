@@ -624,8 +624,10 @@ export function buildMcpServer(
           args.category === undefined
             ? SKILLS
             : SKILLS.filter((skill) => skill.category === args.category);
-        // Manifests only — this module imports the root entry, never `@tessera/skills/content`, so
-        // a body cannot reach a listing response by accident (NFR-4).
+        // Manifests only (NFR-4). `toWireSkill` is the single projection and carries no body; note
+        // this module DOES import `@tessera/skills/content` for `get_skill` below, so the
+        // separate-entry-point guarantee is per-module and does not do the work here — the
+        // projection does.
         return { skills: skills.map(toWireSkill) };
       }),
   );

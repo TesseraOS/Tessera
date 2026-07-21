@@ -108,6 +108,9 @@ importers:
       '@tessera/server':
         specifier: workspace:*
         version: link:../server
+      '@tessera/skills':
+        specifier: workspace:*
+        version: link:../../packages/skills
     devDependencies:
       tsx:
         specifier: ^4.22.4

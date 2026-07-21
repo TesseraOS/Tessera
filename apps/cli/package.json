@@ -32,7 +32,8 @@
     "@tessera/core": "workspace:*",
     "@tessera/ingestion": "workspace:*",
     "@tessera/observability": "workspace:*",
-    "@tessera/server": "workspace:*"
+    "@tessera/server": "workspace:*",
+    "@tessera/skills": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.22.4"

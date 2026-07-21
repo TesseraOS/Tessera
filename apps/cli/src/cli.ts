@@ -9,6 +9,7 @@ import { initCommand } from './commands/init.js';
 import { mcpCommand } from './commands/mcp.js';
 import { mcpConfigCommand } from './commands/mcp-config.js';
 import { serveCommand } from './commands/serve.js';
+import { skillsCommand } from './commands/skills.js';
 import { sourceCommand } from './commands/source.js';
 import { tokenCommand } from './commands/token.js';
 
@@ -25,6 +26,7 @@ export const COMMANDS: readonly Command[] = [
   tokenCommand,
   doctorCommand,
   mcpConfigCommand,
+  skillsCommand,
 ];
 
 /** Print `error: …` (+ hint) to stderr and map the throw to an exit code — the single error funnel. */

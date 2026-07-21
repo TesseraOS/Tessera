@@ -41,7 +41,9 @@ export type McpToolName =
   | 'delete_project'
   | 'list_tokens'
   | 'issue_token'
-  | 'revoke_token';
+  | 'revoke_token'
+  | 'list_skills'
+  | 'get_skill';
 
 export const TOOL_PERMISSIONS: Readonly<Record<McpToolName, Permission>> = {
   search: 'search:read',
@@ -62,6 +64,14 @@ export const TOOL_PERMISSIONS: Readonly<Record<McpToolName, Permission>> = {
   list_tokens: 'admin:manage',
   issue_token: 'admin:manage',
   revoke_token: 'admin:manage',
+  // The skills registry is PUBLIC first-party content — the same bytes the marketing site serves
+  // unauthenticated. Minting a `skills:read` permission would ripple the RBAC catalog through
+  // GET /v1/rbac -> OpenAPI -> the generated SDK -> the dashboard's token-scope UI for content no
+  // scope protects, and would leave a token scoped to `search:read` unable to read a public
+  // document. Reusing the lowest read every role already holds (viewer upward) keeps least
+  // privilege honest and adds nothing to the catalog. Same reasoning as `get_stats` below.
+  list_skills: 'search:read',
+  get_skill: 'search:read',
 };
 
 /**
@@ -92,6 +102,11 @@ export const MCP_AUDIT_ACTIONS: Readonly<Record<McpToolName, AuditAction>> = {
   list_tokens: 'token.read',
   issue_token: 'token.manage',
   revoke_token: 'token.manage',
+  // Mirrors the permission (see TOOL_PERMISSIONS): a catalog discovery read recorded as the
+  // discovery action, so the permission<->action pairing stays coherent with every other row and
+  // the audit vocabulary gains nothing for content that is public anyway.
+  list_skills: 'search',
+  get_skill: 'search',
 };
 
 /**

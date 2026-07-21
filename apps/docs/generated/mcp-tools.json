@@ -1,6 +1,6 @@
 {
   "$source": "tools/list from the real tessera-mcp stdio server — regenerate with `pnpm --filter @tessera/docs generate`",
-  "toolCount": 18,
+  "toolCount": 20,
   "tools": [
     {
       "name": "add_source",
@@ -339,6 +339,30 @@
       }
     },
     {
+      "name": "get_skill",
+      "description": "One skill's full SKILL.md document, plus where to write it for each agent (e.g. .claude/skills/<name>/SKILL.md) — so an agent can install it without a browser.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "capture-memory",
+              "compile-before-coding",
+              "effects-before-editing",
+              "project-onboarding"
+            ],
+            "description": "Skill name, as listed by list_skills."
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
       "name": "get_stats",
       "description": "The workspace summary: indexed documents, memories, graph nodes + effect-links, sources, last scan.",
       "inputSchema": {
@@ -420,6 +444,25 @@
       "inputSchema": {
         "type": "object",
         "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "list_skills",
+      "description": "First-party Tessera skills that teach an agent this workflow — what each does and when to use it. Bodies are NOT included; fetch one with get_skill.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "workflow",
+              "setup"
+            ],
+            "description": "Restrict to one category: `workflow` or `setup`."
+          }
+        },
+        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },

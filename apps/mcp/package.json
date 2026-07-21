@@ -29,6 +29,7 @@
     "@tessera/knowledge-graph": "workspace:*",
     "@tessera/memory": "workspace:*",
     "@tessera/retrieval": "workspace:*",
+    "@tessera/skills": "workspace:*",
     "zod": "^3.25.67"
   },
   "devDependencies": {

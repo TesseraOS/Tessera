@@ -26,6 +26,10 @@ import type { CompileRequest } from '@tessera/context-compiler';
 import type { GetEffectsOptions } from '@tessera/knowledge-graph';
 // The SAME mapper the REST route uses (ADR-0036 parity, structurally) — see @tessera/retrieval.
 import { toRetrievalInclude, type RetrievalQuery } from '@tessera/retrieval';
+// The first-party skills registry (F-054). Manifests from the root entry; bodies from the separate
+// `/content` entry, so only `get_skill` can reach a document.
+import { SKILLS, findSkill, skillInstallLocations, type SkillManifest } from '@tessera/skills';
+import { getSkillDocument } from '@tessera/skills/content';
 import { buildExplanation } from './explain.js';
 import type { McpCallContext, McpGateway, McpToolName } from './gateway.js';
 import { runTool } from './result.js';
@@ -38,8 +42,10 @@ import {
   deleteProjectShape,
   effectsShape,
   explainShape,
+  getSkillShape,
   getStatsShape,
   issueTokenShape,
+  listSkillsShape,
   listProjectsShape,
   listSourcesShape,
   listTokensShape,
@@ -107,6 +113,25 @@ function toWireSource(record: SourceRecord): {
   };
 }
 
+/**
+ * A skill manifest on the wire (F-054). Token-lean by design (NFR-4): what an agent needs to decide
+ * whether to fetch the body — never the body itself, and never the tool list, which the agent can
+ * read from this server's own `tools/list`.
+ */
+function toWireSkill(manifest: SkillManifest): {
+  name: string;
+  version: string;
+  category: string;
+  description: string;
+} {
+  return {
+    name: manifest.name,
+    version: manifest.version,
+    category: manifest.category,
+    description: manifest.description,
+  };
+}
+
 /** Identifies this server in the MCP handshake. */
 export const SERVER_INFO = { name: 'tessera', version: '0.0.0' } as const;
 
@@ -168,8 +193,11 @@ function toCompileRequest(args: {
 
 /**
  * Build the Tessera MCP server over the injected {@link ApiServices} — the **same** domain services
- * the REST API wraps (F-011), so the two surfaces never diverge (FR-35). Tools: `search`,
- * `compile_context`, `get_effects`, `capture_memory`, `explain`. Inputs are validated by the SDK
+ * the REST API wraps (F-011), so the two surfaces never diverge (FR-35). Tools cover retrieval
+ * (`search`, `compile_context`, `explain`), the graph (`get_effects`, `query_graph`,
+ * `assert_effect`), memory, sources, stats, projects, tokens, and the first-party skills registry
+ * (`list_skills`, `get_skill` — the only pair backed by static content, not a service). The
+ * authoritative list is {@link McpToolName}. Inputs are validated by the SDK
  * against the Zod shapes; failures map through the shared error envelope. When a {@link McpGateway} is
  * supplied (F-026), every call is authenticated + authorized + quota-metered first; without one the
  * tools are unguarded (unchanged behavior). Real adapter wiring + the stdio process are the deployment
@@ -574,6 +602,55 @@ export function buildMcpServer(
         }
         await store.revoke(args.id);
         return { id: args.id, revoked: true };
+      }),
+  );
+
+  // --- First-party agent skills (F-054; FR-69, ADR-0036 §3) -------------------------------------
+  // The only tools that wrap NO ApiServices: the registry is static first-party content compiled
+  // into @tessera/skills, identical on every deployment. So there is no tenant or project to scope
+  // to — `projectOf` is deliberately not called here.
+
+  server.registerTool(
+    'list_skills',
+    {
+      description:
+        'First-party Tessera skills that teach an agent this workflow — what each does and when to use it. Bodies are NOT included; fetch one with get_skill.',
+      inputSchema: listSkillsShape,
+    },
+    (args, extra) =>
+      runTool(async () => {
+        await guard('list_skills', extra);
+        const skills =
+          args.category === undefined
+            ? SKILLS
+            : SKILLS.filter((skill) => skill.category === args.category);
+        // Manifests only — this module imports the root entry, never `@tessera/skills/content`, so
+        // a body cannot reach a listing response by accident (NFR-4).
+        return { skills: skills.map(toWireSkill) };
+      }),
+  );
+
+  server.registerTool(
+    'get_skill',
+    {
+      description:
+        "One skill's full SKILL.md document, plus where to write it for each agent (e.g. .claude/skills/<name>/SKILL.md) — so an agent can install it without a browser.",
+      inputSchema: getSkillShape,
+    },
+    (args, extra) =>
+      runTool(async () => {
+        await guard('get_skill', extra);
+        const manifest = findSkill(args.name);
+        const document = getSkillDocument(args.name);
+        if (manifest === undefined || document === undefined) {
+          throw new NotFoundError(`skill not found: ${args.name}`);
+        }
+        return {
+          ...toWireSkill(manifest),
+          compatibility: manifest.compatibility,
+          install: skillInstallLocations(manifest.name),
+          document,
+        };
       }),
   );
 

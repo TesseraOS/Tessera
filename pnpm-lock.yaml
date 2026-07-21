@@ -288,6 +288,9 @@ importers:
       '@tessera/retrieval':
         specifier: workspace:*
         version: link:../../packages/retrieval
+      '@tessera/skills':
+        specifier: workspace:*
+        version: link:../../packages/skills
       zod:
         specifier: ^3.25.67
         version: 3.25.76

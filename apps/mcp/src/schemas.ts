@@ -4,6 +4,7 @@ import { PERMISSIONS, ROLES } from '@tessera/api/auth';
 import { MAX_PROJECT_NAME_LENGTH } from '@tessera/api/projects';
 import { EDGE_KINDS, NODE_KINDS } from '@tessera/knowledge-graph';
 import { MEMORY_KINDS } from '@tessera/memory';
+import { SKILL_CATEGORIES, SKILL_NAMES } from '@tessera/skills';
 import { z } from 'zod';
 
 /**
@@ -170,4 +171,23 @@ export const issueTokenShape = {
 
 export const revokeTokenShape = {
   id: z.string().min(1).describe('The token id to revoke.'),
+};
+
+// --- First-party agent skills (F-054; FR-69, ADR-0036 §3) ---
+
+export const listSkillsShape = {
+  category: z
+    .enum(SKILL_CATEGORIES)
+    .optional()
+    .describe('Restrict to one category: `workflow` or `setup`.'),
+};
+
+export const getSkillShape = {
+  /**
+   * The enum — not a free string — so `tools/list` PUBLISHES the catalog: an agent can fetch a skill
+   * without calling `list_skills` first, and a typo is a validation error at the boundary rather
+   * than a round trip. The cost is that adding a skill changes this tool's JSON Schema, which the
+   * docs reference regenerates from (E-026/E-027) — the churn is the honesty mechanism.
+   */
+  name: z.enum(SKILL_NAMES).describe('Skill name, as listed by list_skills.'),
 };

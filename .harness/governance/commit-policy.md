@@ -29,10 +29,16 @@ Types: `feat, fix, docs, refactor, test, chore, perf, build, ci`.
 Agent-authored commits include the agent co-author trailer.
 
 ## Branching
-- Established repo with a remote: **branch per feature** (`feat/F-00x-slug`), open a PR;
-  don't push feature work straight to the default branch.
-- This repo currently has **no remote**; the genesis/initial commit on `main` is fine.
-  Re-evaluate when a remote is added (an ADR if the model changes).
+- **Trunk-based on `main`** ([ADR-0055](../../docs/adr/0055-trunk-based-main-with-a-remote.md)).
+  A remote exists (`origin` → GitHub), and the earlier "no remote, so `main` is fine" premise
+  is retired along with the branch-per-feature + PR rule it was paired with: with a single
+  operator, a PR adds ceremony without adding a reader, and the independent check that actually
+  catches defects here is the **evaluator pass**, which is orthogonal to branching.
+- The guardrails above are what carry the quality bar instead — only green states, reviewed
+  diffs, one logical change per commit. **Known cost, accepted:** no pre-merge CI signal, so
+  run the gates locally *before* committing and record the evidence.
+- **Revisit the moment a second contributor joins** — ADR-0055's rationale is explicitly a
+  single-operator argument and does not survive a second author.
 
 ## Committed vs ignored (system of record)
 **Commit:** source, tests, configs, [`docs/`](../../docs/), and the harness system of

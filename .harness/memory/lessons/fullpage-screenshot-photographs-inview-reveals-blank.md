@@ -41,11 +41,9 @@ just how it screenshots" — at which point the review stops being a gate at all
   (`MotionConfig reducedMotion="user"` keeps opacity, dropping transforms), so reveals still need
   the scroll.
 
-**Replay the original miss through any gate you add in response to one.** The guard written after
-this review's docs finding (a hand-copied tool count in prose) passed on the fixed content and
-looked done — but when replayed against the five *original* sentences it caught only four, because a
-proximity window put one noun too far from its number. Passing on today's corrected content proves
-nothing about the case that motivated the gate. Feed it the exact text that got through.
+**Related, from the same review:** the gate added in response to *its* finding also looked green
+while missing the case it was written for — see
+[[replay-the-original-miss-through-any-new-gate]].
 
 **The corollary that earned this its keep:** the same review caught a defect no test had — manifest
 prose rendering Markdown backticks literally (`` `tessera init` ``) on the public page. **Fields that

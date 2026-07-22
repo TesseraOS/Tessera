@@ -1,5 +1,4 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import {
   SKILLS,
@@ -149,7 +148,7 @@ function runInstall(io: Io, argv: readonly string[]): number {
 
   const root = resolveInstallRoot({
     cwd: io.cwd,
-    home: homedir(),
+    home: io.home,
     target,
     explicitDir: flagStr(args, 'dir'),
     global,

@@ -132,6 +132,15 @@ export function McpToolCount() {
 
 // --- CLI reference -------------------------------------------------------------------------------
 
+/**
+ * Command count, so prose never hand-copies the number — the twin of {@link McpToolCount}.
+ * `tests/prose-counts.test.ts` bans the literal on a line about commands, and a banned literal
+ * needs a sanctioned alternative or the rule is just a trap.
+ */
+export function CliCommandCount() {
+  return <>{cliReference.commands.length}</>;
+}
+
 /** Every `tessera` command: summary + full usage text, from the CLI's own table. */
 export function CliReference() {
   return (

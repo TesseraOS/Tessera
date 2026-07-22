@@ -112,6 +112,11 @@ describe('nothing is hand-copied into the pages', () => {
       // in quotes, and a name embedded mid-string — `tessera skills install compile-before-coding`
       // in the install-paths block — walked straight past it. A rename would then have shipped a
       // stale command with every gate green.
+      //
+      // Known limit: today's names are multi-word kebab slugs, so they cannot collide with ordinary
+      // prose. A future single-word skill (`memory`, `search`) would false-red against these four
+      // files. Left as-is because the failure message names the skill, so diagnosis is immediate —
+      // but scope the scan if that day comes rather than deleting the assertion.
       expect(sources, `${skill.name} is written into a page source`).not.toContain(skill.name);
     }
   });

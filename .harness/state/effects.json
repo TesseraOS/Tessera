@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-07-21",
+  "updated": "2026-07-22",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -1191,10 +1191,14 @@
         {
           "kind": "artifact",
           "ref": "F-054 moved BOTH generated artifacts, each regenerated in the increment that changed its input (never a red intermediate): generated/mcp-tools.json toolCount 18 -> 20 (+ list_skills/get_skill, with get_skill's enum-of-skill-names input schema baked in), and generated/cli-reference.json gained the 'skills' row (list/show/install usage). NOTE on the '18 tool headings' wording in the sibling entry below: it is historical — the docs e2e derives its headings FROM the artifact rather than hardcoding a count, which is why it followed silently"
+        },
+        {
+          "kind": "test",
+          "ref": "apps/docs/tests/prose-counts.test.ts — the gap this link MISSED, now executable. A toolCount/command-count change moves the generated artifact AND any hand-written sentence quoting it: F-054 took the surface 18 -> 20 and left five prose sentences saying 18, in the VERIFY steps a user follows right after connecting an agent. Neither existing gate could see it (the drift gate compares generated files; the docs e2e derives its headings FROM the artifact). This test bans the literal count in any paragraph mentioning tools/commands, with <McpToolCount /> and <CliCommandCount /> as the sanctioned alternatives. Paragraph-scoped, not line-scoped: the prose wraps at ~85 chars and the sentence that defeated the first version was 83, so a reflow would have re-opened it"
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "The docs' no-fake-data guarantee is this coupling: every machine fact on the public docs derives from a source of truth through generate.mjs, and the drift gate makes staleness a red build. The flip side is a standing obligation — changing the CLI's commands/help/MCP_CLIENTS, the MCP tool registry, a /v1 route, or .env.example now requires `pnpm --filter @tessera/docs generate` + committing the diff (turbo's ^build ordering guarantees fresh dists for the gate; the generator spawns the BUILT server mcp bin and imports the BUILT cli, so a stale dist regenerates old truth — the E-003 SDK trap, inherited). The lone inline exception, the self-host docker-compose.yml block, carries the same obligation via a different mechanism: no regeneration, but editing the compose service definition reddens compose-doc-drift.test.ts until the MDX fence is reconciled (Option-B over a generate-and-render component was chosen because rendering the YAML from a generated string would strip it out of llms-full.txt — which emits raw MDX bodies — and drop the filename chip).",
+      "rationale": "The docs' no-fake-data guarantee is this coupling: every machine fact on the public docs derives from a source of truth through generate.mjs, and the drift gate makes staleness a red build. The flip side is a standing obligation — changing the CLI's commands/help/MCP_CLIENTS, the MCP tool registry, a /v1 route, or .env.example now requires `pnpm --filter @tessera/docs generate` + committing the diff (turbo's ^build ordering guarantees fresh dists for the gate; the generator spawns the BUILT server mcp bin and imports the BUILT cli, so a stale dist regenerates old truth — the E-003 SDK trap, inherited). The lone inline exception, the self-host docker-compose.yml block, carries the same obligation via a different mechanism: no regeneration, but editing the compose service definition reddens compose-doc-drift.test.ts until the MDX fence is reconciled (Option-B over a generate-and-render component was chosen because rendering the YAML from a generated string would strip it out of llms-full.txt — which emits raw MDX bodies — and drop the filename chip). THE TRACE MUST REACH PROSE, NOT JUST TESTS (F-054, 2026-07-21): this link's dependents were the artifacts, the render components, and the tests over them — an inventory of everything that CONSUMES the generated data, and it was complete on those terms. What it never named was the hand-written prose that QUOTES the data, which is where the only user-visible falsehood actually landed. When a generated fact changes, grep the content for the old VALUE, not just for the modules that import it; `prose-counts.test.ts` now does that mechanically for the two counts, and the same exposure exists for any number a page states in words.",
       "confidence": 1,
       "origin": "manual"
     },

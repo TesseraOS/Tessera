@@ -103,7 +103,35 @@ the case it was written for is worse than no gate, so the window is gone: the ru
 line-scoped (a line mentioning tools may not carry the literal count). Re-verified 5/5 caught, zero
 false positives across the real content tree, and proven to redden on the exact phrasing the first
 version let through. **Generalizable:** when you add a gate in response to a miss, replay the
-original miss through it — passing on today's fixed content proves nothing.
+original miss through it — passing on today's fixed content proves nothing. Captured as
+[`replay-the-original-miss-through-any-new-gate`](../memory/lessons/replay-the-original-miss-through-any-new-gate.md).
+
+### Second evaluator pass: PASS, and seven non-blocking findings acted on
+
+The re-verification returned **PASS on F-054** (all gates re-run independently, no flakes that run,
+no gate weakened anywhere in `a3c6f90..HEAD`). It also found that the line-scoped guard still had a
+**line-wrap hole** — this prose wraps at ~85 characters and the sentence that defeated v1 was 83, so
+one reflow would have re-opened it. The rule is now **paragraph-scoped** (measured: zero false
+positives), the five original sentences are **pinned as a regression set inside the test**, and
+`<CliCommandCount />` was added because the command half banned a literal while offering no
+sanctioned alternative — a rule you cannot comply with is a trap, which is the same class of defect
+as the finding that started this.
+
+`homedir()` moved out of the `skills install` call site and into the injected `Io` (which already
+carries `cwd` and `env` for exactly this reason): a wiring regression like `home: io.cwd` previously
+passed every unit test *and* every `--dir` test, because `--dir` never reads `home`. `captureIo`
+defaults `home` to a temp path, so no test can ever write into a live `~/.claude/skills` — deleting
+from there on cleanup could destroy a skill the user authored.
+
+**E-026 extended with the dependent it had missed** — the honest close of the original diagnosis.
+The link inventoried everything that *consumes* the generated data and was complete on those terms;
+the falsehood landed in prose that *quotes* it. Rationale now states the rule: when a generated fact
+changes, grep the content for the old **value**, not only for the modules that import it.
+
+**Process note (evaluator N6):** F-054 stayed `done` through the failed first evaluation. It should
+have gone back to `in_progress` until the blocking finding cleared — `done` briefly asserted
+something the evidence did not support. The acceptance text was *not* edited to fit what shipped,
+which is the line that matters most, but the status should track reality both ways.
 
 Four non-blocking findings taken in the same pass: the marketing install-paths block hard-coded a
 skill name and two directories *past the very test that forbids it* (the scan matched quoted names

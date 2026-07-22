@@ -159,6 +159,25 @@ describe('skills install', () => {
     }
   });
 
+  it('--global writes under the injected home, never a literal "~"', async () => {
+    // The CALL SITE, not just resolveInstallRoot: a wiring regression (passing cwd as home) would
+    // slip past the pure unit tests and past every --dir test, because --dir never reads home.
+    // `home` is injected through Io, so this exercises the real write without touching the user's
+    // actual ~/.claude/skills — deleting from there on cleanup could destroy a skill they wrote.
+    const home = join(dir, 'fake-home');
+    const cwd = join(dir, 'elsewhere');
+    mkdirSync(cwd, { recursive: true });
+    const io = captureIo({ home, cwd });
+
+    expect(await run(['skills', 'install', 'capture-memory', '--global', '--json'], io)).toBe(0);
+    const parsed = JSON.parse(io.out()) as { path: string };
+
+    expect(parsed.path).toBe(join(home, '.claude', 'skills', 'capture-memory', 'SKILL.md'));
+    expect(parsed.path).not.toContain('~');
+    expect(parsed.path.startsWith(cwd)).toBe(false);
+    expect(readFileSync(parsed.path, 'utf8')).toBe(getSkillDocument('capture-memory'));
+  });
+
   it('names the known agents when --agent is wrong', async () => {
     const io = captureIo();
     expect(await run(['skills', 'install', 'capture-memory', '--agent', 'emacs'], io)).toBe(1);

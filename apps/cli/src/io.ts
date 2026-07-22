@@ -1,3 +1,4 @@
+import { homedir } from 'node:os';
 import type { Env } from '@tessera/config';
 
 /**
@@ -15,6 +16,14 @@ export interface Io {
   readonly env: Env;
   /** The working directory commands resolve relative paths (config file, data dir, sources) against. */
   readonly cwd: string;
+  /**
+   * The user's home directory, for commands that write outside the project (`skills install
+   * --global`). Injected for the same reason as {@link Io.cwd}: a direct `os.homedir()` call is a
+   * global reference this seam exists to remove, and it is the one path a test cannot exercise
+   * safely for real — writing into a live `~/.claude/skills` and cleaning up could delete a
+   * skill the user actually authored.
+   */
+  readonly home: string;
 }
 
 /** The real, process-backed {@link Io}. */
@@ -24,6 +33,7 @@ export function processIo(): Io {
     writeErr: (text) => void process.stderr.write(text),
     env: process.env,
     cwd: process.cwd(),
+    home: homedir(),
   };
 }
 

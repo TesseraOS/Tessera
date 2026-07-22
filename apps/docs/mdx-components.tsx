@@ -3,7 +3,13 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import type { MDXComponents } from 'mdx/types';
 import { AgentConfig, AgentConfigFile } from '@/components/agent-config';
-import { CliReference, EnvReference, McpToolCatalog, McpToolCount } from '@/components/reference-data';
+import {
+  CliCommandCount,
+  CliReference,
+  EnvReference,
+  McpToolCatalog,
+  McpToolCount,
+} from '@/components/reference-data';
 
 /**
  * Stock Fumadocs MDX components (DOCS-DESIGN §1.2: no forks — upgrades stay cheap).
@@ -19,6 +25,7 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     Tab,
     AgentConfig,
     AgentConfigFile,
+    CliCommandCount,
     CliReference,
     EnvReference,
     McpToolCatalog,

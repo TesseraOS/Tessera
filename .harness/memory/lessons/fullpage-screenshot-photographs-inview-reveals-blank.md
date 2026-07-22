@@ -41,6 +41,12 @@ just how it screenshots" — at which point the review stops being a gate at all
   (`MotionConfig reducedMotion="user"` keeps opacity, dropping transforms), so reveals still need
   the scroll.
 
+**Replay the original miss through any gate you add in response to one.** The guard written after
+this review's docs finding (a hand-copied tool count in prose) passed on the fixed content and
+looked done — but when replayed against the five *original* sentences it caught only four, because a
+proximity window put one noun too far from its number. Passing on today's corrected content proves
+nothing about the case that motivated the gate. Feed it the exact text that got through.
+
 **The corollary that earned this its keep:** the same review caught a defect no test had — manifest
 prose rendering Markdown backticks literally (`` `tessera init` ``) on the public page. **Fields that
 render as plain text on any surface must be gated against Markdown syntax**, because "it's markdown

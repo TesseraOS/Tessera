@@ -91,9 +91,19 @@ agent. The generated artifact was regenerated correctly; the prose around it was
 drift gate (prose is not generated) nor the docs e2e (it derives headings from the artifact) could
 see it. The five spots now use the existing `<McpToolCount />` component, and
 [`apps/docs/tests/prose-counts.test.ts`](../../apps/docs/tests/prose-counts.test.ts) makes a
-hand-copied tool/command count in MDX a red build — verified to redden by re-inlining "20 tools".
-**The lesson is about the scan, not the number:** E-026's trace stopped at the tests that consume the
-artifact and never reached the prose that quotes it.
+hand-copied tool/command count in MDX a red build. **The lesson is about the scan, not the number:**
+E-026's trace stopped at the tests that consume the artifact and never reached the prose that quotes
+it.
+
+That guard then failed its own first audit, which is worth recording. Written with a 24-character
+proximity window ("the count near the word *tool*"), it was checked against all five original
+sentences and **caught only four** — `codex.mdx`'s "list the available tools in-session — tessera
+should contribute 18" puts the noun ~43 characters from the number. A gate that passes while missing
+the case it was written for is worse than no gate, so the window is gone: the rule is now
+line-scoped (a line mentioning tools may not carry the literal count). Re-verified 5/5 caught, zero
+false positives across the real content tree, and proven to redden on the exact phrasing the first
+version let through. **Generalizable:** when you add a gate in response to a miss, replay the
+original miss through it — passing on today's fixed content proves nothing.
 
 Four non-blocking findings taken in the same pass: the marketing install-paths block hard-coded a
 skill name and two directories *past the very test that forbids it* (the scan matched quoted names

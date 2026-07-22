@@ -36,6 +36,31 @@ function collectMdx(dir: string): string[] {
   });
 }
 
+/**
+ * LINE-SCOPED, deliberately — and this is the one design decision here worth knowing.
+ *
+ * The first version of this guard required the count within 24 characters of the word "tool". It
+ * caught four of the five sentences it was written for and **missed** codex.mdx's "list the
+ * available tools in-session — tessera should contribute 18", where the noun sits ~43 characters
+ * from the number. A gate that passes while missing its own motivating case is worse than no gate,
+ * so the proximity window is gone: a line that talks about tools may not carry the literal count.
+ *
+ * Verified against the real content tree — all five original phrasings caught, zero false positives
+ * at the current counts.
+ */
+function offenders(pages: readonly string[], count: number, noun: string): string[] {
+  const mentionsNoun = new RegExp(`\\b${noun}s?\\b`, 'i');
+  const hasCount = new RegExp(`\\b${count}\\b`);
+  return pages.flatMap((page) => {
+    const lines = readFileSync(page, 'utf8').split('\n');
+    return lines.flatMap((line, index) =>
+      mentionsNoun.test(line) && hasCount.test(line)
+        ? [`${relative(APP_ROOT, page).replaceAll('\\', '/')}:${index + 1}  ${line.trim()}`]
+        : [],
+    );
+  });
+}
+
 describe('prose never hand-copies a generated count', () => {
   const pages = collectMdx(CONTENT_ROOT);
 
@@ -43,31 +68,21 @@ describe('prose never hand-copies a generated count', () => {
     expect(pages.length).toBeGreaterThan(0);
   });
 
-  it('never writes the literal MCP tool count next to the word "tool"', () => {
+  it('never writes the literal MCP tool count on a line about tools', () => {
     const count = mcpTools.toolCount;
-    // "20 tools", "contribute 20", "with 20 tools" — the shapes the F-054 miss actually took.
-    const literal = new RegExp(`\\b${count}\\b(?=[^\\n]{0,24}\\btools?\\b)|\\btools?\\b[^\\n]{0,24}\\b${count}\\b`);
-    const offenders = pages
-      .filter((page) => literal.test(readFileSync(page, 'utf8')))
-      .map((page) => relative(APP_ROOT, page).replaceAll('\\', '/'));
-
+    const found = offenders(pages, count, 'tool');
     expect(
-      offenders,
-      `hand-copied tool count (${count}) — use <McpToolCount /> so the number follows the server:\n${offenders.join('\n')}`,
+      found,
+      `hand-copied tool count (${count}) — use <McpToolCount /> so the number follows the server:\n${found.join('\n')}`,
     ).toEqual([]);
   });
 
-  it('never writes the literal CLI command count next to the word "command"', () => {
+  it('never writes the literal CLI command count on a line about commands', () => {
     const count = cliReference.commands.length;
-    const literal = new RegExp(
-      `\\b${count}\\b(?=[^\\n]{0,24}\\bcommands?\\b)|\\bcommands?\\b[^\\n]{0,24}\\b${count}\\b`,
-    );
-    const offenders = pages
-      .filter((page) => literal.test(readFileSync(page, 'utf8')))
-      .map((page) => relative(APP_ROOT, page).replaceAll('\\', '/'));
-
-    expect(offenders, `hand-copied CLI command count (${count}):\n${offenders.join('\n')}`).toEqual(
-      [],
-    );
+    const found = offenders(pages, count, 'command');
+    expect(
+      found,
+      `hand-copied CLI command count (${count}):\n${found.join('\n')}`,
+    ).toEqual([]);
   });
 });

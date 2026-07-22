@@ -3,6 +3,86 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-22 — F-077 DONE: the MCP compile entitlement bypass, and who is actually metered
+
+Claimed **F-077** on the project lead's explicit call, ahead of the deterministic lowest-id pick
+(**F-055**): F-077 is a `must` describing a live bypass, and building a *new* remote transport while
+the existing surface ignores plan caps is the wrong order. Plan:
+[`F-077-mcp-entitlement-clamp.md`](../plans/F-077-mcp-entitlement-clamp.md). Decision:
+**[ADR-0056](../../docs/adr/0056-entitlement-clamp-silent-and-metered-only.md)** (acceptance clause 2
+required one).
+
+### The defect
+
+`POST /v1/compile` capped the requested budget to the caller's plan (F-035). `apps/mcp/src/server.ts`
+had **zero** references to billing and forwarded `budget` verbatim into `compile_context` **and**
+`explain`. NFR-12 was enforced on the surface humans use and unenforced on the surface **agents**
+use — the population the cap exists to meter.
+
+### The premise in the feature note was false, and the decision hinged on it
+
+F-077's note said *"an agent that is quietly downgraded cannot distinguish a clamp from a thin
+corpus."* Checked against the tree: `assemble.ts` sets `budget: request.budget` and callers clamp
+*before* compiling, so **`pkg.budget` IS the effective budget** and `requested > pkg.budget` ⟺
+clamped, exactly. A thin corpus returns `budget === requested` with few fragments. The two are
+precisely distinguishable with no extra field — which is what F-062 found independently.
+
+That corrected fact is what made a **silent** clamp defensible: an additive per-call field would bill
+every agent on every compile for something derivable from data it already holds (NFR-4). So:
+`compile_context` clamps silently **but publishes the rule in its tool description** (`tools/list` is
+read once per session, not per call — silent-and-undocumented was the defect; silent-and-published is
+a contract), and `explain` — the verbose diagnostic path, with no REST twin — **names** the clamp via
+an optional `budgetClamp {requested, effective}`, omitted entirely when nothing was clamped. New
+effect-link **E-028** records the echo invariant as load-bearing, because three consumers now derive
+from it and a decision was nearly built on its opposite.
+
+### The bigger finding: self-hosted was being charged a cloud tier
+
+Implementing the clamp surfaced that `services.billing ?? createLocalBilling()` resolves to a **free**
+subscription — so a self-hosted deployment that wired no billing was capped at the cloud Free tier's
+8000 tokens, on REST, today. Extending that to MCP would have silently dropped every self-hosted
+agent from "any budget" to 8000.
+
+Escalated rather than assumed, because the repo genuinely does not settle it: NFR-12 is *cost
+control* ("Local-default avoids API spend; cloud tracks per-tenant usage/cost"), the docs call 8000 a
+**default** not a cap, and no doc promises self-hosted users a limit. **Project lead's decision:
+clamp metered deployments only.** A deployment that wired a `BillingProvider` is metered; one that
+did not is self-hosted and uncapped. The plan catalog is untouched — the cloud Free tier keeps its
+8000, and wiring the local adapter *explicitly* still meters you (the unmetered case is the absence
+of a provider, not the identity of one). **This is a REST behaviour change too**, deliberately.
+
+### One implementation, structurally
+
+`createCompileBudgetClamp` (`packages/billing/src/budget.ts`, Fastify-free so MCP may import it
+without breaking F-012) is the single composition both surfaces build from. Extending the rule
+changes one function; the parity e2e fails if either surface moves alone.
+
+### Evidence
+
+- billing 19/19 (was 14) · mcp 27 unit + **45 e2e** (was 39) · api e2e **116** (was 114 — the test
+  that pinned the old local-clamp behaviour was *replaced* by two pinning the new: unmetered
+  uncapped, metered capped, so coverage rose).
+- Workspace: verify-state valid (**28** effect-links) · typecheck 45/45 · lint 26/26 · format:check
+  clean · build 23/23 · test 43/43 · e2e 25/25 · **e2e-full 20/20** (acceptance clause 4 names it).
+- **The acceptance test was proven to catch the bug**: reverting `compile_context` to the pre-fix
+  forwarding fails both the direct assertion and the REST/MCP parity assertion. A test written after
+  a fix that has never been seen red proves nothing.
+- `pnpm --filter @tessera/sdk generate` → **zero diff** (no REST contract change, only clamp policy);
+  `apps/docs/generated/mcp-tools.json` **did** move, because the tool description now publishes the
+  rule — regenerated in the same increment per E-026.
+
+### Decisions
+
+- **ADR-0056** — silent + published clamp, explicit in `explain`, metered deployments only.
+- **ADR-0055** (earlier this session) — trunk-based on `main` now that a remote exists;
+  `commit-policy.md` had said "no remote" while `origin` pointed at GitHub, and its own rule for a
+  remote-having repo prescribed branch-per-feature. Resolved in favour of reality on the lead's call.
+- Effects: **E-028 added**; E-003 and E-013 extended.
+
+**Next step:** none for F-077. The remaining `must` defect is **F-071** (scanned content lands in the
+default tenant regardless of who registered the source) — arguably more severe than this one, and the
+natural next pick over the lowest-id **F-055**.
+
 ## 2026-07-21 — F-054 DONE: the skills registry — one engine, three install paths
 
 Claimed **F-054** (lowest-id eligible R4; blocker F-051 done) by the deterministic

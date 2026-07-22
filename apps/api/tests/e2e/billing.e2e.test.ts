@@ -1,5 +1,10 @@
 import { createHmac } from 'node:crypto';
-import { createDodoBilling, createInMemorySubscriptionStore } from '@tessera/billing';
+import {
+  createDodoBilling,
+  createInMemorySubscriptionStore,
+  createLocalBilling,
+  entitlementsFor,
+} from '@tessera/billing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildServer, type ApiServices } from '../../src/index';
 import { createInMemoryServices } from './support/in-memory-services';
@@ -51,15 +56,52 @@ describe('@tessera/api billing (F-030)', () => {
       expect(res.json().error.code).toBe('VALIDATION');
     });
 
-    it('clamps an over-plan compile budget to the free tier (F-035)', async () => {
+    it('does NOT clamp the compile budget when no provider is wired (F-077, ADR-0056)', async () => {
+      // Behaviour CHANGE, deliberate and recorded: this previously asserted a clamp to 8000,
+      // because the route fell back to createLocalBilling() and treated a self-hosted deployment
+      // as a free-plan tenant. NFR-12 is cost control for the CLOUD; a self-hosted operator spends
+      // their own money and has no tenant to meter. The metered case is covered below and the
+      // cloud Free plan keeps its 8000 cap.
       const res = await app.inject({
         method: 'POST',
         url: '/v1/compile',
         payload: { task: 'how does authentication work', budget: 50000 },
       });
       expect(res.statusCode).toBe(200);
-      // Free plan caps maxTokensPerCompile at 8000.
-      expect(res.json().budget).toBe(8000);
+      expect(res.json().budget).toBe(50000);
+    });
+  });
+
+  describe('metered deployment (a billing provider IS wired)', () => {
+    let app: ReturnType<typeof buildServer>;
+    beforeEach(async () => {
+      // Wiring the local adapter means "meter me": it reports a free subscription, so the free cap
+      // applies exactly as it does for any cloud tenant on `free`.
+      app = buildServer({ ...services, billing: createLocalBilling() });
+      await app.ready();
+    });
+    afterEach(async () => {
+      await app.close();
+    });
+
+    it('clamps an over-plan compile budget to the tenant plan (F-035)', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/compile',
+        payload: { task: 'how does authentication work', budget: 50000 },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().budget).toBe(entitlementsFor('free').maxTokensPerCompile);
+    });
+
+    it('leaves a within-plan budget alone', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/compile',
+        payload: { task: 'how does authentication work', budget: 4000 },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().budget).toBe(4000);
     });
   });
 

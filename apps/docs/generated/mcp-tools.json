@@ -177,7 +177,7 @@
     },
     {
       "name": "compile_context",
-      "description": "Compile a provenance-tagged, token-budget-bounded Context Package for a task.",
+      "description": "Compile a provenance-tagged, token-budget-bounded Context Package for a task. On a metered deployment the budget is capped to your plan; the returned `budget` is always the effective one, so compare it against what you asked for to see a cap.",
       "inputSchema": {
         "type": "object",
         "properties": {

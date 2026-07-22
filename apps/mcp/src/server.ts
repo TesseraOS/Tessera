@@ -26,6 +26,8 @@ import type { CompileRequest } from '@tessera/context-compiler';
 import type { GetEffectsOptions } from '@tessera/knowledge-graph';
 // The SAME mapper the REST route uses (ADR-0036 parity, structurally) — see @tessera/retrieval.
 import { toRetrievalInclude, type RetrievalQuery } from '@tessera/retrieval';
+// Fastify-free (deps: @tessera/core only), so importing it here keeps the F-012 invariant.
+import { createCompileBudgetClamp } from '@tessera/billing';
 // The first-party skills registry (F-054). Manifests from the root entry; bodies from the separate
 // `/content` entry, so only `get_skill` can reach a document.
 import { SKILLS, findSkill, skillInstallLocations, type SkillManifest } from '@tessera/skills';
@@ -211,6 +213,15 @@ export function buildMcpServer(
   const { gateway, tokenStore } = options;
   const configuredProject = options.defaultProject ?? DEFAULT_PROJECT_ID;
 
+  /**
+   * The plan entitlement clamp (NFR-12; F-077) — the SAME composition `POST /v1/compile` uses, so
+   * the rule cannot be enforced on one surface and forgotten on the other. It was forgotten here:
+   * before F-077 this surface forwarded any requested budget verbatim, leaving NFR-12 enforced for
+   * humans and unenforced for agents — the population the cap exists to meter. Unmetered when the
+   * deployment wired no BillingProvider (ADR-0056).
+   */
+  const clampBudget = createCompileBudgetClamp(services.billing);
+
   /** The token store, or a clean error when the deployment wired none (mirrors the REST 409). */
   const requireTokenStore = (): TokenStore => {
     if (tokenStore === undefined) {
@@ -289,17 +300,19 @@ export function buildMcpServer(
   server.registerTool(
     'compile_context',
     {
-      description: 'Compile a provenance-tagged, token-budget-bounded Context Package for a task.',
+      description:
+        'Compile a provenance-tagged, token-budget-bounded Context Package for a task. On a metered deployment the budget is capped to your plan; the returned `budget` is always the effective one, so compare it against what you asked for to see a cap.',
       inputSchema: compileShape,
     },
     (args, extra) =>
       runTool(async () => {
         const ctx = await guard('compile_context', extra);
         const project = await projectOf(ctx, extra);
+        const tenantId = tenantOf(ctx);
         return services.compiler
-          .forTenant(tenantOf(ctx))
+          .forTenant(tenantId)
           .forProject(project)
-          .compile(toCompileRequest(args));
+          .compile(toCompileRequest({ ...args, budget: await clampBudget(tenantId, args.budget) }));
       }),
   );
 
@@ -466,12 +479,17 @@ export function buildMcpServer(
       runTool(async () => {
         const ctx = await guard('explain', extra);
         const project = await projectOf(ctx, extra);
+        const tenantId = tenantOf(ctx);
+        const requestedBudget = args.budget ?? DEFAULT_EXPLAIN_BUDGET;
         const request = toCompileRequest({
           ...args,
-          budget: args.budget ?? DEFAULT_EXPLAIN_BUDGET,
+          budget: await clampBudget(tenantId, requestedBudget),
         });
+        // Unlike compile_context, explain NAMES the clamp (ADR-0056): it is the diagnostic path an
+        // agent reaches for when a package looks wrong, and it already pays for prose.
         return buildExplanation(
-          await services.compiler.forTenant(tenantOf(ctx)).forProject(project).compile(request),
+          await services.compiler.forTenant(tenantId).forProject(project).compile(request),
+          { requestedBudget },
         );
       }),
   );

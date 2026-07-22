@@ -80,3 +80,19 @@ describe('buildExplanation', () => {
     expect(buildExplanation(direct).fragments[0]).not.toHaveProperty('expandedFrom');
   });
 });
+
+describe('budgetClamp (F-077, ADR-0056)', () => {
+  it('names the clamp when the requested budget exceeded the effective one', () => {
+    // `pkg.budget` is 100 — the EFFECTIVE budget, because the caller clamps before compiling.
+    expect(buildExplanation(pkg, { requestedBudget: 50_000 }).budgetClamp).toEqual({
+      requested: 50_000,
+      effective: 100,
+    });
+  });
+
+  it('omits it when nothing was clamped, so the common case costs nothing', () => {
+    expect(buildExplanation(pkg, { requestedBudget: 100 })).not.toHaveProperty('budgetClamp');
+    expect(buildExplanation(pkg, { requestedBudget: 50 })).not.toHaveProperty('budgetClamp');
+    expect(buildExplanation(pkg)).not.toHaveProperty('budgetClamp');
+  });
+});

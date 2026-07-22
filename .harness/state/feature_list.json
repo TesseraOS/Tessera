@@ -2542,7 +2542,7 @@
       "package": "@tessera/mcp",
       "release": "R4",
       "priority": "must",
-      "status": "backlog",
+      "status": "done",
       "blockedBy": [],
       "acceptance": [
         "The MCP `compile_context` and `explain` tools enforce the caller's plan cap, so an over-cap budget cannot produce an over-cap package: an mcp e2e asks for a budget above the free cap and asserts the returned package is bounded by the cap (today it is granted in full)",

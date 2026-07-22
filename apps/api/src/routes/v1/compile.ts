@@ -1,9 +1,4 @@
-import {
-  clampBudgetToPlan,
-  createLocalBilling,
-  effectiveEntitlements,
-  type BillingProvider,
-} from '@tessera/billing';
+import { createCompileBudgetClamp } from '@tessera/billing';
 import type { CompileRequest } from '@tessera/context-compiler';
 import type { ZodFastify } from '../../app-types.js';
 import { requirePermission, tenantOf } from '../../auth/index.js';
@@ -17,9 +12,11 @@ import {
 
 /** `POST /v1/compile` — compile a provenance-tagged, budget-bounded Context Package (F-010). */
 export function registerCompileRoutes(app: ZodFastify, services: ApiServices): void {
-  // The token budget is capped to the caller's plan entitlement (NFR-12; F-035). Falls back to the
-  // local/free adapter when no billing is wired, so free-tier limits apply by default.
-  const billing: BillingProvider = services.billing ?? createLocalBilling();
+  // The token budget is capped to the caller's plan entitlement (NFR-12; F-035), through the SAME
+  // clamp the MCP compile tools use (F-077) — one rule, two surfaces. A deployment that wired no
+  // BillingProvider is self-hosted and unmetered, so it is NOT capped (ADR-0056); the previous
+  // `?? createLocalBilling()` fallback capped self-hosted users at the cloud free tier.
+  const clampBudget = createCompileBudgetClamp(services.billing);
 
   app.post<{ Body: CompileBody }>(
     '/compile',
@@ -35,11 +32,10 @@ export function registerCompileRoutes(app: ZodFastify, services: ApiServices): v
     },
     async (request) => {
       const tenantId = tenantOf(request);
-      const entitlements = effectiveEntitlements(await billing.getSubscription(tenantId));
       const { task, budget, retrievalLimit, filters } = request.body;
       const compileRequest: CompileRequest = {
         task,
-        budget: clampBudgetToPlan(entitlements, budget),
+        budget: await clampBudget(tenantId, budget),
         ...(retrievalLimit !== undefined ? { retrievalLimit } : {}),
         ...(filters !== undefined
           ? { filters: filters.kinds !== undefined ? { kinds: filters.kinds } : {} }

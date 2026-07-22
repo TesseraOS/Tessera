@@ -172,6 +172,10 @@
         {
           "kind": "module",
           "ref": "@tessera/mcp list_skills + get_skill (F-054, FR-69, ADR-0036 §3) — the FIRST tools that wrap NO ApiServices: they serve the static @tessera/skills registry, identical on every deployment, so no tenant/project scoping applies and projectOf is deliberately not called. Tool count 18 -> 20, which means all THREE exhaustive maps in gateway.ts (McpToolName, TOOL_PERMISSIONS, MCP_AUDIT_ACTIONS) plus src/gateway.test.ts's sorted-name assertion and tests/e2e/mcp.e2e.test.ts's advertised-set assertion move together. RBAC/audit REUSE search:read + search rather than minting skills:read — the registry is public first-party content (the same bytes the marketing site serves unauthenticated), so a new permission would ripple the RBAC catalog through /v1/rbac -> OpenAPI -> the generated SDK -> the dashboard token-scope UI for content no scope protects, and would leave a search:read token unable to read a public document (the get_stats precedent, argued inline). NO REST ROUTE AND NO SDK/OPENAPI REGEN: the /v1 surface is untouched — do not go looking for one. get_skill's input is z.enum(SKILL_NAMES), so adding a skill changes this tool's JSON Schema and therefore apps/docs generated/mcp-tools.json (E-026/E-027)"
+        },
+        {
+          "kind": "module",
+          "ref": "THE ENTITLEMENT CLAMP NOW BINDS BOTH SURFACES (F-077, ADR-0056): packages/billing/src/budget.ts `createCompileBudgetClamp` is the ONE composition of effectiveEntitlements + clampBudgetToPlan, built by apps/api/src/routes/v1/compile.ts AND by apps/mcp/src/server.ts for compile_context + explain. Before this, MCP had no clamp at all — NFR-12 was enforced for humans and unenforced for agents. NO WIRE-SHAPE CHANGE on compile_context (behaviour only: an over-cap budget now returns a capped package) and NO REST route change, so `pnpm --filter @tessera/sdk generate` produces a ZERO DIFF — asserted, not assumed. `explain` gained an OPTIONAL budgetClamp {requested, effective}, emitted only when a clamp applied. The compile_context tool DESCRIPTION changed (it now publishes the cap rule), which is why apps/docs/generated/mcp-tools.json moved in the same increment (E-026). Extending the rule must go through budget.ts or the surfaces drift again"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -570,6 +574,10 @@
         {
           "kind": "test",
           "ref": "tests/bench (F-049) — the compiler now has a MEASURED latency + token contract: compile p95 at the default budget, the compile envelope ratio (response tokens / package totalTokens), and FR-30 budget adherence are all asserted per run. A change that slows compilation or fattens the package fails the perf gate."
+        },
+        {
+          "kind": "module",
+          "ref": "createCompileBudgetClamp (packages/billing/src/budget.ts) is the single implementation of the compile entitlement rule, and its dependents are BOTH surfaces (apps/api compile route, apps/mcp compile_context + explain) plus apps/mcp/tests/e2e/entitlements.e2e.test.ts, whose parity case fails if either surface is extended without the other. ADR-0056 also CHANGED WHO IS METERED: a deployment that wired no BillingProvider is self-hosted and is NOT clamped — the previous `services.billing ?? createLocalBilling()` fallback conflated *unmetered* with *free-tier* and capped self-hosted users at the cloud Free plan's 8000. This is a REST behaviour change too, not only MCP. The plan catalog is untouched: a metered tenant on `free` still clamps at 8000, and wiring the local adapter EXPLICITLY still meters you (the unmetered case is the absence of a provider, not the identity of one)"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -1240,6 +1248,35 @@
       ],
       "kind": "EFFECT_LINK",
       "rationale": "One engine, three surfaces: the marketing catalog, the CLI, and the MCP tools all serve the SAME SKILL.md bytes, which is what makes 'installed by download == installed by CLI == fetched by an agent' provable rather than promised (asserted byte-for-byte in all three suites, plus against the prerendered file Next emits). The obligations that follow, in increasing blast radius: (1) EDITING a SKILL.md requires `pnpm --filter @tessera/skills generate` + committing src/generated/*, or the package's own drift gate reddens; (2) ADDING OR RENAMING a skill additionally moves the marketing static params + sitemap + llms.txt, get_skill's z.enum input schema, and therefore apps/docs's generated reference — two different drift gates in two packages fail if either regeneration is skipped; (3) RENAMING AN MCP TOOL breaks the skills that teach it, caught by apps/mcp/src/skills.test.ts. Two deliberate structural choices worth preserving: MANIFESTS AND BODIES SIT BEHIND SEPARATE ENTRY POINTS ('.' and './content'), so a listing surface importing the root CANNOT ship bodies — NFR-4 enforced by the module graph instead of by review; and the format is the Agent Skills spec verbatim with the FRONTMATTER AS THE MANIFEST (no sibling skill.json), so the artifact an agent installs cannot disagree with the catalog that advertised it. Manifest PROSE fields (description/compatibility/headline/why) are gated against Markdown syntax because they render as plain text on the public page, in `tessera skills list`, and in a list_skills response — a defect the screenshot review actually caught, not a hypothetical.",
+      "confidence": 1,
+      "origin": "manual"
+    },
+    {
+      "id": "E-028",
+      "from": {
+        "kind": "contract",
+        "ref": "ContextPackage.budget is the EFFECTIVE budget (packages/context-compiler/src/stages/assemble.ts sets `budget: request.budget`, and every caller clamps BEFORE invoking the compiler)"
+      },
+      "to": [
+        {
+          "kind": "module",
+          "ref": "apps/mcp/src/explain.ts — derives `budgetClamp` from `requestedBudget > pkg.budget`; the derivation is only sound while assemble echoes the request"
+        },
+        {
+          "kind": "module",
+          "ref": "apps/web Inspector clamp notice (F-062) — renders 'Capped to X — you requested Y' from the same comparison, with no additive field"
+        },
+        {
+          "kind": "module",
+          "ref": "apps/mcp compile_context — its tool description tells agents to compare the returned budget against what they asked for, which is only true because of this invariant"
+        },
+        {
+          "kind": "test",
+          "ref": "apps/mcp/tests/e2e/entitlements.e2e.test.ts + apps/api/tests/e2e/billing.e2e.test.ts — both assert on the returned `budget` as the effective one"
+        }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "ADR-0056's decision to clamp SILENTLY rests entirely on this invariant: because the compiler echoes the budget it was given and callers clamp first, `requested > pkg.budget` <=> clamped, EXACTLY — so a clamp is distinguishable from a thin corpus (which returns budget === requested with few fragments) using only data the caller already holds. That is what made an additive per-call field unnecessary on the token-lean agent surface (NFR-4), and it is the same reasoning F-062 reached independently for the dashboard. IF THE COMPILER EVER ECHOES THE REQUESTED (pre-clamp) BUDGET INSTEAD, or clamping moves inside the compiler, three consumers silently start lying at once: explain's budgetClamp, the dashboard notice, and compile_context's own published advice. Recorded because F-077's feature note asserted the OPPOSITE ('an agent quietly downgraded cannot distinguish a clamp from a thin corpus') and a decision was nearly built on the false premise — the invariant is load-bearing and undocumented until now.",
       "confidence": 1,
       "origin": "manual"
     }

@@ -17,8 +17,9 @@ import { FIXTURE_TERM, readHandoff } from '../support/handoff.js';
  * single-user machine case), so that is what we drive. The gap is recorded as a finding (**F-072**),
  * not papered over here.
  *
- * The tenant is the deployment's default one for a second reason — see the `TENANT` note in
- * `support/full-stack-server.mjs` and **F-071** (ingestion indexes into the default tenant).
+ * The agent runs as the deployment's real tenant (`handoff.tenantId` = `acme`) — the scan indexed
+ * into that tenant since F-071 (ADR-0057), so the zero-auth MCP process reads acme's own corpus with
+ * `TESSERA_AUTH_TENANT` set to it.
  */
 const repoRoot = resolve(process.cwd(), '../..');
 const mcpBin = resolve(repoRoot, 'apps/server/dist/bin/mcp.js');

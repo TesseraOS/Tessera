@@ -17,6 +17,11 @@ export interface Handoff {
   readonly dataDir: string;
   readonly fixtureRoot: string;
   readonly scanSummary: { added: number; modified: number; removed: number; unchanged: number };
+  /** An owner token for a DIFFERENT tenant ({@link Handoff.otherTenantId}) — for isolation checks (F-071). */
+  readonly otherToken: string;
+  readonly otherTenantId: string;
+  /** A real project under {@link Handoff.tenantId}, holding the sunstone fixture (F-050 carve-out). */
+  readonly betaProjectId: string;
   /** The exact `TESSERA_*` env a second process needs to attach to this same deployment. */
   readonly env: Record<string, string>;
 }
@@ -40,3 +45,6 @@ export function readHandoff(): Handoff {
 
 /** The term that appears ONLY in the fixture corpus, so a hit can't be incidental. */
 export const FIXTURE_TERM = 'quernstone';
+
+/** The term that appears ONLY in fixture-b, scanned under globex/default and acme/beta (F-071). */
+export const FIXTURE_B_TERM = 'sunstone';

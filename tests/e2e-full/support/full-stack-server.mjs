@@ -22,6 +22,7 @@ const packageRoot = resolve(here, '..');
 
 const port = Number(process.env.E2E_FULL_API_PORT ?? 3200);
 const fixtureRoot = join(packageRoot, 'fixture');
+const fixtureBRoot = join(packageRoot, 'fixture-b');
 const handoffPath = join(packageRoot, '.tmp', 'handoff.json');
 
 /** A fresh data directory per run — the suite must never depend on a previous run's state. */
@@ -44,21 +45,19 @@ const tesseraEnv = {
 };
 
 /**
- * **Do not change this to a non-default tenant without fixing F-071 first.**
- *
- * Ingestion indexes into the DEFAULT tenant unconditionally (`createIndexingDocumentSink` calls
- * `indexDocument` with no `tenantId`; see the "ingestion runs in the default tenant (F-038 boundary)"
- * note in `packages/config/src/sources/ingestion-sink.ts`). So a source registered under tenant
- * `acme` scans "successfully" — `added: 3` — and its content lands in `default`, invisible to `acme`.
- * F-048 found this; F-071 fixes it.
- *
- * Until then the honest deployment to test is the single-tenant one, which is the shipped local shape
- * (ADR-0003): token auth on, everything in the default tenant. Point this at `acme` and the human
- * journey fails with an empty search for reasons that have nothing to do with the dashboard.
+ * The suite runs under REAL tenants now that F-071 (ADR-0057) threads the scan's scope to the sink —
+ * content indexes into the tenant/project that registered the source, not `DEFAULT_TENANT_ID`. The
+ * primary journeys run as `acme`; `globex` and the `beta` project exist only to prove isolation
+ * (`scope-isolation.spec.ts`): what `acme`/default scanned must be invisible to them, and vice versa.
+ * Before F-071 this file was pinned to `default` because a non-default scan landed its content in
+ * `default` and searched empty — that constraint is gone.
  */
-const TENANT = 'default';
+const PRIMARY_TENANT = 'acme';
+const OTHER_TENANT = 'globex';
 /** fixture/: src/ledger.ts, src/reporting.ts, docs/decisions.md — pinned so a lost file fails loudly. */
 const FIXTURE_FILE_COUNT = 3;
+/** fixture-b/: src/beacon.ts — one file, the "sunstone" corpus used to prove cross-scope isolation. */
+const FIXTURE_B_FILE_COUNT = 1;
 
 const handle = await startApiServer({
   env: { ...process.env, ...tesseraEnv },
@@ -70,31 +69,63 @@ const { runtime } = handle;
 if (runtime.auth.tokenStore === undefined) {
   throw new Error('token mode did not wire a token store');
 }
-const { token } = await runtime.auth.tokenStore.issue({
-  tenantId: TENANT,
-  principalId: 'e2e-user',
-  roles: ['owner'],
-  displayName: 'E2E User',
-});
-
-// Register the fixture repository as a real source and scan it through the real ingestion pipeline.
-// The in-process queue drains, so the scan is synchronous-complete by the time this resolves.
-const sources = runtime.sources.forTenant(TENANT);
-const source = await sources.register({
-  kind: 'filesystem',
-  label: 'quernstone-fixture',
-  config: { root: fixtureRoot },
-});
-const { summary } = await sources.scan(source.id);
-
-// Fail fast, loudly, BEFORE reporting healthy: a suite that starts against an unindexed corpus would
-// report confusing downstream failures instead of the real one. The fixture is 3 files, all new on a
-// fresh data dir, so `added` must be 3.
-if (summary.added !== FIXTURE_FILE_COUNT) {
-  throw new Error(
-    `fixture scan added ${summary.added} documents, expected ${FIXTURE_FILE_COUNT}: ${JSON.stringify(summary)}`,
-  );
+if (runtime.services.projects === undefined) {
+  throw new Error('project service was not wired');
 }
+
+/** Issue an owner token for a tenant through the real token store. */
+async function issueOwner(tenantId, principalId) {
+  const { token } = await runtime.auth.tokenStore.issue({
+    tenantId,
+    principalId,
+    roles: ['owner'],
+    displayName: `E2E ${tenantId}`,
+  });
+  return token;
+}
+
+/** Register + scan a source through the real pipeline (the in-process queue drains synchronously). */
+async function scanFixture(scopedSources, label, root, expectedCount) {
+  const source = await scopedSources.register({ kind: 'filesystem', label, config: { root } });
+  const { summary } = await scopedSources.scan(source.id);
+  // Fail fast, loudly, BEFORE reporting healthy: a suite that starts against an unindexed corpus would
+  // report confusing downstream failures instead of the real one.
+  if (summary.added !== expectedCount) {
+    throw new Error(
+      `${label} scan added ${summary.added} documents, expected ${expectedCount}: ${JSON.stringify(summary)}`,
+    );
+  }
+  return { source, summary };
+}
+
+const token = await issueOwner(PRIMARY_TENANT, 'e2e-user');
+const otherToken = await issueOwner(OTHER_TENANT, 'e2e-other');
+
+// The primary journeys run as acme/default over the quernstone fixture.
+const { source, summary } = await scanFixture(
+  runtime.sources.forTenant(PRIMARY_TENANT),
+  'quernstone-fixture',
+  fixtureRoot,
+  FIXTURE_FILE_COUNT,
+);
+
+// A real project under acme, and the sunstone fixture scanned into it — so isolation can be proven
+// ACROSS projects within one tenant, not only across tenants (F-050 carve-out).
+const betaProject = await runtime.services.projects.create(PRIMARY_TENANT, { name: 'beta' });
+await scanFixture(
+  runtime.sources.forTenant(PRIMARY_TENANT).forProject(betaProject.id),
+  'sunstone-fixture-acme-beta',
+  fixtureBRoot,
+  FIXTURE_B_FILE_COUNT,
+);
+
+// The same sunstone fixture scanned under a DIFFERENT tenant — globex/default.
+await scanFixture(
+  runtime.sources.forTenant(OTHER_TENANT),
+  'sunstone-fixture-globex',
+  fixtureBRoot,
+  FIXTURE_B_FILE_COUNT,
+);
 
 mkdirSync(dirname(handoffPath), { recursive: true });
 writeFileSync(
@@ -103,11 +134,15 @@ writeFileSync(
     {
       apiUrl: handle.url,
       token,
-      tenantId: TENANT,
+      tenantId: PRIMARY_TENANT,
       sourceId: source.id,
       dataDir,
       fixtureRoot,
       scanSummary: summary,
+      // The cross-scope actors for scope-isolation.spec.ts (F-071 clauses 2 + 5).
+      otherToken,
+      otherTenantId: OTHER_TENANT,
+      betaProjectId: betaProject.id,
       // The exact env a second process needs to attach to THIS deployment (the agent journey uses it).
       env: tesseraEnv,
     },
@@ -117,7 +152,7 @@ writeFileSync(
 );
 
 console.log(
-  `[e2e-full] real server on ${handle.url} · tenant=${TENANT} · data=${dataDir} · scan=${JSON.stringify(summary)}`,
+  `[e2e-full] real server on ${handle.url} · tenant=${PRIMARY_TENANT} (+${OTHER_TENANT}, project=${betaProject.id}) · data=${dataDir} · scan=${JSON.stringify(summary)}`,
 );
 
 async function shutdown() {

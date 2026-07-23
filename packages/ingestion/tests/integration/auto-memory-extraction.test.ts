@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { newId } from '@tessera/core';
+import { DEFAULT_PROJECT_ID, DEFAULT_TENANT_ID, newId } from '@tessera/core';
 import { createInProcessQueue } from '@tessera/storage';
 import type { SourceDescriptor } from '../../src/domain';
 import { createFilesystemConnector } from '../../src/connectors/filesystem';
@@ -65,6 +65,7 @@ describe('auto memory extraction (filesystem → pipeline → memory)', () => {
         queue,
         connector,
         source,
+        scope: { tenantId: DEFAULT_TENANT_ID, projectId: DEFAULT_PROJECT_ID },
         manifest,
       }).scan();
       await queue.shutdown();

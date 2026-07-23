@@ -1,8 +1,18 @@
 import { createHash } from 'node:crypto';
-import type { Id, TenantId } from '@tessera/core';
+import type { Id, ProjectId, TenantId } from '@tessera/core';
 
 /** Identifies a configured ingestion source (one connector instance). */
 export type SourceId = Id<'Source'>;
+
+/**
+ * The `(tenant, project)` a scan's content belongs to (F-071, ADR-0057). It rides the queue job so the
+ * worker — built once per runtime, not per tenant — knows where to index, instead of defaulting to
+ * `DEFAULT_TENANT_ID`. Two strings, so it survives a real queue transport (BullMQ) unchanged.
+ */
+export interface IngestionScope {
+  readonly tenantId: TenantId;
+  readonly projectId: ProjectId;
+}
 
 /** Stable identifier for an ingested document. */
 export type DocumentId = Id<'Document'>;
@@ -26,6 +36,12 @@ export type ChangeKind = 'added' | 'modified' | 'removed';
  */
 export interface ChangeEvent {
   readonly source: SourceDescriptor;
+  /**
+   * The `(tenant, project)` this content belongs to (F-071, ADR-0057). **Required, not optional:** an
+   * optional scope with a default fallback would keep the exact silent-default bug this closes — the
+   * worker indexes through `sink.forTenant(scope.tenantId).forProject(scope.projectId)`, never a default.
+   */
+  readonly scope: IngestionScope;
   /** Source-relative, `/`-delimited path. */
   readonly path: string;
   readonly changeKind: ChangeKind;
@@ -88,16 +104,24 @@ export interface ScanSummary {
  * The composition root bridges these to the API's SSE stream (`document.*` from the worker;
  * `source.scan.*` lifecycle from the source service). Payloads stay JSON-safe and non-sensitive.
  *
- * **Tenancy (ADR-0050).** The scan-lifecycle events carry the tenant that owns the source, because
- * the source service resolves it from the registry record. The `document.*` events do **not**: they
- * come off the queue in the worker, which has no tenant — the same gap that makes ingestion write to
- * the default tenant (F-071). Rather than invent an attribution the worker cannot know, the type
- * says so, and the composition root's SSE bridge attributes them to the tenant ingestion actually
- * wrote to. When F-071 carries the tenant onto the queue job, the field belongs here too.
+ * **Tenancy (ADR-0050, closed by ADR-0057).** Every scan-attributable event carries the owning
+ * `(tenant, project)` scope. The scan-lifecycle events resolve it from the registry record; the
+ * `document.*` events now carry it too, because F-071 threads the scope onto the queue job — so the
+ * worker knows the tenant, and the composition root's SSE bridge attributes `document.*` to the
+ * tenant ingestion actually wrote to. (`document.processed` is domain-internal — progress counting in
+ * `SourceService`, which already holds the scope — so it stays scope-free; adding an unused field
+ * would be surface for nobody.)
  */
 export interface IngestionEvents extends Record<string, unknown> {
-  readonly 'document.ingested': { readonly document: ProcessedDocument };
-  readonly 'document.removed': { readonly sourceId: SourceId; readonly path: string };
+  readonly 'document.ingested': {
+    readonly document: ProcessedDocument;
+    readonly scope: IngestionScope;
+  };
+  readonly 'document.removed': {
+    readonly sourceId: SourceId;
+    readonly path: string;
+    readonly scope: IngestionScope;
+  };
   /**
    * One queued change event finished processing — emitted for **every** outcome (F-081).
    *

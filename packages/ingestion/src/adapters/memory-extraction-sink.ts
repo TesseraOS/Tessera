@@ -1,3 +1,4 @@
+import type { ProjectId, TenantId } from '@tessera/core';
 import type { DocumentSink } from '../ports/sink.js';
 import type {
   CandidateMemory,
@@ -23,6 +24,9 @@ export interface MemoryCaptureService {
   capture(input: CandidateMemory): Promise<CapturedMemory>;
   edit(lineageId: string, patch: { readonly body: string }): Promise<CapturedMemory>;
   list(filter?: { readonly kind?: CandidateMemoryKind }): Promise<readonly CapturedMemory[]>;
+  /** Scoped views (F-071) — the sink rebinds these so a scan's auto-memories land in the scanning tenant. */
+  forTenant(tenantId: TenantId): MemoryCaptureService;
+  forProject(projectId: ProjectId): MemoryCaptureService;
 }
 
 export interface MemoryExtractionSinkOptions {
@@ -74,6 +78,12 @@ async function captureIdempotently(
  */
 export function createMemoryExtractionSink(options: MemoryExtractionSinkOptions): DocumentSink {
   const { memory, extractors } = options;
+  // Rebind the memory target for a scoped view (F-071): an ADR ingested under tenant A must become
+  // A's memory, not the default tenant's — otherwise a scan silently writes one org's decisions into
+  // another's. The acceptance names only the indexing + graph sinks, but a required scoped view forces
+  // the question, and returning `this` (writing to `default`) is the wrong answer.
+  const withMemory = (next: MemoryCaptureService): DocumentSink =>
+    createMemoryExtractionSink({ memory: next, extractors });
   return {
     async upsert(document) {
       for (const candidate of runExtractors(extractors, document)) {
@@ -82,6 +92,12 @@ export function createMemoryExtractionSink(options: MemoryExtractionSinkOptions)
     },
     remove() {
       return Promise.resolve();
+    },
+    forTenant(tenantId) {
+      return withMemory(memory.forTenant(tenantId));
+    },
+    forProject(projectId) {
+      return withMemory(memory.forProject(projectId));
     },
   };
 }

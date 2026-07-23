@@ -1,12 +1,16 @@
-import type { ChangeEvent, SourceDescriptor, SourceEntry } from '../domain.js';
+import type { ChangeEvent, IngestionScope, SourceDescriptor, SourceEntry } from '../domain.js';
 
 /**
  * Diff a source's current entries against the last-known manifest snapshot to produce the minimal
  * set of change events (FR-8): `added` (new path), `modified` (hash differs), `removed` (gone).
  * Unchanged entries produce nothing — this is what prevents a full re-index on a small change.
+ *
+ * Every emitted event is stamped with the source's `scope` (F-071), so the worker indexes into the
+ * `(tenant, project)` that owns the source rather than the default tenant.
  */
 export function diffEntries(
   source: SourceDescriptor,
+  scope: IngestionScope,
   current: readonly SourceEntry[],
   prior: ReadonlyMap<string, string>,
 ): ChangeEvent[] {
@@ -19,6 +23,7 @@ export function diffEntries(
     if (priorHash === undefined) {
       events.push({
         source,
+        scope,
         path: entry.path,
         changeKind: 'added',
         contentHash: entry.contentHash,
@@ -26,6 +31,7 @@ export function diffEntries(
     } else if (priorHash !== entry.contentHash) {
       events.push({
         source,
+        scope,
         path: entry.path,
         changeKind: 'modified',
         contentHash: entry.contentHash,
@@ -35,7 +41,7 @@ export function diffEntries(
 
   for (const path of prior.keys()) {
     if (!seen.has(path)) {
-      events.push({ source, path, changeKind: 'removed' });
+      events.push({ source, scope, path, changeKind: 'removed' });
     }
   }
 

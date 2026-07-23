@@ -1,6 +1,6 @@
 import { ValidationError } from '@tessera/core';
 import type { Queue } from '@tessera/storage';
-import type { ChangeEvent, ScanSummary, SourceDescriptor } from '../domain.js';
+import type { ChangeEvent, IngestionScope, ScanSummary, SourceDescriptor } from '../domain.js';
 import type { Connector } from '../ports/connector.js';
 import type { IngestionManifest } from '../ports/manifest.js';
 import { diffEntries } from '../connectors/scan-diff.js';
@@ -13,6 +13,11 @@ export interface IngestionCoordinatorOptions {
   readonly connector: Connector;
   /** Descriptor for the source being scanned. */
   readonly source: SourceDescriptor;
+  /**
+   * The `(tenant, project)` that owns the source (F-071). Stamped on every enqueued change event so
+   * the worker indexes into the scanning tenant, not the default one.
+   */
+  readonly scope: IngestionScope;
   /** The content-hash index the scan diffs against (advanced by the worker, not here). */
   readonly manifest: IngestionManifest;
   /** Queue topic to publish to (default {@link INGESTION_TOPIC}). */
@@ -33,7 +38,7 @@ export interface IngestionCoordinator {
 export function createIngestionCoordinator(
   options: IngestionCoordinatorOptions,
 ): IngestionCoordinator {
-  const { queue, connector, source, manifest } = options;
+  const { queue, connector, source, scope, manifest } = options;
   const topic = options.topic ?? INGESTION_TOPIC;
 
   if (connector.kind !== source.kind) {
@@ -45,7 +50,7 @@ export function createIngestionCoordinator(
   return {
     async scan() {
       const [entries, prior] = await Promise.all([connector.list(), manifest.snapshot(source.id)]);
-      const events = diffEntries(source, entries, prior);
+      const events = diffEntries(source, scope, entries, prior);
       await Promise.all(events.map((event: ChangeEvent) => queue.enqueue(topic, event)));
 
       const added = events.filter((event) => event.changeKind === 'added').length;

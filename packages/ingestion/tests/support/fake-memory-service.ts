@@ -33,7 +33,7 @@ export function createFakeMemoryService(): FakeMemoryService {
 
   const currentVersions = (): StoredMemory[] => versions.filter((memory) => memory.current);
 
-  return {
+  const service: FakeMemoryService = {
     capture(input: CandidateMemory) {
       seq += 1;
       const memory: StoredMemory = {
@@ -73,5 +73,16 @@ export function createFakeMemoryService(): FakeMemoryService {
     allVersions() {
       return [...versions];
     },
+    // Single-scope fake: the scoped views are the same store (F-071). Real cross-scope memory
+    // isolation is exercised against the actual MemoryService in the runtime integration test; here
+    // the sink only needs `forTenant`/`forProject` to exist and round-trip.
+    forTenant() {
+      return service;
+    },
+    forProject() {
+      return service;
+    },
   };
+
+  return service;
 }

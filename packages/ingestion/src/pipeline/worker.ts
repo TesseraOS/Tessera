@@ -60,16 +60,30 @@ export function createIngestionWorker(options: IngestionWorkerOptions): Ingestio
     createRedactionProcessor(),
   ];
 
-  async function forget(sourceId: ChangeEvent['source']['id'], path: string): Promise<void> {
-    await sink.remove({ sourceId, path });
-    await manifest.delete(sourceId, path);
-    await events?.emit('document.removed', { sourceId, path });
+  /** Resolve the destination sink for this job's scope (F-071). Never falls back to a default. */
+  function scopedSink(scope: ChangeEvent['scope']): DocumentSink {
+    return sink.forTenant(scope.tenantId).forProject(scope.projectId);
+  }
+
+  async function forget(event: ChangeEvent): Promise<void> {
+    const { source, path, scope } = event;
+    await scopedSink(scope).remove({ sourceId: source.id, path });
+    await manifest.delete(source.id, path);
+    await events?.emit('document.removed', { sourceId: source.id, path, scope });
   }
 
   async function handle(event: ChangeEvent): Promise<void> {
-    const { source, path, changeKind } = event;
+    const { source, scope, path, changeKind } = event;
+    // The queue is a boundary: a job that arrives without a scope is a bug (a producer that forgot to
+    // stamp it), and the one thing we must never do is silently index into the default tenant — that
+    // is the defect F-071 closes. Reject it loudly instead.
+    if (scope === undefined || scope.tenantId === '' || scope.projectId === '') {
+      throw new ValidationError('ingestion job is missing its (tenant, project) scope', {
+        details: { sourceId: source.id, path },
+      });
+    }
     if (changeKind === 'removed') {
-      await forget(source.id, path);
+      await forget(event);
       return;
     }
 
@@ -83,7 +97,7 @@ export function createIngestionWorker(options: IngestionWorkerOptions): Ingestio
     const raw = await connector.resolve(path);
     if (raw === undefined) {
       // The file vanished between scan and processing — converge by removing it.
-      await forget(source.id, path);
+      await forget(event);
       return;
     }
 
@@ -94,9 +108,9 @@ export function createIngestionWorker(options: IngestionWorkerOptions): Ingestio
     }
 
     const processed = await runPipeline(pipeline, decodeDocument(source, raw));
-    await sink.upsert(processed);
+    await scopedSink(scope).upsert(processed);
     await manifest.set(source.id, path, raw.contentHash);
-    await events?.emit('document.ingested', { document: processed });
+    await events?.emit('document.ingested', { document: processed, scope });
   }
 
   /**

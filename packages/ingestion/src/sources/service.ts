@@ -6,7 +6,13 @@ import {
   type TenantId,
 } from '@tessera/core';
 import type { Queue } from '@tessera/storage';
-import type { IngestionEvents, ScanSummary, SourceDescriptor, SourceId } from '../domain.js';
+import type {
+  IngestionEvents,
+  IngestionScope,
+  ScanSummary,
+  SourceDescriptor,
+  SourceId,
+} from '../domain.js';
 import type { Connector } from '../ports/connector.js';
 import type { IngestionManifest } from '../ports/manifest.js';
 import { createIngestionCoordinator } from '../pipeline/coordinator.js';
@@ -153,8 +159,14 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
     }
     const connector = ensureConnector(record);
     const source: SourceDescriptor = { id: record.id, kind: record.kind, label: record.label };
-    // The owning tenant, so the SSE bridge delivers these only to them (ADR-0050): the label is a
-    // repository name, which is one org's business and not another's.
+    // The owning (tenant, project) the scan indexes into (F-071): stamped on every queue job so the
+    // worker writes to the scanning tenant, never the default one.
+    const ingestionScope: IngestionScope = {
+      tenantId: record.tenantId,
+      projectId: record.projectId,
+    };
+    // The SSE lifecycle payload — the tenant so the bridge delivers these only to them (ADR-0050): the
+    // label is a repository name, which is one org's business and not another's.
     const scope = {
       sourceId: id,
       tenantId: record.tenantId,
@@ -177,7 +189,13 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
     statuses.set(id, { state: 'running', progress: { processed: 0, total: 0 }, ...keepLast });
 
     try {
-      const coordinator = createIngestionCoordinator({ queue, connector, source, manifest });
+      const coordinator = createIngestionCoordinator({
+        queue,
+        connector,
+        source,
+        scope: ingestionScope,
+        manifest,
+      });
 
       // Subscribe BEFORE the diff enqueues anything: the in-process queue delivers on the microtask
       // queue, so a job can complete while we are still awaiting `scan()`. Subscribing after would

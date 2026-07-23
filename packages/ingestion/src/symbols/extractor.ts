@@ -1,3 +1,4 @@
+import type { ProjectId, TenantId } from '@tessera/core';
 import type { ProcessedDocument } from '../domain.js';
 
 /** A top-level code symbol extracted from a source file (FR-16). */
@@ -75,4 +76,7 @@ export interface GraphWriteService {
     readonly kind?: RemovableEdgeKind;
   }): Promise<void>;
   deriveStaticEffectLinks(): Promise<number>;
+  /** Scoped views (F-071) — the graph sink rebinds these so a scan populates the scanning tenant's graph. */
+  forTenant(tenantId: TenantId): GraphWriteService;
+  forProject(projectId: ProjectId): GraphWriteService;
 }

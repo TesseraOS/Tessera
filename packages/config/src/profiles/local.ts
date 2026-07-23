@@ -22,7 +22,7 @@ import {
   type BillingProvider,
 } from '@tessera/billing';
 import { createContextCompiler } from '@tessera/context-compiler';
-import { createEventBus, DEFAULT_TENANT_ID, InternalError, ValidationError } from '@tessera/core';
+import { createEventBus, InternalError, ValidationError } from '@tessera/core';
 import {
   createFilesystemConnector,
   createGitConnector,
@@ -276,28 +276,25 @@ export async function createLocalRuntime(
   // The ingestion domain bus the worker (document.*) + source service (source.scan.*) emit onto; bridged
   // to the SSE bus below as small, non-sensitive summaries.
   const ingestionEvents = createEventBus<IngestionEvents>();
-  // Tenant attribution for the bridged SSE events (ADR-0050) — the SSE route delivers an event only
-  // to the tenant named here. `source.scan.*` carry the owning tenant from the registry record. The
-  // `document.*` events do NOT: they come off the queue, which carries no tenant, which is exactly
-  // why `createIndexingDocumentSink` below indexes into DEFAULT_TENANT_ID (F-071). So they are
-  // attributed to the tenant ingestion REALLY wrote to, not the one that asked for the scan —
-  // an honest attribution of a known-wrong write. Consequence, accepted in ADR-0050: until F-071
-  // lands, a non-default tenant does not see `document.*` for its own scans. Under-delivering beats
-  // leaking — these events are otherwise indistinguishable from another tenant's. When F-071 carries
-  // the tenant to the worker, replace INGESTION_TENANT with the event's own tenantId.
-  const INGESTION_TENANT = DEFAULT_TENANT_ID;
+  // Tenant attribution for the bridged SSE events (ADR-0050, closed by ADR-0057) — the SSE route
+  // delivers an event only to the tenant named here. Every scan-attributable event now carries its
+  // owning tenant: `source.scan.*` from the registry record, and `document.*` from the scope F-071
+  // threads onto the queue job. So `document.ingested`/`document.removed` are attributed to the tenant
+  // ingestion actually wrote to — which is now the tenant that asked for the scan. (SSE has no project
+  // dimension — `ApiEventMap` is tenant-scoped — so only `scope.tenantId` is bridged; within-tenant
+  // project isolation on the stream is a documented backlog item, ADR-0057 §consequences.)
   const bridge = [
-    ingestionEvents.on('document.ingested', ({ document }) =>
+    ingestionEvents.on('document.ingested', ({ document, scope }) =>
       events.emit('document.ingested', {
-        tenantId: INGESTION_TENANT,
+        tenantId: scope.tenantId,
         ref: document.id,
         path: document.path,
         kind: document.kind,
       }),
     ),
-    ingestionEvents.on('document.removed', ({ sourceId, path }) =>
+    ingestionEvents.on('document.removed', ({ sourceId, path, scope }) =>
       events.emit('document.removed', {
-        tenantId: INGESTION_TENANT,
+        tenantId: scope.tenantId,
         ref: documentIdFor(sourceId, path),
         path,
       }),
@@ -355,7 +352,8 @@ export async function createLocalRuntime(
   const indexedMemory = createIndexingMemoryService(memory, indexer);
   // The runtime DocumentSink: index every document (F-039) + extract memories from ADRs/settled items
   // (F-017) + populate the knowledge graph from code symbols/imports (F-040), so get_effects returns
-  // real dependents. Ingestion runs in the default tenant (F-038/ADR-0040 boundary).
+  // real dependents. Scope-aware since F-071/ADR-0057: the worker resolves the scanning tenant/project
+  // from the queue job and writes each sink's forTenant/forProject view — no default-tenant fallback.
   const ingestionSink = teeSink(
     createIndexingDocumentSink(indexer),
     createMemoryExtractionSink({ memory: indexedMemory, extractors: defaultMemoryExtractors }),

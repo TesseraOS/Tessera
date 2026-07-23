@@ -1,8 +1,8 @@
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { createEventBus, newId } from '@tessera/core';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { createEventBus, DEFAULT_PROJECT_ID, DEFAULT_TENANT_ID, newId } from '@tessera/core';
 import { createInProcessQueue } from '@tessera/storage';
 import type { SourceDescriptor, IngestionEvents } from '../../src/domain';
 import { createFilesystemConnector } from '../../src/connectors/filesystem';
@@ -34,6 +34,10 @@ describe('ingestion pipeline (filesystem → queue → worker → sink)', () => 
     const sink = createInMemoryDocumentSink();
     const manifest = createInMemoryManifest();
     const events = createEventBus<IngestionEvents>();
+    // Assert on observable OUTCOMES (emitted events + sink contents), not on a spy of the base sink:
+    // the worker writes through `sink.forTenant().forProject()`, so the persisted doc lands in a view,
+    // not via `sink.upsert`. The base sink's view IS (default, default), so `sink.size`/`all()` still
+    // read what was written. Per-scan deltas come from resetting the counters before each `ingest`.
     let ingested = 0;
     let removed = 0;
     events.on('document.ingested', () => {
@@ -42,8 +46,6 @@ describe('ingestion pipeline (filesystem → queue → worker → sink)', () => 
     events.on('document.removed', () => {
       removed += 1;
     });
-    const upsertSpy = vi.spyOn(sink, 'upsert');
-    const removeSpy = vi.spyOn(sink, 'remove');
 
     const source: SourceDescriptor = {
       id: newId<'Source'>(),
@@ -52,14 +54,17 @@ describe('ingestion pipeline (filesystem → queue → worker → sink)', () => 
     };
     const connector = createFilesystemConnector({ root });
 
-    // A single scan: fresh queue + worker, then drain via shutdown.
+    // A single scan under the default scope: fresh queue + worker, then drain via shutdown.
     const ingest = async (): Promise<ScanSummary> => {
+      ingested = 0;
+      removed = 0;
       const queue = createInProcessQueue();
       createIngestionWorker({ queue, connectors: [connector], sink, manifest, events });
       const summary = await createIngestionCoordinator({
         queue,
         connector,
         source,
+        scope: { tenantId: DEFAULT_TENANT_ID, projectId: DEFAULT_PROJECT_ID },
         manifest,
       }).scan();
       await queue.shutdown();
@@ -69,9 +74,8 @@ describe('ingestion pipeline (filesystem → queue → worker → sink)', () => 
     // Act + Assert — initial ingest persists all three files.
     const first = await ingest();
     expect(first).toEqual({ added: 3, modified: 0, removed: 0, unchanged: 0 });
-    expect(upsertSpy).toHaveBeenCalledTimes(3);
-    expect(sink.size).toBe(3);
     expect(ingested).toBe(3);
+    expect(sink.size).toBe(3);
 
     // Secret scrubbing: the planted key is nowhere in any persisted document.
     const configDoc = sink.all().find((document) => document.path === 'config.txt');
@@ -80,29 +84,24 @@ describe('ingestion pipeline (filesystem → queue → worker → sink)', () => 
     expect(JSON.stringify(sink.all())).not.toContain(AWS_EXAMPLE_KEY);
 
     // Incremental: modifying one file re-processes only that file (no full re-index).
-    upsertSpy.mockClear();
     await writeFile(join(root, 'src', 'a.ts'), 'export const a = 2;\n');
     const second = await ingest();
     expect(second).toEqual({ added: 0, modified: 1, removed: 0, unchanged: 2 });
-    expect(upsertSpy).toHaveBeenCalledTimes(1);
+    expect(ingested).toBe(1);
     expect(sink.size).toBe(3);
 
     // Idempotent: a scan with no changes does no work.
-    upsertSpy.mockClear();
-    removeSpy.mockClear();
     const third = await ingest();
     expect(third).toEqual({ added: 0, modified: 0, removed: 0, unchanged: 3 });
-    expect(upsertSpy).not.toHaveBeenCalled();
-    expect(removeSpy).not.toHaveBeenCalled();
+    expect(ingested).toBe(0);
+    expect(removed).toBe(0);
 
     // Removal: deleting a file removes exactly that document.
-    removeSpy.mockClear();
     await rm(join(root, 'README.md'));
     const fourth = await ingest();
     expect(fourth).toEqual({ added: 0, modified: 0, removed: 1, unchanged: 2 });
-    expect(removeSpy).toHaveBeenCalledTimes(1);
+    expect(removed).toBe(1);
     expect(sink.size).toBe(2);
     expect(sink.all().some((document) => document.path === 'README.md')).toBe(false);
-    expect(removed).toBe(1);
   });
 });

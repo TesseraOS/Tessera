@@ -27,6 +27,11 @@ export interface GraphExtractionSinkOptions {
 export function createGraphExtractionSink(options: GraphExtractionSinkOptions): DocumentSink {
   const { extractor, graph } = options;
 
+  // Rebind the graph target for a scoped view (F-071): a scan under tenant A must populate A's graph.
+  // The extractor is pure (no scope), so only the write target moves.
+  const withGraph = (next: GraphWriteService): DocumentSink =>
+    createGraphExtractionSink({ extractor, graph: next });
+
   async function forgetFile(path: string): Promise<void> {
     const fileRef: GraphNodeRef = { kind: 'file', key: fileNodeKey(path) };
     // Clear the file's own outgoing edges + the stale effect-links pointing at it; other files' edges
@@ -84,6 +89,13 @@ export function createGraphExtractionSink(options: GraphExtractionSinkOptions): 
     async remove(ref: DocumentRef) {
       await forgetFile(ref.path);
       await graph.deriveStaticEffectLinks();
+    },
+
+    forTenant(tenantId) {
+      return withGraph(graph.forTenant(tenantId));
+    },
+    forProject(projectId) {
+      return withGraph(graph.forProject(projectId));
     },
   };
 }

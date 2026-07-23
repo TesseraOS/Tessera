@@ -456,7 +456,8 @@ export function buildMcpServer(
   server.registerTool(
     'scan_source',
     {
-      description: 'Scan a source (incremental + idempotent); returns what changed.',
+      description:
+        'Scan a source (incremental + idempotent); returns what changed. `indexed` is the distinct paths actually persisted — compare it against `summary` to catch a scan that enqueued work but failed to index it (F-071).',
       inputSchema: scanSourceShape,
     },
     (args, extra) =>
@@ -464,8 +465,14 @@ export function buildMcpServer(
         const ctx = await guard('scan_source', extra);
         const project = await projectOf(ctx, extra);
         const scoped = requireSources(services).forTenant(tenantOf(ctx)).forProject(project);
-        const { source, summary } = await scoped.scan(args.id as Parameters<typeof scoped.scan>[0]);
-        return { source: toWireSource(source), summary };
+        const { source, summary, indexed } = await scoped.scan(
+          args.id as Parameters<typeof scoped.scan>[0],
+        );
+        return {
+          source: toWireSource(source),
+          summary,
+          ...(indexed !== undefined ? { indexed } : {}),
+        };
       }),
   );
 

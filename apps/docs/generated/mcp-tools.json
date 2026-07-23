@@ -580,7 +580,7 @@
     },
     {
       "name": "scan_source",
-      "description": "Scan a source (incremental + idempotent); returns what changed.",
+      "description": "Scan a source (incremental + idempotent); returns what changed. `indexed` is the distinct paths actually persisted — compare it against `summary` to catch a scan that enqueued work but failed to index it (F-071).",
       "inputSchema": {
         "type": "object",
         "properties": {

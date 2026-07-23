@@ -1165,6 +1165,7 @@ export interface paths {
                                     unchanged: number;
                                 };
                                 at: string;
+                                indexed?: number;
                             };
                             error?: string;
                         };

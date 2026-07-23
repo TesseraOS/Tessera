@@ -1,5 +1,5 @@
 import { createContextCompiler, type FragmentSource } from '@tessera/context-compiler';
-import { ValidationError } from '@tessera/core';
+import { createEventBus, ValidationError } from '@tessera/core';
 import {
   createFilesystemConnector,
   createGitConnector,
@@ -9,6 +9,7 @@ import {
   createIngestionWorker,
   createSourceService,
   type Connector,
+  type IngestionEvents,
   type SourceRecord,
   type SourceService,
 } from '@tessera/ingestion';
@@ -87,10 +88,15 @@ function createInMemorySourceService(): SourceService {
   const queue = createInProcessQueue();
   const manifest = createInMemoryManifest();
   const sink = createInMemoryDocumentSink();
+  // Wire the ingestion event bus, as the production composition root always does — the service counts
+  // successfully-persisted paths off it to report `indexed` (F-071 clause 3). Without it the count is
+  // unavailable and the field is honestly absent.
+  const events = createEventBus<IngestionEvents>();
   const sources = createSourceService({
     registry: createInMemorySourceRegistry(),
     queue,
     manifest,
+    events,
     connectorFactory: (record: SourceRecord): Connector => {
       const root = record.config['root'];
       if (typeof root !== 'string' || root.length === 0) {
@@ -107,6 +113,7 @@ function createInMemorySourceService(): SourceService {
     connectorFor: sources.connectorFor,
     sink,
     manifest,
+    events,
   });
   return sources;
 }

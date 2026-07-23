@@ -39,7 +39,20 @@ export interface SourceScanStatus {
    */
   readonly progress?: ScanProgress;
   /** The most recent completed scan's summary + time (absent until the first completes). */
-  readonly lastScan?: { readonly summary: ScanSummary; readonly at: string };
+  readonly lastScan?: {
+    readonly summary: ScanSummary;
+    readonly at: string;
+    /**
+     * Distinct paths this scan **successfully persisted** through the sink (F-071 clause 3).
+     *
+     * The honest counterpart to `summary`, which counts what the diff *enqueued* — so a scan whose
+     * every job threw (embeddings down, disk full) still reports `added: N` while `indexed: 0`,
+     * making the contradiction visible instead of a silent success. Present only when the scan
+     * actually **awaited completion** (`queue.drain` exists — the Local profile); with an async
+     * adapter the count would be a lower bound, and an absent field beats a wrong one.
+     */
+    readonly indexed?: number;
+  };
   /** The last scan error message when `state: 'error'`. */
   readonly error?: string;
 }
@@ -48,6 +61,11 @@ export interface SourceScanStatus {
 export interface SourceScanResult {
   readonly source: SourceRecord;
   readonly summary: ScanSummary;
+  /**
+   * Distinct paths successfully persisted this scan (F-071 clause 3) — present only when the scan
+   * awaited completion (the Local profile drains the queue). See {@link SourceScanStatus.lastScan}.
+   */
+  readonly indexed?: number;
 }
 
 /** Aggregate numbers across one tenant's sources — backs the workspace summary (F-060). */
@@ -183,8 +201,12 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
      * monotonic instead of letting progress overshoot `total`.
      */
     const processedPaths = new Set<string>();
+    // Paths the worker actually PERSISTED (document.ingested/removed fire only after a successful
+    // sink write + manifest advance), as opposed to `processedPaths`, which counts every handled job
+    // including idempotent no-ops and failures. This is the honest `indexed` count (F-071 clause 3).
+    const persistedPaths = new Set<string>();
     let total = 0;
-    let unsubscribe: (() => void) | undefined;
+    const unsubscribes: (() => void)[] = [];
 
     statuses.set(id, { state: 'running', progress: { processed: 0, total: 0 }, ...keepLast });
 
@@ -200,13 +222,23 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
       // Subscribe BEFORE the diff enqueues anything: the in-process queue delivers on the microtask
       // queue, so a job can complete while we are still awaiting `scan()`. Subscribing after would
       // silently miss those and under-report progress — the F-079 shape of bug, one layer down.
-      unsubscribe = events?.on('document.processed', (event) => {
-        if (event.sourceId !== id) return;
-        processedPaths.add(event.path);
-        const progress = { processed: processedPaths.size, total };
-        statuses.set(id, { state: 'running', progress, ...keepLast });
-        void events?.emit('source.scan.progress', { ...scope, ...progress });
-      });
+      if (events !== undefined) {
+        unsubscribes.push(
+          events.on('document.processed', (event) => {
+            if (event.sourceId !== id) return;
+            processedPaths.add(event.path);
+            const progress = { processed: processedPaths.size, total };
+            statuses.set(id, { state: 'running', progress, ...keepLast });
+            void events.emit('source.scan.progress', { ...scope, ...progress });
+          }),
+          events.on('document.ingested', (event) => {
+            if (event.document.source.id === id) persistedPaths.add(event.document.path);
+          }),
+          events.on('document.removed', (event) => {
+            if (event.sourceId === id) persistedPaths.add(event.path);
+          }),
+        );
+      }
 
       const summary = await coordinator.scan();
       // What the diff actually enqueued — `unchanged` is not work, so it is not in the denominator.
@@ -220,12 +252,18 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
 
       // Turn the fire-and-forget queue into a completion barrier where supported (Local profile),
       // so the summary reflects fully-processed work; async adapters observe progress via SSE.
+      const awaited = queue.drain !== undefined;
       await queue.drain?.();
 
+      // `indexed` is trustworthy only when we could actually count it: the scan awaited the drain AND
+      // an event bus was wired (the count is derived from document.ingested/removed). Without a bus,
+      // or with an async adapter, the count would be a lower bound — and an absent field beats a wrong
+      // one (F-071 clause 3). The production composition root always wires the bus.
+      const indexed = awaited && events !== undefined ? { indexed: persistedPaths.size } : {};
       const at = new Date().toISOString();
-      statuses.set(id, { state: 'idle', lastScan: { summary, at } });
+      statuses.set(id, { state: 'idle', lastScan: { summary, at, ...indexed } });
       await events?.emit('source.scan.completed', { ...scope, summary });
-      return { source: record, summary };
+      return { source: record, summary, ...indexed };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       statuses.set(id, { state: 'error', error: message, ...keepLast });
@@ -234,7 +272,7 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
       await events?.emit('source.scan.failed', { ...scope, error: message });
       throw error;
     } finally {
-      unsubscribe?.();
+      for (const unsubscribe of unsubscribes) unsubscribe();
     }
   }
 

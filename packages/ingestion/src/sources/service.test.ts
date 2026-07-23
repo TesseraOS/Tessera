@@ -5,6 +5,7 @@ import { createInMemoryDocumentSink } from '../adapters/in-memory-sink.js';
 import type { IngestionEvents, RawDocument, SourceEntry, SourceId } from '../domain.js';
 import { contentHashOf } from '../hash.js';
 import type { Connector } from '../ports/connector.js';
+import type { DocumentSink } from '../ports/sink.js';
 import { createInMemoryManifest } from '../adapters/in-memory-manifest.js';
 import { createIngestionWorker } from '../pipeline/worker.js';
 import { createInMemorySourceRegistry, type SourceRecord } from './registry.js';
@@ -40,13 +41,13 @@ function fakeConnector(files: Map<string, string>): Connector {
 /** Wire a service + a worker sharing one event bus + sink, over a `root → files` filesystem map. */
 function harness(
   filesystems: Map<string, Map<string, string>>,
-  options: { autoScanOnRegister?: boolean } = {},
+  options: { autoScanOnRegister?: boolean; sink?: DocumentSink } = {},
 ) {
   const queue = createInProcessQueue();
   const manifest = createInMemoryManifest();
   const registry = createInMemorySourceRegistry();
   const events = createEventBus<IngestionEvents>();
-  const sink = createInMemoryDocumentSink();
+  const sink = options.sink ?? createInMemoryDocumentSink();
 
   const connectorFactory = (record: SourceRecord): Connector => {
     if (record.kind !== 'fake') {
@@ -109,6 +110,48 @@ describe('createSourceService', () => {
 
     const status = await service.scanStatus(source.id);
     expect(status?.state).toBe('idle');
+    expect(status?.lastScan?.summary.added).toBe(2);
+    // The honest count: both files reached the sink (F-071 clause 3).
+    expect(status?.lastScan?.indexed).toBe(2);
+  });
+
+  it('reports indexed: 0 when the sink fails, so a scan cannot claim success it did not earn', async () => {
+    // A sink whose every upsert throws — the "embeddings down / disk full" shape. The in-process
+    // queue swallows job failures after retries, so WITHOUT `indexed` a scan here would still return
+    // `added: 2` and look successful. `indexed` is what makes the failure visible (F-071 clause 3).
+    let attempts = 0;
+    const failingSink: DocumentSink = {
+      upsert() {
+        attempts += 1;
+        return Promise.reject(new Error('sink is down'));
+      },
+      remove() {
+        return Promise.resolve();
+      },
+      forTenant() {
+        return failingSink;
+      },
+      forProject() {
+        return failingSink;
+      },
+    };
+    const files = new Map([
+      ['a.md', '# A'],
+      ['b.ts', 'const b = 1;'],
+    ]);
+    const { service } = harness(new Map([['/repo', files]]), { sink: failingSink });
+
+    const source = await service.register({ kind: 'fake', config: { root: '/repo' } });
+    const { summary, indexed } = await service.scan(source.id);
+
+    // The diff still enqueued 2 changes…
+    expect(summary.added).toBe(2);
+    // …but nothing was persisted, and the result says so instead of pretending success.
+    expect(indexed).toBe(0);
+    expect(attempts).toBeGreaterThan(0);
+
+    const status = await service.scanStatus(source.id);
+    expect(status?.lastScan?.indexed).toBe(0);
     expect(status?.lastScan?.summary.added).toBe(2);
   });
 

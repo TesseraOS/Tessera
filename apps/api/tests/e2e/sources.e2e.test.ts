@@ -74,6 +74,8 @@ describe('@tessera/api sources', () => {
       const status = await awaitScan(app, source.id);
       expect(status.state).toBe('idle');
       expect(status.lastScan?.summary).toEqual({ added: 2, modified: 0, removed: 0, unchanged: 0 });
+      // The honest count (F-071): both enqueued paths actually reached the sink.
+      expect(status.lastScan?.indexed).toBe(2);
     });
 
     it('404s an unknown source and 400s an unsupported kind', async () => {

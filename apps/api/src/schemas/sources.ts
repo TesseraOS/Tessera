@@ -78,7 +78,18 @@ export const scanStatusResponseSchema = z.object({
   state: z.enum(['idle', 'running', 'error']),
   /** Present while `state: 'running'` — what a determinate progress bar reads (F-081). */
   progress: scanProgressSchema.optional(),
-  lastScan: z.object({ summary: scanSummarySchema, at: z.string() }).optional(),
+  lastScan: z
+    .object({
+      summary: scanSummarySchema,
+      at: z.string(),
+      /**
+       * Distinct paths this scan actually persisted (F-071). `summary` counts what the diff
+       * *enqueued*; `indexed` counts what reached the sink — so `added: 3, indexed: 0` reveals a scan
+       * that failed to index despite reporting changes. Absent when the scan did not await completion.
+       */
+      indexed: z.number().int().nonnegative().optional(),
+    })
+    .optional(),
   error: z.string().optional(),
 });
 

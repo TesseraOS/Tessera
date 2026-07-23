@@ -3,6 +3,97 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-22 — F-071 DONE: scanned content lands in the tenant/project that registered the source
+
+Claimed **F-071** (`must`) over the lowest-id **F-055** on the lead's earlier call — a live
+tenant-isolation break outranks a new transport. Plan:
+[`F-071-scope-aware-ingestion.md`](../plans/F-071-scope-aware-ingestion.md) (planner subagent).
+Decision: **[ADR-0057](../../docs/adr/0057-ingestion-scope-on-the-queue-job.md)**.
+
+### The defect
+
+`createIndexingDocumentSink` called `CorpusIndexer.indexDocument` with **no** tenant/project, so it
+defaulted to `DEFAULT_TENANT_ID`. In any multi-tenant deployment a scan under `acme` reported
+`added: 3` while the content landed in `default`, invisible to `acme` — search/compile empty, graph
+empty. `SourceRecord` carried the scope, but `SourceDescriptor` (the only identity on the queue job)
+did not, and the sink is built once per runtime, not per tenant. F-048 found it; the full-stack suite
+had been pinned to the default tenant with a comment naming this feature.
+
+### Red before green
+
+[`runtime-ingestion-scope.test.ts`](../../packages/config/tests/integration/runtime-ingestion-scope.test.ts)
+was written against today's API and captured failing first: **"acme must find what acme scanned:
+expected 0 to be greater than 0"** — content in `default`. It passes now, alongside a
+project-isolation twin.
+
+### The mechanism (ADR-0057)
+
+- **`ChangeEvent` (the queue job) gains a REQUIRED `scope: {tenantId, projectId}`** — required, not
+  optional, because an optional scope with a default fallback keeps the exact silent-default bug.
+  Stamped by `diffEntries` from the `SourceRecord` via the coordinator.
+- **`DocumentSink` gains REQUIRED `forTenant`/`forProject` scoped views** — a required member is
+  compiler-enforced for every implementer, whereas a `(document, scope)` parameter is silently
+  droppable (and this bug *is* a silently dropped scope). All five sinks implement them.
+- **The worker validates the job** — a missing/blank scope throws rather than defaulting. That guard
+  is the permanent anti-regression device.
+- **Scope never enters `ProcessedDocument`/the plugin stages** — it would put a deployment concern
+  into the third-party `Processor` contract and, since processors return a new document, make
+  tenancy plugin-forgeable.
+
+### Two findings that shaped the sequence
+
+- **Increments 1 and 2 shipped together, deliberately.** Landing the sink fix while the SSE bridge
+  still hardcoded `INGESTION_TENANT = DEFAULT_TENANT_ID` would have *leaked acme's file paths onto
+  the default tenant's stream* while acme's own feed stayed empty — a new cross-tenant leak. So the
+  bridge moved in the same commit (`document.*` now carry the scope; the bridge reads
+  `scope.tenantId`).
+- **The in-process queue swallows job failures by design**, so clause 3 ("a scan cannot report
+  success while indexing nothing the caller can see") needed a real post-index count, not just the
+  scope fix. Added `indexed` — distinct paths actually persisted (counted off
+  `document.ingested`/`removed`, which fire only after a successful sink write). `added: 3,
+  indexed: 0` now shows a scan that failed to index despite reporting changes.
+
+### A real bug caught mid-implementation
+
+Gating `indexed` on `queue.drain` alone reported a **wrong `indexed: 0`** in the api e2e harness,
+which omits the event bus (the count derives from the bus). Corrected to `awaited && events
+!== undefined`, and the api harness now wires the bus as the production composition root always
+does — an absent field beats a wrong 0.
+
+### Isolation proven over one live deployment (clause 4)
+
+The full-stack suite is off the default tenant: journeys run as **acme**, and
+[`scope-isolation.spec.ts`](../../tests/e2e-full/tests/scope-isolation.spec.ts) scans a second corpus
+(`sunstone`) under `globex/default` and `acme/beta`. It proves acme sees its own content
+(search/compile/graph), globex sees none (get_effects on acme's file node **404s** in globex's
+scope), project isolation within acme, and that the same term in two tenants stays partitioned.
+**Isolation is asserted on the KEYWORD signal, not empty results** — fake embeddings have no
+relevance floor, the F-048 lesson. Three real gotchas fixed writing it: the REST search body field
+is `query` not `text`; an EffectHit's dependent key is `hit.node.key`; a missing graph node 404s.
+
+### Evidence
+
+- ingestion 82/83 (1 skipped, was 76) · config 80/81 · api e2e 116/116 · **e2e-full 6/6 under real
+  tenants** (console shows `tenant=acme`).
+- Workspace: verify-state valid (28 effect-links) · typecheck 45/45 · lint 26/26 · format clean ·
+  build 23/23 · test 43/43 · e2e 25/25 · e2e-full 20/20.
+- `pnpm --filter @tessera/sdk generate` + `@tessera/docs generate` committed in-change (the
+  additive `indexed` field + the scan_source description).
+
+### Decisions
+
+- **ADR-0057** — scope on the queue job; `DocumentSink` scoped views; scope out of the plugin stages;
+  the queue's threat model (in-process trusted; durable broker = a job is a trust boundary). Closes
+  ADR-0050's blocked `document.*` attribution; supersedes ADR-0040's deferral.
+- Effects: E-009/E-014/E-018/E-003 extended (no new id — every dependent sits inside an existing
+  link's stated surface).
+- **Backlog findings recorded, not built:** SSE has no project dimension (within-tenant project
+  isolation on the stream); per-tenant blob keys remain **F-075**; MCP stdio credentials remain
+  **F-072**.
+
+**Next step:** none for F-071. The remaining R4 `must` items are F-055 (remote MCP), F-056, F-059,
+F-069, F-078; the next lowest-id `must` is **F-055**.
+
 ## 2026-07-22 — F-077 DONE: the MCP compile entitlement bypass, and who is actually metered
 
 Claimed **F-077** on the project lead's explicit call, ahead of the deterministic lowest-id pick

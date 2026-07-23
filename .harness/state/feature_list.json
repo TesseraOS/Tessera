@@ -2352,7 +2352,7 @@
       "package": "@tessera/ingestion",
       "release": "R4",
       "priority": "must",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [],
       "acceptance": [
         "Ingestion indexes into the tenant that OWNS the source, not DEFAULT_TENANT_ID: the tenant travels source -> queue job -> worker -> DocumentSink, and createIndexingDocumentSink/createGraphExtractionSink index through the tenant-scoped views (ADR-0033), replacing today's unconditional default-tenant write",

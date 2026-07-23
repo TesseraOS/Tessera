@@ -176,6 +176,10 @@
         {
           "kind": "module",
           "ref": "THE ENTITLEMENT CLAMP NOW BINDS BOTH SURFACES (F-077, ADR-0056): packages/billing/src/budget.ts `createCompileBudgetClamp` is the ONE composition of effectiveEntitlements + clampBudgetToPlan, built by apps/api/src/routes/v1/compile.ts AND by apps/mcp/src/server.ts for compile_context + explain. Before this, MCP had no clamp at all — NFR-12 was enforced for humans and unenforced for agents. NO WIRE-SHAPE CHANGE on compile_context (behaviour only: an over-cap budget now returns a capped package) and NO REST route change, so `pnpm --filter @tessera/sdk generate` produces a ZERO DIFF — asserted, not assumed. `explain` gained an OPTIONAL budgetClamp {requested, effective}, emitted only when a clamp applied. The compile_context tool DESCRIPTION changed (it now publishes the cap rule), which is why apps/docs/generated/mcp-tools.json moved in the same increment (E-026). Extending the rule must go through budget.ts or the surfaces drift again"
+        },
+        {
+          "kind": "module",
+          "ref": "SCAN REPORTS AN HONEST `indexed` COUNT (F-071 clause 3): SourceScanResult + GET /v1/sources/:id/scan `lastScan` gained an OPTIONAL `indexed` (distinct paths actually persisted through the sink), and MCP scan_source returns it — so `added: N` with `indexed: 0` reveals a scan that enqueued work but failed to index it (the in-process queue swallows job failures by design). ADDITIVE + OPTIONAL: `summary` is untouched (F-081's progress denominator), no breaking change. Regenerated in-change: OpenAPI + @tessera/sdk (openapi.json + generated/schema.ts) + apps/docs generated/{openapi,mcp-tools}.json (the scan_source description also changed). apps/web/lib/api/types.ts is NOT mirrored — the field is optional and no UI reads it (deliberately no unused surface). `indexed` is present only when the count is trustworthy: the scan awaited the drain AND an event bus was wired."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -398,6 +402,10 @@
         {
           "kind": "module",
           "ref": "SourceService.summary() → { sources, documents, lastScanAt } (F-060, service-level; IngestionManifest port UNCHANGED by design). Sums the manifest over the tenant OWN registry, so it is tenant-correct by construction. lastScanAt is process-lifetime only (scan status is an in-memory Map) — the type says so and callers must render \"no scan this session\", never \"never scanned\". ALSO (ADR-0050): IngestionEvents source.scan.started/completed now carry tenantId (from SourceRecord); document.* deliberately do NOT — the worker has no tenant (the same gap as F-071), so the type encodes the asymmetry rather than inventing an attribution"
+        },
+        {
+          "kind": "contract",
+          "ref": "SCOPE THREADS THROUGH THE INGESTION PIPELINE (F-071, ADR-0057): ChangeEvent (the queue job) gained a REQUIRED `scope: {tenantId, projectId}`, and DocumentSink gained REQUIRED forTenant/forProject scoped views. The worker resolves sink.forTenant(scope.tenantId).forProject(scope.projectId) and VALIDATES the job (a missing/blank scope throws, never defaults). Dependents that moved in-change: diffEntries (stamps scope), the coordinator (takes scope), SourceService.performScan (supplies it from the SourceRecord), and ALL FIVE sinks — in-memory (scope-partitioned), tee (forwards to every member), graph-extraction + memory-extraction (rebind their target service via widened GraphWriteService/MemoryCaptureService structural interfaces), and @tessera/config's createIndexingDocumentSink (threads scope into CorpusIndexer). IngestionEvents document.ingested/removed gained scope (document.processed stays scope-free — domain-internal progress). NON-OBVIOUS DEPENDENT: the Queue port's future durable adapters (E-001 'later bullmq') — the job payload is now an isolation-relevant contract that must survive serialization intact, and a job enqueued by an old producer would lack scope (ADR-0057 threat model: in-process the coordinator is trusted; a shared broker makes a job a trust boundary needing registry re-validation or signing). Scope NEVER enters ProcessedDocument/the Processor stages — it would be plugin-forgeable (ADR-0057 §3). Test doubles (fake-memory-service, the pipeline/auto-memory integration tests) updated to the new port."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -638,7 +646,7 @@
         },
         {
           "kind": "module",
-          "ref": "createLocalRuntime SSE bridge attributes tenants (F-060/ADR-0050): source.scan.* forward the event own tenantId; document.* are pinned to INGESTION_TENANT = DEFAULT_TENANT_ID — an HONEST attribution of where ingestion really writes (F-071), not where the scan was requested. When F-071 carries the tenant onto the queue job, replace INGESTION_TENANT with the event tenantId; nothing else changes"
+          "ref": "createLocalRuntime SSE bridge (F-071 CLOSES this, was F-060/ADR-0050): source.scan.* AND document.* now BOTH carry the owning tenant — INGESTION_TENANT=DEFAULT_TENANT_ID is deleted, the document.* handlers read event.scope.tenantId. Increment 1 (scope to the sink) WITHOUT this would have leaked acme's file paths onto the default tenant's stream while acme's own feed stayed empty, so the two shipped together. SSE has no project dimension (ApiEventMap is tenant-scoped), so only scope.tenantId is bridged — within-tenant project isolation on the stream is a documented backlog finding (ADR-0057 §consequences). createIndexingDocumentSink is now scope-aware (was the DEFAULT_TENANT_ID write site)."
         },
         {
           "kind": "module",
@@ -647,6 +655,10 @@
         {
           "kind": "package",
           "ref": "@tessera/cli (F-052, apps/cli) — a new runnable that boots a Runtime through @tessera/server (createServerRuntime/startApiServer/startMcpServer): `init` writes+validates a tessera.config.json ConfigInput (config precedence: defaults < file < TESSERA_* env < flags; the file is passed as loadConfig overrides so it wins over env by design) and creates the data dir; `serve` runs the REST API; `mcp` the stdio MCP server; `source add` wraps the SourceService (register+scan), `doctor` validates config/storage/embeddings. A pure CONSUMER of the config schema + Local-profile boot contract — no change to it. Because init writes relative storage paths that createLocalRuntime resolves against process.cwd(), init/serve/source add are cwd-sensitive (run from the project dir); an absolute --data-dir makes the config cwd-independent. mcp-config emits agent-client config (Claude Code/Cursor/Cline/Codex/Continue) from a data table — a documented coupling to those clients' EXTERNAL config schemas (json mcpServers / toml mcp_servers)."
+        },
+        {
+          "kind": "test",
+          "ref": "apps/api/tests/e2e/support/in-memory-services.ts now wires the ingestion EVENT BUS into its SourceService + worker, as the production composition root always does — SourceService counts successfully-persisted paths off that bus to report `indexed` (F-071 clause 3). A harness that omits the bus gets `indexed: undefined` (honest — the count is unavailable), which is why the field is gated on `awaited && events !== undefined`, not drain alone (a bug caught mid-implementation: drain-only reported a wrong indexed:0)."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -831,6 +843,10 @@
         {
           "kind": "package",
           "ref": "@tessera/cli `token issue` (F-052, apps/cli) — a new consumer of the TokenStore control plane: it boots a Runtime and calls runtime.auth.tokenStore.issue({tenantId,principalId,roles,scopes?,displayName?}), validating roles against ROLES and scopes against PERMISSIONS via the Fastify-free @tessera/api/auth subpath (mirrors the tessera-token bin). Requires auth.mode=token (else a clean error). No change to the auth model — if the AuthContext/RBAC catalog or TokenStore.issue signature changes, this call site + its --json output ripple too."
+        },
+        {
+          "kind": "contract",
+          "ref": "INGESTED CONTENT is now inside the data-plane isolation guarantee (F-071, ADR-0057) — the last hole ADR-0033/0037 had. A scan indexes into the (tenant, project) that registered the source, proven end-to-end by tests/e2e-full/tests/scope-isolation.spec.ts over ONE live deployment: acme sees its quernstone corpus via search/compile/graph, globex and acme/beta see none of it (get_effects on acme's file node 404s in globex's scope), and the same term scanned in two scopes stays partitioned. F-050's ingestion carve-out ('scan-content-into-project is carved out to F-071') is CLOSED. Isolation asserted on the KEYWORD signal, not empty results, because fake embeddings have no relevance floor (the F-048 lesson)."
         }
       ],
       "kind": "EFFECT_LINK",

@@ -91,6 +91,20 @@ is `query` not `text`; an EffectHit's dependent key is `hit.node.key`; a missing
   isolation on the stream); per-tenant blob keys remain **F-075**; MCP stdio credentials remain
   **F-072**.
 
+### Evaluator pass: PASS, three follow-ups taken
+
+Independent evaluator returned **PASS** on all five clauses, all gates green, zero blocking findings.
+Three non-blocking findings acted on: (1) the plan's promised `DocumentSink` scope-routing
+**conformance suite** was built —
+[`document-sink-scope.conformance.ts`](../../packages/ingestion/tests/conformance/document-sink-scope.conformance.ts),
+run against the in-memory sink and a tee-over-in-memory, so a future sink inherits the guarantee;
+(2) the **memory-extraction sink's scope rebind was untested** (the exact silent-drop class this
+feature closes) — the fake memory service is now scope-partitioned and a test proves an `acme` capture
+lands only in `(acme, beta)`, verified to fail if `forTenant` returns `this`; (3) **E-014 added** to
+F-071's `effects` array (the SSE-bridge dependent — `effects.json` already recorded it). Left as
+recorded backlog: no standalone `graph-extraction-sink.test.ts` (graph is covered end-to-end by the
+runtime + e2e-full isolation tests).
+
 **Next step:** none for F-071. The remaining R4 `must` items are F-055 (remote MCP), F-056, F-059,
 F-069, F-078; the next lowest-id `must` is **F-055**.
 

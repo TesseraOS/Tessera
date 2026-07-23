@@ -74,6 +74,24 @@ describe('createMemoryExtractionSink', () => {
 
     expect(memory.current()).toHaveLength(1);
   });
+
+  it('rebinds the memory service to a scoped view — captures land in the SCANNING tenant (F-071)', async () => {
+    // The whole point of the required scoped views: an ADR ingested under tenant `acme` must become
+    // acme's memory, not the default tenant's. Returning `this` from forTenant would silently write
+    // it to `default` — the exact leak class this feature closes — so this must be exercised.
+    const memory = createFakeMemoryService();
+    const sink = createMemoryExtractionSink({ memory, extractors: [sourcedExtractor] });
+
+    await sink.forTenant('acme').forProject('beta').upsert(makeDoc('acme decision'));
+
+    // Landed in (acme, beta)…
+    expect(memory.forTenant('acme').forProject('beta').current()).toHaveLength(1);
+    expect(memory.forTenant('acme').forProject('beta').current()[0]?.body).toBe('acme decision');
+    // …and NOWHERE else — not the base default view, not acme's default project, not another tenant.
+    expect(memory.current()).toHaveLength(0);
+    expect(memory.forTenant('acme').current()).toHaveLength(0);
+    expect(memory.forTenant('globex').current()).toHaveLength(0);
+  });
 });
 
 describe('teeSink', () => {

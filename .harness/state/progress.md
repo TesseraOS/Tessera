@@ -185,7 +185,7 @@ mutation check caught a comment claiming more than its test delivered.
 
 ### Evidence
 
-- config **116/117** with Postgres (was 86). With Postgres + MinIO + Redis: storage **70/70** (was 42) · memory 69/69 ·
+- config **116/117** with Postgres (was 86) · retrieval **48/48** (was 36). With Postgres + MinIO + Redis: storage **70/70** (was 42) · memory 69/69 ·
   knowledge-graph 54/54. `pnpm -w test` unchanged at 43/43 with none reachable (guarded suites skip).
 - Retry is mutation-verified (pinning `attempts: 1` turns that case red), as were the two increment-4
   S3 bugs.
@@ -193,6 +193,20 @@ mutation check caught a comment claiming more than its test delivered.
   clean · build 23/23.
 
 ### Next step
+
+### Increment 7c — the two adapters increment 6 was supposed to include
+
+Caught while starting the profile: the plan's increment 6 was "ports go async **+ PG keyword/temporal**",
+and I shipped only the port change. The self-hosted profile then had no keyword or temporal retriever
+to select. Landed separately rather than folded into the profile commit, so the port change and the
+adapters stay independently bisectable.
+
+Keyword is Postgres full-text with a **generated stored** `tsvector` (the index cannot drift from its
+text) + GIN, config pinned to `'english'`, and `plainto_tsquery` so a user typing `auth & login!` is
+searching rather than triggering a syntax error. `toEpochMs` and the decay curve are now **exported
+and shared** with the SQLite adapter, and keyword scores stay `1/(1+rank)` rather than raw `ts_rank`
+— fusion combines scores across retrievers, so a different curve would rank the same corpus
+differently per deployment profile. The score is contract, not implementation.
 
 **Increment 8 is all that remains, and it is where clause 1 closes:** a shared `profiles/assemble.ts`
 holding the profile-independent composition, `local.ts` and a new `self-hosted.ts` each constructing

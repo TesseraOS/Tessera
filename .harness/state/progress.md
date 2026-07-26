@@ -3,6 +3,72 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-26 — F-056 IN PROGRESS: self-hosted profile (increments 0–1 of 8)
+
+Claimed **F-056** (`must`, lowest-id eligible; F-023 + F-053 done). Plan:
+[`F-056-self-hosted-profile-and-deployment.md`](../plans/F-056-self-hosted-profile-and-deployment.md)
+(planner subagent). Decision: **[ADR-0059](../../docs/adr/0059-self-hosted-profile-and-deployment-artifacts.md)**.
+
+### The feature's own acceptance was wrong about its size
+
+Clause 1 named **four** adapters to build (PG memory + graph, S3 blob, BullMQ queue). A grep for
+`BetterSQLite3Database` across `packages/*/src` returns twelve files; **nine** bind the data path to
+SQLite. Beyond memory and graph: the keyword FTS5 retriever, the temporal retriever, the ingestion
+manifest, the source registry, the project store, the token store, and the audit log.
+
+That is not pedantry, because of the shortcut it invites. Postgres for the heavy data with a small
+SQLite file beside it for the control plane would boot, pass a smoke test, and fail the first time an
+operator scaled it — a single-writer file on one node's disk cannot be shared, so **any** SQLite in the
+data path caps self-hosted at one node, which is the one property self-hosted exists to provide.
+
+### The split (lead's decision)
+
+Asked, and approved: **F-056** keeps clause 1 + the compose *data* services (increments 0–8);
+new **F-093** (`must`, R4, `blockedBy: [F-056]`) takes the Dockerfiles, app containers, compose-boot
+smoke, release CD, and the three deployment guides (increments 9–13). Release contents unchanged; the
+cut is at the last increment touching product code. Both records carry the reasoning.
+
+### ADR-0059 in one line each
+
+Shared `assembleRuntime` + two thin profile modules + a **dynamic import** of the self-hosted branch
+(a static one drags `bullmq`/`ioredis`/`pg` into the local stdio binary, breaking FR-50's
+zero-external-services promise — ADR-0058's subpath argument one level up) · Postgres adapters never
+create their own tables; each package exports a `Migration[]` and the composition root applies them
+once under `pg_advisory_lock` · retriever ports go fully `async`, not `void | Promise<void>` (a union
+is silently ignorable — the ADR-0057 argument) · BullMQ taken, S3 SigV4 hand-rolled and **explicitly
+reversible** (swapping to the SDK changes nothing outside `s3-blob/`).
+
+### Increment 1 — the migration seam, verified against real Postgres
+
+`pgClientMigrationDb` + `withPgAdvisoryLock`, no consumer yet. The race is real: `runMigrations` reads
+applied ids **then** applies (`runner.ts:75-96`), so two replicas booting together both see an empty
+table and both apply.
+
+Docker Desktop was started and `docker compose up -d postgres` brought up the pgvector service, so
+`TESSERA_TEST_POSTGRES=1 pnpm --filter @tessera/storage test` ran **42 passed / 9 files / zero
+skipped** — previously 26 passed / **13 skipped**, meaning the pgvector and postgres-relational suites
+from F-023 had never actually executed on this machine. The migration test uses a bare `CREATE TABLE`
+(no `IF NOT EXISTS`) so a double-apply is a hard error, and asserts exactly one replica reports
+`applied` and the other `skipped`. **Mutation-verified:** removing the `pg_advisory_lock` call turns
+both concurrency tests red and nothing else.
+
+### Evidence
+
+- `@tessera/storage` 42/42 with Postgres reachable; `pnpm -w test` unchanged at 43/43 (guarded suites
+  skip offline — an advisory lock has no SQLite fallback).
+- Workspace: verify-state valid (93 features, 1228 doc links) · typecheck 45/45 · lint 26/26 · format
+  clean · build 23/23.
+
+### Next step
+
+Increment 2: the Postgres `MemoryStore` against the shared conformance suite (incl. tenant/project
+isolation), then 3 graph · 4 S3 · 5 BullMQ · 6 async retriever ports (E-012, its own commit) ·
+7 the five remaining PG relational adapters · 8 the profile itself. **Postgres must be running**
+(`docker compose up -d postgres`) and guarded runs need `TESSERA_TEST_POSTGRES=1` — without it the new
+suites skip and prove nothing.
+
+---
+
 ## 2026-07-26 — F-055 DONE: remote MCP over streamable HTTP, through the existing gateway
 
 Claimed **F-055** by the plain rule in [`next-feature`](../commands/next-feature.md) — lowest-id

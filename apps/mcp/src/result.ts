@@ -4,7 +4,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 /** Message returned for any internal (5xx-equivalent) fault — internal detail is never leaked. */
 const GENERIC_INTERNAL_MESSAGE = 'internal server error';
 
-interface ToolErrorEnvelope {
+export interface ToolErrorEnvelope {
   readonly code: ErrorCode;
   readonly message: string;
   readonly details?: unknown;
@@ -15,8 +15,11 @@ interface ToolErrorEnvelope {
  * domain `TesseraError`s surface their `code`/`message` (4xx are safe), `INTERNAL` and unknown
  * faults are masked. Implemented per-surface (REST maps Fastify/Zod errors; MCP input validation is
  * handled by the SDK before the handler runs), so this stays free of any HTTP dependency.
+ *
+ * Exported so the HTTP transport's boundary errors (F-055) use this one policy rather than growing a
+ * second one — a masked 500 must look the same whether it left through a tool result or a status line.
  */
-function toEnvelope(error: unknown): ToolErrorEnvelope {
+export function toEnvelope(error: unknown): ToolErrorEnvelope {
   if (error instanceof TesseraError) {
     if (error.code === 'INTERNAL') {
       return { code: 'INTERNAL', message: GENERIC_INTERNAL_MESSAGE };

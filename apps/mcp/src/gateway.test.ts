@@ -121,6 +121,65 @@ describe('createMcpGateway', () => {
   });
 });
 
+describe('createMcpGateway.authenticate (the HTTP boundary check, F-055)', () => {
+  it('resolves the AuthContext for a valid credential', async () => {
+    const gateway = createMcpGateway({ auth: fixedProvider(contextWith('p', [])) });
+    const context = await gateway.authenticate(EMPTY_CALL);
+    expect(context.principal.id).toBe('p');
+    expect(context.tenantId).toBe('acme');
+  });
+
+  it('propagates UNAUTHORIZED for a bad/missing credential', async () => {
+    const gateway = createMcpGateway({
+      auth: { authenticate: () => Promise.reject(new UnauthorizedError('no token')) },
+    });
+    await expect(gateway.authenticate(EMPTY_CALL)).rejects.toSatisfy(hasCode('UNAUTHORIZED'));
+  });
+
+  it('reads the credential through the SAME resolver `guard` uses', async () => {
+    const seen: string[] = [];
+    const gateway = createMcpGateway({
+      auth: fixedProvider(contextWith('p', ['search:read'])),
+      resolveCredential: (context) => {
+        seen.push(String(context.authInfo?.token));
+        return { authorization: 'Bearer fixed', headers: {} };
+      },
+    });
+
+    await gateway.authenticate({ authInfo: { token: 'from-boundary' } });
+    await gateway.guard('search', { authInfo: { token: 'from-call' } });
+    expect(seen).toEqual(['from-boundary', 'from-call']);
+  });
+
+  it('applies NO permission check — a principal with no permissions still authenticates', async () => {
+    // This is the whole point of the split: the boundary proves identity, `guard` proves authority.
+    const gateway = createMcpGateway({ auth: fixedProvider(contextWith('p', [])) });
+    await expect(gateway.authenticate(EMPTY_CALL)).resolves.toBeDefined();
+    await expect(gateway.guard('search', EMPTY_CALL)).rejects.toSatisfy(hasCode('FORBIDDEN'));
+  });
+
+  it('consumes NO quota — the boundary must not spend the caller’s per-call budget', async () => {
+    const quota = createInMemoryQuotaLimiter({ limit: 1, windowMs: 1000, now: () => 0 });
+    const gateway = createMcpGateway({
+      auth: fixedProvider(contextWith('p', ['search:read'])),
+      quota,
+    });
+
+    await gateway.authenticate(EMPTY_CALL);
+    await gateway.authenticate(EMPTY_CALL);
+    // The single unit of quota is still available to a real tool call.
+    await expect(gateway.guard('search', EMPTY_CALL)).resolves.toBeDefined();
+  });
+
+  it('records NO audit event — there is no action to attribute a connection to', async () => {
+    const audit = createInMemoryAuditLog();
+    const gateway = createMcpGateway({ auth: fixedProvider(contextWith('p', [])), audit });
+
+    await gateway.authenticate(EMPTY_CALL);
+    expect((await audit.forTenant('acme').query()).events).toEqual([]);
+  });
+});
+
 describe('MCP_AUDIT_ACTIONS', () => {
   it('maps every guarded tool to an audit action from the existing REST taxonomy', () => {
     expect(Object.keys(MCP_AUDIT_ACTIONS).sort()).toEqual(Object.keys(TOOL_PERMISSIONS).sort());

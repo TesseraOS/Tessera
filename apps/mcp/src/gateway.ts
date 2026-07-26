@@ -18,8 +18,9 @@ import type { QuotaLimiter } from './quota.js';
  * {@link AuthContext} (reusing the F-025 `AuthProvider`), authorizing the tool against the caller's
  * RBAC permissions, and metering per-principal {@link QuotaLimiter quotas}. It is transport-agnostic:
  * the credential is read from the MCP request via {@link CredentialResolver} (default: the SDK
- * `authInfo` / `Authorization` header), so it works over stdio (one identity) or a future
- * multi-client HTTP transport.
+ * `authInfo` / `Authorization` header), so it works over stdio (one identity) or the multi-client
+ * streamable-HTTP transport in `@tessera/mcp/http` (F-055, ADR-0058), which carries a per-client
+ * Bearer credential on every request.
  */
 
 /** The tools the gateway guards, each mapped to the permission it requires (RBAC, reuse F-025 catalog). */
@@ -164,6 +165,19 @@ export interface McpGateway {
    * the resolved {@link AuthContext} on success.
    */
   guard(tool: McpToolName, context: McpCallContext): Promise<AuthContext>;
+  /**
+   * Authenticate a **connection-level** request — the HTTP transport's boundary check (F-055,
+   * ADR-0058 §5) — using the SAME {@link CredentialResolver} {@link McpGateway.guard} uses, so the
+   * boundary and the tools can never disagree about where a credential comes from.
+   *
+   * There is no tool here, so there is deliberately **no RBAC, no quota, and no audit**: those are
+   * per-call concerns and stay in `guard`, which re-runs on every tool call. This exists only so an
+   * unauthenticated caller is refused *before* a session and an `McpServer` are allocated for it
+   * (NFR-2); over stdio it is simply unused.
+   *
+   * Throws `UnauthorizedError` for a missing or bad credential.
+   */
+  authenticate(context: McpCallContext): Promise<AuthContext>;
 }
 
 export function createMcpGateway(options: McpGatewayOptions): McpGateway {
@@ -192,6 +206,10 @@ export function createMcpGateway(options: McpGatewayOptions): McpGateway {
   };
 
   return {
+    authenticate(context) {
+      return options.auth.authenticate(resolveCredential(context));
+    },
+
     async guard(tool, context) {
       // A failure here is unauthenticated — no identity, so nothing attributable to audit.
       const authContext = await options.auth.authenticate(resolveCredential(context));

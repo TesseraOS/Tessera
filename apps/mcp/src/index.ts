@@ -8,6 +8,11 @@
  * `get_skill`, which serve static first-party content and wrap no service at all. Inputs are validated against
  * Zod shapes; failures map to a consistent, masked error envelope (matching REST's). Services are
  * injected (the deployment-profile wiring is F-015); `startMcpStdio` serves over stdio for agents.
+ *
+ * **Transports.** stdio (here) is the local default. Remote agents connect over the streamable-HTTP
+ * transport in the separate **`@tessera/mcp/http`** subpath (F-055, ADR-0058). It is deliberately not
+ * re-exported from this entry: the SDK's HTTP transport pulls `hono`/`@hono/node-server` into the
+ * module graph, and the stdio binary agent clients spawn must not pay for them.
  */
 export { buildMcpServer, SERVER_INFO } from './server.js';
 export type { BuildMcpServerOptions } from './server.js';

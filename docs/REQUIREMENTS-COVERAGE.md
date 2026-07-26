@@ -119,7 +119,7 @@ multi-project) traced to requirements/features:
 | Professional docs at the `docs.` subdomain | 🟡 | FR-68; ADR-0035; F-052 |
 | Cloud/self-host deployment steps in docs | 🟡 | FR-68 + FR-51/NFR-15; F-052/F-056 |
 | Skills page (like unabyss.com/skills) | 🟡 | FR-69; ADR-0036; F-053 |
-| Easy for users **and** AI agents; agent-first automation, less dashboard dependence | 🟡 | G8 + FR-70/71; ADR-0036; F-038 (parity rule applied), F-054/F-055 |
+| Easy for users **and** AI agents; agent-first automation, less dashboard dependence | ✅ | G8 + FR-70/71; ADR-0036; F-038 (parity rule applied), F-054 (CLI + skills + llms.txt), F-055 (remote MCP over HTTP, ADR-0058 — the last of the three to land) |
 | Fast + low token usage for agents | 🟡 | NFR-4 (extended); F-049 benchmarks |
 | Professional profile page in the dashboard | 🟡 | FR-65; F-046 |
 | Complete E2E mimicking an actual user & environment | 🟡 | NFR-16; F-048 |

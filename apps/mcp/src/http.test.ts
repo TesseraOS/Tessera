@@ -171,20 +171,15 @@ describe('createMcpHttpHandler', () => {
         token,
       });
 
-      // The SDK refuses a non-initialize request that carries no session id, and no session is
-      // registered for it. NOTE: this does NOT prove the speculative server was closed — `sessions`
-      // is only ever written from `onsessioninitialized`, which never fires on this path, so
-      // `sessionCount` is 0 either way. That close is not observable from outside the handler; the
-      // assertion here is scoped to what it can actually see.
       expect(response.status).toBe(400);
       expect(handler.sessionCount).toBe(0);
 
-      // What IS observable: capacity is not consumed by the refused attempt.
-      await start({ maxSessions: 1 });
-      const live = await issue('agent-2');
-      await post(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }), { token: live });
-      const opened = await openSession(live);
-      expect(opened).toBeTruthy();
+      // HONEST LIMIT: this does NOT prove the speculative server was closed. `sessions` is written
+      // only from `onsessioninitialized`, which never fires on this path, so `sessionCount` is 0
+      // whether or not `openSession` closes it — and capacity is checked before the server is built,
+      // so `maxSessions` cannot see it either. That close has no observable effect through this
+      // interface, and a test asserting otherwise would be the tautology this one used to be. It is
+      // held by review (`openSession`'s post-`handleRequest` branch), not by an assertion.
     });
   });
 

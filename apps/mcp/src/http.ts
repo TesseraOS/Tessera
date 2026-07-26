@@ -303,8 +303,13 @@ export function createMcpHttpHandler(
       try {
         await serve(req, res, parsedBody);
       } catch (error) {
-        if (res.headersSent) res.end();
-        else respondError(res, 500, error);
+        // Once the transport has written a status line, the only safe move is to stop talking —
+        // `writeHead` would throw and mask the original fault.
+        if (res.headersSent) {
+          if (!res.writableEnded) res.end();
+        } else {
+          respondError(res, 500, error);
+        }
       }
     },
 

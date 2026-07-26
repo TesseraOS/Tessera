@@ -19,6 +19,10 @@
     "./stats": {
       "types": "./dist/stats/core.d.ts",
       "import": "./dist/stats/core.js"
+    },
+    "./conformance": {
+      "types": "./dist/conformance.d.ts",
+      "import": "./dist/conformance.js"
     }
   },
   "main": "./dist/index.js",

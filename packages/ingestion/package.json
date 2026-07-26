@@ -7,6 +7,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./conformance": {
+      "types": "./dist/sources/registry.conformance.d.ts",
+      "import": "./dist/sources/registry.conformance.js"
     }
   },
   "main": "./dist/index.js",

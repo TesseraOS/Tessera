@@ -17,6 +17,13 @@ export * from './auth/sqlite-token-store.js';
 export * from './projects/sqlite-project-store.js';
 export * from './sources/sqlite-source-registry.js';
 export * from './sources/sqlite-manifest.js';
+// Postgres twins for the self-hosted profile (F-056, ADR-0059 §2) — same ports, same conformance.
+// The audit log mirrors its SQLite twin in staying unexported: the composition root imports it
+// directly, and it is not part of this package's public surface.
+export * from './projects/postgres-project-store.js';
+export * from './sources/postgres-source-registry.js';
+export * from './sources/postgres-manifest.js';
+export * from './auth/postgres-token-store.js';
 export * from './sources/corpus-indexer.js';
 export * from './sources/ingestion-sink.js';
 export * from './sources/memory-indexing.js';

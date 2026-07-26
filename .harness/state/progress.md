@@ -3,7 +3,7 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
-## 2026-07-26 — F-056 IN PROGRESS: self-hosted profile (increments 0–5 of 8)
+## 2026-07-26 — F-056 IN PROGRESS: self-hosted profile (increments 0–6 of 8)
 
 Claimed **F-056** (`must`, lowest-id eligible; F-023 + F-053 done). Plan:
 [`F-056-self-hosted-profile-and-deployment.md`](../plans/F-056-self-hosted-profile-and-deployment.md)
@@ -133,6 +133,32 @@ Progress, not emptiness, is what "delivery finished" means.
 anywhere is done", which one process cannot know, and a local-only version would silently mean
 something different per profile.
 
+### Increment 6 — the port change, and the rationale that turned out to be false
+
+`KeywordRetriever`/`TemporalRetriever` `index`/`remove` now return `Promise<void>`. SQLite returns
+`Promise.resolve()` over the same synchronous handle, so behaviour is unchanged: retrieval is 36/36,
+the identical count, no assertion moved.
+
+**ADR-0059 §4 justified this by saying a required `Promise` makes the compiler enumerate every
+caller. That is simply not true, and this workspace proved it in the same diff.** After the signature
+change all four production call sites in `corpus-indexer.ts` were still un-awaited, and `typecheck`
+*and* `lint` were green. TypeScript does not error on a discarded `Promise<void>`; only the type-aware
+`no-floating-promises` does, and the repo runs `tseslint.configs.recommended`, not
+`recommendedTypeChecked`. I found them by grepping, not by tooling.
+
+Worse, tsc did not catch the `await`s I then added inside non-async *test* helpers either — `tests/`
+is outside every package's build tsconfig, so those files are never typechecked. Two esbuild parse
+errors caught what the type checker could not see.
+
+The ADR now records the correction, because an ADR that promises a control nobody implements is
+exactly the defect the F-055 evaluator pass caught. Honest accounting: the async signature buys the
+*ability* to have a Postgres implementation (the real blocker) and states intent; it buys **no
+enforcement**. Filed as **F-094** with the reproduction — enabling `projectService` fails immediately
+on `@tessera/billing` because test files are excluded from the build tsconfigs. The ESLint config has
+carried a "type-aware linting is layered in once real domain packages land" TODO since F-001.
+
+27 call sites awaited (the two production pairs now `Promise.all`-ed, being independent).
+
 ### Evidence
 
 - With Postgres + MinIO + Redis reachable: storage **70/70** (was 42) · memory 69/69 ·
@@ -144,9 +170,11 @@ something different per profile.
 
 ### Next step
 
-Increment 6 (async retriever ports — an E-012 port change; its own commit so a regression bisects
-cleanly) · 7 the five remaining PG relational adapters (manifest, source registry, project store,
+Increment 7 (the five remaining PG relational adapters — manifest, source registry, project store,
 token store, audit log) · 8 the profile itself, which is where clause 1 actually closes.
+
+**Do not trust `typecheck` to find dropped `await`s** (increment 6's finding): the rule is off and
+`tests/` is not typechecked at all. When increment 7's adapters land, grep the call sites.
 
 **Docker Desktop died mid-session and had to be restarted by hand.** `Docker Desktop.exe` alone exits
 immediately when its WSL backend is stopped; `wsl -d docker-desktop --exec /bin/sh -c true` starts the

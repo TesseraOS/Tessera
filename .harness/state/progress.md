@@ -90,24 +90,30 @@ Adding the new docs page to the axe `PAGES` set failed immediately: shiki's defa
 colours code comments `#6a737d`, **3.49:1** on the dark code background — below AA. Three existing
 pages (`guides/governance-and-audit`, `guides/sources`, `deployment/local`) carry shell comments and
 have the same violation today, invisible only because they are not in `PAGES`. The comment was
-reworded out of this page to keep F-055 scoped; **the defect is untouched and filed separately**,
+reworded out of this page to keep F-055 scoped; **the defect is untouched and tracked as F-092**,
 because fixing it means overriding the Fumadocs code theme, which ADR-0054 constrains to the
 `--color-fd-*` seam — its own decision.
 
 ### Evidence
 
-- `@tessera/mcp` 45 unit (was 33) + 56 e2e (was 45) · `@tessera/config` 86/87 (+7) ·
+- `@tessera/mcp` 47 unit (was 27) + 56 e2e (was 45) · `@tessera/config` 86/87 (+6) ·
   `@tessera/server` 7 unit + **6 e2e (new suite)** · `@tessera/docs` 25 unit + 24 e2e (incl. the new
   page's axe AA on both themes and its 375px overflow check) · `@tessera/api` e2e 116/116 unchanged.
-- Workspace: verify-state valid (28 effect-links, 1178 doc links, env-docs ok) · typecheck 45/45 ·
-  lint 26/26 · format clean · test 43/43 · build 23/23 · **e2e 26/26**.
+- Workspace: verify-state valid (28 effect-links, env-docs ok) · typecheck 45/45 · lint 26/26 ·
+  format clean · test 43/43 · build 23/23 · **e2e 26/26**.
 - `@tessera/sdk generate` + `@tessera/docs generate` committed in-change. `packages/sdk/src/generated/
   schema.ts` did **not** move — the route is `hide: true`, so no OpenAPI path and no SDK method.
-- **Honest note:** two intermittent `@tessera/api#test:e2e` *task* failures were observed under
-  full-workspace parallelism, each with the suite itself reporting 116/116 passing and a non-zero task
-  exit; five subsequent full runs were clean at 26/26. Unrelated to this change (which touches only
-  that package's OpenAPI description string) and consistent with the known I/O flakiness of this
-  drive. Recorded rather than swept.
+- **Honest note — an unresolved intermittent.** `@tessera/api#test:e2e` failed the *task* on **3 of
+  ~9** full-workspace `pnpm -w test:e2e` runs during this session. Every time, the suite itself
+  printed `14 passed (14) / 116 passed (116)` and the task still exited non-zero, and turbo then
+  cancelled the remaining tasks (20/26 reported). It has never failed when run standalone (3/3 clean).
+  Not attributable to this change — F-055 touches `@tessera/api` only in the OpenAPI
+  `info.description` string, which cannot produce a nondeterministic process exit — and the likeliest
+  trigger is contention from the *new* parallel `@tessera/server#test:e2e` task booting real servers
+  alongside it, on a drive already recorded as flaky. **This is disclosed, not diagnosed:** the root
+  cause is unknown, a 1-in-3 CI flake is not acceptable long-term, and the final verification run for
+  this feature was clean at 26/26. Whoever picks up F-056 (which adds compose-boot CI) should expect
+  to meet this again.
 
 ### Effects
 
@@ -116,6 +122,45 @@ E-018 (the AuthProvider now guards a **network** boundary; `createRuntimeGateway
 F-072's stdio note is now outdated) · E-014 (config section + the first cross-section refinement) ·
 E-026 (regenerated inputs + the contrast finding). `gates.json` unchanged — `apps/server` gained a
 `test:e2e` script, which `turbo run test:e2e` picks up on its own.
+
+### The evaluator pass caught four real things — this is why it is a separate pass
+
+The generator's own gates were all green and the feature still was not done. An independent
+[`evaluator`](../../.claude/agents/) run against the acceptance clauses returned **NOT-DONE** with a
+runnable repro, and it was right on every count:
+
+1. **Cross-tenant session attach.** ADR-0058 §4 and the plan both specified binding on
+   `(tenantId, principalId)`; the code stored **`principalId` only**. The token store's `principal_id`
+   has no cross-tenant uniqueness, so `globex`'s `ci-bot` could attach to a session opened by `acme`'s
+   `ci-bot`. The shipped test covered *same tenant, different principal* — which passes under both
+   implementations, which is exactly why it hid this. Fixed, plus the cross-tenant case, and both
+   verified by mutation.
+   *(Data was never at risk — every tool call re-guards and scopes by the caller's own `AuthContext` —
+   but the control the ADR promised did not exist, and the ADR was a false record.)*
+2. **`close()` violated its own documented contract.** A request that passed the `closed` check and
+   was still awaiting authentication would register its session *after* `close()` cleared the map and
+   stopped the sweeper — unreapable. Fixed at both ends (refuse the entry, and tear the server down
+   after the response), asserted with a deterministic slow-auth race.
+3. **A tautological test.** `sessionCount === 0` on the 400 path can never fail: `sessions` is only
+   written from `onsessioninitialized`, which never fires there. Its comment claimed to prove the
+   speculative server was closed. Retitled to what it can see, with the unobservable part named.
+4. **A shipped page still called the feature unbuilt** — `deployment/self-host-docker.mdx`, the page
+   whose readers most need remote MCP, two lines from a file the docs commit had edited. Also swept
+   `deployment/index.mdx` and `concepts/glossary.mdx`.
+
+It also caught that "filed separately" was **false in repo terms** (the contrast defect existed only
+as an ephemeral UI chip, not in `feature_list.json` — the repo is the system of record, golden rule 1;
+now **F-092**), and that two test-count baselines in this entry were wrong (`@tessera/mcp` unit was
+27, not 33; config was +6, not +7). Both corrected above.
+
+Fixed in a follow-up commit; ADR-0058 §4 rewritten to match the code, and §3.3 corrected from `503`
+to the `429` the code actually returns (`RATE_LIMITED` is the only envelope code meaning "retry
+later", and REST already maps it to 429). Added an error boundary around `handle` while there — a
+rejection after the Fastify host hijacked the reply had nowhere to go and would hang the client.
+
+**The lesson worth carrying:** green gates measure the code you wrote, not the code you promised. An
+ADR is a specification — check the implementation against it, not just against the tests, because the
+tests were written by whoever misread it.
 
 ### Next step
 

@@ -85,20 +85,32 @@ idle sweeper is not optional:
 1. **`DELETE`** → the SDK's `onsessionclosed` + `transport.close()` → our `onclose` deletes the entry.
 2. **Idle TTL sweep** — a per-entry `lastSeenAt` and a sweeper on an **`.unref()`'d** `setInterval`
    (unref'd or the process never exits; the `/v1/events` heartbeat sets the precedent).
-3. **`maxSessions`** — a hard cap; an `initialize` beyond it is refused `503` + `Retry-After` rather
-   than growing unbounded.
+3. **`maxSessions`** — a hard cap; an `initialize` beyond it is refused **`429` + `Retry-After`**
+   rather than growing unbounded. `429` and not `503` because the response body carries the shared
+   error envelope, and `RATE_LIMITED` is the only code in it that means *refused now, retry later* —
+   REST already maps that code to `429`. Inventing a second status↔code mapping for one call site
+   would let the two surfaces disagree.
 4. **`close()`** — closes every live server, clears the interval, empties the map.
 
 `transport.onclose` is assigned **before** `server.connect`, because `Protocol.connect` captures and
 chains the existing handler (`protocol.js:220-224`); assigning after would clobber the SDK's own cleanup.
 
-### 4. Each session is bound to the principal that opened it
+### 4. Each session is bound to the `(tenantId, principalId)` that opened it
 
-An entry records the opening `principalId`/`tenantId`. A request whose credential resolves to a
-different principal is answered **`404 Session not found`** — the same status the SDK uses for an
-unknown session, so the response never confirms to a stranger that the session exists. Per-call
-authorization through the gateway is the load-bearing control; this exists so that a leaked session id
-plus *any* valid token cannot attach to another tenant's notification stream.
+An entry records **both** halves of the opening identity, and a request whose credential resolves to a
+different one is answered **`404 Session not found`** — the same status the SDK uses for an unknown
+session, so the response never confirms to a stranger that the session exists.
+
+**Both halves are load-bearing**, and binding on `principalId` alone is a real hole rather than a
+theoretical one: the token store's `principal_id` carries no cross-tenant uniqueness, so `ci-bot` is an
+ordinary name for two different tenants' automation, and an id-only check lets `globex`'s `ci-bot`
+attach to a session opened by `acme`'s. A test asserts exactly that case, because a same-tenant
+different-principal test passes under both implementations and would have hidden it.
+
+Per-call authorization through the gateway remains the load-bearing control — every tool call
+re-resolves the caller's own `AuthContext` and scopes the data plane by it, so this is not what keeps
+tenants' *data* apart. It exists so that a leaked session id plus any valid token cannot attach to
+another tenant's session at all.
 
 ### 5. The gateway owns the connection-level check too — `McpGateway.authenticate`
 

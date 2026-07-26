@@ -32,10 +32,20 @@ type McpIncomingMessage = IncomingMessage & { auth?: AuthInfo };
 interface SessionEntry {
   readonly server: ReturnType<typeof buildMcpServer>;
   readonly transport: StreamableHTTPServerTransport;
-  /** The principal that opened the session — a different one is refused (ADR-0058 §4). */
-  readonly principalId: string;
+  /**
+   * The identity that opened the session — any other is refused (ADR-0058 §4). **Both** halves are
+   * load-bearing: a principal id is unique only within its tenant (the token store's `principal_id`
+   * carries no cross-tenant uniqueness), so binding on the id alone would let `acme`'s `ci-bot` attach
+   * to a session opened by `globex`'s `ci-bot` — the exact cross-tenant case this control exists for.
+   */
+  readonly owner: { readonly tenantId: string; readonly principalId: string };
   /** Epoch ms of the last request on this session; drives the idle sweep. */
   lastSeenAt: number;
+}
+
+/** Two identities are the same session owner only if BOTH the tenant and the principal match. */
+function sameOwner(a: SessionEntry['owner'], b: SessionEntry['owner']): boolean {
+  return a.tenantId === b.tenantId && a.principalId === b.principalId;
 }
 
 export interface McpHttpHandlerOptions extends BuildMcpServerOptions {
@@ -165,7 +175,7 @@ export function createMcpHttpHandler(
     req: McpIncomingMessage,
     res: ServerResponse,
     parsedBody: unknown,
-    principalId: string,
+    owner: SessionEntry['owner'],
   ): Promise<void> => {
     if (sessions.size >= maxSessions) {
       respondError(res, 429, new RateLimitedError('too many concurrent MCP sessions'), {
@@ -178,7 +188,11 @@ export function createMcpHttpHandler(
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (sessionId) => {
-        sessions.set(sessionId, { server, transport, principalId, lastSeenAt: now() });
+        // `close()` may have run while this request was in flight — it clears the map and stops the
+        // sweeper, so an entry registered after it would never be reaped by anything. Refuse to enter
+        // the map; the post-`handleRequest` check below tears the server down.
+        if (closed) return;
+        sessions.set(sessionId, { server, transport, owner, lastSeenAt: now() });
       },
       // Fired by the SDK on an explicit DELETE.
       onsessionclosed: (sessionId) => {
@@ -200,10 +214,78 @@ export function createMcpHttpHandler(
     await server.connect(transport as Transport);
     await transport.handleRequest(req, res, parsedBody);
 
-    if (transport.sessionId === undefined) {
+    const sessionId = transport.sessionId;
+    if (sessionId === undefined) {
       // Not an initialize request — the SDK already answered 400. Nothing was registered; drop it.
       await server.close();
+      return;
     }
+    if (closed) {
+      // A session that raced `close()`. `onsessioninitialized` kept it out of the map; this is what
+      // actually releases it, so `close()` honours its "every live session" contract even for a
+      // request that was mid-flight when it ran.
+      sessions.delete(sessionId);
+      await server.close();
+    }
+  };
+
+  /** Serve one request. Wrapped by `handle`, which owns the error boundary. */
+  const serve = async (
+    req: McpIncomingMessage,
+    res: ServerResponse,
+    parsedBody: unknown,
+  ): Promise<void> => {
+    if (closed) {
+      // Retryable, not a fault: the host is shutting down. Guarding here is what stops a request
+      // racing `close()` from allocating a session nothing will ever tear down.
+      respondError(res, 429, new RateLimitedError('server is shutting down'), {
+        'retry-after': '5',
+      });
+      return;
+    }
+
+    // 1. Boundary auth (ADR-0058 §5) — before any session or McpServer exists. `headers` is Node's
+    //    lowercase-keyed record, exactly what defaultCredentialResolver indexes into.
+    const context: McpCallContext = { requestInfo: { headers: req.headers } };
+    let owner: SessionEntry['owner'];
+    try {
+      const authContext = await gateway.authenticate(context);
+      owner = { tenantId: authContext.tenantId, principalId: authContext.principal.id };
+    } catch (error) {
+      // 401 + the challenge every MCP client expects at the HTTP layer. Nothing was allocated.
+      respondError(res, 401, error, { 'www-authenticate': 'Bearer error="invalid_token"' });
+      return;
+    }
+
+    // 2. Hand the SDK the credential through its own documented channel as well as the raw header
+    //    (ADR-0058 §6). `scopes` stays empty on purpose: Tessera permissions are not OAuth scopes,
+    //    and publishing them here would invite an SDK-side check that is not the authority — the
+    //    gateway is.
+    const authorization = firstHeader(req.headers.authorization) ?? '';
+    if (/^Bearer /i.test(authorization)) {
+      req.auth = {
+        token: authorization.slice('Bearer '.length),
+        clientId: owner.principalId,
+        scopes: [],
+      };
+    }
+
+    const sessionId = firstHeader(req.headers[SESSION_HEADER]);
+    if (sessionId === undefined || sessionId === '') {
+      await openSession(req, res, parsedBody, owner);
+      return;
+    }
+
+    const entry = sessions.get(sessionId);
+    // A session belonging to anyone else answers 404, NOT 403: the SDK's own code for an unknown
+    // session, so the response never confirms to a stranger that the session exists.
+    if (entry === undefined || !sameOwner(entry.owner, owner)) {
+      respondError(res, 404, new NotFoundError('session not found'));
+      return;
+    }
+
+    entry.lastSeenAt = now();
+    await entry.transport.handleRequest(req, res, parsedBody);
   };
 
   return {
@@ -214,56 +296,16 @@ export function createMcpHttpHandler(
     sweep,
 
     async handle(req, res, parsedBody) {
-      if (closed) {
-        // Retryable, not a fault: the host is shutting down. Guarding here is what stops a request
-        // racing `close()` from allocating a session nothing will ever tear down.
-        respondError(res, 429, new RateLimitedError('server is shutting down'), {
-          'retry-after': '5',
-        });
-        return;
-      }
-
-      // 1. Boundary auth (ADR-0058 §5) — before any session or McpServer exists. `headers` is Node's
-      //    lowercase-keyed record, exactly what defaultCredentialResolver indexes into.
-      const context: McpCallContext = { requestInfo: { headers: req.headers } };
-      let principalId: string;
+      // The error boundary. Without it a rejection has nowhere to go: a Fastify host has already
+      // hijacked the reply, so no framework error handler can respond and the client waits forever;
+      // on a bare `node:http` host it surfaces as an unhandled rejection, which Node 22 treats as
+      // fatal. A masked 500 is the only acceptable outcome for an unexpected fault here.
       try {
-        principalId = (await gateway.authenticate(context)).principal.id;
+        await serve(req, res, parsedBody);
       } catch (error) {
-        // 401 + the challenge every MCP client expects at the HTTP layer. Nothing was allocated.
-        respondError(res, 401, error, { 'www-authenticate': 'Bearer error="invalid_token"' });
-        return;
+        if (res.headersSent) res.end();
+        else respondError(res, 500, error);
       }
-
-      // 2. Hand the SDK the credential through its own documented channel as well as the raw header
-      //    (ADR-0058 §6). `scopes` stays empty on purpose: Tessera permissions are not OAuth scopes,
-      //    and publishing them here would invite an SDK-side check that is not the authority — the
-      //    gateway is.
-      const authorization = firstHeader(req.headers.authorization) ?? '';
-      if (/^Bearer /i.test(authorization)) {
-        req.auth = {
-          token: authorization.slice('Bearer '.length),
-          clientId: principalId,
-          scopes: [],
-        };
-      }
-
-      const sessionId = firstHeader(req.headers[SESSION_HEADER]);
-      if (sessionId === undefined || sessionId === '') {
-        await openSession(req, res, parsedBody, principalId);
-        return;
-      }
-
-      const entry = sessions.get(sessionId);
-      // A session belonging to another principal answers 404, NOT 403: the SDK's own code for an
-      // unknown session, so the response never confirms to a stranger that the session exists.
-      if (entry === undefined || entry.principalId !== principalId) {
-        respondError(res, 404, new NotFoundError('session not found'));
-        return;
-      }
-
-      entry.lastSeenAt = now();
-      await entry.transport.handleRequest(req, res, parsedBody);
     },
 
     async close() {

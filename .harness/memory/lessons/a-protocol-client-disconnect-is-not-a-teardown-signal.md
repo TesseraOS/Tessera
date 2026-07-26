@@ -42,7 +42,25 @@ someone else's code, and library docs describe the happy path while the source d
   than re-derive. Every load-bearing claim in ADR-0058 came from `node_modules`, not from docs.
 - Mounting a raw protocol handler behind a web framework has a fixed shortlist of collisions worth
   checking up front: **who parsed the body**, **whose headers survive a hijacked reply** (framework
-  `reply.header()` is lost when the handler calls `writeHead`; `raw.setHeader` merges), and **what
-  order shutdown runs in** (an open stream is not an "idle" connection, so closing the app first
-  hangs). See [[authentication-is-not-authorization-on-a-shared-bus]] for the sibling case where the
-  transport change, not the handler, was where the real decision lived.
+  `reply.header()` is lost when the handler calls `writeHead`; `raw.setHeader` merges), **what order
+  shutdown runs in** (an open stream is not an "idle" connection, so closing the app first hangs), and
+  **where an unexpected rejection goes** (after a hijack, no framework error handler can respond — the
+  client just waits). See [[authentication-is-not-authorization-on-a-shared-bus]] for the sibling case
+  where the transport change, not the handler, was where the real decision lived.
+
+**Postscript — the part the gates could not tell me.** Every gate was green and the feature still was
+not done. An independent evaluator pass found that ADR-0058 §4 specified binding sessions on
+`(tenantId, principalId)` while the code bound on `principalId` alone — and the shipped test covered
+*same tenant, different principal*, which **passes under both implementations**. A green suite is
+evidence about the code you wrote, never about the code you promised.
+
+Two habits follow, and they generalise past this feature:
+
+- **Diff the implementation against the ADR, clause by clause, as a distinct step.** The tests were
+  written by whoever misread the spec, so they inherit the misreading. Anything the ADR calls a
+  security control deserves that check by name.
+- **When a control has two conditions, write the test that isolates each.** A composite identity
+  (tenant + principal, org + user, region + key) needs a case where the *other* half differs, or the
+  weaker implementation ships green. Mutation-test both — flip each half and confirm the intended
+  test, and only that test, goes red.
+

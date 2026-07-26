@@ -2,7 +2,7 @@
   "$schemaRef": "./schemas/feature_list.schema.json",
   "version": 1,
   "project": "tessera",
-  "updated": "2026-07-18",
+  "updated": "2026-07-26",
   "policy": {
     "wip_limit": 1,
     "ordering": "by release, then id; respect blockedBy"
@@ -3026,6 +3026,34 @@
         "E-020"
       ],
       "notes": "User items 1-5 (2026-07-18 report, second batch). Done 2026-07-18: descriptions from action semantics (NFR-7-safe), bell gains loading/error/retry, chart rides --primary (E-004 records the categorical-vs-single-series color rule). Plan: .harness/plans/F-091-overview-polish.md"
+    },
+    {
+      "id": "F-092",
+      "title": "Docs code blocks fail WCAG AA: shiki comment tokens are 3.49:1 on the dark code surface",
+      "requirements": [
+        "NFR-14"
+      ],
+      "service": "web",
+      "package": "@tessera/docs",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "Comment tokens inside docs code blocks meet WCAG AA (>= 4.5:1) in BOTH themes. Measured today: shiki's default `github-dark` colours comments #6a737d, which is 3.49:1 against the dark code surface #251a20 — axe reports `color-contrast`, impact serious. The light theme is UNMEASURED and must be checked as part of this, not assumed",
+        "The mechanism is decided rather than defaulted: shiki's themes are Fumadocs defaults and `apps/docs/source.config.ts` deliberately keeps `mdxOptions` stock, while ADR-0054 constrains docs theming to the `--color-fd-*` seam (no forks). Overriding the code theme (`mdxOptions.rehypeCodeOptions`) or restyling comment tokens in CSS touches every code block on every docs page, so record an ADR that cites or amends ADR-0054",
+        "The gate is widened to the pages that actually carry the defect: add `guides/governance-and-audit`, `guides/sources`, and `deployment/local` to `PAGES` in apps/docs/tests/e2e/docs.spec.ts — all three ship shell comments in code fences and have this violation today, invisible only because they are not in the axe-checked set",
+        "Restore a `#` comment to the bash block in content/docs/agents/remote-mcp.mdx (reworded away by F-055 to keep that feature scoped), so the fix is proven on the page that surfaced it; the contrast-checker skill applies; workspace gates green"
+      ],
+      "verification": [
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-026"
+      ],
+      "notes": "FOUND BY F-055 (2026-07-26), not fixed there. Adding content/docs/agents/remote-mcp.mdx to the axe-checked PAGES set failed immediately on a `# or oidc` comment in a bash fence. The comment was reworded into prose to keep F-055 scoped and the defect was left untouched — it predates F-055 and affects three already-shipped pages. Reproduce: add any of the three pages above to PAGES and run `pnpm --filter @tessera/docs test:e2e`. This is the second time the docs' own axe gate has been shown to be narrower than the content it guards; consider whether PAGES should be derived from the content tree rather than hand-listed."
     }
   ]
 }

@@ -62,8 +62,12 @@ describe('createMcpHttpHandler', () => {
   let clock = 0;
 
   /** Issue a real token from the real F-034 store — no auth doubles anywhere in this file. */
-  async function issue(principalId: string, roles: Role[] = ['member']): Promise<string> {
-    const { token } = await tokenStore.issue({ tenantId: 'acme', principalId, roles });
+  async function issue(
+    principalId: string,
+    roles: Role[] = ['member'],
+    tenantId = 'acme',
+  ): Promise<string> {
+    const { token } = await tokenStore.issue({ tenantId, principalId, roles });
     return token;
   }
 
@@ -160,17 +164,27 @@ describe('createMcpHttpHandler', () => {
       expect((await post(INITIALIZE_BODY, { token })).status).toBe(401);
     });
 
-    it('does not leave a server behind when the body is not an initialize request', async () => {
+    it('refuses a non-initialize request that carries no session id, registering no session', async () => {
       await start();
       const token = await issue('agent');
       const response = await post(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }), {
         token,
       });
 
-      // The SDK refuses a non-initialize request that carries no session id...
+      // The SDK refuses a non-initialize request that carries no session id, and no session is
+      // registered for it. NOTE: this does NOT prove the speculative server was closed — `sessions`
+      // is only ever written from `onsessioninitialized`, which never fires on this path, so
+      // `sessionCount` is 0 either way. That close is not observable from outside the handler; the
+      // assertion here is scoped to what it can actually see.
       expect(response.status).toBe(400);
-      // ...and the speculative server we built for it is closed rather than orphaned.
       expect(handler.sessionCount).toBe(0);
+
+      // What IS observable: capacity is not consumed by the refused attempt.
+      await start({ maxSessions: 1 });
+      const live = await issue('agent-2');
+      await post(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }), { token: live });
+      const opened = await openSession(live);
+      expect(opened).toBeTruthy();
     });
   });
 
@@ -206,6 +220,23 @@ describe('createMcpHttpHandler', () => {
       // 404 so the response never confirms to a stranger that the session exists (ADR-0058 §4).
       expect(response.status).toBe(404);
       expect(handler.sessionCount).toBe(1); // agent-a's session is untouched
+    });
+
+    it('answers 404 when the SAME principal id in a DIFFERENT tenant presents the session id', async () => {
+      // The case a principal-only binding misses, and the one ADR-0058 §4 actually exists for: the
+      // token store's principal_id carries no cross-tenant uniqueness, so `ci-bot` is a perfectly
+      // ordinary name for two different tenants' automation. Binding on the id alone let globex's
+      // ci-bot attach to acme's session.
+      await start();
+      const sessionId = await openSession(await issue('ci-bot', ['member'], 'acme'));
+
+      const response = await post(INITIALIZE_BODY, {
+        token: await issue('ci-bot', ['member'], 'globex'),
+        session: sessionId,
+      });
+
+      expect(response.status).toBe(404);
+      expect(handler.sessionCount).toBe(1);
     });
 
     it('refuses a new session beyond maxSessions with a retryable 429', async () => {
@@ -253,6 +284,39 @@ describe('createMcpHttpHandler', () => {
       // Only the one whose last request is older than the TTL is gone. This is the leak that
       // `client.close()` would otherwise create: the client sends no DELETE, so nothing else reaps it.
       expect(handler.sessionCount).toBe(1);
+    });
+
+    it('close() also releases a session that was still in flight when it ran', async () => {
+      // `close()` clears the map and stops the sweeper. A request that passed the `closed` check a
+      // moment earlier still completes and initializes a session — which nothing would ever reap.
+      // Slow authentication makes the window deterministic.
+      tokenStore = createInMemoryTokenStore();
+      const realAuth = createTokenAuthProvider({ tokenStore });
+      handler = createMcpHttpHandler(createServices(), {
+        gateway: createMcpGateway({
+          auth: {
+            authenticate: async (input) => {
+              await new Promise((resolve) => setTimeout(resolve, 150));
+              return realAuth.authenticate(input);
+            },
+          },
+        }),
+        sweepIntervalMs: 0,
+      });
+      server = createServer((req, res) => {
+        void handler.handle(req, res);
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/mcp`;
+
+      const inFlight = post(INITIALIZE_BODY, { token: await issue('agent') });
+      await new Promise((resolve) => setTimeout(resolve, 40)); // past the `closed` check, mid-auth
+      await handler.close();
+
+      const response = await inFlight;
+      await response.body?.cancel();
+
+      expect(handler.sessionCount).toBe(0);
     });
 
     it('close() drops every live session and refuses further requests', async () => {

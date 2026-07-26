@@ -78,10 +78,12 @@ server:
    supervisor's health check to `GET /ready`.
 5. Point remote agents and dashboards at the proxied HTTPS origin.
 
-Know the boundaries: SQLite-backed storage on one node, agent MCP access is
-stdio-on-that-host today (the HTTP/streamable MCP transport for remote agents is its
-own upcoming feature, F-055), and horizontal scale is exactly what the self-hosted
-profile completes.
+Know the boundaries: SQLite-backed storage on one node, and horizontal scale is
+exactly what the self-hosted profile completes. Agents on the host connect over
+stdio; agents anywhere else use
+[remote MCP over HTTP](/docs/agents/remote-mcp), served on this same proxied origin
+— which is also why the TLS step above matters for agent traffic and not only for
+the dashboard.
 
 ## What F-056 completes
 

@@ -56,8 +56,11 @@ one:
 1. **The REST API** (`tessera serve`, or the `tessera-api` bin) — serves `/v1` to
    dashboards, scripts, and remote callers. Liveness at `GET /health`, readiness at
    `GET /ready`.
-2. **The MCP server** (`tessera mcp`) — *not* a daemon you run: each agent client
-   spawns it over stdio and owns its lifetime. One process per connected agent, all
-   sharing the same store.
+2. **The MCP server** (`tessera mcp`) — locally, *not* a daemon you run: each agent
+   client spawns it over stdio and owns its lifetime, one process per connected
+   agent, all sharing the same store. For agents that are not on the host, the REST
+   process can also serve
+   [remote MCP over HTTP](/docs/agents/remote-mcp) on its own port (opt-in, and it
+   refuses to start unauthenticated).
 3. **Scans** — triggered when you add a source or ask for a rescan; incremental
    after the first pass.

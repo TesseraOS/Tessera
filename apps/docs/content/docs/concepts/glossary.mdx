@@ -48,7 +48,7 @@ these terms consistently; where a term has its own page, it is linked.
 
 | Term | Definition |
 |------|------------|
-| **MCP** | The Model Context Protocol — the agent-facing tool interface. Tessera's MCP server is spawned by agent clients over stdio. |
+| **MCP** | The Model Context Protocol — the agent-facing tool interface. Tessera serves it over two transports: stdio (spawned by the agent client, the local default) and streamable HTTP for remote agents (opt-in, Bearer-authenticated). |
 | **Parity rule** | The binding rule that every product operation is available over REST `/v1` and (where agent-relevant) MCP — the dashboard is never a privileged surface. |
 | **Port** | A domain-defined interface (hexagonal architecture) that infrastructure implements. |
 | **Adapter** | A concrete implementation of a port for a backend (sqlite-vec vs. pgvector, SQLite vs. Postgres). |

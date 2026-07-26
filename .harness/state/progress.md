@@ -3,7 +3,7 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
-## 2026-07-26 — F-056 IN PROGRESS: self-hosted profile (increments 0–4 of 8)
+## 2026-07-26 — F-056 IN PROGRESS: self-hosted profile (increments 0–5 of 8)
 
 Claimed **F-056** (`must`, lowest-id eligible; F-023 + F-053 done). Plan:
 [`F-056-self-hosted-profile-and-deployment.md`](../plans/F-056-self-hosted-profile-and-deployment.md)
@@ -112,20 +112,46 @@ live in the compose **header** (stripped by `composeBody`), with a header commen
 naming F-092 — whose notes now say to move them back inline when it lands. Information preserved,
 gate honest, defect still tracked rather than absorbed.
 
+### Increment 5 — BullMQ, and a conformance suite that was testing an implementation detail
+
+Taken as a dependency, unlike the S3 signer next door, and the asymmetry is the decision: SigV4 is a
+pure specified function with published vectors, whereas a reliable distributed queue is atomic Lua,
+visibility timeouts and stalled-job recovery — get that subtly wrong and jobs vanish silently.
+
+**The suite had been asserting synchronous delivery.** Every case ran `enqueue` → `shutdown()` →
+assert, which only observes anything because the in-process adapter dispatches on the microtask queue.
+Against a broker that closes the worker before it runs, so the suite would have failed a *correct*
+adapter. It now takes a harness with an optional `settle()`; in-process still passes with no hook,
+because for it the property genuinely holds.
+
+Defining `settle` took two attempts. "Wait until nothing is pending" deadlocked the
+unsubscribed-handler case — that test enqueues a job nobody will ever consume, deliberately. The right
+barrier is **quiescence**: nothing left to do, *or* nothing being worked and the backlog unchanged.
+Progress, not emptiness, is what "delivery finished" means.
+
+`drain()` is deliberately absent and a test asserts the absence: it would have to mean "every worker
+anywhere is done", which one process cannot know, and a local-only version would silently mean
+something different per profile.
+
 ### Evidence
 
-- With Postgres + MinIO reachable: storage **64/64** (was 42) · memory 69/69 · knowledge-graph 54/54.
-  `pnpm -w test` unchanged at 43/43 with neither reachable (guarded suites skip).
+- With Postgres + MinIO + Redis reachable: storage **70/70** (was 42) · memory 69/69 ·
+  knowledge-graph 54/54. `pnpm -w test` unchanged at 43/43 with none reachable (guarded suites skip).
+- Retry is mutation-verified (pinning `attempts: 1` turns that case red), as were the two increment-4
+  S3 bugs.
 - Workspace: verify-state valid (93 features, 1230 doc links) · typecheck 45/45 · lint 26/26 · format
   clean · build 23/23.
 
 ### Next step
 
-Increment 5 (BullMQ queue — note the conformance suite's enqueue→`shutdown()` assumption needs a
-`settle?()` harness hook, and `drain?()` stays absent by design) · 6 async retriever ports (an E-012
-port change — its own commit so a regression bisects cleanly) · 7 the five remaining PG relational
-adapters (manifest, source registry, project store, token store, audit log) · 8 the profile itself,
-which is where clause 1 actually closes.
+Increment 6 (async retriever ports — an E-012 port change; its own commit so a regression bisects
+cleanly) · 7 the five remaining PG relational adapters (manifest, source registry, project store,
+token store, audit log) · 8 the profile itself, which is where clause 1 actually closes.
+
+**Docker Desktop died mid-session and had to be restarted by hand.** `Docker Desktop.exe` alone exits
+immediately when its WSL backend is stopped; `wsl -d docker-desktop --exec /bin/sh -c true` starts the
+backend first, after which the app launches and the daemon is up in ~20s. Worth knowing before
+concluding the machine cannot run the guarded suites.
 
 **Running the guarded suites is not optional.** They need `docker compose up -d` **and** the flags
 (`TESSERA_TEST_POSTGRES=1`, `TESSERA_TEST_S3=1`, and `TESSERA_TEST_REDIS=1` from increment 5); without

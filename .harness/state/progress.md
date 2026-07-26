@@ -3,7 +3,7 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
-## 2026-07-26 — F-056 IN PROGRESS: self-hosted profile (increments 0–3 of 8)
+## 2026-07-26 — F-056 IN PROGRESS: self-hosted profile (increments 0–4 of 8)
 
 Claimed **F-056** (`must`, lowest-id eligible; F-023 + F-053 done). Plan:
 [`F-056-self-hosted-profile-and-deployment.md`](../plans/F-056-self-hosted-profile-and-deployment.md)
@@ -80,23 +80,58 @@ The graph cycle guard has its own test beside the shared suite, because a broken
 a wrong value — it hangs. Mutation-verified: replacing it with `TRUE` turns that test *and* the
 conformance suite's cycle case red.
 
+### Increment 4 — S3 blob, and the strongest argument yet for testing against a real server
+
+Five operations over `fetch` + `node:crypto`, no AWS SDK. The signer is a pure function pinned to the
+**published AWS SigV4 vectors** — the distinction matters, because pinning a hand-rolled
+implementation of someone else's protocol to *its own output* would pass for any implementation,
+correct or not. All three vectors match.
+
+Then MinIO found two bugs the vectors could not:
+
+1. **Double-encoded path → 403 `SignatureDoesNotMatch`.** The adapter encoded the key into the URL
+   and the signer encoded `url.pathname` *again*: signed `a%2520b`, sent `a%20b`. Only keys with a
+   space, non-ASCII, or `!'()*` failed — plain keys passed, which is exactly how this survives a
+   careless test. The signer now signs `url.pathname` verbatim and the contract is documented, because
+   it *cannot* safely encode a raw path: `URL` leaves `!'()*` unescaped in `pathname`.
+2. **`list()` disagreed with `put()`.** MinIO returns `'` as the numeric reference `&#39;`, which a
+   named-entity-only decoder missed. Fixing that exposed a subtler one: the container block was
+   decoded, then the leaf decoded again, so a key containing the literal `&#39;` (sent as `&amp;#39;`)
+   came back as `'`. Now raw extraction with a single leaf decode, single-pass regex.
+
+Both mutation-verified. Key validation is now **shared** with the filesystem adapter, so the two
+profiles cannot drift on what a legal key is.
+
+### F-092 blocked real work, and the workaround is recorded
+
+Adding minio to compose put the first inline comments in that file's body — and apps/docs embeds the
+body **verbatim** (byte-pinned) on a page that *is* in the axe set, where shiki renders comments at
+3.49:1. The page went red. Fixing it properly is a shiki theme decision across every code block on the
+site, which ADR-0054 governs and which does not belong inside this feature. So the service comments
+live in the compose **header** (stripped by `composeBody`), with a header comment saying why and
+naming F-092 — whose notes now say to move them back inline when it lands. Information preserved,
+gate honest, defect still tracked rather than absorbed.
+
 ### Evidence
 
-- With Postgres reachable: storage 42/42 · memory 69/69 · knowledge-graph 54/54. `pnpm -w test`
-  unchanged at 43/43 with Postgres absent (guarded suites skip).
+- With Postgres + MinIO reachable: storage **64/64** (was 42) · memory 69/69 · knowledge-graph 54/54.
+  `pnpm -w test` unchanged at 43/43 with neither reachable (guarded suites skip).
 - Workspace: verify-state valid (93 features, 1230 doc links) · typecheck 45/45 · lint 26/26 · format
   clean · build 23/23.
 
 ### Next step
 
-Increment 4 (S3 blob, SigV4 hand-rolled per ADR-0059 §5) · 5 BullMQ · 6 async retriever ports (an
-E-012 port change — its own commit so a regression bisects cleanly) · 7 the five remaining PG
-relational adapters (manifest, source registry, project store, token store, audit log) · 8 the profile
-itself, which is where clause 1 actually closes.
+Increment 5 (BullMQ queue — note the conformance suite's enqueue→`shutdown()` assumption needs a
+`settle?()` harness hook, and `drain?()` stays absent by design) · 6 async retriever ports (an E-012
+port change — its own commit so a regression bisects cleanly) · 7 the five remaining PG relational
+adapters (manifest, source registry, project store, token store, audit log) · 8 the profile itself,
+which is where clause 1 actually closes.
 
-**Running the guarded suites is not optional.** They need `docker compose up -d postgres` **and**
-`TESSERA_TEST_POSTGRES=1`; without the flag they skip silently and prove nothing — which is exactly
-how F-023's pgvector and postgres-relational suites sat unexecuted until increment 1 ran them.
+**Running the guarded suites is not optional.** They need `docker compose up -d` **and** the flags
+(`TESSERA_TEST_POSTGRES=1`, `TESSERA_TEST_S3=1`, and `TESSERA_TEST_REDIS=1` from increment 5); without
+them they skip silently and prove nothing — which is exactly how F-023's pgvector and
+postgres-relational suites sat unexecuted until increment 1 ran them. Every bug in increments 1–4 that
+mattered was found by a real server, not by a unit test.
 
 ---
 

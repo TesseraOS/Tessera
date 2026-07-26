@@ -16,6 +16,8 @@ const PAGES = [
   { path: '/docs/quickstart', h1: 'Quickstart' },
   { path: '/docs/concepts/context-compiler', h1: 'Context Compiler' },
   { path: '/docs/agents/claude-code', h1: 'Claude Code' },
+  // Carries a wide control-matrix table, so the 375px overflow check earns its keep here.
+  { path: '/docs/agents/remote-mcp', h1: 'Remote MCP over HTTP' },
   { path: '/docs/reference/mcp-tools', h1: 'MCP tools' },
   { path: '/docs/deployment/self-host-docker', h1: 'Self-hosting with Docker' },
 ] as const;

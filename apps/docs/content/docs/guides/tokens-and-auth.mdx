@@ -102,7 +102,10 @@ is in the [configuration reference](/docs/reference/configuration).
 
 The stdio MCP server is spawned by your agent on your machine and inherits the
 deployment's config. There is no credential prompt in the stdio transport — a local
-agent is the machine's user, which is exactly the `none`-mode trust model. Locking
-agents down independently of humans becomes meaningful with the remote MCP
-transport (HTTP + Bearer through the gateway), which is its own upcoming feature
-(F-055) and will ride the same token model documented here.
+agent is the machine's user, which is exactly the `none`-mode trust model.
+
+Locking agents down independently of humans becomes meaningful over
+[remote MCP](/docs/agents/remote-mcp), where each client presents its own Bearer
+token. It rides exactly the token model documented on this page: the same tokens,
+the same roles, the same revocation — so a token scoped to `viewer` is a read-only
+agent, and revoking it cuts the agent off on its next call.

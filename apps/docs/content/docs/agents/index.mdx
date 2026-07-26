@@ -77,5 +77,10 @@ checks node, config, storage, and embeddings health with real error messages.
 
 The stdio transport inherits your local trust: the spawned server runs as you,
 against your files, under the deployment's [auth mode](/docs/guides/tokens-and-auth).
-There is no per-agent credential in stdio; remote agents connecting over HTTP with
-Bearer tokens is the upcoming remote-MCP transport (F-055).
+There is no per-agent credential in stdio — the transport carries one identity, the
+one that launched it.
+
+When the agent is *not* on your machine, use
+[remote MCP over HTTP](/docs/agents/remote-mcp): the same tools, served on the API's
+port, with each client presenting its own Bearer token through the gateway that
+authorizes, meters, and audits every call.

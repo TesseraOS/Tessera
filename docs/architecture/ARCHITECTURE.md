@@ -66,7 +66,7 @@ surface serves an IDE agent, a CLI agent, or an orchestrator's worker identicall
 | **Ingestion workers** | `@tessera/ingestion` | in-process (local) / BullMQ workers (cloud) | Consume source events, run processors, write to stores. |
 | **Dashboard** | `@tessera/web` (`apps/web`) | Next.js/React | Search, graph, timeline, package inspector, config, governance. |
 | **Domain packages** | `@tessera/*` | library | Compiler, retrieval, KG, memory, storage ports — no I/O of their own. |
-| **MCP server** | `@tessera/mcp` | embedded in API (gateway later) | Exposes tools to agents. |
+| **MCP server** | `@tessera/mcp` | stdio process (local) + HTTP mounted on the API listener (remote, opt-in) | Exposes tools to agents; both transports go through the same auth/quota/audit gateway. |
 | **SDK** | `@tessera/sdk` | library | Generated + hand-written client; plugin SDK. |
 
 In **Local/Self-Hosted**, API + workers + MCP run in **one process** (workers can be a
@@ -205,8 +205,13 @@ inputs → same output) and **cacheable** with incremental recompute (FR-33).
 - **REST `/v1`** — OpenAPI-described, additive-versioned (NFR-11). Validation via Zod at
   the boundary; serialization via Fastify JSON Schema.
 - **MCP** — tools `search`, `compile_context`, `get_effects`, `capture_memory`,
-  `explain` (FR-35); embedded in the API process now, **gateway** (multi-client auth +
-  quotas) in R2 (FR-36).
+  `explain` and the rest of the agent surface (FR-35), served over **two transports**:
+  **stdio** (the local default — the agent client spawns the process) and, opt-in,
+  **streamable HTTP** mounted on the API listener at `/mcp` for remote agents
+  (FR-71, [ADR-0058](../adr/0058-remote-mcp-http-transport.md)). Both run through the
+  **gateway** (per-client auth + RBAC + quotas + audit, FR-36); the HTTP transport
+  refuses to start unless auth is `token` or `oidc`. It is JSON-RPC, so it carries no
+  OpenAPI path.
 - **SSE/WebSocket** — ingest progress, new memories, package-ready events (FR-38).
 - **SDKs** — TS SDK generated from OpenAPI + hand-written ergonomics (FR-39); **plugin
   SDK** contracts in `@tessera/sdk` (FR-40).

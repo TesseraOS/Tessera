@@ -1,0 +1,149 @@
+---
+title: Remote MCP over HTTP
+description: Expose the MCP tools to remote agents over streamable HTTP with Bearer tokens — turning it on, connecting a client, what the gateway enforces, and the operational limits.
+---
+
+Everything else in this section describes **stdio**: your agent spawns the server on
+your machine and owns its lifetime. That is the right model for a developer working
+locally, and it stays the default.
+
+It does not work when the agent is somewhere else — a hosted assistant, a CI job, a
+teammate's laptop pointed at a shared deployment. For those, Tessera can serve the
+same MCP tools over **streamable HTTP** on the same listener and port as the REST
+API, with each client presenting its own Bearer token.
+
+<Callout type="warn">
+Turning this on moves the MCP surface from a process boundary to a **network**
+boundary. Before stdio, reaching the tools required the ability to run a process on
+the host; after, it requires a token and network access. Read
+[Tokens &amp; auth](/docs/guides/tokens-and-auth) first, and serve it over TLS.
+</Callout>
+
+## Turning it on
+
+Two settings, and the first is not optional — use `token` or `oidc`, never `none`:
+
+```bash
+TESSERA_AUTH_MODE=token
+TESSERA_MCP_HTTP_ENABLED=1
+```
+
+The server **refuses to start** if remote MCP is enabled while `TESSERA_AUTH_MODE`
+is `none`. That is deliberate: in `none` mode the local provider authenticates
+anything, so an enabled-but-unauthenticated remote surface would hand the tools to
+whoever can reach the port. The failure is a config validation error at startup, not
+a silently ignored setting — you will know immediately.
+
+Equivalently, in `tessera.config.json`:
+
+```json
+{
+  "auth": { "mode": "token" },
+  "mcp": { "http": { "enabled": true } }
+}
+```
+
+The endpoint is then served at **`POST`/`GET`/`DELETE` `/mcp`** on the API's own
+host and port. No second port, no second process, no separate certificate.
+
+## Connecting a client
+
+Any MCP client that speaks the streamable-HTTP transport can connect. Point it at
+the endpoint and give it an `Authorization` header carrying a token you
+[issued](/docs/guides/tokens-and-auth#issuing-tokens):
+
+```json
+{
+  "mcpServers": {
+    "tessera": {
+      "type": "http",
+      "url": "https://your-host.example.com/mcp",
+      "headers": { "Authorization": "Bearer tsk_..." }
+    }
+  }
+}
+```
+
+Client config formats differ — check your agent's own documentation for where the
+URL and headers go. What is the same everywhere: the URL, the `Authorization`
+header, and the tool catalog, which is identical to the stdio one
+([all <McpToolCount /> of them](/docs/reference/mcp-tools)).
+
+A connection without a valid credential is rejected with `401` and a
+`WWW-Authenticate: Bearer` challenge **before** any session is created.
+
+## What the gateway enforces
+
+Remote MCP does not get its own security model — it goes through the same gateway
+the stdio transport uses, on every single call:
+
+| Control | Behaviour |
+| --- | --- |
+| **Authentication** | The connection is authenticated once at the boundary, and *again* on every tool call. Revoking a token stops it working on the next call, without the client reconnecting. |
+| **Authorization** | Each tool requires a permission from the [role model](/docs/guides/tokens-and-auth#the-role-model). A `viewer` token calling a write tool gets `FORBIDDEN`. |
+| **Quotas** | With `TESSERA_AUTH_QUOTA_ENABLED=1`, calls are metered per principal; exceeding the window returns `RATE_LIMITED`. |
+| **Audit** | Every call is recorded in the same trail REST writes to, tagged `surface: mcp` — see [Governance &amp; audit](/docs/guides/governance-and-audit). |
+| **Rate limiting** | When `TESSERA_API_RATE_LIMIT_ENABLED=1`, the endpoint is rate-limited per IP, complementing the per-principal quota. |
+| **Headers** | The endpoint carries the same security headers and `x-request-id` correlation as every REST response. |
+
+## Project scope
+
+Remote MCP is the only transport that can carry the `X-Tessera-Project` header,
+because stdio has no per-call headers. Send it with a project id and every data tool
+on that connection is scoped to that project; omit it for the default project. An
+unknown or foreign id is rejected with `NOT_FOUND` rather than silently falling back.
+See [Tenants &amp; projects](/docs/guides/tenants-and-projects).
+
+## Sessions and limits
+
+Each connected client holds a session, identified by the `Mcp-Session-Id` header the
+server issues at initialization.
+
+- **Sessions are bound to the principal that opened them.** Presenting another
+  principal's token against a session id is answered `404`, the same as an unknown
+  session.
+- **Idle sessions are reaped.** MCP clients are not required to close their session
+  when they exit — most simply stop talking — so a session with no traffic for
+  `TESSERA_MCP_HTTP_SESSION_TTL_MS` (default 5 minutes) is closed server-side. A
+  client that goes quiet and comes back will re-initialize; this is normal.
+- **Concurrency is capped** at `TESSERA_MCP_HTTP_MAX_SESSIONS` (default 100). Beyond
+  it, a new session is refused `429` with `Retry-After`. The cap is global, not
+  per-principal.
+- **Sessions live in the process's memory.** A multi-replica deployment therefore
+  needs sticky sessions at the load balancer, or clients will land on a replica that
+  has never heard of their session id.
+
+## What it is not
+
+- **Not described in the OpenAPI document.** `/mcp` speaks JSON-RPC, not REST, so it
+  carries no path in the [API reference](/docs/reference/api) and the generated SDK
+  has no method for it. That is a decision, not an omission — a JSON-RPC envelope
+  modelled as a REST operation would be a fiction in every generated client.
+- **Not an OAuth resource server.** Tessera authenticates with its own tokens or
+  your OIDC provider; there is no dynamic client registration and no
+  `.well-known` protected-resource metadata.
+- **Not for browser-origin clients.** The CORS allowlist does not expose the MCP
+  session headers, so a browser-based client cannot complete the preflight. Real
+  remote MCP clients are server-side and unaffected.
+- **Not resumable.** A dropped connection re-initializes rather than replaying
+  missed messages.
+
+## Troubleshooting
+
+**The server will not start.** If the error names `mcp.http.enabled` and
+`auth.mode`, the deployment is still in `none` mode — set `TESSERA_AUTH_MODE=token`.
+
+**`401` on every request.** The token is missing, malformed, expired, or revoked.
+Confirm the header is `Authorization: Bearer <token>` and that the token still lists
+as active — see [Using and revoking](/docs/guides/tokens-and-auth#using-and-revoking).
+
+**`404` from a client that was working.** Its session was reaped or the server
+restarted. The client should re-initialize; if it does not, reconnect it.
+
+**Tools listed but every call is `FORBIDDEN`.** The tool catalog is not filtered by
+role — discovery is open, authorization happens per call. Issue a token with a role
+that holds the permission.
+
+**Works locally, `404` behind a proxy.** The endpoint is a plain HTTP path on the
+API listener; make sure the proxy forwards `/mcp` and does not buffer streamed
+responses.

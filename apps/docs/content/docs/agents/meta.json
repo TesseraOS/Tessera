@@ -1,4 +1,4 @@
 {
   "title": "Agents",
-  "pages": ["index", "claude-code", "cursor", "cline", "codex", "continue"]
+  "pages": ["index", "claude-code", "cursor", "cline", "codex", "continue", "remote-mcp"]
 }

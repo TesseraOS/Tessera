@@ -1827,27 +1827,25 @@
     },
     {
       "id": "F-056",
-      "title": "Self-hosted profile completion + deployment artifacts: PG memory/graph stores, S3, BullMQ, Dockerfiles, full compose, release CD, deploy guides",
+      "title": "Self-hosted profile completion: Postgres/S3/BullMQ adapters + profile wiring so `profile: self-hosted` boots for real",
       "requirements": [
         "FR-51",
-        "FR-53",
-        "NFR-15",
-        "NFR-10"
+        "FR-53"
       ],
       "service": "root",
       "package": "—",
       "release": "R4",
       "priority": "must",
-      "status": "backlog",
+      "status": "in_progress",
       "blockedBy": [
         "F-023",
         "F-053"
       ],
       "acceptance": [
-        "Profile `self-hosted` boots for real: Postgres-backed MemoryStore + GraphStore adapters (same conformance suites incl. tenant/project isolation, env-guarded like F-023), S3-compatible BlobStore adapter, BullMQ/Redis Queue adapter — createRuntime selects them by config with NO domain change (FR-53; closes the F-023 deferral where non-local profiles throw)",
-        "Deployment artifacts: production Dockerfiles for apps/server (API+MCP) and apps/web (+ marketing/docs), a full docker-compose stack (server, web, postgres+pgvector, minio, redis) that stands up a working self-hosted Tessera from scratch, verified end-to-end",
-        "Release CD (NFR-15): tagged releases build + publish container images (and prep npm publish for sdk/cli); CI gains the compose-boot smoke",
-        "Deployment guides in docs (F-053 section completed): self-host via compose, managed-cloud walkthrough (a mainstream provider end-to-end incl. TLS, domains per ADR-0035 topology, env/secrets, backups via F-024), production checklist (auth mode, CORS allowlist, rate limits, retention, telemetry); workspace gates green"
+        "Profile `self-hosted` boots for real: EVERY component in the data path has a non-SQLite implementation selected by config with NO domain change (FR-53; closes the F-023/ADR-0026 deferral where non-local profiles throw at profiles/local.ts). Clause scope corrected 2026-07-26: the original wording named four adapters (MemoryStore, GraphStore, S3 BlobStore, BullMQ Queue) but a profile that boots needs ELEVEN — grep for BetterSQLite3Database found seven more SQLite-bound components (keyword FTS5 retriever, temporal retriever, ingestion manifest, source registry, project store, token store, audit log). Keeping SQLite for any of them forfeits the horizontal scale self-hosted exists for, so they are in scope, not creep",
+        "Each Postgres adapter passes the SAME shared conformance suite its SQLite twin passes, including tenant/project isolation, env-guarded exactly like F-023 (`TESSERA_TEST_POSTGRES=1`) so a machine without Postgres still goes green",
+        "Schema is created by migrations applied once at composition-root boot under a Postgres advisory lock (the existing runner read-then-applies, which races across replicas); adapters never create their own tables",
+        "The compose stack gains the DATA services (postgres+pgvector, minio, redis) so the profile is verifiable against real infrastructure; `TESSERA_PROFILE=self-hosted` serves everything Local does, proven end-to-end; workspace gates green"
       ],
       "verification": [
         "typecheck",
@@ -1860,7 +1858,43 @@
         "E-007",
         "E-014",
         "E-005"
-      ]
+      ],
+      "notes": "RESCOPED 2026-07-26 by the lead, on a verified finding from the F-056 planning pass: clause 1 as originally written understated its own scope by ~7 adapters. Clauses 2b/3/4 of the original record (Dockerfiles, app containers in compose, compose-boot smoke, release CD, deployment guides) moved to F-093 — release contents are unchanged, only the unit of work moved, and both stay `must` in R4. The cut is at the last increment that touches product code. Plan: .harness/plans/F-056-self-hosted-profile-and-deployment.md (covers both features; increments 0-8 are F-056, 9-13 are F-093)."
+    },
+    {
+      "id": "F-093",
+      "title": "Deployment artifacts: production Dockerfiles, full compose stack, compose-boot CI smoke, release CD, and the deployment guides",
+      "requirements": [
+        "NFR-15",
+        "NFR-10",
+        "FR-53"
+      ],
+      "service": "root",
+      "package": "—",
+      "release": "R4",
+      "priority": "must",
+      "status": "backlog",
+      "blockedBy": [
+        "F-056"
+      ],
+      "acceptance": [
+        "Production Dockerfiles for apps/server (API + MCP) and the three Next apps (web, marketing, docs), multi-stage over the pnpm+turbo workspace (pruned install, Node 22.16.0 per .nvmrc), with image size and build caching accounted for",
+        "The docker-compose stack gains the APP services on top of F-056's data services, so `docker compose up -d` stands up a working self-hosted Tessera from scratch — verified end-to-end, not asserted (register a source, scan, search, compile, capture a memory, read the audit trail)",
+        "Release CD (NFR-15): tagged releases build + publish container images; CI gains the compose-boot smoke as a JOB (deliberately not a gates.json gate — that would force Docker on every contributor for every change, and add a second source of the parallel-e2e contention disclosed in progress.md). npm publishing is NOT here: F-059 owns it and it cannot precede F-059's LICENSE clause; F-056/F-093 do `npm pack --dry-run` over the publish set only",
+        "Deployment guides in docs (completing the F-053 section): self-host via compose, a managed-cloud walkthrough end-to-end (TLS, domains per ADR-0035 topology, env/secrets, backups via F-024), and a production checklist (auth mode, CORS allowlist, rate limits, retention, telemetry) that CROSS-LINKS docs/agents/remote-mcp.mdx rather than duplicating it; workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-005",
+        "E-014",
+        "E-026"
+      ],
+      "notes": "SPLIT OUT OF F-056 on 2026-07-26 by the lead. F-056 as recorded carried four clauses; its clause 1 alone turned out to be ~11 adapters rather than the 4 it named, so the artifact clauses moved here to let each feature close honestly with green gates instead of one enormous half-finished one. Release contents unchanged. Plan: .harness/plans/F-056-self-hosted-profile-and-deployment.md increments 9-13 (written before the split, and sequenced so it covers both). Constraint carried over: apps/docs/tests/compose-doc-drift.test.ts byte-pins the compose file against the docs fence, so compose edits and doc edits ship together. Note F-092 (shiki AA contrast) constrains which new doc pages may join the axe PAGES set."
     },
     {
       "id": "F-057",

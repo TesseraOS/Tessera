@@ -3,7 +3,7 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
-## 2026-07-26 — F-056 IN PROGRESS: self-hosted profile (increments 0–1 of 8)
+## 2026-07-26 — F-056 IN PROGRESS: self-hosted profile (increments 0–3 of 8)
 
 Claimed **F-056** (`must`, lowest-id eligible; F-023 + F-053 done). Plan:
 [`F-056-self-hosted-profile-and-deployment.md`](../plans/F-056-self-hosted-profile-and-deployment.md)
@@ -52,20 +52,51 @@ from F-023 had never actually executed on this machine. The migration test uses 
 `applied` and the other `skipped`. **Mutation-verified:** removing the `pg_advisory_lock` call turns
 both concurrency tests red and nothing else.
 
+### Increments 2–3 — the first two adapters, both against the shared conformance suites
+
+**PG MemoryStore** (69 tests, was 52) and **PG GraphStore** (54, was 40). Each satisfies the *same*
+shared suite as its SQLite twin, tenant/project isolation included, so the pair cannot diverge. Neither
+creates its own tables; both export a `Migration[]`. Test isolation is a fresh schema per harness via
+`search_path`, so no adapter needed a test-only `tableName` option.
+
+Three things only a real database would have told us:
+
+- **A claim of mine was false, and the mutation check is what caught it.** I wrote that PG `real`
+  would round-trip `0.85` as `0.8500000238…` and asserted it; mutating the column to `real` left all 69
+  tests green. Measured: `0.85::real::text` is `'0.85'` — float4 output uses shortest-round-trip text,
+  so the obvious worry is unfounded. The real boundary is ~7 significant digits:
+  `0.123456789012345::real::text` is `'0.12345679'`, silently, while SQLite's float8 returns it whole.
+  `doublePrecision` is still right; the *reason* I gave was wrong. Test now uses a value past the
+  boundary and re-mutates red.
+- **Postgres rejects a recursive CTE whose two arms disagree on column type at parse time.**
+  `COALESCE(confidence, 1.0)` is `numeric` in the anchor and `double precision` in the recursion, so
+  `getEffects` needs explicit `::double precision` / `::integer` casts. `strpos` also replaces SQLite's
+  `instr` for the cycle guard.
+- **node-postgres returns `count(*)` as a string** (bigint, to avoid truncating past 2^53), so every
+  `count*` parses rather than casts — with a test asserting the returned *type*, since a stray `'2'`
+  satisfies loose equality and then flows into arithmetic.
+
+The graph cycle guard has its own test beside the shared suite, because a broken guard does not return
+a wrong value — it hangs. Mutation-verified: replacing it with `TRUE` turns that test *and* the
+conformance suite's cycle case red.
+
 ### Evidence
 
-- `@tessera/storage` 42/42 with Postgres reachable; `pnpm -w test` unchanged at 43/43 (guarded suites
-  skip offline — an advisory lock has no SQLite fallback).
-- Workspace: verify-state valid (93 features, 1228 doc links) · typecheck 45/45 · lint 26/26 · format
+- With Postgres reachable: storage 42/42 · memory 69/69 · knowledge-graph 54/54. `pnpm -w test`
+  unchanged at 43/43 with Postgres absent (guarded suites skip).
+- Workspace: verify-state valid (93 features, 1230 doc links) · typecheck 45/45 · lint 26/26 · format
   clean · build 23/23.
 
 ### Next step
 
-Increment 2: the Postgres `MemoryStore` against the shared conformance suite (incl. tenant/project
-isolation), then 3 graph · 4 S3 · 5 BullMQ · 6 async retriever ports (E-012, its own commit) ·
-7 the five remaining PG relational adapters · 8 the profile itself. **Postgres must be running**
-(`docker compose up -d postgres`) and guarded runs need `TESSERA_TEST_POSTGRES=1` — without it the new
-suites skip and prove nothing.
+Increment 4 (S3 blob, SigV4 hand-rolled per ADR-0059 §5) · 5 BullMQ · 6 async retriever ports (an
+E-012 port change — its own commit so a regression bisects cleanly) · 7 the five remaining PG
+relational adapters (manifest, source registry, project store, token store, audit log) · 8 the profile
+itself, which is where clause 1 actually closes.
+
+**Running the guarded suites is not optional.** They need `docker compose up -d postgres` **and**
+`TESSERA_TEST_POSTGRES=1`; without the flag they skip silently and prove nothing — which is exactly
+how F-023's pgvector and postgres-relational suites sat unexecuted until increment 1 ran them.
 
 ---
 

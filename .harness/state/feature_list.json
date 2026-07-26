@@ -1803,7 +1803,7 @@
       "package": "@tessera/mcp",
       "release": "R4",
       "priority": "should",
-      "status": "backlog",
+      "status": "in_progress",
       "blockedBy": [
         "F-026",
         "F-044"

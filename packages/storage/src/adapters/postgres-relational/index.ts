@@ -16,6 +16,12 @@ export interface PostgresStoreOptions {
 /** Postgres {@link RelationalStore}: lifecycle plus a typed Drizzle `db` handle for repositories. */
 export interface PostgresStore extends RelationalStore {
   readonly db: NodePgDatabase;
+  /**
+   * The underlying pool. Exposed for the one thing the Drizzle handle cannot express: taking a
+   * **session-scoped** advisory lock and doing work on that same connection (see
+   * {@link withPgAdvisoryLock}). Repositories should use {@link PostgresStore.db}, not this.
+   */
+  readonly pool: pg.Pool;
 }
 
 /**
@@ -33,6 +39,7 @@ export function createPostgresStore(options: PostgresStoreOptions): PostgresStor
 
   return {
     db,
+    pool,
 
     async migrate() {
       // No schemas yet (they arrive with later features); applying a configured migrations folder is

@@ -53,6 +53,32 @@ export function postgresMigrationDb(db: NodePgDatabase): MigrationDb {
   };
 }
 
+/**
+ * The slice of a `pg` client this module needs. Structural on purpose: the runner stays free of a
+ * direct `pg` import, and any `pg.Client` / `pg.PoolClient` satisfies it.
+ */
+export interface PgQueryable {
+  query(text: string): Promise<{ rows: Array<Record<string, unknown>> }>;
+}
+
+/**
+ * {@link MigrationDb} over **one** Postgres client rather than a pool (F-056, ADR-0059 §2).
+ *
+ * Required because `pg_advisory_lock` is **session-scoped**: a pooled `db.execute` may take the lock
+ * on one connection and run the migrations on another, which holds a lock that guards nothing. The
+ * caller obtains a single client (see `withPgAdvisoryLock`), locks it, and migrates through it.
+ */
+export function pgClientMigrationDb(client: PgQueryable): MigrationDb {
+  return {
+    async run(statement) {
+      await client.query(statement);
+    },
+    async rows(query) {
+      return (await client.query(query)).rows;
+    },
+  };
+}
+
 /** Quote a SQL string literal (ids are constrained, but escape defensively). */
 function quote(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
@@ -64,6 +90,13 @@ function quote(value: string): string {
  * `up` SQL is caller-supplied (portable DDL/DML); ids are constrained to a safe identifier pattern. Works
  * on SQLite and Postgres via the {@link MigrationDb} seam. Migrations are applied individually (not one
  * big transaction) — write each so it is safe to re-run after a partial failure.
+ *
+ * **Concurrency (F-056/ADR-0059).** This reads the applied ids and *then* applies, so two processes
+ * starting together both see an empty table and both apply. Idempotence by id makes the end state
+ * survivable, but concurrent DDL on the same table is not something to rely on. A multi-replica
+ * caller must serialize the whole call — on Postgres, via {@link withPgAdvisoryLock} plus
+ * {@link pgClientMigrationDb} so the lock and the migrations share one session. Single-process
+ * callers (the Local profile) need nothing.
  */
 export async function runMigrations(
   db: MigrationDb,

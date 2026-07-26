@@ -13,6 +13,17 @@ import type { Retriever } from '../ports/retriever.js';
 /** Default recency half-life: an item ~30 days old scores 0.5 (tunable per source). */
 export const DEFAULT_TEMPORAL_HALF_LIFE_MS = 30 * 24 * 60 * 60 * 1000;
 
+/**
+ * Exponential recency weight in `(0, 1]`; future/now → 1, decaying by half every `halfLifeMs`.
+ *
+ * Shared by every {@link TemporalRetriever} adapter on purpose. The fusion ranker combines scores
+ * across retrievers, so two adapters using different curves would rank the same corpus differently
+ * per deployment profile — the score is part of the contract, not an implementation detail.
+ */
+export function temporalRecencyWeight(ageMs: number, halfLifeMs: number): number {
+  return 2 ** (-Math.max(0, ageMs) / halfLifeMs);
+}
+
 /** A timestamp accepted by {@link TemporalRetriever.index}: epoch **milliseconds**, ISO string, or Date. */
 export type TemporalTimestamp = number | string | Date;
 
@@ -47,8 +58,13 @@ export interface TemporalRetriever extends Retriever {
   forProject(projectId: ProjectId): TemporalRetriever;
 }
 
-/** Normalize a timestamp to epoch milliseconds, rejecting invalid input at the trust boundary. */
-function toEpochMs(timestamp: TemporalTimestamp): number {
+/**
+ * Normalize a timestamp to epoch milliseconds, rejecting invalid input at the trust boundary.
+ *
+ * Exported so every {@link TemporalRetriever} adapter normalizes identically — a Postgres twin that
+ * parsed dates even slightly differently would put different values in the index for the same input.
+ */
+export function toEpochMs(timestamp: TemporalTimestamp): number {
   const millis =
     timestamp instanceof Date
       ? timestamp.getTime()
@@ -84,10 +100,7 @@ export function createTemporalRetriever(options: TemporalRetrieverOptions): Temp
   const { windowMs } = options;
   ensureTemporalSchema(db, table);
 
-  /** Exponential recency weight in `(0, 1]`; future/now → 1, decaying by half every `halfLifeMs`. */
-  function recencyWeight(ageMs: number): number {
-    return 2 ** (-Math.max(0, ageMs) / halfLifeMs);
-  }
+  const recencyWeight = (ageMs: number): number => temporalRecencyWeight(ageMs, halfLifeMs);
 
   function storeFor(tenantId: TenantId, projectId: ProjectId): TemporalRetriever {
     return {

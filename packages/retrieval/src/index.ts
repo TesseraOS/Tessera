@@ -15,4 +15,8 @@ export * from './adapters/keyword-retriever.js';
 export * from './adapters/graph-retriever.js';
 export * from './adapters/symbolic-retriever.js';
 export * from './adapters/temporal-retriever.js';
+// Postgres twins for the self-hosted profile (F-056, ADR-0059 §2) — same ports, same conformance,
+// and deliberately the same scoring helpers, so fusion ranks identically across profiles.
+export * from './adapters/postgres-keyword-retriever.js';
+export * from './adapters/postgres-temporal-retriever.js';
 export * from './service/hybrid-retriever.js';

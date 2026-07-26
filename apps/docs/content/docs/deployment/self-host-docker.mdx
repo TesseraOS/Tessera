@@ -71,9 +71,24 @@ services:
       echo 'bucket ready'
       "
 
+  redis:
+    image: redis:7-alpine
+    container_name: tessera-redis
+    command: redis-server --appendonly yes --maxmemory-policy noeviction
+    ports:
+      - '6379:6379'
+    volumes:
+      - tessera-redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
 volumes:
   tessera-postgres-data:
   tessera-minio-data:
+  tessera-redis-data:
 ```
 
 ```bash

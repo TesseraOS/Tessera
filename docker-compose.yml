@@ -14,6 +14,9 @@
 #               virtual-host-style bucket addressing. API on 9000, web console on 9001.
 #   minio-init  Creates the `tessera` bucket, then exits. The adapter never creates buckets —
 #               provisioning is an operator concern.
+#   redis       Backs the BullMQ Queue adapter. `appendonly` is on because a queue that loses
+#               jobs on restart is not a queue; BullMQ also requires `maxmemory-policy noeviction`
+#               (an evicted job key is a silently dropped job).
 #
 # WHY THESE ARE NOT INLINE COMMENTS: apps/docs embeds this file's body verbatim in a fenced
 # block (compose-doc-drift.test.ts pins it byte-for-byte), and shiki renders comment tokens at
@@ -68,6 +71,21 @@ services:
       echo 'bucket ready'
       "
 
+  redis:
+    image: redis:7-alpine
+    container_name: tessera-redis
+    command: redis-server --appendonly yes --maxmemory-policy noeviction
+    ports:
+      - '6379:6379'
+    volumes:
+      - tessera-redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
 volumes:
   tessera-postgres-data:
   tessera-minio-data:
+  tessera-redis-data:

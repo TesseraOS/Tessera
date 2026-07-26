@@ -1,7 +1,8 @@
 import type { Runtime } from '@tessera/config';
-import { createInMemoryQuotaLimiter, createMcpGateway, startMcpStdio } from '@tessera/mcp';
+import { startMcpStdio } from '@tessera/mcp';
 import { instrumentServices, type Observability } from '@tessera/observability';
 import { createServerRuntime, type ServerRuntimeOptions } from './bootstrap.js';
+import { createRuntimeGateway } from './mcp-gateway.js';
 
 /** The connected MCP server, typed through `@tessera/mcp` (no direct SDK dependency). */
 type ConnectedMcpServer = Awaited<ReturnType<typeof startMcpStdio>>;
@@ -29,18 +30,9 @@ export async function startMcpServer(options: McpServerOptions = {}): Promise<Mc
       ? runtime.services
       : instrumentServices(runtime.services, options.observability);
 
-  // Gate the tools with the runtime's provider (F-026/F-034); the local provider = full access, so
-  // `none` mode is unchanged. Quotas engage only when configured. All gateway pieces are Fastify-free.
-  const quota = runtime.config.auth.quota;
-  const gateway = createMcpGateway({
-    auth: runtime.auth.provider,
-    ...(quota.enabled
-      ? { quota: createInMemoryQuotaLimiter({ limit: quota.limit, windowMs: quota.windowMs }) }
-      : {}),
-    // Record agent tool calls into the runtime's trail (F-047, closes the F-027 seam) — the SAME sink
-    // and taxonomy the REST surface records into, so one trail covers both surfaces (ADR-0036).
-    ...(runtime.audit !== undefined ? { audit: runtime.audit } : {}),
-  });
+  // Gate the tools with the runtime's providers (F-026/F-034/F-047) — the same gateway the remote HTTP
+  // transport builds, so the two transports cannot drift in what they enforce.
+  const gateway = createRuntimeGateway(runtime);
   const server = await startMcpStdio(services, {
     gateway,
     // Back the token-management tools with the runtime's token store (F-046; present in token mode).

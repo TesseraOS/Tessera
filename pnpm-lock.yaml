@@ -326,6 +326,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/observability
     devDependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.29.0
+        version: 1.29.0(zod@4.4.3)
       tsx:
         specifier: ^4.22.4
         version: 4.22.4

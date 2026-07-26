@@ -125,6 +125,15 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
     ...(apiCors !== undefined ? { cors: apiCors } : {}),
     ...(apiSecurity !== undefined ? { security: apiSecurity } : {}),
   });
+  const mcpHttp = section({
+    enabled: bool(env.TESSERA_MCP_HTTP_ENABLED),
+    path: env.TESSERA_MCP_HTTP_PATH,
+    sessionTtlMs: num(env.TESSERA_MCP_HTTP_SESSION_TTL_MS),
+    maxSessions: num(env.TESSERA_MCP_HTTP_MAX_SESSIONS),
+  });
+  const mcp = section({
+    ...(mcpHttp !== undefined ? { http: mcpHttp } : {}),
+  });
 
   if (storage !== undefined) input.storage = storage;
   if (embeddings !== undefined) input.embeddings = embeddings;
@@ -135,6 +144,7 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
   if (audit !== undefined) input.audit = audit;
   if (sources !== undefined) input.sources = sources;
   if (api !== undefined) input.api = api;
+  if (mcp !== undefined) input.mcp = mcp;
   return input as ConfigInput;
 }
 
@@ -154,6 +164,7 @@ function mergeConfig(base: ConfigInput, over: ConfigInput): ConfigInput {
     ...((base.audit ?? over.audit) ? { audit: { ...base.audit, ...over.audit } } : {}),
     ...((base.sources ?? over.sources) ? { sources: { ...base.sources, ...over.sources } } : {}),
     ...((base.api ?? over.api) ? { api: { ...base.api, ...over.api } } : {}),
+    ...((base.mcp ?? over.mcp) ? { mcp: { ...base.mcp, ...over.mcp } } : {}),
   };
 }
 

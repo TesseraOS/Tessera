@@ -23,7 +23,12 @@ export function registerOpenapi(app: FastifyInstance): void {
           '**Project scope (multi-project workspaces, ADR-0037):** send the `X-Tessera-Project` header ' +
           'with a project id (from `GET /v1/projects`) to scope a request — its search, compile, effects, ' +
           'graph, memory, and sources — to that project. Omit it (or send `default`) for the reserved ' +
-          'default project. An unknown/foreign project id is rejected with `404`.',
+          'default project. An unknown/foreign project id is rejected with `404`.\n\n' +
+          '**Remote MCP (F-055):** a deployment may additionally expose the Model Context Protocol ' +
+          'over streamable HTTP on this same listener (default path `/mcp`, methods POST/GET/DELETE, ' +
+          'Bearer-authenticated). It is JSON-RPC rather than REST, so it is deliberately **not** ' +
+          'described in this document and no generated SDK method exists for it — see the remote-MCP ' +
+          'setup page in the docs.',
       },
       servers: [{ url: '/' }],
       tags: [

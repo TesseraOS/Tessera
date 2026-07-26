@@ -233,22 +233,60 @@ const apiSchema = z
   })
   .default({});
 
+/**
+ * Remote MCP over streamable HTTP (F-055; FR-71, ADR-0058). **Off by default** — stdio stays the local
+ * default, and a network-reachable agent surface must be something an operator turns on deliberately.
+ */
+const mcpHttpSchema = z
+  .object({
+    enabled: z.boolean().default(false),
+    /** Path the transport is mounted at, on the same listener as REST. */
+    path: z
+      .string()
+      .regex(/^\/[\w\-/]*$/, 'mcp.http.path must start with "/" and contain no query or wildcard')
+      .default('/mcp'),
+    /** Idle sessions are closed after this long without a request. */
+    sessionTtlMs: z.number().int().positive().default(300_000),
+    /** Hard cap on concurrent sessions; beyond it a new session is refused. */
+    maxSessions: z.number().int().positive().default(100),
+  })
+  .default({});
+
+/** MCP transport settings. stdio needs no configuration; only the remote transport does. */
+const mcpSchema = z.object({ http: mcpHttpSchema }).default({});
+
 /** The validated Tessera configuration (FR-50). Deployment is configuration — one surface. */
-export const configSchema = z.object({
-  profile: z.enum(DEPLOYMENT_PROFILES as unknown as [string, ...string[]]).default('local'),
-  env: z.enum(['development', 'test', 'production']).default('development'),
-  logLevel: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-  storage: storageSchema,
-  embeddings: embeddingsSchema,
-  budgets: budgetsSchema,
-  secrets: secretsSchema,
-  auth: authSchema,
-  billing: billingSchema,
-  audit: auditSchema,
-  memory: memorySchema,
-  sources: sourcesSchema,
-  api: apiSchema,
-});
+export const configSchema = z
+  .object({
+    profile: z.enum(DEPLOYMENT_PROFILES as unknown as [string, ...string[]]).default('local'),
+    env: z.enum(['development', 'test', 'production']).default('development'),
+    logLevel: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+    storage: storageSchema,
+    embeddings: embeddingsSchema,
+    budgets: budgetsSchema,
+    secrets: secretsSchema,
+    auth: authSchema,
+    billing: billingSchema,
+    audit: auditSchema,
+    memory: memorySchema,
+    sources: sourcesSchema,
+    api: apiSchema,
+    mcp: mcpSchema,
+  })
+  .superRefine((value, ctx) => {
+    // A cross-SECTION rule, so it cannot live inside `authSchema` or `mcpSchema`. Remote MCP in `none`
+    // mode would be an unauthenticated, network-reachable agent surface (NFR-2): the local provider
+    // authenticates anything, so the transport's required gateway would be theatre. Failing here means
+    // the process dies at config load, before a single adapter is constructed.
+    if (value.mcp.http.enabled && value.auth.mode === 'none') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'mcp.http.enabled requires auth.mode to be "token" or "oidc" — remote MCP must not be unauthenticated',
+        path: ['mcp', 'http', 'enabled'],
+      });
+    }
+  });
 
 /** Caller-facing config input (pre-defaults). */
 export type ConfigInput = z.input<typeof configSchema>;

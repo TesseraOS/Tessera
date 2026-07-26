@@ -2,6 +2,7 @@ import { buildServer } from '@tessera/api';
 import type { Runtime } from '@tessera/config';
 import { annotateRequestId, instrumentServices, type Observability } from '@tessera/observability';
 import { createServerRuntime, type ServerRuntimeOptions } from './bootstrap.js';
+import { registerMcpHttp, type McpHttpMount } from './mcp-http.js';
 
 type ApiApp = ReturnType<typeof buildServer>;
 
@@ -59,6 +60,13 @@ export async function startApiServer(options: ApiServerOptions = {}): Promise<Ap
     ...(obs !== undefined ? { loggerInstance: obs.logger } : { logger: options.logger ?? false }),
   });
 
+  // Remote MCP on the same listener (F-055; ADR-0058). Off unless configured, and the config schema
+  // has already refused the combination `enabled` + `auth.mode: none`, so reaching here means the
+  // surface is authenticated.
+  const mcpHttp: McpHttpMount | undefined = runtime.config.mcp.http.enabled
+    ? registerMcpHttp(app as never, { runtime, services, security: { hsts: api.security.hsts } })
+    : undefined;
+
   if (obs !== undefined) {
     // Thread the request/correlation id onto the active span (F-044); no-op if telemetry is off.
     app.addHook('onRequest', (request, _reply, done) => {
@@ -84,6 +92,10 @@ export async function startApiServer(options: ApiServerOptions = {}): Promise<Ap
     app,
     url,
     async close() {
+      // MCP sessions FIRST. Fastify 5's `close()` defaults to `forceCloseConnections: 'idle'`, and an
+      // open MCP SSE stream is not idle — closing the app first would wait for a client that has no
+      // reason to disconnect, and shutdown would hang.
+      await mcpHttp?.close();
       await app.close();
       await runtime.close();
     },

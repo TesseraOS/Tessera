@@ -24,6 +24,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "dev": "tsx watch src/bin/api.ts",
     "dev:mcp": "tsx watch src/bin/mcp.ts",
     "start": "node dist/bin/api.js",
@@ -36,6 +37,7 @@
     "@tessera/observability": "workspace:*"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "tsx": "^4.22.4"
   }
 }

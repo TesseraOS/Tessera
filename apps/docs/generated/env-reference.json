@@ -390,6 +390,35 @@
           "description": "Strict-Transport-Security. Enable ONLY when the API is served over TLS (directly or via a proxy)."
         }
       ]
+    },
+    {
+      "section": "Remote MCP over HTTP (F-055; FR-71, ADR-0058)",
+      "vars": [
+        {
+          "name": "TESSERA_MCP_HTTP_ENABLED",
+          "default": "0",
+          "optional": true,
+          "description": "stdio is the local default and needs no configuration. This exposes the MCP tools to REMOTE agents on the same listener and port as REST, so a leaked token becomes network access rather than merely local access. Off by default, and the server REFUSES TO START with it on unless TESSERA_AUTH_MODE is `token` or `oidc` — there is no such thing as unauthenticated remote MCP (NFR-2)."
+        },
+        {
+          "name": "TESSERA_MCP_HTTP_PATH",
+          "default": "/mcp",
+          "optional": true,
+          "description": "Path on the API listener. Not described in the OpenAPI document (JSON-RPC is not a REST operation)."
+        },
+        {
+          "name": "TESSERA_MCP_HTTP_SESSION_TTL_MS",
+          "default": "300000",
+          "optional": true,
+          "description": "Idle sessions are reaped after this long. An MCP client that exits without calling terminateSession leaves its session behind, so this sweep — not client politeness — is what bounds memory."
+        },
+        {
+          "name": "TESSERA_MCP_HTTP_MAX_SESSIONS",
+          "default": "100",
+          "optional": true,
+          "description": "Hard cap on concurrent sessions; a new session beyond it is refused 429 with Retry-After."
+        }
+      ]
     }
   ]
 }

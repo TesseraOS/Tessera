@@ -3,7 +3,7 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
-## 2026-07-26 — F-056 IN PROGRESS: self-hosted profile (increments 0–6 of 8)
+## 2026-07-26 — F-056 IN PROGRESS: self-hosted profile (increments 0–7 of 8)
 
 Claimed **F-056** (`must`, lowest-id eligible; F-023 + F-053 done). Plan:
 [`F-056-self-hosted-profile-and-deployment.md`](../plans/F-056-self-hosted-profile-and-deployment.md)
@@ -159,9 +159,33 @@ carried a "type-aware linting is layered in once real domain packages land" TODO
 
 27 call sites awaited (the two production pairs now `Promise.all`-ed, being independent).
 
+### Increment 7 — the last five adapters, and two suites nobody could reach
+
+Manifest, source registry, project store, token store, audit log. **All eleven now exist**; nothing in
+the data path is SQLite-bound.
+
+**Two shared conformance suites had been unreachable.** The audit log's and project store's suites
+live in `apps/api/src`, so only their in-memory reference adapters could run them — the SQLite audit
+test admits in its own comments that it "duplicates a case in the shared audit-log.conformance suite".
+Duplicated contract cases drift, which is the whole reason conformance suites exist. Both now ship on
+an `@tessera/api/conformance` subpath (vitest-importing, so deliberately not the root entry), and the
+Postgres adapters run the real thing. Same for the registry via `@tessera/ingestion/conformance`.
+
+**A real dialect difference, found only by running it.** `activity()` buckets by a computed day.
+SQLite has `date(at, '<n> minutes')`; Postgres does not, and it then *rejected* Drizzle's inlined
+`GROUP BY` expression ("column audit_events.at must appear in the GROUP BY clause"). Grouping by
+ordinal fixes it, and a test pins that offset 0 reproduces SQLite's UTC day while +60 shifts to the
+next — a chart that differs by deployment profile would be a lie about the same data.
+
+**A comment walked back.** The cursor test claimed to pin `bigserial` `number` mode against
+node-postgres's string-bigint behaviour. Mutation says no: `bigint` mode leaves it green, because
+Drizzle maps the typed column either way. The test still earns its place (`lt`→`lte` turns it red), so
+it is now labelled with what it proves rather than what I assumed. Third time this session that a
+mutation check caught a comment claiming more than its test delivered.
+
 ### Evidence
 
-- With Postgres + MinIO + Redis reachable: storage **70/70** (was 42) · memory 69/69 ·
+- config **116/117** with Postgres (was 86). With Postgres + MinIO + Redis: storage **70/70** (was 42) · memory 69/69 ·
   knowledge-graph 54/54. `pnpm -w test` unchanged at 43/43 with none reachable (guarded suites skip).
 - Retry is mutation-verified (pinning `attempts: 1` turns that case red), as were the two increment-4
   S3 bugs.
@@ -170,11 +194,15 @@ carried a "type-aware linting is layered in once real domain packages land" TODO
 
 ### Next step
 
-Increment 7 (the five remaining PG relational adapters — manifest, source registry, project store,
-token store, audit log) · 8 the profile itself, which is where clause 1 actually closes.
+**Increment 8 is all that remains, and it is where clause 1 closes:** a shared `profiles/assemble.ts`
+holding the profile-independent composition, `local.ts` and a new `self-hosted.ts` each constructing
+only their own adapters, `createRuntime` selecting between them via a **dynamic import** so
+`bullmq`/`ioredis`/`pg` never enter the local process graph. The eleven migration arrays are applied
+once at boot under `withPgAdvisoryLock`. Then delete the `InternalError` throw at
+[`profiles/local.ts:222`](../../packages/config/src/profiles/local.ts).
 
 **Do not trust `typecheck` to find dropped `await`s** (increment 6's finding): the rule is off and
-`tests/` is not typechecked at all. When increment 7's adapters land, grep the call sites.
+`tests/` is not typechecked at all. Grep the call sites.
 
 **Docker Desktop died mid-session and had to be restarted by hand.** `Docker Desktop.exe` alone exits
 immediately when its WSL backend is stopped; `wsl -d docker-desktop --exec /bin/sh -c true` starts the

@@ -3,6 +3,128 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-26 — F-055 DONE: remote MCP over streamable HTTP, through the existing gateway
+
+Claimed **F-055** by the plain rule in [`next-feature`](../commands/next-feature.md) — lowest-id
+eligible in the earliest open release (all remaining features are R4; F-026 and F-044 both `done`).
+No `must`-outranks-lowest-id call was needed this time: nothing on the board is a live defect.
+Plan: [`F-055-remote-mcp-http-transport.md`](../plans/F-055-remote-mcp-http-transport.md) (planner
+subagent). Decision: **[ADR-0058](../../docs/adr/0058-remote-mcp-http-transport.md)**.
+
+### What was missing
+
+F-026 built the entire multi-client control plane — authenticate → authorize → meter → audit — and it
+had never had more than one client, because ADR-0017 fixed the transport at stdio. ADR-0029 wrote its
+own gap down: *"Per-client credentials require a multi-client transport (HTTP); stdio carries one
+identity."* The gateway was a door with no building attached. This is the building.
+
+### The four decisions the code could not infer (ADR-0058)
+
+- **Placement.** `@tessera/mcp/http`, a new export subpath, Fastify-free over raw `node:http`, mounted
+  onto the existing app by `apps/server`. A route in `@tessera/api` is not a style preference to argue
+  about — it is a **workspace cycle** (`@tessera/mcp` already depends on `@tessera/api`). The subpath
+  rather than the package root because the SDK's streamable transport pulls `hono`/`@hono/node-server`
+  into the graph, and the `tessera-mcp` stdio binary agents spawn must not pay for them.
+- **Stateful sessions.** Stateless is *not* "no sessions": `Protocol.connect` throws on transport reuse
+  (`shared/protocol.js:216-218`), so stateless means building a fresh 20-tool `McpServer` **per HTTP
+  request**.
+- **Four teardown paths**, because the common one leaks — see below.
+- **Boundary auth on the gateway** (`McpGateway.authenticate`), not the SDK's middleware.
+
+### The leak, which is the part worth remembering
+
+**The SDK client's `close()` sends no DELETE** (`client/streamableHttp.js:280-287`); only the explicit
+`terminateSession()` does. So the *ordinary* case — an agent process exiting — strands an `McpServer`
+and its transport forever. The idle sweeper is therefore load-bearing, not hygiene, and its interval
+must be `unref`'d or the process never exits. The e2e asserts the leak directly: `sessionCount` stays
+1 after `client.close()`, a sweep before the TTL changes nothing, and only the sweep *after* it clears.
+
+### Why the boundary check exists at all, given `guard()` re-runs per call
+
+Without it `initialize` succeeds with **no credential**: a session and a 20-tool server allocated for
+an anonymous caller, with only `tools/call` failing. So: 401 + `WWW-Authenticate` before anything is
+allocated. It lives on `McpGateway` so there is one object and one `CredentialResolver` — and it does
+**no RBAC, no quota, no audit**, asserted by five tests, because a boundary that quietly spent the
+caller's quota or logged a phantom action would be worse than none.
+
+The SDK's `requireBearerAuth` is unusable three ways over: Express-shaped, it **rejects tokens without
+`expiresAt`** (`bearerAuth.js:30-35`) and Tessera issues non-expiring ones, and it would add an
+`OAuthTokenVerifier` identity model beside `AuthProvider` — the thing ADR-0029 avoided.
+
+### Three integration problems Fastify created, all real
+
+- **`request.body` must be forwarded as `parsedBody`.** Fastify already drained the stream to parse
+  JSON; without it the SDK calls `req.json()` on a consumed stream and the request **hangs forever**.
+- **A hijacked reply loses `reply.header()`** — hono answers via `writeHead`. The F-044 headers go onto
+  `reply.raw` with `setHeader`, which Node merges. Same idiom as `GET /v1/events`; now a pattern.
+- **`close()` must drop MCP sessions before `app.close()`.** Fastify 5 closes with
+  `forceCloseConnections: 'idle'` and an open MCP stream is not idle, so the naive order waits on a
+  client that has no reason to leave. Asserted by shutting down with a client connected.
+
+Rate limiting came free: outside `/v1` there is no `request.authContext`, so the existing
+`rateLimitKey` falls through to `ip:` — the right key for an unauthenticated flood.
+
+### Two independent guards, on purpose
+
+The handler's `gateway` option is **required at the type level**, *and* the config schema refuses
+`mcp.http.enabled` while `auth.mode` is `none` — configSchema's first **cross-section** refinement, so
+it must be root-level. It fails at config load, before an adapter exists: not at the first
+unauthenticated call, and not by silently ignoring a setting the operator believes is on.
+
+### A free win nobody could test before
+
+`X-Tessera-Project` per-call project selection (F-050/ADR-0037) has been read by the tool handlers
+since F-050 and **no transport could carry it** — stdio has no per-call headers. This one does, and
+the e2e proves both halves (a tenant's own project scopes; an unknown id 404s).
+
+### Red before green
+
+`apps/server/tests/e2e/mcp-http.e2e.test.ts` was written against the intended surface first and
+captured failing: **`Error POSTing to endpoint: {"error":{"code":"NOT_FOUND","message":"route not
+found: POST /mcp"}}`** — 5 failed / 1 passed. Now 6/6. The session→principal binding (404, not 403) was
+additionally verified by **mutation**: dropping the principal check turns that test red.
+
+### Found, not absorbed
+
+Adding the new docs page to the axe `PAGES` set failed immediately: shiki's default `github-dark`
+colours code comments `#6a737d`, **3.49:1** on the dark code background — below AA. Three existing
+pages (`guides/governance-and-audit`, `guides/sources`, `deployment/local`) carry shell comments and
+have the same violation today, invisible only because they are not in `PAGES`. The comment was
+reworded out of this page to keep F-055 scoped; **the defect is untouched and filed separately**,
+because fixing it means overriding the Fumadocs code theme, which ADR-0054 constrains to the
+`--color-fd-*` seam — its own decision.
+
+### Evidence
+
+- `@tessera/mcp` 45 unit (was 33) + 56 e2e (was 45) · `@tessera/config` 86/87 (+7) ·
+  `@tessera/server` 7 unit + **6 e2e (new suite)** · `@tessera/docs` 25 unit + 24 e2e (incl. the new
+  page's axe AA on both themes and its 375px overflow check) · `@tessera/api` e2e 116/116 unchanged.
+- Workspace: verify-state valid (28 effect-links, 1178 doc links, env-docs ok) · typecheck 45/45 ·
+  lint 26/26 · format clean · test 43/43 · build 23/23 · **e2e 26/26**.
+- `@tessera/sdk generate` + `@tessera/docs generate` committed in-change. `packages/sdk/src/generated/
+  schema.ts` did **not** move — the route is `hide: true`, so no OpenAPI path and no SDK method.
+- **Honest note:** two intermittent `@tessera/api#test:e2e` *task* failures were observed under
+  full-workspace parallelism, each with the suite itself reporting 116/116 passing and a non-zero task
+  exit; five subsequent full runs were clean at 26/26. Unrelated to this change (which touches only
+  that package's OpenAPI description string) and consistent with the known I/O flakiness of this
+  drive. Recorded rather than swept.
+
+### Effects
+
+E-003 (gateway member, `./http` subpath, **no** new OpenAPI path, `X-Tessera-Project` now reachable) ·
+E-018 (the AuthProvider now guards a **network** boundary; `createRuntimeGateway`; session binding;
+F-072's stdio note is now outdated) · E-014 (config section + the first cross-section refinement) ·
+E-026 (regenerated inputs + the contrast finding). `gates.json` unchanged — `apps/server` gained a
+`test:e2e` script, which `turbo run test:e2e` picks up on its own.
+
+### Next step
+
+Next eligible by the same rule: **F-056** (`must`, self-hosted profile completion + deployment
+artifacts; F-023 + F-053 both done). Note F-059 and F-069 are also `must` but both need
+outside-the-repo input (npm publish / domain + counsel facts).
+
+---
+
 ## 2026-07-22 — F-071 DONE: scanned content lands in the tenant/project that registered the source
 
 Claimed **F-071** (`must`) over the lowest-id **F-055** on the lead's earlier call — a live

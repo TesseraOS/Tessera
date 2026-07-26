@@ -89,11 +89,16 @@ export function createCorpusIndexer(options: CorpusIndexerOptions): CorpusIndexe
           : { ref: input.ref, text: input.text, kind: input.kind, metadata: { ...input.metadata } };
       await putFragment(blob, fragment);
 
-      keyword.forTenant(tenantId).forProject(projectId).index(input.ref, input.text);
-      temporal
-        .forTenant(tenantId)
-        .forProject(projectId)
-        .index(input.ref, input.timestamp ?? Date.now());
+      // Independent writes to two different indices — run them together (engineering rule:
+      // parallelize independent async work) and, critically, AWAIT them: against a networked index
+      // a dropped promise writes nothing while reporting success.
+      await Promise.all([
+        keyword.forTenant(tenantId).forProject(projectId).index(input.ref, input.text),
+        temporal
+          .forTenant(tenantId)
+          .forProject(projectId)
+          .index(input.ref, input.timestamp ?? Date.now()),
+      ]);
 
       const embedding = await embeddings.embed(input.text);
       await vector
@@ -108,8 +113,10 @@ export function createCorpusIndexer(options: CorpusIndexerOptions): CorpusIndexe
       const tenantId = input.tenantId ?? DEFAULT_TENANT_ID;
       const projectId = input.projectId ?? DEFAULT_PROJECT_ID;
       await blob.delete(input.ref);
-      keyword.forTenant(tenantId).forProject(projectId).remove(input.ref);
-      temporal.forTenant(tenantId).forProject(projectId).remove(input.ref);
+      await Promise.all([
+        keyword.forTenant(tenantId).forProject(projectId).remove(input.ref),
+        temporal.forTenant(tenantId).forProject(projectId).remove(input.ref),
+      ]);
       await vector.forTenant(tenantId).forProject(projectId).delete([input.ref]);
       indexedHash.delete(cacheKey(tenantId, projectId, input.ref));
     },

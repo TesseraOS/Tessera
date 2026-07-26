@@ -17,12 +17,20 @@ export interface KeywordRetrieverOptions {
   readonly table?: string;
 }
 
-/** A keyword retriever that also owns the FTS index it queries. */
+/**
+ * A keyword retriever that also owns the FTS index it queries.
+ *
+ * `index`/`remove` are **async**, and deliberately not a `void | Promise<void>` union (F-056,
+ * ADR-0059 §6). A union would compile at every existing call site untouched — which is exactly the
+ * problem: it is *silently ignorable*, and a forgotten `await` against a Postgres-backed index writes
+ * nothing while reporting success. The F-071 lesson is that whatever can be silently dropped
+ * eventually is; a required `Promise` makes the compiler enumerate every caller instead.
+ */
 export interface KeywordRetriever extends Retriever {
   /** Index (or re-index) an item's text under `ref`. Ingestion populates this in production. */
-  index(ref: string, content: string): void;
+  index(ref: string, content: string): Promise<void>;
   /** Drop an item's text under `ref` (no error if absent). Document removal uses this. */
-  remove(ref: string): void;
+  remove(ref: string): Promise<void>;
   /** A view confined to `tenantId` (FR-52), reset to its default project; scopes index/remove/retrieve. */
   forTenant(tenantId: TenantId): KeywordRetriever;
   /** A view confined to `projectId` within the current tenant (FR-66); scopes index/remove/retrieve. */
@@ -55,6 +63,9 @@ export function createKeywordRetriever(options: KeywordRetrieverOptions): Keywor
     return {
       kind: 'keyword',
 
+      // `async` on a synchronous better-sqlite3 handle: the work still happens before the returned
+      // promise settles, so behaviour is unchanged — only the signature moved, to let a Postgres
+      // implementation exist behind the same port.
       index(ref, content) {
         db.run(
           sql`DELETE FROM ${table} WHERE ref = ${ref} AND tenant = ${tenantId} AND project = ${projectId}`,
@@ -62,12 +73,14 @@ export function createKeywordRetriever(options: KeywordRetrieverOptions): Keywor
         db.run(
           sql`INSERT INTO ${table}(ref, tenant, project, content) VALUES (${ref}, ${tenantId}, ${projectId}, ${content})`,
         );
+        return Promise.resolve();
       },
 
       remove(ref) {
         db.run(
           sql`DELETE FROM ${table} WHERE ref = ${ref} AND tenant = ${tenantId} AND project = ${projectId}`,
         );
+        return Promise.resolve();
       },
 
       retrieve(query) {

@@ -62,7 +62,7 @@ export async function buildCorpus(): Promise<Corpus> {
 
   for (const doc of DOCS) {
     const ref = id(doc.key);
-    keyword.index(ref, doc.text);
+    await keyword.index(ref, doc.text);
     fragments.set(ref, { ref, text: doc.text, kind: doc.kind });
     await service.upsertNode({ kind: 'file', key: doc.key, label: doc.key });
   }

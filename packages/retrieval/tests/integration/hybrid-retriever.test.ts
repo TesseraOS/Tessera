@@ -22,7 +22,7 @@ async function setup() {
     await vectorStore.upsert([
       { id: ref, vector: await embeddings.embed(text), model: embeddings.info.model },
     ]);
-    keyword.index(ref, text);
+    await keyword.index(ref, text);
   }
 
   const semantic = createSemanticRetriever({ embeddings, vectorStore });

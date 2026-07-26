@@ -52,7 +52,7 @@ describe('local profile runtime', () => {
     expect(effects.map((hit) => hit.node.key)).toContain('src/b.ts');
 
     // Keyword index (owned by the wired retriever) + hybrid search.
-    rt.keyword.index('doc:auth', 'authentication uses signed tokens to verify the caller');
+    await rt.keyword.index('doc:auth', 'authentication uses signed tokens to verify the caller');
     const results = await rt.services.search.search({ text: 'authentication tokens' });
     expect(results.map((candidate) => candidate.ref)).toContain('doc:auth');
 

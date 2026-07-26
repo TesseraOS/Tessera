@@ -3088,6 +3088,34 @@
         "E-026"
       ],
       "notes": "FOUND BY F-055 (2026-07-26), not fixed there. Adding content/docs/agents/remote-mcp.mdx to the axe-checked PAGES set failed immediately on a `# or oidc` comment in a bash fence. The comment was reworded into prose to keep F-055 scoped and the defect was left untouched — it predates F-055 and affects three already-shipped pages. Reproduce: add any of the three pages above to PAGES and run `pnpm --filter @tessera/docs test:e2e`. This is the second time the docs' own axe gate has been shown to be narrower than the content it guards; consider whether PAGES should be derived from the content tree rather than hand-listed. BLOCKED REAL WORK ON 2026-07-26 (F-056 increment 4): adding minio/minio-init to docker-compose.yml put the first inline comments in that file body, and apps/docs embeds the body VERBATIM in a fenced block (compose-doc-drift.test.ts pins it byte-for-byte) on self-host-docker.mdx, which IS in the axe PAGES set — so the page went red on this defect. Fixing it properly needs a shiki theme decision affecting every code block on the site (ADR-0054 constrains docs theming), which does not belong inside an unrelated feature. Workaround shipped: the service comments live in the compose file HEADER block, which composeBody() strips, with a comment in that header saying why and naming this feature. WHEN THIS LANDS, move them back inline where they belong."
+    },
+    {
+      "id": "F-094",
+      "title": "Type-aware linting: no-floating-promises is off, so a dropped await on an async port compiles and lints clean",
+      "requirements": [
+        "NFR-1"
+      ],
+      "service": "root",
+      "package": "—",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "`@typescript-eslint/no-floating-promises` (and the rest of a chosen type-aware set) runs across the workspace. Today eslint.config.mjs uses `tseslint.configs.recommended`, NOT `recommendedTypeChecked`, so an ignored `Promise<void>` is invisible to both tsc and eslint — the config has carried a 'type-aware linting is layered in once real domain packages land (see F-002+)' TODO since F-001",
+        "The blocker is resolved: enabling `projectService` fails immediately because every package's BUILD tsconfig excludes `src/**/*.test.ts`, so test files are 'not found by the project service' (reproduced on @tessera/billing — 4 parsing errors). Fix it structurally (a per-package tsconfig that includes tests, or `allowDefaultProject`), not by exempting tests from the rule — tests are where floating promises hide best",
+        "Every violation the rule surfaces across the workspace is FIXED, not suppressed; if a genuine fire-and-forget call exists it gets an explicit `void` operator plus a comment saying why",
+        "Decide and record whether the rest of `recommendedTypeChecked` comes with it or only a chosen subset (lint runtime is a real cost on 26 packages); workspace gates green"
+      ],
+      "verification": [
+        "lint",
+        "typecheck",
+        "test"
+      ],
+      "effects": [
+        "E-005"
+      ],
+      "notes": "FOUND BY F-056 increment 6 (2026-07-26), which turned KeywordRetriever/TemporalRetriever `index`/`remove` from `void` to `Promise<void>` on the stated rationale that a required Promise 'makes the compiler enumerate every caller'. It does not. After the change, all four production call sites in packages/config/src/sources/corpus-indexer.ts were left un-awaited and BOTH typecheck and lint stayed green — the port change bought the ability to have an async implementation, but zero enforcement that anyone awaits it. ADR-0059 §4 now records that correction. The four call sites are awaited (and `Promise.all`-ed, being independent) as of that increment; this feature is about the missing control, not those specific calls."
     }
   ]
 }

@@ -104,6 +104,23 @@ that produces "the scan said it indexed and search finds nothing." This is an **
 ships in its own commit so a regression bisects cleanly. Every existing assertion must survive
 unchanged; if one has to move, the change was not behaviour-preserving.
 
+**Correction, recorded during implementation.** An earlier draft of this section claimed the required
+`Promise` makes *the compiler* enumerate every caller. **It does not, and this workspace proves it.**
+TypeScript does not error on a discarded `Promise<void>`; only the type-aware
+`@typescript-eslint/no-floating-promises` rule does, and this repo runs
+`tseslint.configs.recommended` — not `recommendedTypeChecked` — so that rule is off. The proof is
+concrete: after this change, all four production call sites in
+[`corpus-indexer.ts`](../../packages/config/src/sources/corpus-indexer.ts) were left un-awaited and
+both `typecheck` and `lint` stayed green. They are awaited now, but nothing *made* them be.
+
+So the honest accounting of what the async signature buys: it makes a Postgres-backed index
+**possible** (the real blocker), and it states intent at the port. It does **not** enforce that
+callers await. Enabling type-aware linting is the control that would, and it is not free here —
+switching it on fails immediately because every package's build tsconfig excludes `*.test.ts`, so the
+project service cannot resolve test files. That is tracked as **F-094**, not hand-waved: the ESLint
+config has carried a "type-aware linting is layered in once real domain packages land" TODO since
+F-001, and these four floating promises are what it costs.
+
 ### 5. BullMQ is taken as a dependency; S3 is hand-rolled
 
 **BullMQ: take it.** Atomic move-to-active, stalled-job recovery, and backoff are precisely what must

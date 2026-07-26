@@ -13,23 +13,23 @@ const NOW = Date.parse('2026-07-02T00:00:00Z');
 const DAY_MS = 24 * 60 * 60 * 1000;
 const fixedNow = () => NOW;
 
-function setup(overrides: Partial<TemporalRetrieverOptions> = {}) {
+async function setup(overrides: Partial<TemporalRetrieverOptions> = {}) {
   const sqlite = createSqliteStore({ path: ':memory:' });
   const retriever = createTemporalRetriever({ db: sqlite.db, now: fixedNow, ...overrides });
-  retriever.index('doc:old', NOW - 60 * DAY_MS);
-  retriever.index('doc:mid', NOW - 30 * DAY_MS);
-  retriever.index('doc:new', NOW - 1 * DAY_MS);
+  await retriever.index('doc:old', NOW - 60 * DAY_MS);
+  await retriever.index('doc:mid', NOW - 30 * DAY_MS);
+  await retriever.index('doc:new', NOW - 1 * DAY_MS);
   return { sqlite, retriever };
 }
 
-runRetrieverConformance('temporal', 'temporal', () => {
-  const { sqlite, retriever } = setup();
+runRetrieverConformance('temporal', 'temporal', async () => {
+  const { sqlite, retriever } = await setup();
   return Promise.resolve({ retriever, query: 'anything', cleanup: () => sqlite.close() });
 });
 
 describe('temporal retriever (recency)', () => {
   it('orders candidates newest-first, independent of the query text', async () => {
-    const { sqlite, retriever } = setup();
+    const { sqlite, retriever } = await setup();
     try {
       const candidates = await retriever.retrieve({ text: 'ignored query text' });
       expect(candidates.map((candidate) => candidate.ref)).toEqual([
@@ -44,7 +44,7 @@ describe('temporal retriever (recency)', () => {
   });
 
   it('scores by exponential recency decay (half-life → 0.5), monotonic with age', async () => {
-    const { sqlite, retriever } = setup({ halfLifeMs: DEFAULT_TEMPORAL_HALF_LIFE_MS });
+    const { sqlite, retriever } = await setup({ halfLifeMs: DEFAULT_TEMPORAL_HALF_LIFE_MS });
     try {
       const byRef = new Map(
         (await retriever.retrieve({ text: 'q' })).map((candidate) => [
@@ -66,7 +66,7 @@ describe('temporal retriever (recency)', () => {
   });
 
   it('excludes items older than the time window', async () => {
-    const { sqlite, retriever } = setup({ windowMs: 40 * DAY_MS });
+    const { sqlite, retriever } = await setup({ windowMs: 40 * DAY_MS });
     try {
       const refs = (await retriever.retrieve({ text: 'q' })).map((candidate) => candidate.ref);
       expect(refs).toEqual(['doc:new', 'doc:mid']); // doc:old (60d) is outside the 40d window
@@ -76,15 +76,15 @@ describe('temporal retriever (recency)', () => {
   });
 
   it('respects the limit, re-indexes a ref idempotently, and removes', async () => {
-    const { sqlite, retriever } = setup();
+    const { sqlite, retriever } = await setup();
     try {
       expect(await retriever.retrieve({ text: 'q', limit: 1 })).toHaveLength(1);
 
-      retriever.index('doc:old', NOW); // bump the oldest to now → it becomes the newest
+      await retriever.index('doc:old', NOW); // bump the oldest to now → it becomes the newest
       expect((await retriever.retrieve({ text: 'q' }))[0]?.ref).toBe('doc:old');
       expect(await retriever.retrieve({ text: 'q' })).toHaveLength(3); // still one row per ref
 
-      retriever.remove('doc:old');
+      await retriever.remove('doc:old');
       expect((await retriever.retrieve({ text: 'q' })).some((c) => c.ref === 'doc:old')).toBe(
         false,
       );
@@ -94,18 +94,18 @@ describe('temporal retriever (recency)', () => {
   });
 
   it('isolates the recency index by tenant (forTenant)', async () => {
-    const { sqlite, retriever } = setup();
+    const { sqlite, retriever } = await setup();
     try {
       const a = retriever.forTenant('tenant-a');
       const b = retriever.forTenant('tenant-b');
-      a.index('doc:shared', NOW - 5 * DAY_MS);
-      b.index('doc:shared', NOW - 5 * DAY_MS); // same ref, different tenant
+      await a.index('doc:shared', NOW - 5 * DAY_MS);
+      await b.index('doc:shared', NOW - 5 * DAY_MS); // same ref, different tenant
 
       expect((await a.retrieve({ text: 'q' })).map((c) => c.ref)).toEqual(['doc:shared']);
       expect((await b.retrieve({ text: 'q' })).map((c) => c.ref)).toEqual(['doc:shared']);
 
       // Removing in A leaves B (and the base tenant) untouched.
-      a.remove('doc:shared');
+      await a.remove('doc:shared');
       expect(await a.retrieve({ text: 'q' })).toEqual([]);
       expect((await b.retrieve({ text: 'q' })).map((c) => c.ref)).toEqual(['doc:shared']);
       expect((await retriever.retrieve({ text: 'q' })).map((c) => c.ref)).toEqual([
@@ -119,19 +119,19 @@ describe('temporal retriever (recency)', () => {
   });
 
   it('isolates the recency index by project (forProject) within a tenant', async () => {
-    const { sqlite, retriever } = setup();
+    const { sqlite, retriever } = await setup();
     try {
       const tenant = retriever.forTenant('tenant-a');
       const p1 = tenant.forProject('project-1');
       const p2 = tenant.forProject('project-2');
-      p1.index('doc:shared', NOW - 5 * DAY_MS);
-      p2.index('doc:shared', NOW - 5 * DAY_MS); // same ref, different project
+      await p1.index('doc:shared', NOW - 5 * DAY_MS);
+      await p2.index('doc:shared', NOW - 5 * DAY_MS); // same ref, different project
 
       expect((await p1.retrieve({ text: 'q' })).map((c) => c.ref)).toEqual(['doc:shared']);
       expect((await p2.retrieve({ text: 'q' })).map((c) => c.ref)).toEqual(['doc:shared']);
 
       // Removing in project 1 leaves project 2 untouched.
-      p1.remove('doc:shared');
+      await p1.remove('doc:shared');
       expect(await p1.retrieve({ text: 'q' })).toEqual([]);
       expect((await p2.retrieve({ text: 'q' })).map((c) => c.ref)).toEqual(['doc:shared']);
     } finally {
@@ -153,12 +153,12 @@ describe('temporal retriever (recency)', () => {
     const sqlite = createSqliteStore({ path: ':memory:' });
     try {
       const keyword = createKeywordRetriever({ db: sqlite.db });
-      keyword.index('doc:old', 'shared topic alpha');
-      keyword.index('doc:new', 'shared topic alpha');
+      await keyword.index('doc:old', 'shared topic alpha');
+      await keyword.index('doc:new', 'shared topic alpha');
 
       const temporal = createTemporalRetriever({ db: sqlite.db, now: fixedNow });
-      temporal.index('doc:old', NOW - 90 * DAY_MS);
-      temporal.index('doc:new', NOW - 1 * DAY_MS);
+      await temporal.index('doc:old', NOW - 90 * DAY_MS);
+      await temporal.index('doc:new', NOW - 1 * DAY_MS);
 
       const fused = await createHybridRetriever([keyword, temporal]).search({
         text: 'alpha topic',

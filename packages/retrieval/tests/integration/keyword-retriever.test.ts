@@ -3,27 +3,27 @@ import { createSqliteStore } from '@tessera/storage';
 import { createKeywordRetriever } from '../../src/adapters/keyword-retriever';
 import { runRetrieverConformance } from '../conformance/retriever.conformance';
 
-function setup() {
+async function setup() {
   const sqlite = createSqliteStore({ path: ':memory:' });
   const retriever = createKeywordRetriever({ db: sqlite.db });
-  retriever.index('doc:auth', 'authentication and login with OAuth tokens');
-  retriever.index('doc:db', 'database migrations with drizzle and sqlite');
+  await retriever.index('doc:auth', 'authentication and login with OAuth tokens');
+  await retriever.index('doc:db', 'database migrations with drizzle and sqlite');
   return { sqlite, retriever };
 }
 
-runRetrieverConformance('keyword', 'keyword', () => {
-  const { sqlite, retriever } = setup();
+runRetrieverConformance('keyword', 'keyword', async () => {
+  const { sqlite, retriever } = await setup();
   return Promise.resolve({ retriever, query: 'oauth tokens', cleanup: () => sqlite.close() });
 });
 
 describe('keyword retriever (FTS5)', () => {
   it('matches documents by term and re-indexes idempotently', async () => {
-    const { sqlite, retriever } = setup();
+    const { sqlite, retriever } = await setup();
     try {
       expect((await retriever.retrieve({ text: 'drizzle migrations' }))[0]?.ref).toBe('doc:db');
       expect((await retriever.retrieve({ text: 'oauth' }))[0]?.ref).toBe('doc:auth');
 
-      retriever.index('doc:auth', 'authentication and login with OAuth tokens'); // re-index same ref
+      await retriever.index('doc:auth', 'authentication and login with OAuth tokens'); // re-index same ref
       expect(await retriever.retrieve({ text: 'oauth' })).toHaveLength(1);
     } finally {
       await sqlite.close();
@@ -31,21 +31,21 @@ describe('keyword retriever (FTS5)', () => {
   });
 
   it('removes a document from the index (document removal)', async () => {
-    const { sqlite, retriever } = setup();
+    const { sqlite, retriever } = await setup();
     try {
       expect((await retriever.retrieve({ text: 'oauth' })).map((c) => c.ref)).toEqual(['doc:auth']);
-      retriever.remove('doc:auth');
+      await retriever.remove('doc:auth');
       expect(await retriever.retrieve({ text: 'oauth' })).toEqual([]);
       // Other documents are untouched; removing an absent ref is a no-op.
       expect((await retriever.retrieve({ text: 'drizzle' })).map((c) => c.ref)).toEqual(['doc:db']);
-      retriever.remove('doc:missing');
+      await retriever.remove('doc:missing');
     } finally {
       await sqlite.close();
     }
   });
 
   it('returns no results for a termless query', async () => {
-    const { sqlite, retriever } = setup();
+    const { sqlite, retriever } = await setup();
     try {
       expect(await retriever.retrieve({ text: '   ...   ' })).toEqual([]);
     } finally {
@@ -54,12 +54,12 @@ describe('keyword retriever (FTS5)', () => {
   });
 
   it('isolates the FTS index by tenant (forTenant)', async () => {
-    const { sqlite, retriever } = setup();
+    const { sqlite, retriever } = await setup();
     try {
       const a = retriever.forTenant('tenant-a');
       const b = retriever.forTenant('tenant-b');
-      a.index('doc:shared', 'quarterly revenue projections alpha');
-      b.index('doc:shared', 'unrelated beta content'); // same ref, different tenant
+      await a.index('doc:shared', 'quarterly revenue projections alpha');
+      await b.index('doc:shared', 'unrelated beta content'); // same ref, different tenant
 
       expect((await a.retrieve({ text: 'revenue projections' })).map((c) => c.ref)).toEqual([
         'doc:shared',
@@ -78,13 +78,13 @@ describe('keyword retriever (FTS5)', () => {
   });
 
   it('isolates the FTS index by project (forProject) within a tenant', async () => {
-    const { sqlite, retriever } = setup();
+    const { sqlite, retriever } = await setup();
     try {
       const tenant = retriever.forTenant('tenant-a');
       const p1 = tenant.forProject('project-1');
       const p2 = tenant.forProject('project-2');
-      p1.index('doc:shared', 'quarterly revenue projections alpha');
-      p2.index('doc:shared', 'unrelated beta content'); // same ref, different project
+      await p1.index('doc:shared', 'quarterly revenue projections alpha');
+      await p2.index('doc:shared', 'unrelated beta content'); // same ref, different project
 
       expect((await p1.retrieve({ text: 'revenue projections' })).map((c) => c.ref)).toEqual([
         'doc:shared',

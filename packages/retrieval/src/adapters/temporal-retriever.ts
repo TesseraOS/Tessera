@@ -29,12 +29,18 @@ export interface TemporalRetrieverOptions {
   readonly windowMs?: number;
 }
 
-/** A temporal retriever that also owns the timestamp index it queries. */
+/**
+ * A temporal retriever that also owns the timestamp index it queries.
+ *
+ * `index`/`remove` are **async** for the same reason as {@link KeywordRetriever}'s (ADR-0059 §6): a
+ * `void | Promise<void>` union is silently ignorable, and a dropped `await` against a networked store
+ * writes nothing while reporting success.
+ */
 export interface TemporalRetriever extends Retriever {
   /** Record (or update) an item's timestamp under `ref`. Ingestion populates this in production. */
-  index(ref: string, timestamp: TemporalTimestamp): void;
+  index(ref: string, timestamp: TemporalTimestamp): Promise<void>;
   /** Drop an item's timestamp. */
-  remove(ref: string): void;
+  remove(ref: string): Promise<void>;
   /** A view confined to `tenantId` (FR-52), reset to its default project; scopes index/remove/retrieve. */
   forTenant(tenantId: TenantId): TemporalRetriever;
   /** A view confined to `projectId` within the current tenant (FR-66); scopes index/remove/retrieve. */
@@ -87,18 +93,22 @@ export function createTemporalRetriever(options: TemporalRetrieverOptions): Temp
     return {
       kind: 'temporal',
 
+      // See the note on the keyword adapter: `Promise.resolve()` over a synchronous handle, so the
+      // work is already done by the time the promise settles.
       index(ref, timestamp) {
         const ts = toEpochMs(timestamp);
         db.run(
           sql`INSERT INTO ${table}(ref, tenant, project, ts) VALUES (${ref}, ${tenantId}, ${projectId}, ${ts})
               ON CONFLICT(tenant, project, ref) DO UPDATE SET ts = excluded.ts`,
         );
+        return Promise.resolve();
       },
 
       remove(ref) {
         db.run(
           sql`DELETE FROM ${table} WHERE ref = ${ref} AND tenant = ${tenantId} AND project = ${projectId}`,
         );
+        return Promise.resolve();
       },
 
       retrieve(query) {

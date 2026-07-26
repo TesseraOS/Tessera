@@ -1,10 +1,24 @@
-# Tessera self-hosted stack (F-023 / FR-51). Provides Postgres + pgvector for the
-# @tessera/storage Postgres/pgvector adapters.
+# Tessera self-hosted stack (F-023, F-056 / FR-51). The DATA services the self-hosted
+# profile's adapters need. Application containers arrive with F-093.
 #
-#   docker compose up -d postgres
-#   TESSERA_TEST_POSTGRES=1 pnpm --filter @tessera/storage test   # run the guarded conformance
+#   docker compose up -d                                          # postgres + minio
+#   TESSERA_TEST_POSTGRES=1 pnpm --filter @tessera/storage test    # guarded PG conformance
+#   TESSERA_TEST_S3=1 pnpm --filter @tessera/storage test          # guarded S3 conformance
 #
 # Default credentials are for local development only.
+#
+# Service notes (kept in this header rather than inline, see below):
+#   postgres    pgvector-enabled Postgres 16 — relational, vector, memory, and graph stores.
+#   minio       S3-compatible object storage for the BlobStore adapter. The adapter must be
+#               configured with `forcePathStyle` against MinIO: there is no wildcard DNS for
+#               virtual-host-style bucket addressing. API on 9000, web console on 9001.
+#   minio-init  Creates the `tessera` bucket, then exits. The adapter never creates buckets —
+#               provisioning is an operator concern.
+#
+# WHY THESE ARE NOT INLINE COMMENTS: apps/docs embeds this file's body verbatim in a fenced
+# block (compose-doc-drift.test.ts pins it byte-for-byte), and shiki renders comment tokens at
+# 3.49:1 on the docs' dark code surface — below WCAG AA, which fails the axe gate on that page.
+# That defect is tracked as F-092; when it lands, move these back inline where they belong.
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -23,5 +37,37 @@ services:
       timeout: 5s
       retries: 20
 
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: tessera-minio
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: tessera
+      MINIO_ROOT_PASSWORD: tessera-secret
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - tessera-minio-data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    container_name: tessera-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 tessera tessera-secret &&
+      mc mb --ignore-existing local/tessera &&
+      echo 'bucket ready'
+      "
+
 volumes:
   tessera-postgres-data:
+  tessera-minio-data:

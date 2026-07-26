@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
-import { ValidationError } from '@tessera/core';
 import type { BlobStore } from '../../ports/blob.js';
+import { blobKeySegments } from '../blob-key.js';
 
 export interface FilesystemBlobOptions {
   /** Directory under which all blobs are stored. */
@@ -18,16 +18,8 @@ export function createFilesystemBlobStore(options: FilesystemBlobOptions): BlobS
   const rootAbs = resolve(options.root);
 
   function keyToPath(key: string): string {
-    const segments = key.split('/').filter((segment) => segment.length > 0);
-    if (segments.some((segment) => segment === '.' || segment === '..')) {
-      throw new ValidationError('blob key must not contain "." or ".." segments', {
-        details: { key },
-      });
-    }
-    if (segments.length === 0) {
-      throw new ValidationError('blob key must not be empty', { details: { key } });
-    }
-    return join(rootAbs, ...segments);
+    // Shared with the S3 adapter so both profiles accept exactly the same key space.
+    return join(rootAbs, ...blobKeySegments(key));
   }
 
   function isErrno(error: unknown, code: string): boolean {

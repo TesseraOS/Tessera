@@ -15,3 +15,4 @@ export * from './effects/static-derivation.js';
 export * from './service/knowledge-graph-service.js';
 export * from './adapters/in-memory-graph-store.js';
 export * from './adapters/sqlite-graph-store.js';
+export * from './adapters/postgres-graph-store.js';

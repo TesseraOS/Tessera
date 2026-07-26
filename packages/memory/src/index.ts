@@ -12,3 +12,4 @@ export * from './service/memory-service.js';
 export * from './service/retention.js';
 export * from './adapters/in-memory-memory-store.js';
 export * from './adapters/sqlite-memory-store.js';
+export * from './adapters/postgres-memory-store.js';

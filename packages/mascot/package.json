@@ -1,6 +1,7 @@
 {
   "name": "@tessera/mascot",
   "version": "0.0.0",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "description": "Tess — the Tessera brand mascot: a tessera-built figure with data-driven moods, CSS-only motion, and a closed --mascot-* theming contract (ADR-0046).",

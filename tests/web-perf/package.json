@@ -1,6 +1,7 @@
 {
   "name": "@tessera/web-perf",
   "version": "0.0.0",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "description": "Frontend performance budgets (F-049; ADR-0021): over-the-wire first-load JS budgets for every web app. CWV/Lighthouse is F-074 — see the header of web-perf.mjs for why it is not gated here.",

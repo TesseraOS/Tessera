@@ -1,6 +1,7 @@
 {
   "name": "@tessera/brand",
   "version": "0.0.0",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "description": "The Tessera logo system (BRAND.md §4): mark v2 + lockup, ported from the master SVG, with a closed --brand-* theming contract that falls back to the sanctioned monochrome.",

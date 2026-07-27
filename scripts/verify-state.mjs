@@ -310,6 +310,9 @@ const GOVERNED_DOCS = [
   'AGENTS.md',
   'CLAUDE.md',
   'NOTICE.md',
+  // A security policy is read by people acting on it under time pressure; a dead link in it is worse
+  // than a dead link almost anywhere else in the repo (F-059).
+  'SECURITY.md',
   ...filesUnder('docs', '.md'),
   ...filesUnder('.harness', '.md'),
 ];

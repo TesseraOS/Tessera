@@ -12,10 +12,11 @@
 
 | | |
 |---|---|
-| **Status** | In build. R0–R2 engine complete (37 features, gates green); R3 (product completeness) and R4 (launch) in progress — see [`docs/roadmap.md`](docs/roadmap.md) and [`.harness/state/feature_list.json`](.harness/state/feature_list.json). Not yet released. |
+| **Status** | **Not yet released.** 82 of 98 tracked features are done and the verification gates are green; R0–R3 are complete and R4 (launch) is in progress. See [`docs/roadmap.md`](docs/roadmap.md) and [`.harness/state/feature_list.json`](.harness/state/feature_list.json). |
+| **License** | **Apache-2.0** ([`LICENSE`](LICENSE)) — the whole repository. The commercial tier is the hosted service, not a carved-out package ([ADR-0062](docs/adr/0062-apache-2-licence-whole-repo-oss-and-the-publish-closure.md)). |
+| **Security** | Report privately — see [`SECURITY.md`](SECURITY.md). |
+| **Package scope** | `@tessera/*` (nothing published yet) |
 | **Codename** | `ContextOS` (internal only — the public brand is **Tessera**). |
-| **Package scope** | `@tessera/*` |
-| **License** | Open-core (PRD OQ4, resolved 2026-07-03); license files land with launch readiness (F-059). |
 
 ---
 
@@ -34,19 +35,69 @@ The two differentiators we build around:
 2. **Effect-links** — a first-class graph of "change here implies change there,"
    surfaced to agents so they stop fixing one place and breaking others.
 
+## Quickstart
+
+> **From source.** Nothing is on npm yet — the release pipeline exists but has never been
+> dispatched (see [Releasing](#releasing)). Until then, run it from a clone.
+
+```bash
+git clone https://github.com/TesseraOS/Tessera.git && cd Tessera && pnpm install && pnpm build
+```
+
+Check the toolchain, config, storage and embeddings are healthy:
+
+```bash
+pnpm tessera doctor
+```
+
+Scaffold a Local deployment — SQLite, local embeddings, **no external services and no API keys**:
+
+```bash
+pnpm tessera init
+```
+
+Index a repository:
+
+```bash
+pnpm tessera source add --kind git --root /path/to/your/repo
+```
+
+Point an agent at it. `mcp-config` emits ready-to-paste configuration for Claude Code, Cursor,
+Cline, Codex and Continue:
+
+```bash
+pnpm tessera mcp-config --client claude-code
+```
+
+Or serve the REST API:
+
+```bash
+pnpm tessera serve
+```
+
+The full command set is `init`, `serve`, `mcp`, `source`, `token`, `doctor`, `mcp-config` and
+`skills` — run `pnpm tessera --help` for details. (`pnpm tessera` is a root alias for the built
+CLI; once the package is published this is just `tessera`.)
+
 ## What's here today
 
-The **engine is built and verified** (R0–R2): ingestion connectors (filesystem/Git/GitHub),
-memory, knowledge graph + effect-links, hybrid retrieval (5 signals + fusion), the Context
-Compiler, REST `/v1` + MCP surfaces, generated TS SDK, auth/RBAC/tenant isolation, audit
-trail, billing port, Postgres/pgvector adapters, observability — all behind verification
-gates (typecheck/lint/test/build/e2e/a11y, all green).
+The engine is **built and verified**: ingestion connectors (filesystem/Git/GitHub), versioned
+memory, the knowledge graph with effect-links, hybrid retrieval (five signals plus rank fusion),
+the Context Compiler, REST `/v1` and MCP surfaces (stdio and remote HTTP), a generated TypeScript
+SDK, auth/RBAC with tenant and project isolation, an audit trail, usage metering and a billing
+port, Postgres/pgvector and S3 adapters for self-hosting, feature flags, a plugin host, and
+observability.
 
-**In progress:** R3 wires the engine into the shipped runtime end-to-end (runtime source
-management, live indexing, dashboard completion, hardening, full-stack E2E) and R4 delivers
-the launch surface (marketing/docs/skills sites, CLI, deployment artifacts). The build is
-governed by the in-repo agent harness — see [`AGENTS.md`](AGENTS.md) and
-[`.harness/state/`](.harness/state/) — **one feature at a time**.
+Three web surfaces ship alongside it: the **dashboard** (`apps/web`), the **marketing site**
+(`apps/marketing`) and the **documentation site** (`apps/docs`, with generated API and env
+references that are drift-gated against the code).
+
+**What remains** is R4 launch work — deployment artifacts, notifications, i18n readiness, and the
+operator/legal finalization — tracked as open features in
+[`.harness/state/feature_list.json`](.harness/state/feature_list.json).
+
+Everything is built **one feature at a time** under the in-repo agent harness: plan, implement,
+verify against gates, trace effects, record. See [`AGENTS.md`](AGENTS.md).
 
 - [`docs/PRD.md`](docs/PRD.md) — product requirements.
 - [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md) — system design.
@@ -59,15 +110,16 @@ governed by the in-repo agent harness — see [`AGENTS.md`](AGENTS.md) and
 tessera/
 ├── apps/
 │   ├── api/        # @tessera/api    — Fastify REST /v1 (modular monolith surface)
-│   ├── mcp/        # @tessera/mcp    — MCP server (same services as REST)
+│   ├── mcp/        # @tessera/mcp    — MCP server (same services as REST; stdio + HTTP)
 │   ├── server/     # @tessera/server — runnable bins (tessera-api / tessera-mcp / tessera-token)
-│   ├── cli/        # @tessera/cli    — `tessera` one-command onboarding (init/serve/mcp/source add/token issue/doctor/mcp-config)
+│   ├── cli/        # @tessera/cli    — `tessera` one-command onboarding
 │   ├── web/        # @tessera/web    — Next.js dashboard (app subdomain, ADR-0035)
 │   ├── marketing/  # @tessera/marketing — public marketing site (apex domain; Terra Mosaic)
-│   └── docs/       # @tessera/docs   — documentation site (docs subdomain; Fumadocs, generated references, ADR-0054)
+│   └── docs/       # @tessera/docs   — documentation site (Fumadocs, generated references)
 ├── packages/       # @tessera/*      — core, storage, ai, ingestion, memory, knowledge-graph,
 │                   #                   retrieval, context-compiler, config, observability,
-│                   #                   plugin-host, billing, sdk
+│                   #                   plugin-host, billing, sdk, skills, brand, mascot
+├── tests/          # cross-cutting suites — bench, e2e-full, web-perf
 ├── docs/           # PRD, architecture, ADRs, design system
 ├── .harness/       # tool-agnostic agent harness (system of record)
 └── .claude/        # Claude Code adapter for the harness
@@ -83,6 +135,12 @@ tessera/
 | Docker | optional | Only for self-hosted / cloud-parity local stacks. |
 | Ollama | optional | Optional local embedding/LLM runtime. |
 
+Verification gates (run in order; green is the only acceptable state):
+
+```bash
+node scripts/verify-state.mjs && pnpm -w typecheck && pnpm -w lint && pnpm -w format:check && pnpm -w test && pnpm -w build
+```
+
 ## Deployment modes (one architecture, configuration-selected)
 
 | Mode | Storage | Auth | Intended user |
@@ -95,7 +153,21 @@ tessera/
 Deployment is **configuration, not a fork** — see the ports & adapters design in
 [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE.md).
 
+## Releasing
+
+Releases are dispatched manually and **do not publish by default**: the workflow builds, packs and
+generates an SBOM on every run, and reaches `npm publish` only when explicitly asked to. See
+[ADR-0062](docs/adr/0062-apache-2-licence-whole-repo-oss-and-the-publish-closure.md).
+
+## Contributing
+
+Read [`AGENTS.md`](AGENTS.md) first — it is the operating manual for humans and agents alike, and
+it is binding. In short: one feature at a time, plan before code, verification is the proof rather
+than an assertion, and every deviation from a documented default gets an ADR.
+
 ---
 
-© Tessera. All rights reserved. Branding and license terms are tracked in
-[`docs/adr/0008-brand-tessera-and-package-scope.md`](docs/adr/0008-brand-tessera-and-package-scope.md).
+Licensed under the [Apache License 2.0](LICENSE). Third-party attributions are in
+[`NOTICE.md`](NOTICE.md). *Tessera* is a project name and brand — see
+[ADR-0008](docs/adr/0008-brand-tessera-and-package-scope.md); the licence grants no trademark
+rights (Apache-2.0 §6).

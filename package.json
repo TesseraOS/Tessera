@@ -10,6 +10,7 @@
     "pnpm": ">=9"
   },
   "scripts": {
+    "tessera": "node apps/cli/dist/bin/tessera.js",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
   Activity,
   Boxes,
+  ChartNoAxesCombined,
   FileSearch,
   LayoutGrid,
   Network,
@@ -66,6 +67,17 @@ export function buildNavGroups(pathname: string): SidebarNavGroup[] {
       label: 'Connect',
       items: [
         { title: 'Sources', path: '/sources', icon: <Boxes />, isActive: isActive('/sources') },
+      ],
+    },
+    {
+      label: 'Measure',
+      items: [
+        {
+          title: 'Analytics',
+          path: '/analytics',
+          icon: <ChartNoAxesCombined />,
+          isActive: isActive('/analytics'),
+        },
       ],
     },
     {

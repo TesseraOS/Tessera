@@ -44,6 +44,8 @@ import type {
   RecentActivity,
   Subscription,
   TokenList,
+  UsageQuery,
+  UsageSummary,
   WorkspaceStats,
   WorkspaceActivity,
 } from '@tessera/sdk';
@@ -130,6 +132,11 @@ export const api = {
    * stats:read). A narrowed view of the audit trail; the full trail stays behind getAudit (admin).
    */
   getRecentActivity: (limit?: number): Promise<RecentActivity> => sdk.getRecentActivity(limit),
+  /**
+   * Per-tenant usage, entitlement, latency and retrieval-quality proxies (F-057; FR-47/NFR-12;
+   * admin:manage). Backs the Analytics and Billing views. Latency is a mean and a max, not a p95.
+   */
+  getUsage: (query?: UsageQuery): Promise<UsageSummary> => sdk.getUsage(query),
 
   // --- multi-project workspaces (F-050; ADR-0037) ---
   listProjects: (): Promise<ProjectList> => sdk.listProjects(),

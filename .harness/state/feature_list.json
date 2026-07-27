@@ -3150,6 +3150,35 @@
       "notes": "FOUND WHILE PLANNING F-057 (2026-07-27) and deliberately REFUSED there as scope creep (golden rule 2), even though F-057 touches the checkout flow and the two-line fix was tempting. Verified at the time: apps/api/src/routes/v1/billing.ts sets only `config: { public: true }` — no `config.audit` on any billing route — while the actions and their dashboard labels have existed since F-046. This is a governance gap, not a cosmetic one: FR-56 says privileged actions are auditable, and a plan change is about as privileged as a tenant-level action gets."
     },
     {
+      "id": "F-097",
+      "title": "The dashboard cannot name the embeddings provider, so FR-47 cost posture can only say what Tessera itself bills",
+      "requirements": [
+        "FR-47"
+      ],
+      "service": "api",
+      "package": "@tessera/api",
+      "release": "R4",
+      "priority": "could",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "A read endpoint exposes the deployment's effective embeddings provider (and dimension), so a client can distinguish \"local, no API spend\" from \"a hosted provider bills you\". GET /v1/stats or a new GET /v1/deployment are both candidates — decide and record which, since /v1/stats is deliberately token-lean for the get_stats MCP tool",
+        "The Analytics view's cost-posture card names the provider instead of the current provider-agnostic wording, and the RTL test asserts the local and hosted cases render differently",
+        "Nothing leaks that an unauthenticated caller should not see: the provider name is deployment configuration, so the route is guarded at least as tightly as /v1/stats"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-003",
+        "E-004"
+      ],
+      "notes": "FOUND DURING F-057 increment 8 (2026-07-27) while writing the Analytics cost-posture card. The plan called for \"embeddings provider + plan price + tokens compiled\", and the first draft rendered \"Embedding spend: None\" — which is FALSE for any deployment using a hosted provider. Verified at the time: nothing on the API surface exposes config.embeddings.provider, and the dashboard has no other way to know. The card now says only what is true regardless (\"Billed by Tessera\"), with a code comment explaining why and naming this feature. Low priority because the current wording is honest, just less specific than FR-47 could support."
+    },
+    {
       "id": "F-096",
       "title": "The guarded self-hosted suite fails its own run on a teardown race: ioredis rejects with \"Connection is closed\" after every assertion has passed",
       "requirements": [

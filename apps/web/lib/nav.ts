@@ -1,6 +1,7 @@
 import {
   Activity,
   Boxes,
+  ChartNoAxesCombined,
   FileSearch,
   LayoutGrid,
   Network,
@@ -39,6 +40,10 @@ export const navGroups: NavGroup[] = [
   {
     label: 'Connect',
     items: [{ title: 'Sources', href: '/sources', icon: Boxes }],
+  },
+  {
+    label: 'Measure',
+    items: [{ title: 'Analytics', href: '/analytics', icon: ChartNoAxesCombined }],
   },
   {
     label: 'Govern',

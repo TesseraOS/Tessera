@@ -219,6 +219,25 @@ export function useActivity(days?: number) {
   });
 }
 
+/**
+ * Per-tenant usage, entitlement, latency and quality proxies (F-057; FR-47/NFR-12) — the Analytics
+ * and Billing views' one data source. Requires `admin:manage`.
+ *
+ * A plain query with the same reasoning as {@link useActivity}: the buckets are daily, so an event
+ * this second cannot meaningfully move today's number, and self-invalidating on the stream would
+ * burst refetches through a scan for no visible gain.
+ *
+ * `days` is in the key because the server clamps the window to what the store actually holds — two
+ * window lengths are genuinely different answers, not one answer sliced.
+ */
+export function useUsage(days?: number) {
+  return useQuery({
+    queryKey: ['usage', days ?? null],
+    queryFn: () => api.getUsage(days !== undefined ? { days } : {}),
+    staleTime: 60_000,
+  });
+}
+
 // --- sources (F-038/FR-62) ---
 
 /** List registered sources — GET /v1/sources. */

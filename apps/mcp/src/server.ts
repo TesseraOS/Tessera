@@ -27,7 +27,11 @@ import type { GetEffectsOptions } from '@tessera/knowledge-graph';
 // The SAME mapper the REST route uses (ADR-0036 parity, structurally) — see @tessera/retrieval.
 import { toRetrievalInclude, type RetrievalQuery } from '@tessera/retrieval';
 // Fastify-free (deps: @tessera/core only), so importing it here keeps the F-012 invariant.
-import { createCompileBudgetClamp, type UsageStore } from '@tessera/billing';
+import {
+  createCompileBudgetClamp,
+  createMonthlyCompileGuard,
+  type UsageStore,
+} from '@tessera/billing';
 // The first-party skills registry (F-054). Manifests from the root entry; bodies from the separate
 // `/content` entry, so only `get_skill` can reach a document.
 import { SKILLS, findSkill, skillInstallLocations, type SkillManifest } from '@tessera/skills';
@@ -239,6 +243,16 @@ export function buildMcpServer(
   // Per-tenant usage metering (F-057; NFR-12). Applied per metered tool — see `createMcpMeter` for
   // why it is neither generic in `runTool` nor folded into `McpGateway.guard`.
   const meter = createMcpMeter(options.usage);
+  /**
+   * The monthly compile entitlement (F-035's closure) — again the SAME single implementation REST
+   * uses. Guards `compile_context` **and** `explain`: `explain` calls `compiler.compile`, so
+   * exempting it would leave a free, unmetered way to spend the entitlement.
+   */
+  const guardMonthly = createMonthlyCompileGuard({
+    ...(services.billing !== undefined ? { billing: services.billing } : {}),
+    ...(options.usage !== undefined ? { usage: options.usage } : {}),
+    metered: options.metered ?? false,
+  });
 
   /** The token store, or a clean error when the deployment wired none (mirrors the REST 409). */
   const requireTokenStore = (): TokenStore => {
@@ -330,6 +344,8 @@ export function buildMcpServer(
         const ctx = await guard('compile_context', extra);
         const project = await projectOf(ctx, extra);
         const tenantId = tenantOf(ctx);
+        // Refuse before capping, exactly as REST does — one rule, two surfaces.
+        await guardMonthly(tenantId);
         const request = toCompileRequest({
           ...args,
           budget: await clampBudget(tenantId, args.budget),
@@ -518,6 +534,8 @@ export function buildMcpServer(
         const ctx = await guard('explain', extra);
         const project = await projectOf(ctx, extra);
         const tenantId = tenantOf(ctx);
+        // Guarded too: explain compiles, so an unguarded explain is a free way past the entitlement.
+        await guardMonthly(tenantId);
         const requestedBudget = args.budget ?? DEFAULT_EXPLAIN_BUDGET;
         const request = toCompileRequest({
           ...args,

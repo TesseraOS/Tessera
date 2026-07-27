@@ -20,6 +20,7 @@ export * from './adapters/postgres-subscription-store.js';
 // it exists to serve: a counter and the limit it is measured against belong in one package, or they drift.
 export * from './usage/period.js';
 export * from './usage/ports.js';
+export * from './usage/monthly-guard.js';
 export * from './usage/adapters/in-memory-usage-store.js';
 export * from './usage/adapters/sqlite-usage-store.js';
 export * from './usage/adapters/postgres-usage-store.js';

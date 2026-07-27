@@ -81,7 +81,7 @@ export function registerV1Routes(
       registerRbacRoutes(v1);
       registerTokenRoutes(v1, hardening.tokenStore);
       registerSearchRoutes(v1, services);
-      registerCompileRoutes(v1, services, hardening.metered);
+      registerCompileRoutes(v1, services, hardening.metered, hardening.usage);
       registerEffectsRoutes(v1, services);
       registerGraphRoutes(v1, services);
       registerMemoryRoutes(v1, services, events);

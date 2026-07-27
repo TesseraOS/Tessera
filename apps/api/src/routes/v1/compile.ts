@@ -1,4 +1,8 @@
-import { createCompileBudgetClamp } from '@tessera/billing';
+import {
+  createCompileBudgetClamp,
+  createMonthlyCompileGuard,
+  type UsageStore,
+} from '@tessera/billing';
 import type { CompileRequest } from '@tessera/context-compiler';
 import type { ZodFastify } from '../../app-types.js';
 import { requirePermission, tenantOf } from '../../auth/index.js';
@@ -15,7 +19,15 @@ export function registerCompileRoutes(
   app: ZodFastify,
   services: ApiServices,
   metered = false,
+  usage?: UsageStore,
 ): void {
+  // The monthly compile entitlement (F-035's closure; NFR-12) — the same single implementation the
+  // MCP compile tools call. Runs BEFORE the clamp: refuse first, then cap.
+  const guardMonthly = createMonthlyCompileGuard({
+    ...(services.billing !== undefined ? { billing: services.billing } : {}),
+    ...(usage !== undefined ? { usage } : {}),
+    metered,
+  });
   // The token budget is capped to the caller's plan entitlement (NFR-12; F-035), through the SAME
   // clamp the MCP compile tools use (F-077) — one rule, two surfaces.
   //
@@ -42,6 +54,10 @@ export function registerCompileRoutes(
     },
     async (request) => {
       const tenantId = tenantOf(request);
+      // Refuse before capping (ADR-0060 §6): a tenant past its monthly entitlement gets a 429, not a
+      // silently smaller package. The 429 response is `>= 400`, so the metering hook skips it and a
+      // refusal cannot inflate the count that caused it.
+      await guardMonthly(tenantId);
       const { task, budget, retrievalLimit, filters } = request.body;
       const compileRequest: CompileRequest = {
         task,

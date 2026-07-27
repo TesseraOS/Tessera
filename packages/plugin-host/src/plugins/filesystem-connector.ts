@@ -23,7 +23,9 @@ export const filesystemConnectorPlugin: Plugin<FilesystemConnectorConfig, Connec
     // It walks `config.root` and reads file bodies — and nothing else (FR-60).
     permissions: ['filesystem:read'],
   },
-  setup(config) {
+  setup(config, context) {
+    // Asked for, not assumed: the connector cannot walk a root it was never granted read access to.
+    context.permissions.require('filesystem:read');
     return {
       capability: createFilesystemConnector(
         config.ignoredDirectories === undefined

@@ -241,3 +241,177 @@ describe('plugin permissions (FR-60)', () => {
     });
   });
 });
+
+describe('plugin grants — denied by default (FR-60)', () => {
+  /** A plugin that asks the host for `wanted` during setup, while declaring `declared`. */
+  function asking(
+    declared: readonly PluginPermission[],
+    wanted: PluginPermission,
+  ): Plugin<Record<string, never>, { ok: true }> {
+    return {
+      manifest: {
+        id: 'p.asks',
+        kind: 'connector',
+        name: 'asks',
+        version: '1.0.0',
+        configSchema: z.object({}),
+        permissions: declared,
+      },
+      setup(_config, context) {
+        context.permissions.require(wanted);
+        return { capability: { ok: true } };
+      },
+    };
+  }
+
+  it('grants exactly what was declared, and nothing more', async () => {
+    let seen: readonly PluginPermission[] = [];
+    const host = createPluginHost();
+    host.register({
+      manifest: {
+        id: 'p.inspect',
+        kind: 'processor',
+        name: 'inspect',
+        version: '1',
+        configSchema: z.object({}),
+        permissions: ['network'],
+      },
+      setup(_config, context) {
+        seen = context.permissions.granted;
+        return { capability: {} };
+      },
+    });
+
+    await host.load('p.inspect');
+    expect(seen).toEqual(['network']);
+  });
+
+  it('`has` answers without throwing, for both the granted and the ungranted', async () => {
+    const answers: Record<string, boolean> = {};
+    const host = createPluginHost();
+    host.register({
+      manifest: {
+        id: 'p.has',
+        kind: 'processor',
+        name: 'has',
+        version: '1',
+        configSchema: z.object({}),
+        permissions: ['filesystem:read'],
+      },
+      setup(_config, context) {
+        answers['filesystem:read'] = context.permissions.has('filesystem:read');
+        answers['network'] = context.permissions.has('network');
+        return { capability: {} };
+      },
+    });
+
+    expect((await host.load('p.has')).status).toBe('loaded');
+    expect(answers).toEqual({ 'filesystem:read': true, network: false });
+  });
+
+  it('allows a declared capability through', async () => {
+    const host = createPluginHost();
+    host.register(asking(['filesystem:read'], 'filesystem:read'));
+
+    expect((await host.load('p.asks')).status).toBe('loaded');
+  });
+
+  it('refuses an undeclared capability, isolated as failed rather than thrown', async () => {
+    const host = createPluginHost();
+    host.register(asking(['filesystem:read'], 'network'));
+
+    // The whole invariant in one line: asking beyond the declaration must not escape the host.
+    const info = await host.load('p.asks');
+    expect(info.status).toBe('failed');
+    expect(info.error).toMatch(/did not declare permission "network"/);
+    expect(host.capability('p.asks')).toBeUndefined();
+  });
+
+  it('refuses everything when nothing was declared — the least-privilege default', async () => {
+    const host = createPluginHost();
+    host.register(asking([], 'filesystem:read'));
+
+    expect((await host.load('p.asks')).status).toBe('failed');
+  });
+
+  it('keeps the base context (the logger) alongside the per-plugin grants', async () => {
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const host = createPluginHost({ logger });
+    host.register({
+      manifest: {
+        id: 'p.logs',
+        kind: 'processor',
+        name: 'logs',
+        version: '1',
+        configSchema: z.object({}),
+        permissions: ['network'],
+      },
+      setup(_config, context) {
+        context.logger?.info({ granted: context.permissions.granted }, 'setup');
+        return { capability: {} };
+      },
+    });
+
+    await host.load('p.logs');
+    expect(logger.info).toHaveBeenCalledWith({ granted: ['network'] }, 'setup');
+  });
+
+  it('gives each plugin its own grants — one plugin cannot borrow another’s', async () => {
+    const seen: Record<string, readonly PluginPermission[]> = {};
+    const host = createPluginHost();
+    for (const [id, declared] of [
+      ['p.a', ['network']],
+      ['p.b', ['filesystem:read']],
+    ] as const) {
+      host.register({
+        manifest: {
+          id,
+          kind: 'processor',
+          name: id,
+          version: '1',
+          configSchema: z.object({}),
+          permissions: declared,
+        },
+        setup(_config, context) {
+          seen[id] = context.permissions.granted;
+          return { capability: {} };
+        },
+      });
+    }
+
+    await host.load('p.a');
+    await host.load('p.b');
+    expect(seen).toEqual({ 'p.a': ['network'], 'p.b': ['filesystem:read'] });
+  });
+
+  it('the first-party filesystem connector actually asks before it walks a root', async () => {
+    const host = createPluginHost();
+    host.register(filesystemConnectorPlugin);
+    expect((await host.load('tessera.connector.filesystem', { root: '.' })).status).toBe('loaded');
+
+    // Loading successfully proves nothing on its own — it stays green if the plugin never asks. Strip
+    // the declaration and the SAME setup must now be refused; that is what pins the `require` call.
+    const stripped = createPluginHost();
+    stripped.register({
+      ...filesystemConnectorPlugin,
+      manifest: { ...filesystemConnectorPlugin.manifest, permissions: [] },
+    });
+    const refused = await stripped.load('tessera.connector.filesystem', { root: '.' });
+    expect(refused.status).toBe('failed');
+    expect(refused.error).toMatch(/did not declare permission "filesystem:read"/);
+  });
+
+  it('the transformers embeddings plugin asks before it reaches the network', async () => {
+    // Undeclared ⇒ refused during setup, so no model is ever fetched. The assertion is that the
+    // refusal happens BEFORE the download, which is why this test is fast and offline.
+    const host = createPluginHost();
+    host.register({
+      ...transformersEmbeddingsPlugin,
+      manifest: { ...transformersEmbeddingsPlugin.manifest, permissions: ['filesystem:write'] },
+    });
+
+    const info = await host.load('tessera.ai.transformers-embeddings');
+    expect(info.status).toBe('failed');
+    expect(info.error).toMatch(/did not declare permission "network"/);
+  });
+});

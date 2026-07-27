@@ -1,8 +1,10 @@
-import { ConflictError, NotFoundError } from '@tessera/core';
+import { ConflictError, ForbiddenError, NotFoundError } from '@tessera/core';
 import {
   isPluginPermission,
   type Plugin,
   type PluginContext,
+  type PluginGrants,
+  type PluginHostContext,
   type PluginInfo,
   type PluginInstance,
   type PluginKind,
@@ -43,6 +45,27 @@ function partitionPermissions(declared: readonly string[] | undefined): {
     }
   }
   return { permissions, unrecognized };
+}
+
+/**
+ * The grant set for one plugin (FR-60). Closed over the plugin's own normalized declarations, so
+ * there is no path by which a plugin is granted something its manifest did not ask for.
+ */
+function createGrants(pluginId: string, granted: readonly PluginPermission[]): PluginGrants {
+  return {
+    granted,
+    has: (permission) => granted.includes(permission),
+    require(permission) {
+      if (!granted.includes(permission)) {
+        throw new ForbiddenError(
+          `plugin "${pluginId}" did not declare permission "${permission}"`,
+          {
+            details: { pluginId, permission, declared: [...granted] },
+          },
+        );
+      }
+    },
+  };
 }
 
 /**
@@ -89,8 +112,11 @@ function toInfo(entry: Entry): PluginInfo {
   return entry.error === undefined ? base : { ...base, error: entry.error };
 }
 
-/** Create a {@link PluginHost}. `context` is passed to each plugin's `setup` (e.g. a bound logger). */
-export function createPluginHost(context: PluginContext = {}): PluginHost {
+/**
+ * Create a {@link PluginHost}. `context` is the base handed to each plugin's `setup` (e.g. a bound
+ * logger); the host adds that plugin's own {@link PluginGrants} to it at load.
+ */
+export function createPluginHost(context: PluginHostContext = {}): PluginHost {
   const entries = new Map<string, Entry>();
   const order: string[] = [];
 
@@ -168,8 +194,12 @@ export function createPluginHost(context: PluginContext = {}): PluginHost {
         entry.instance = undefined;
         return toInfo(entry);
       }
+      const pluginContext: PluginContext = {
+        ...context,
+        permissions: createGrants(id, entry.permissions),
+      };
       try {
-        entry.instance = await entry.plugin.setup(parsed.data, context);
+        entry.instance = await entry.plugin.setup(parsed.data, pluginContext);
         entry.status = 'loaded';
         entry.error = undefined;
       } catch (error) {

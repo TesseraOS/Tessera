@@ -44,7 +44,10 @@ export const transformersEmbeddingsPlugin: Plugin<TransformersEmbeddingsConfig, 
     // "local embeddings" still reaches the network exactly once and an operator should see that.
     permissions: ['network', 'filesystem:write'],
   },
-  async setup(config) {
+  async setup(config, context) {
+    // The model download + on-disk cache are the two things this plugin does beyond arithmetic.
+    context.permissions.require('network');
+    context.permissions.require('filesystem:write');
     return {
       capability: await createTransformersEmbeddings(
         config.model !== undefined ? { model: config.model } : {},

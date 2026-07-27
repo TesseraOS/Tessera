@@ -51,11 +51,42 @@ export interface PluginLogger {
   error(obj: unknown, msg?: string): void;
 }
 
-/** Services the host provides to a plugin during setup. Kept minimal for R0. */
+/**
+ * The capabilities granted to one plugin — exactly what its manifest declared, and nothing else
+ * (FR-60; ADR-0061 §2). The host builds one of these per plugin and hands it to `setup`; a plugin
+ * keeps it and asks before doing anything it needed to declare.
+ *
+ * **This is a gate at the host boundary, not a sandbox.** A plugin runs in-process and can reach for
+ * `fs` directly without asking (ADR-0020 already recorded that limit). What this buys is a declared,
+ * inspectable surface and a refusal at the seam — not containment.
+ */
+export interface PluginGrants {
+  /** Everything this plugin declared, normalized. */
+  readonly granted: readonly PluginPermission[];
+  /** Whether `permission` was declared — the non-throwing question. */
+  has(permission: PluginPermission): boolean;
+  /**
+   * Assert `permission` was declared. Throws {@link ForbiddenError} otherwise; thrown during `setup`
+   * the host isolates it into `failed`, exactly like any other setup failure.
+   */
+  require(permission: PluginPermission): void;
+}
+
+/** Services the host provides to a plugin during setup. */
 export interface PluginContext {
   /** Optional logger bound to the plugin (e.g. `@tessera/observability`'s, passed in by the host). */
   readonly logger?: PluginLogger;
+  /** What this plugin is allowed to do. Denied by default: undeclared is refused. */
+  readonly permissions: PluginGrants;
 }
+
+/**
+ * What {@link createPluginHost} itself is constructed with. `permissions` is deliberately absent —
+ * grants are *per plugin*, derived from that plugin's own manifest, so only the host can build them.
+ * A caller-supplied grant set would be a caller deciding what a plugin may do, which is the opposite
+ * of a declaration.
+ */
+export type PluginHostContext = Omit<PluginContext, 'permissions'>;
 
 /** Describes a plugin: identity + the kind it extends + a Zod schema validating its config. */
 export interface PluginManifest<TConfig = unknown> {

@@ -20,7 +20,7 @@ export function registerSearchRoutes(app: ZodFastify, services: ApiServices): vo
         body: searchBodySchema,
         response: { 200: searchResponseSchema },
       },
-      config: { audit: 'search' },
+      config: { audit: 'search', meter: 'search' },
     },
     async (request) => {
       const { query, limit, include } = request.body;

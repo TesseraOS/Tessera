@@ -27,7 +27,7 @@ import type { GetEffectsOptions } from '@tessera/knowledge-graph';
 // The SAME mapper the REST route uses (ADR-0036 parity, structurally) — see @tessera/retrieval.
 import { toRetrievalInclude, type RetrievalQuery } from '@tessera/retrieval';
 // Fastify-free (deps: @tessera/core only), so importing it here keeps the F-012 invariant.
-import { createCompileBudgetClamp } from '@tessera/billing';
+import { createCompileBudgetClamp, type UsageStore } from '@tessera/billing';
 // The first-party skills registry (F-054). Manifests from the root entry; bodies from the separate
 // `/content` entry, so only `get_skill` can reach a document.
 import { SKILLS, findSkill, skillInstallLocations, type SkillManifest } from '@tessera/skills';
@@ -35,6 +35,7 @@ import { getSkillDocument } from '@tessera/skills/content';
 import { buildExplanation } from './explain.js';
 import type { McpCallContext, McpGateway, McpToolName } from './gateway.js';
 import { runTool } from './result.js';
+import { createMcpMeter } from './usage.js';
 import {
   addSourceShape,
   assertEffectShape,
@@ -156,6 +157,12 @@ export interface BuildMcpServerOptions {
    * an unconfigured server is unchanged. Multi-client gateways select per call via the header instead.
    */
   readonly defaultProject?: ProjectId;
+  /**
+   * The durable per-tenant usage store (F-057; NFR-12). The composition root passes `runtime.usage`;
+   * without one the agent surface is unmetered and behaves exactly as it did before. See
+   * {@link UsageStore} + ADR-0060.
+   */
+  readonly usage?: UsageStore;
 }
 
 /** Token budget used by `explain` when the caller does not specify one. */
@@ -221,6 +228,9 @@ export function buildMcpServer(
    * deployment wired no BillingProvider (ADR-0056).
    */
   const clampBudget = createCompileBudgetClamp(services.billing);
+  // Per-tenant usage metering (F-057; NFR-12). Applied per metered tool — see `createMcpMeter` for
+  // why it is neither generic in `runTool` nor folded into `McpGateway.guard`.
+  const meter = createMcpMeter(options.usage);
 
   /** The token store, or a clean error when the deployment wired none (mirrors the REST 409). */
   const requireTokenStore = (): TokenStore => {
@@ -291,8 +301,11 @@ export function buildMcpServer(
         // The SAME enriched service REST calls (ADR-0036): labels/kinds/nodes come from the one
         // composition-root decorator, so the two surfaces cannot disagree about a hit.
         const project = await projectOf(ctx, extra);
+        const tenantId = tenantOf(ctx);
         return {
-          results: await services.search.forTenant(tenantOf(ctx)).forProject(project).search(query),
+          results: await meter('search', { tenantId, projectId: project }, () =>
+            services.search.forTenant(tenantId).forProject(project).search(query),
+          ),
         };
       }),
   );
@@ -309,10 +322,20 @@ export function buildMcpServer(
         const ctx = await guard('compile_context', extra);
         const project = await projectOf(ctx, extra);
         const tenantId = tenantOf(ctx);
-        return services.compiler
-          .forTenant(tenantId)
-          .forProject(project)
-          .compile(toCompileRequest({ ...args, budget: await clampBudget(tenantId, args.budget) }));
+        const request = toCompileRequest({
+          ...args,
+          budget: await clampBudget(tenantId, args.budget),
+        });
+        return meter(
+          'compile',
+          { tenantId, projectId: project },
+          () => services.compiler.forTenant(tenantId).forProject(project).compile(request),
+          (pkg) => ({
+            tokens: pkg.totalTokens,
+            budgetAdherence: pkg.scores.budgetAdherence,
+            provenanceCoverage: pkg.scores.provenanceCoverage,
+          }),
+        );
       }),
   );
 
@@ -494,10 +517,21 @@ export function buildMcpServer(
         });
         // Unlike compile_context, explain NAMES the clamp (ADR-0056): it is the diagnostic path an
         // agent reaches for when a package looks wrong, and it already pays for prose.
-        return buildExplanation(
-          await services.compiler.forTenant(tenantId).forProject(project).compile(request),
-          { requestedBudget },
+        //
+        // It is metered as a `compile`, because it IS one — `services.compiler.compile` below spends
+        // exactly the same resource. Exempting the diagnostic path would leave a free, unmetered way
+        // to compile, which is a hole in the entitlement rather than a courtesy.
+        const pkg = await meter(
+          'compile',
+          { tenantId, projectId: project },
+          () => services.compiler.forTenant(tenantId).forProject(project).compile(request),
+          (compiled) => ({
+            tokens: compiled.totalTokens,
+            budgetAdherence: compiled.scores.budgetAdherence,
+            provenanceCoverage: compiled.scores.provenanceCoverage,
+          }),
         );
+        return buildExplanation(pkg, { requestedBudget });
       }),
   );
 

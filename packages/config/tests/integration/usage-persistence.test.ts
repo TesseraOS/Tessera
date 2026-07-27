@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { sql } from 'drizzle-orm';
@@ -74,6 +74,38 @@ describe('local profile — usage and subscriptions outlive the runtime', () => 
     expect(summary).toEqual([
       expect.objectContaining({ operation: 'compile', count: 1, tokens: 1234 }),
     ]);
+  });
+
+  it('meters ingested documents when the worker writes them, not when a scan is requested', async () => {
+    // ADR-0060 §5: `POST /v1/sources/:id/scan` returns 202 since F-081, so metering the REQUEST would
+    // count intent. This asserts the subscriber counts real documents — and note the assertion is
+    // "matches the number of documents the scan reported", not a hard-coded number, because that is
+    // the property (one bucket increment per ingested document) rather than a fixture detail.
+    //
+    // Mutation check: removing the `document.ingested` subscriber from assembleRuntime turns this red.
+    const rt = (runtime = await boot());
+    const repo = await mkdtemp(join(tmpdir(), 'tessera-usage-repo-'));
+    try {
+      await mkdir(join(repo, 'src'), { recursive: true });
+      await writeFile(join(repo, 'README.md'), '# Repo\n\nThe quernstone subsystem lives here.\n');
+      await writeFile(join(repo, 'src', 'ledger.ts'), 'export const quernstone = 1;\n');
+
+      const sources = rt.services.sources.forTenant('default');
+      const source = await sources.register({ kind: 'filesystem', config: { root: repo } });
+      const { summary } = await sources.scan(source.id);
+      expect(summary.added).toBeGreaterThan(0);
+
+      const today = new Date().toISOString().slice(0, 10);
+      const ingested = await rt.usage.summarize({
+        tenantId: 'default',
+        from: today,
+        until: today,
+        operations: ['ingest'],
+      });
+      expect(ingested[0]?.count).toBe(summary.added);
+    } finally {
+      await rm(repo, { recursive: true, force: true });
+    }
   });
 
   it('serves a paid plan the provider never saw, from the profile store — the F-030 seam, closed', async () => {

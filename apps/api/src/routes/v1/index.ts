@@ -1,8 +1,10 @@
+import type { UsageStore } from '@tessera/billing';
 import type { MemoryRetentionPolicy } from '@tessera/memory';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { ZodFastify } from '../../app-types.js';
 import { registerAuth, type AuthProvider, type TokenStore } from '../../auth/index.js';
 import { recordAudit, type AuditLog } from '../../audit/index.js';
+import { recordUsage } from '../../usage/recorder.js';
 import type { ApiEventBus } from '../../events.js';
 import { registerRateLimit, type RateLimiter } from '../../security/rate-limit.js';
 import type { SecurityHeadersOptions } from '../../security/headers.js';
@@ -35,6 +37,12 @@ export interface V1HardeningOptions {
   readonly tokenStore: TokenStore | undefined;
   /** The effective memory retention policy backing `/v1/retention` (F-047); empty ⇒ retention off. */
   readonly memoryRetention: MemoryRetentionPolicy;
+  /**
+   * The durable usage store metering writes to (F-057; NFR-12), or `undefined` when a composition
+   * wired none — then nothing is metered, which is what keeps `buildServer({})` (the SDK's OpenAPI
+   * generator) working.
+   */
+  readonly usage: UsageStore | undefined;
 }
 
 /**
@@ -65,6 +73,8 @@ export function registerV1Routes(
       }
       // Record an audit event per response for routes flagged with an `audit` action (FR-55).
       recordAudit(v1, audit);
+      // Record a usage bucket per response for routes flagged with a `meter` operation (NFR-12).
+      recordUsage(v1, hardening.usage);
       registerMeRoutes(v1);
       registerRbacRoutes(v1);
       registerTokenRoutes(v1, hardening.tokenStore);

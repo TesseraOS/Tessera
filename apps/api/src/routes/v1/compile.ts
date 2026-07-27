@@ -28,7 +28,7 @@ export function registerCompileRoutes(app: ZodFastify, services: ApiServices): v
         body: compileBodySchema,
         response: { 200: contextPackageSchema },
       },
-      config: { audit: 'compile' },
+      config: { audit: 'compile', meter: 'compile' },
     },
     async (request) => {
       const tenantId = tenantOf(request);
@@ -42,10 +42,20 @@ export function registerCompileRoutes(app: ZodFastify, services: ApiServices): v
           : {}),
       };
       // Data-plane isolation (FR-52/FR-66): compile against only the caller's (tenant, project) corpus/graph.
-      return services.compiler
+      const pkg = await services.compiler
         .forTenant(tenantId)
         .forProject(projectOf(request))
         .compile(compileRequest);
+
+      // Annotate for the metering hook (ADR-0060 §5) — the handler never records. `scores` is what
+      // FR-47's retrieval-quality proxies are made of; the compiler already computes it, so analytics
+      // costs an accumulation rather than a second pass over the package.
+      request.usageTokens = pkg.totalTokens;
+      request.usageScores = {
+        budgetAdherence: pkg.scores.budgetAdherence,
+        provenanceCoverage: pkg.scores.provenanceCoverage,
+      };
+      return pkg;
     },
   );
 }

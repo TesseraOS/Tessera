@@ -4,6 +4,7 @@ import Fastify, {
   type FastifyServerOptions,
 } from 'fastify';
 import cors from '@fastify/cors';
+import type { UsageStore } from '@tessera/billing';
 import { EMPTY_RETENTION_POLICY, type MemoryRetentionPolicy } from '@tessera/memory';
 import {
   serializerCompiler,
@@ -139,6 +140,14 @@ export interface BuildServerOptions {
    */
   readonly memoryRetention?: MemoryRetentionPolicy;
   /**
+   * The durable per-tenant usage store (F-057; NFR-12). The composition root passes `runtime.usage`;
+   * omitted ⇒ nothing is metered, which is what lets `buildServer({})` — the SDK's OpenAPI generator —
+   * boot with empty services. Rides here rather than on {@link ApiServices} deliberately:
+   * `instrumentServices` rebuilds that object member by member, and a member dropped there 500s its
+   * routes in production (E-015). See {@link UsageStore} + ADR-0060.
+   */
+  readonly usage?: UsageStore;
+  /**
    * Security-header hardening (F-044; NFR-2). Headers are on by default; `security.hsts` adds HSTS
    * for TLS-terminated profiles. See {@link SecurityHeadersOptions}.
    */
@@ -226,6 +235,7 @@ export function buildServer(services: ApiServices, options: BuildServerOptions =
       rateLimiter: resolveRateLimiter(options.rateLimit),
       tokenStore: options.tokenStore,
       memoryRetention: options.memoryRetention ?? EMPTY_RETENTION_POLICY,
+      usage: options.usage,
     },
   );
 

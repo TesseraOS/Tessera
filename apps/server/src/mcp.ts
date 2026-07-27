@@ -37,6 +37,8 @@ export async function startMcpServer(options: McpServerOptions = {}): Promise<Mc
     gateway,
     // Back the token-management tools with the runtime's token store (F-046; present in token mode).
     ...(runtime.auth.tokenStore !== undefined ? { tokenStore: runtime.auth.tokenStore } : {}),
+    // Meter the agent surface too (F-057; NFR-12) — the population the entitlement exists to meter.
+    usage: runtime.usage,
   });
 
   return {

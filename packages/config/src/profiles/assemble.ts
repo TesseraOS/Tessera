@@ -294,6 +294,29 @@ export async function assembleRuntime(
         summary: event.summary,
       }),
     ),
+    // Usage metering for ingested documents (F-057; NFR-12, ADR-0060 §5). A subscriber here rather
+    // than a marker on `POST /v1/sources/:id/scan`, because that route has returned **202 accepted**
+    // since F-081: documents are written later by the queue worker. Metering the request would count
+    // intent, not documents — and a scan that finds nothing would bill the same as one that ingests a
+    // thousand files. Failure-isolated, like every other recorder.
+    // `durationMs: 0` is deliberate and not a placeholder: the event carries no timing, and the
+    // surfaces report latency for `compile` and `search` only, so an invented number would be the
+    // one thing worse than an absent one. Known limit, stated rather than hidden: the queue may retry
+    // a handler, so a retried job can count its documents twice — exact-once accounting would need a
+    // dedupe key the event does not carry.
+    ingestionEvents.on('document.ingested', ({ scope }) => {
+      void adapters.usageStore
+        .record({
+          tenantId: scope.tenantId,
+          projectId: scope.projectId,
+          operation: 'ingest',
+          occurredAt: new Date().toISOString(),
+          durationMs: 0,
+        })
+        .catch(() => {
+          // Swallowed by design: a metering failure must never break the ingestion pipeline.
+        });
+    }),
   ];
 
   // The corpus indexer (F-039): one tenant-aware path that lands (ref, text) in the blob corpus AND

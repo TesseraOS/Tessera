@@ -39,7 +39,7 @@ export function registerMemoryRoutes(
         body: captureBodySchema,
         response: { 201: memorySchema },
       },
-      config: { audit: 'memory.write' },
+      config: { audit: 'memory.write', meter: 'memory.write' },
     },
     async (request, reply) => {
       const tenantId = tenantOf(request);
@@ -122,7 +122,7 @@ export function registerMemoryRoutes(
         body: editBodySchema,
         response: { 200: memorySchema },
       },
-      config: { audit: 'memory.write' },
+      config: { audit: 'memory.write', meter: 'memory.write' },
     },
     (request) => {
       const lineageId = request.params.lineageId as MemoryLineageId;

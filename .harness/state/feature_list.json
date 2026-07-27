@@ -1980,7 +1980,7 @@
       "package": "—",
       "release": "R4",
       "priority": "must",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-051",
         "F-053"
@@ -1996,9 +1996,10 @@
         "build"
       ],
       "effects": [
-        "E-005"
+        "E-005",
+        "E-030"
       ],
-      "notes": "PUBLISH SET (from F-054, 2026-07-21): @tessera/skills must ship alongside @tessera/cli — the published CLI imports it at RUNTIME for `tessera skills`, so a release that omits it produces a CLI that crashes on that command. It is `private: true` today and ships only dist/ (the SKILL.md bytes are compiled into the generated modules, so no extra files entry is needed)."
+      "notes": "PUBLISH SET CORRECTED (F-059, 2026-07-27): the note from F-054 said sdk + cli + skills. That is WRONG and would ship a CLI that cannot install — @tessera/cli's transitive closure is EIGHTEEN packages (ai, api, billing, cli, config, context-compiler, core, ingestion, knowledge-graph, mcp, memory, observability, plugin-host, retrieval, sdk, server, skills, storage), and pnpm rewrites workspace:* to a concrete version on pack, so a published CLI hard-requires @tessera/api@0.0.0 from the registry. Proven both ways by installing from local tarballs: 18 installs and runs `tessera doctor` green; 3 fails with 404. See ADR-0062 §3 and effect E-030. DELIVERED PARTIALLY, DELIBERATELY: (a) nothing has been published to npm — the release workflow is built and proven up to, and not including, the registry write, because publishing is outward-facing and irreversible and is the operator's action (see .harness/governance/release-checklist.md); (b) \"domain + trademark verified\" is NOT asserted — those are external legal facts owned by F-069, whose acceptance already names them. The in-repo half of the ADR-0008 brand checklist is now enforced as verify-state check 8 rather than reviewed once. OPEN ITEMS recorded rather than silently skipped: GitHub Actions are pinned to release tags, not commit SHAs; container image signing needs the images from F-093."
     },
     {
       "id": "F-060",

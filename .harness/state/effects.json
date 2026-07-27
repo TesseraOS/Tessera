@@ -334,6 +334,14 @@
         {
           "kind": "test",
           "ref": "new env-guarded suites that a machine without Docker skips cleanly (F-056): TESSERA_TEST_S3=1 (MinIO), TESSERA_TEST_REDIS=1 (Redis), TESSERA_TEST_SELF_HOSTED=1 (all three). `gates.json` is UNCHANGED — these are opt-in like F-023's TESSERA_TEST_POSTGRES, because making them gates would force Docker on every contributor for every change. The compose-boot CI job is F-093. NOTE the standing risk: a guarded suite that nobody runs proves nothing — F-023's pgvector suites sat unexecuted until F-056 increment 1 ran them."
+        },
+        {
+          "kind": "artifact",
+          "ref": "F-059 adds TWO CI jobs that are deliberately NOT gates: `sbom` (CycloneDX per run) in ci.yml, and the whole of release.yml. Neither can fail a change — they produce evidence and artifacts — so neither belongs in gates.json. The mirror guard only walks gates -> ci.yml, never the reverse, so adding jobs is safe; adding a GATE still requires the CI step in the same commit."
+        },
+        {
+          "kind": "file",
+          "ref": "scripts/verify-state.mjs gains CHECK 8 (brand): the ADR-0008 codename boundary over apps/web app+components, marketing/docs content, and every PUBLISHED package name/description. It reads direct children for manifests — the first version reused `filesUnder`, which recurses into node_modules and hung the gate past 120s rather than failing it. SECURITY.md also joins the governed doc set (check 6)."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -1442,6 +1450,43 @@
       ],
       "kind": "EFFECT_LINK",
       "rationale": "Minted rather than folded into E-019 because it is a port with its own adapters and its own conformance suite — the effect-link protocol's own trigger. Usage exists to serve entitlements, which is why it lives in @tessera/billing beside them rather than in a separate package: a counter and the limit it is measured against belong together, or they drift. LOAD-BEARING PRIVACY RULE: there is deliberately NO principalId on UsageEvent (ADR-0060 §4). With one, an aggregate counter becomes personal data subject to NFR-13 DSR export AND erasure — and honouring an erasure would destroy the billing evidence the counter exists to be. \"Who did this\" is already answered by the audit trail. A future feature that adds this column silently pulls the store into DSR scope; anyone touching this schema must decide that explicitly. HONESTY RULES the surfaces depend on: buckets are UTC days, pre-aggregated at write time and therefore NOT re-splittable into a viewer offset (this deliberately differs from the F-088 Overview chart, and the analytics page says so); latency is a sum and a max, so it can produce a mean and a maximum but NEVER a percentile (ADR-0060 §3); quality averages divide by scoredCount, not count; and GET /v1/usage returns the window it ACTUALLY used, clamped to the store's earliest day (ADR-0053 clause 3).",
+      "confidence": 1,
+      "origin": "manual"
+    },
+    {
+      "id": "E-030",
+      "from": {
+        "kind": "artifact",
+        "ref": "the PUBLISHED-ARTIFACT contract (F-059): which workspace packages are public, their shared version line, and what their tarballs contain"
+      },
+      "to": [
+        {
+          "kind": "package",
+          "ref": "the 18-package closure of @tessera/cli — ai, api, billing, cli, config, context-compiler, core, ingestion, knowledge-graph, mcp, memory, observability, plugin-host, retrieval, sdk, server, skills, storage. Adding a @tessera/* dependency to ANY of them drags a 19th package into the closure; omitting it produces a 404 on the user install."
+        },
+        {
+          "kind": "file",
+          "ref": ".changeset/config.json — all 18 are `fixed`, so they share one version line (a skew between them is an install failure, not a build failure). The 8 private packages (web, marketing, docs, brand, mascot, bench, e2e-full, web-perf) sit in `ignore`."
+        },
+        {
+          "kind": "file",
+          "ref": "scripts/pack-publishable.mjs derives the publish set from `private` in each manifest rather than from a list, so it cannot drift from what `changeset publish` pushes; it exits non-zero if the tarball count disagrees with the package count."
+        },
+        {
+          "kind": "file",
+          "ref": ".github/workflows/release.yml — dispatch-only, `publish` input defaults false, re-runs the gates against the dispatched ref (dispatch takes a ref, and nothing else guarantees it is the ref that passed), and declares `id-token: write` because provenance otherwise fails at publish time."
+        },
+        {
+          "kind": "doc",
+          "ref": ".harness/governance/release-checklist.md — publishing is a HUMAN action an agent must not take unasked; it encodes the tarball-contents audit and the offline install proof as required steps."
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0062-apache-2-licence-whole-repo-oss-and-the-publish-closure.md"
+        }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "This contract breaks INSTALLS, not builds — which is precisely why it needs an effect-link. Inside the workspace `workspace:*` always resolves, so no typecheck, test, build or e2e in this repository can see a missing package; pnpm rewrites `workspace:*` to a concrete version at pack time, and the gap surfaces only as a 404 on a user machine. The publish set recorded by F-054 (sdk + cli + skills) was wrong for exactly this reason, and F-059 PROVED it by installing both sets from local tarballs: the 18-package closure installs and runs `tessera doctor` green, while the 3-package set fails with `404 @tessera/api@0.0.0 is not in this registry`. Anyone changing a published package dependency, its files/exports, or its private flag is changing this contract, and the only check that catches a mistake is the offline install proof.",
       "confidence": 1,
       "origin": "manual"
     }

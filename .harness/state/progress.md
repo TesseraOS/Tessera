@@ -3,6 +3,103 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-27 — F-059 DONE: Apache-2.0, the supply chain, and a publish set that was wrong
+
+Claimed **F-059** (`must`, lowest-id eligible in R4; F-051 + F-053 done). Plan:
+[`F-059-launch-readiness-license-supply-chain-and-release.md`](../plans/F-059-launch-readiness-license-supply-chain-and-release.md).
+Decision: **[ADR-0062](../../docs/adr/0062-apache-2-licence-whole-repo-oss-and-the-publish-closure.md)**.
+
+All **9 increments** committed green. OQ4 resolved to "open-core, permissive" on 2026-07-03 and
+then nothing was written: no `LICENSE`, no `SECURITY.md`, no `license` field on any of 26 packages,
+no SBOM, no versioning tooling, no release workflow.
+
+### Four decisions the lead took (AskUserQuestion)
+
+1. **Apache-2.0**, not MIT — express patent grant, and a trademark section that matters because
+   ADR-0008 locks the mark and a hosted tier is planned under it.
+2. **The whole repository is the open core**; what is sold is the service. Carving out
+   `@tessera/billing` would run a licence boundary through a package that works end to end today.
+3. **Release is `workflow_dispatch` with `publish: false` by default.** A tag-triggered first
+   release is an irreversible publish of names npm will not let you reuse.
+4. First version **`0.1.0`**, not `1.0.0` — `1.0.0` is a stability promise this project has not
+   earned.
+
+### The finding: the recorded publish set would have shipped a CLI that cannot install
+
+F-054's note said the publish set was `sdk` + `cli` + `skills`, having spotted that the CLI imports
+`skills` at runtime. **That is one link of the chain.** `@tessera/cli` declares seven `@tessera/*`
+dependencies whose computed closure is **eighteen packages**.
+
+pnpm rewrites `workspace:*` to a concrete version at pack time — verified by unpacking the CLI
+tarball — so a published CLI hard-requires `@tessera/api@0.0.0` *from the registry*.
+
+**No gate in this repository can see this.** Inside the workspace `workspace:*` always resolves, so
+typecheck, lint, test, build and e2e are all green either way; the break appears only on a user's
+`npm install`. So it was proven by experiment, both directions:
+
+| Publish set | Result |
+|---|---|
+| **18 packages** (the closure) | 398 packages installed from local tarballs, no registry lookup for any `@tessera/*`, and `./node_modules/.bin/tessera doctor` reports all four checks green |
+| **3 packages** (as recorded) | `npm error 404 '@tessera/api@0.0.0' is not in this registry` |
+
+Recorded as **[E-030](effects.json)** — a contract that breaks installs rather than builds — and the
+offline install proof is now a required step in the release checklist, because nothing else catches it.
+
+### What landed
+
+| # | Increment | Evidence |
+|---|-----------|----------|
+| 0 | Plan + ADR-0062 + claim | `verify-state` |
+| 1 | Apache-2.0 `LICENSE` + `license` on all 27 manifests + the NOTICE §4(d) grant | build green; 5 structural anchors checked on the licence text |
+| 2 | `SECURITY.md` | link-gated; two false claims removed before commit |
+| 3 | README rewritten for launch, quickstart **run** | CLI commands executed |
+| 4 | CycloneDX SBOM job | workflow parsed; action inputs verified against the pinned definition |
+| 5 | Changesets + the 18-package publish set | pack + install proof, both directions |
+| 6 | `release.yml` — dispatch-only, publish off by default | parsed; pack script 18/18 locally |
+| 7 | Release checklist + supply-chain table | 1313 doc links |
+| 8 | ADR-0008 brand boundary as `verify-state` check 8 | both branches red when broken |
+| 9 | Effects (E-005, **E-030**), records | full gates |
+
+### Four things caught by gates or by running them, not by review
+
+1. **`SECURITY.md` advertised SBOM and provenance that did not exist yet.** Removed until the
+   mechanisms landed — a security policy is the wrong file to be aspirational in.
+2. **It also linked `governance/secrets.md`; the file is `secrets-policy.md`.** Found by adding
+   SECURITY.md to the governed doc set, then *proven* by restoring the bad link and watching the
+   gate fail.
+3. **The README's `pnpm --filter @tessera/cli exec tessera …` quickstart does not work** — the bin
+   is not linked, so a reader pasting it gets "Command 'tessera' not found". Caught by running it
+   rather than by checking the command files exist. Fixed with a root `pnpm tessera` alias.
+4. **The release workflow's first pack step filtered by name** and would have packed `brand`,
+   `mascot`, `bench`, `e2e-full` and `web-perf`. Replaced with a script that derives the set from
+   `private` — a hand-maintained list is exactly how the F-054 note went wrong.
+
+Also: the README footer said **"© Tessera. All rights reserved."**, the literal opposite of the
+Apache grant committed one increment earlier; the CI header claimed the workflow was dormant because
+"there is no remote" (there is, per ADR-0055); and check 8's first draft reused `filesUnder`, which
+recurses into `node_modules` and **hung** `verify-state` past 120s instead of failing.
+
+### Delivered partially, deliberately — stated so it is not mistaken for done
+
+- **Nothing has been published to npm.** The workflow is proven up to, and not including, the
+  registry write. Publishing is outward-facing and irreversible, and is the operator's action; the
+  release checklist now makes "an agent must not dispatch with `publish: true` unasked" a binding
+  governance rule rather than a habit of mine.
+- **Domain and trademark are NOT verified.** Those are external legal facts owned by **F-069**. The
+  in-repo half of ADR-0008's checklist is now enforced as `verify-state` check 8; a green gate means
+  the repo is internally consistent with the brand decision, not that the name is cleared.
+- Open items recorded rather than skipped: actions pinned to release tags rather than commit SHAs;
+  container image signing needs **F-093**.
+
+### Evidence
+
+`verify-state` (98 features, 30 effect-links, 1313 doc links), typecheck 46, lint, format, test 44,
+build 23, `test:e2e` 27 tasks — all green.
+
+**Next step:** **F-064** — dashboard UX-baseline completion + i18n readiness — is the next lowest-id
+eligible in R4.
+
+---
 ## 2026-07-27 — F-058 DONE: feature flags, plugin permissions, plugin health — and one honest empty set
 
 Claimed **F-058** (`could`, lowest-id eligible in R4; F-013 done). Plan:

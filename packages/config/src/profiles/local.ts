@@ -1,3 +1,4 @@
+import { createSqliteSubscriptionStore, createSqliteUsageStore } from '@tessera/billing';
 import { createKeywordRetriever, createTemporalRetriever } from '@tessera/retrieval';
 import { createSqliteGraphStore } from '@tessera/knowledge-graph';
 import { createSqliteMemoryStore } from '@tessera/memory';
@@ -65,6 +66,11 @@ export async function createLocalRuntime(
     manifest: createSqliteManifest(relational.db),
     registry: createSqliteSourceRegistry(relational.db),
     projectStore: createSqliteProjectStore(relational.db),
+    // Usage + subscriptions are durable even here (F-057). Local is single-node, so an in-memory Map
+    // would "work" — but a restart would then reset a tenant's month and lose its plan, and `profile:
+    // local` + `billing.provider: dodo` is a legal config: a self-hoster on a paid plan.
+    usageStore: createSqliteUsageStore(relational.db),
+    subscriptionStore: createSqliteSubscriptionStore(relational.db),
     ...(config.auth.mode === 'token' ? { tokenStore: createSqliteTokenStore(relational.db) } : {}),
     ...(config.audit.enabled ? { auditLog: createSqliteAuditLog(relational.db) } : {}),
     // Every SQLite adapter shares the one handle `assembleRuntime` already closes; nothing else to do.

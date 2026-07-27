@@ -9,9 +9,10 @@ import {
 import { createProjectService, type ProjectStore } from '@tessera/api/projects';
 import {
   createDodoBilling,
-  createInMemorySubscriptionStore,
   createLocalBilling,
   type BillingProvider,
+  type SubscriptionStore,
+  type UsageStore,
 } from '@tessera/billing';
 import { createContextCompiler } from '@tessera/context-compiler';
 import { createEventBus, ValidationError } from '@tessera/core';
@@ -82,6 +83,15 @@ export interface ProfileAdapters {
   readonly manifest: IngestionManifest;
   readonly registry: SourceRegistry;
   readonly projectStore: ProjectStore;
+  /**
+   * Durable per-tenant usage buckets (F-057; NFR-12) and subscription state (closing the F-030
+   * in-memory seam). **Required from both profiles, deliberately** — an optional member here, or one
+   * constructed below in the profile-independent half, is exactly how a store ends up SQLite-only and
+   * caps self-hosted at a single node (the F-056 lesson). Making them required is what forces the
+   * compiler to ask Local *and* self-hosted for an answer.
+   */
+  readonly usageStore: UsageStore;
+  readonly subscriptionStore: SubscriptionStore;
   /** Present when `config.auth.mode === 'token'`; the profile picks the backing store. */
   readonly tokenStore?: TokenStore;
   /** Present when `config.audit.enabled`. */
@@ -130,12 +140,19 @@ function createRuntimeAuth(config: TesseraConfig['auth'], tokenStore?: TokenStor
 
 /**
  * Build the billing provider from config (F-030): `dodo` reads its secrets via the SecretsProvider
- * and persists subscriptions in memory (a durable store is a seam); otherwise the local/free adapter
+ * and persists subscriptions in the store the **profile** supplied; otherwise the local/free adapter
  * (OSS default, no external service).
+ *
+ * The store arrives as an argument rather than being constructed here, and that is the whole fix for
+ * the F-030 seam: this function lives in the profile-independent half, which by construction cannot
+ * know whether the durable store is SQLite or Postgres. Building an in-memory `Map` here meant that on
+ * Managed Cloud a restart — or simply a second replica — silently downgraded every paying tenant to
+ * free, because nothing outside one process had ever heard about the subscription.
  */
 async function createRuntimeBilling(
   config: TesseraConfig['billing'],
   secrets: SecretsProvider,
+  store: SubscriptionStore,
 ): Promise<BillingProvider> {
   if (config.provider === 'dodo') {
     const [apiKey, webhookSecret] = await Promise.all([
@@ -145,7 +162,7 @@ async function createRuntimeBilling(
     return createDodoBilling({
       apiKey,
       webhookSecret,
-      store: createInMemorySubscriptionStore(),
+      store,
       ...(config.dodoBaseUrl !== undefined ? { baseUrl: config.dodoBaseUrl } : {}),
     });
   }
@@ -208,7 +225,7 @@ export async function assembleRuntime(
   // so enriching its retriever would buy nothing and pay for a second corpus read per candidate.
   const enrichedSearch = createEnrichedRetriever(search, fragmentSource);
 
-  const billing = await createRuntimeBilling(config.billing, secrets);
+  const billing = await createRuntimeBilling(config.billing, secrets, adapters.subscriptionStore);
   const memory = createMemoryService(adapters.memoryStore);
 
   // --- Runtime ingestion (F-038): registry + pipeline worker + SSE bridge -------------------------
@@ -330,6 +347,10 @@ export async function assembleRuntime(
     services,
     auth: createRuntimeAuth(config.auth, adapters.tokenStore),
     billing,
+    // Per-tenant usage metering (F-057). On the Runtime rather than in ApiServices, deliberately:
+    // ApiServices is rebuilt member-by-member by `instrumentServices`, and a member dropped there
+    // 500s its routes in production (E-015, twice). BuildServerOptions is structurally immune.
+    usage: adapters.usageStore,
     // Persistent audit trail (F-027) when enabled; the surface falls back to its in-memory sink otherwise.
     ...(adapters.auditLog !== undefined ? { audit: adapters.auditLog } : {}),
     memoryRetention: toMemoryRetentionPolicy(config.memory.retention),

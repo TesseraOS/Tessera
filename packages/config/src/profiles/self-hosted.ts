@@ -1,4 +1,10 @@
 import { ValidationError } from '@tessera/core';
+import {
+  createPostgresSubscriptionStore,
+  createPostgresUsageStore,
+  pgSubscriptionMigrations,
+  pgUsageMigrations,
+} from '@tessera/billing';
 import { createPostgresGraphStore, pgGraphMigrations } from '@tessera/knowledge-graph';
 import { createPostgresMemoryStore, pgMemoryMigrations } from '@tessera/memory';
 import {
@@ -63,6 +69,8 @@ const ALL_MIGRATIONS = [
   ...pgProjectStoreMigrations,
   ...pgTokenStoreMigrations,
   ...pgAuditLogMigrations,
+  ...pgUsageMigrations,
+  ...pgSubscriptionMigrations,
 ];
 
 /** Read a required secret, with an error naming the setting rather than the internal key. */
@@ -151,6 +159,8 @@ export async function createSelfHostedRuntime(
     manifest: createPostgresManifest(relational.db),
     registry: createPostgresSourceRegistry(relational.db),
     projectStore: createPostgresProjectStore(relational.db),
+    usageStore: createPostgresUsageStore(relational.db),
+    subscriptionStore: createPostgresSubscriptionStore(relational.db),
     ...(config.auth.mode === 'token'
       ? { tokenStore: createPostgresTokenStore(relational.db) }
       : {}),

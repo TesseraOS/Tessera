@@ -3,7 +3,7 @@ import type { Embeddings } from '@tessera/ai';
 // `@tessera/config` — and the MCP process booting through it — stays Fastify-free (ADR-0030).
 import type { ApiEventBus, ApiServices, AuditLog } from '@tessera/api';
 import type { AuthProvider, TokenStore } from '@tessera/api/auth';
-import type { BillingProvider } from '@tessera/billing';
+import type { BillingProvider, UsageStore } from '@tessera/billing';
 import type { SourceService } from '@tessera/ingestion';
 import type { MemoryRetentionPolicy } from '@tessera/memory';
 import type { KeywordRetriever, TemporalRetriever } from '@tessera/retrieval';
@@ -50,6 +50,12 @@ export interface Runtime {
   readonly auth: RuntimeAuth;
   /** The billing provider (local/free or Dodo), selected by `config.billing` (F-030). */
   readonly billing: BillingProvider;
+  /**
+   * Durable per-tenant usage buckets (F-057; NFR-12) — what the metering recorders write to, what the
+   * monthly compile entitlement is measured against, and what `GET /v1/usage` and the Analytics view
+   * read. Always present: the profile supplies it, so there is no "metering is off" runtime shape.
+   */
+  readonly usage: UsageStore;
   /**
    * The persistent, tenant-scoped audit trail (F-027; FR-55/NFR-13) the REST surface records into,
    * present when `config.audit.enabled`. `undefined` → the surface falls back to its in-memory sink.

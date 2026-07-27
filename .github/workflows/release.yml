@@ -1,0 +1,116 @@
+name: Release
+
+# Manual only, and publishing is OPT-IN (ADR-0062 §4).
+#
+# Every run builds, verifies, packs all publishable packages and produces an SBOM. It reaches
+# `npm publish` ONLY when dispatched with `publish: true`. A tag-triggered release was rejected
+# deliberately: the first tag would be a live publish, and npm package names cannot be reused after
+# an unpublish — so the irreversible step is the one that requires a person to ask for it.
+#
+# Versions are NOT bumped here. Run `pnpm version-packages` locally, review the diff and the
+# generated CHANGELOGs, and commit them — then dispatch this workflow. A release job that rewrites
+# the repository is a job whose output nobody reviewed.
+#
+# See .harness/governance/release-checklist.md for the full procedure.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish to npm. Leave OFF for a dry run (build + pack + SBOM, no registry writes).'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  # Required for npm provenance attestations (NFR-18). Without it `--provenance` fails at publish
+  # time rather than at dispatch, which is the worst moment to discover it.
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: pnpm
+          # Sets up .npmrc so NODE_AUTH_TOKEN is used for the publish step.
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # A release runs the gates itself rather than trusting that CI was green on this commit.
+      # Dispatch takes a ref, and nothing otherwise guarantees the ref you release is the ref that
+      # passed.
+      - name: Harness state
+        run: node scripts/verify-state.mjs
+
+      - name: Typecheck
+        run: pnpm -w typecheck
+
+      - name: Lint
+        run: pnpm -w lint
+
+      - name: Format
+        run: pnpm -w format:check
+
+      - name: Test
+        run: pnpm -w test
+
+      - name: Build
+        run: pnpm -w build
+
+      # Pack before publishing so the artifacts are inspectable on a dry run. `changeset publish`
+      # packs again itself; this exists so a human can download and open the tarballs first.
+      - name: Pack publishable packages
+        run: node scripts/pack-publishable.mjs dist-packages
+
+      - name: Upload package tarballs
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-tarballs
+          path: dist-packages/*.tgz
+          retention-days: 90
+
+      - name: Generate SBOM (CycloneDX)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: pnpm-lock.yaml
+          format: cyclonedx
+          output: sbom.cyclonedx.json
+          exit-code: '0'
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx-release
+          path: sbom.cyclonedx.json
+          retention-days: 365
+
+      - name: Dry run — nothing published
+        if: ${{ !inputs.publish }}
+        run: |
+          echo "Dry run: built, packed and SBOM'd, but NOTHING was published."
+          echo "Re-dispatch with publish: true to release."
+          pnpm exec changeset status
+
+      # The only irreversible step in this workflow. `changeset publish` publishes exactly the
+      # packages whose committed version is not yet on the registry, honouring each package's
+      # publishConfig (access: public, provenance: true) and skipping the private ones.
+      - name: Publish to npm
+        if: ${{ inputs.publish }}
+        run: pnpm exec changeset publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'

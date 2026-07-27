@@ -92,3 +92,4 @@ tests/bench/results/latest.json
 # Generated supply-chain evidence (produced in CI, uploaded as an artifact — never committed).
 sbom.cyclonedx.json
 sbom.*.json
+dist-packages/

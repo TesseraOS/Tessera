@@ -20,6 +20,8 @@ export const filesystemConnectorPlugin: Plugin<FilesystemConnectorConfig, Connec
     name: 'Filesystem connector',
     version: '0.0.0',
     configSchema,
+    // It walks `config.root` and reads file bodies — and nothing else (FR-60).
+    permissions: ['filesystem:read'],
   },
   setup(config) {
     return {

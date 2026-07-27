@@ -1,11 +1,13 @@
 import { ConflictError, NotFoundError } from '@tessera/core';
-import type {
-  Plugin,
-  PluginContext,
-  PluginInfo,
-  PluginInstance,
-  PluginKind,
-  PluginStatus,
+import {
+  isPluginPermission,
+  type Plugin,
+  type PluginContext,
+  type PluginInfo,
+  type PluginInstance,
+  type PluginKind,
+  type PluginPermission,
+  type PluginStatus,
 } from './domain.js';
 
 /** A plugin stored with its config/capability types erased — the host validates + drives it. */
@@ -13,9 +15,34 @@ type ErasedPlugin = Plugin<unknown, unknown>;
 
 interface Entry {
   readonly plugin: ErasedPlugin;
+  /** Declared permissions the host recognizes, deduped (FR-60). */
+  readonly permissions: readonly PluginPermission[];
+  /** Declared entries the host does NOT recognize — these fail the plugin at load. */
+  readonly unrecognized: readonly string[];
   status: PluginStatus;
   error: string | undefined;
   instance: PluginInstance<unknown> | undefined;
+}
+
+/**
+ * Split a manifest's declarations into the ones this host understands and the ones it does not
+ * (FR-60). Types do not survive a plugin loaded from JavaScript, so the vocabulary is checked at
+ * runtime — a declaration the host cannot interpret is not a permission it can enforce.
+ */
+function partitionPermissions(declared: readonly string[] | undefined): {
+  permissions: readonly PluginPermission[];
+  unrecognized: readonly string[];
+} {
+  const permissions: PluginPermission[] = [];
+  const unrecognized: string[] = [];
+  for (const entry of declared ?? []) {
+    if (isPluginPermission(entry)) {
+      if (!permissions.includes(entry)) permissions.push(entry);
+    } else if (!unrecognized.includes(entry)) {
+      unrecognized.push(entry);
+    }
+  }
+  return { permissions, unrecognized };
 }
 
 /**
@@ -57,6 +84,7 @@ function toInfo(entry: Entry): PluginInfo {
     name: manifest.name,
     version: manifest.version,
     status: entry.status,
+    permissions: entry.permissions,
   };
   return entry.error === undefined ? base : { ...base, error: entry.error };
 }
@@ -106,8 +134,11 @@ export function createPluginHost(context: PluginContext = {}): PluginHost {
       if (entries.has(id)) {
         throw new ConflictError('plugin id already registered', { details: { id } });
       }
+      const { permissions, unrecognized } = partitionPermissions(plugin.manifest.permissions);
       entries.set(id, {
         plugin: plugin as unknown as ErasedPlugin,
+        permissions,
+        unrecognized,
         status: 'registered',
         error: undefined,
         instance: undefined,
@@ -121,6 +152,15 @@ export function createPluginHost(context: PluginContext = {}): PluginHost {
 
     async load(id, config) {
       const entry = require(id);
+      // Before config, before setup: a manifest declaring a capability this host cannot interpret is
+      // refused (FR-60). Loading it anyway would mean running a plugin whose stated needs the host
+      // has already admitted it does not understand.
+      if (entry.unrecognized.length > 0) {
+        entry.status = 'failed';
+        entry.error = `unrecognized permission(s): ${entry.unrecognized.join(', ')}`;
+        entry.instance = undefined;
+        return toInfo(entry);
+      }
       const parsed = entry.plugin.manifest.configSchema.safeParse(config ?? {});
       if (!parsed.success) {
         entry.status = 'failed';

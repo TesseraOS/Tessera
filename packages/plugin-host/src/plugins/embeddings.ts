@@ -16,6 +16,8 @@ export const fakeEmbeddingsPlugin: Plugin<FakeEmbeddingsConfig, Embeddings> = {
     name: 'Fake embeddings',
     version: '0.0.0',
     configSchema: fakeConfigSchema,
+    // Deterministic hashing over the input string — no network, no disk, nothing to declare.
+    permissions: [],
   },
   setup(config) {
     return {
@@ -38,6 +40,9 @@ export const transformersEmbeddingsPlugin: Plugin<TransformersEmbeddingsConfig, 
     name: 'Transformers.js embeddings',
     version: '0.0.0',
     configSchema: transformersConfigSchema,
+    // Downloads the model from the Hub on first use and caches it on disk — both are declared, because
+    // "local embeddings" still reaches the network exactly once and an operator should see that.
+    permissions: ['network', 'filesystem:write'],
   },
   async setup(config) {
     return {

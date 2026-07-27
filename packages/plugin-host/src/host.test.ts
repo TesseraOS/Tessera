@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import type { Plugin } from './domain.js';
+import type { Plugin, PluginPermission } from './domain.js';
 import { createPluginHost } from './host.js';
+import { fakeEmbeddingsPlugin, transformersEmbeddingsPlugin } from './plugins/embeddings.js';
+import { filesystemConnectorPlugin } from './plugins/filesystem-connector.js';
 
 const counterConfig = z.object({ start: z.number().int() });
 
@@ -146,5 +148,96 @@ describe('createPluginHost', () => {
         .sort(),
     ).toEqual(['p.conn', 'p.proc']);
     expect(host.list({ kind: 'connector' }).map((i) => i.id)).toEqual(['p.conn']);
+  });
+});
+
+describe('plugin permissions (FR-60)', () => {
+  /** A plugin declaring `permissions` verbatim — `declared` is typed loosely to model a JS plugin. */
+  function declaring(
+    id: string,
+    declared: readonly string[],
+  ): Plugin<Record<string, never>, object> {
+    return {
+      manifest: {
+        id,
+        kind: 'connector',
+        name: id,
+        version: '1.0.0',
+        configSchema: z.object({}),
+        permissions: declared as readonly PluginPermission[],
+      },
+      setup: () => ({ capability: {} }),
+    };
+  }
+
+  it('surfaces declared permissions from registration, before the plugin is ever loaded', () => {
+    const host = createPluginHost();
+    host.register(declaring('p.fs', ['filesystem:read']));
+
+    expect(host.list()[0]).toMatchObject({
+      status: 'registered',
+      permissions: ['filesystem:read'],
+    });
+  });
+
+  it('reports an empty declaration as an empty array, not as missing information', async () => {
+    const host = createPluginHost();
+    host.register(counterPlugin('p.counter'));
+
+    expect((await host.load('p.counter', { start: 0 })).permissions).toEqual([]);
+  });
+
+  it('dedupes a repeated declaration', () => {
+    const host = createPluginHost();
+    host.register(declaring('p.dupe', ['network', 'filesystem:read', 'network']));
+
+    expect(host.list()[0]?.permissions).toEqual(['network', 'filesystem:read']);
+  });
+
+  it('refuses a plugin declaring a permission the host does not understand', async () => {
+    const host = createPluginHost();
+    host.register(declaring('p.bogus', ['filesystem:read', 'gpu:direct']));
+
+    const info = await host.load('p.bogus');
+    expect(info.status).toBe('failed');
+    expect(info.error).toMatch(/unrecognized permission\(s\): gpu:direct/);
+    // The recognized half is still reported — an operator needs to see what it asked for.
+    expect(info.permissions).toEqual(['filesystem:read']);
+    expect(host.capability('p.bogus')).toBeUndefined();
+  });
+
+  it('refuses before setup runs — an uninterpretable declaration is not a config problem', async () => {
+    const setup = vi.fn(() => ({ capability: {} }));
+    const host = createPluginHost();
+    host.register({
+      manifest: {
+        id: 'p.never',
+        kind: 'processor',
+        name: 'never',
+        version: '1',
+        configSchema: z.object({ required: z.string() }),
+        permissions: ['nonsense'] as unknown as readonly PluginPermission[],
+      },
+      setup,
+    });
+
+    // The config is ALSO invalid; the permission failure must win, and setup must not run.
+    const info = await host.load('p.never', {});
+    expect(info.error).toMatch(/unrecognized permission/);
+    expect(info.error).not.toMatch(/invalid config/);
+    expect(setup).not.toHaveBeenCalled();
+  });
+
+  it('the first-party plugins declare exactly what they use', () => {
+    const host = createPluginHost();
+    host.register(filesystemConnectorPlugin);
+    host.register(fakeEmbeddingsPlugin);
+    host.register(transformersEmbeddingsPlugin);
+
+    expect(Object.fromEntries(host.list().map((i) => [i.id, i.permissions]))).toEqual({
+      'tessera.connector.filesystem': ['filesystem:read'],
+      'tessera.ai.fake-embeddings': [],
+      'tessera.ai.transformers-embeddings': ['network', 'filesystem:write'],
+    });
   });
 });

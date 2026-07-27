@@ -16,6 +16,34 @@ export const PLUGIN_KINDS = [
 
 export type PluginKind = (typeof PLUGIN_KINDS)[number];
 
+/**
+ * The capabilities a plugin may declare it needs (FR-60, least privilege; ADR-0061 §2).
+ *
+ * A **closed** vocabulary, deliberately: a free-form permission string cannot be validated at load,
+ * which is the one moment the host can still refuse. Anything not on this list is a declaration the
+ * host does not understand, and an unrecognized declaration fails the plugin rather than being
+ * waved through.
+ */
+export const PLUGIN_PERMISSIONS = [
+  /** Outbound network access (an HTTP connector, a remote embeddings provider). */
+  'network',
+  /** Read files outside the plugin's own package (a filesystem connector's root). */
+  'filesystem:read',
+  /** Write files (a processor that materializes derived artifacts). */
+  'filesystem:write',
+  /** Spawn a child process (a connector shelling out to `git`). */
+  'process:spawn',
+  /** Read deployment secrets through the host (an API key for a paid provider). */
+  'secrets:read',
+] as const;
+
+export type PluginPermission = (typeof PLUGIN_PERMISSIONS)[number];
+
+/** Whether `value` is a permission this host understands. */
+export function isPluginPermission(value: unknown): value is PluginPermission {
+  return (PLUGIN_PERMISSIONS as readonly unknown[]).includes(value);
+}
+
 /** A minimal structural logger so the host/plugins need not depend on a logging implementation. */
 export interface PluginLogger {
   info(obj: unknown, msg?: string): void;
@@ -38,6 +66,12 @@ export interface PluginManifest<TConfig = unknown> {
   readonly version: string;
   /** Validates the plugin's configuration at load time (FR-58). */
   readonly configSchema: z.ZodType<TConfig>;
+  /**
+   * Capabilities this plugin needs (FR-60). **Optional, and omitting it grants nothing** — the
+   * least-privilege default is the safe one here, which is why this is not required. Declarations are
+   * validated at load; a plugin is refused anything it did not declare (ADR-0061 §2).
+   */
+  readonly permissions?: readonly PluginPermission[];
 }
 
 /**
@@ -74,6 +108,12 @@ export interface PluginInfo {
   readonly name: string;
   readonly version: string;
   readonly status: PluginStatus;
+  /**
+   * The capabilities the manifest declared, normalized (deduped, unrecognized entries excluded).
+   * Always present so the host API can show an operator what a plugin claims to need — an empty
+   * array is the honest answer for a plugin that declared nothing, not missing information.
+   */
+  readonly permissions: readonly PluginPermission[];
   /** Present when `status` is `failed` — the isolated error message (never throws out of the host). */
   readonly error?: string;
 }

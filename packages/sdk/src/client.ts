@@ -50,6 +50,8 @@ export type ProjectDeleteResult =
   paths['/v1/projects/{id}']['delete']['responses'][200]['content'][Json];
 export type WorkspaceStats = paths['/v1/stats']['get']['responses'][200]['content'][Json];
 export type UsageSummary = paths['/v1/usage']['get']['responses'][200]['content'][Json];
+/** Feature flags evaluated for the calling tenant (F-058; FR-57). */
+export type FeatureFlags = paths['/v1/flags']['get']['responses'][200]['content'][Json];
 export type CheckoutBody = NonNullable<
   paths['/v1/billing/checkout']['post']['requestBody']
 >['content'][Json];
@@ -169,6 +171,12 @@ export interface TesseraClient {
    * day the store holds — which the caller must label. Latency is a mean and a max, NOT a percentile.
    */
   getUsage(query?: UsageQuery): Promise<UsageSummary>;
+  /**
+   * The feature flags in effect for the calling tenant (F-058; FR-57). Read-only — flags are declared
+   * in deployment config, so there is no write counterpart. `source` says whether a value came from
+   * the flag default or from an override naming this tenant. Empty when none are declared.
+   */
+  getFlags(): Promise<FeatureFlags>;
   /**
    * Daily activity for the Overview chart (F-084) — audit-derived, floored to the trail. `from` is
    * the window the server actually used (clamped to the oldest event it holds), which the caller
@@ -328,6 +336,9 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
       return unwrap(
         await client.GET('/v1/usage', query !== undefined ? { params: { query } } : {}),
       );
+    },
+    async getFlags() {
+      return unwrap(await client.GET('/v1/flags', {}));
     },
     async getActivity(query) {
       return unwrap(

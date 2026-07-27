@@ -5,6 +5,7 @@ import Fastify, {
 } from 'fastify';
 import cors from '@fastify/cors';
 import type { UsageStore } from '@tessera/billing';
+import type { FlagProvider } from '@tessera/core';
 import { EMPTY_RETENTION_POLICY, type MemoryRetentionPolicy } from '@tessera/memory';
 import {
   serializerCompiler,
@@ -154,6 +155,14 @@ export interface BuildServerOptions {
    */
   readonly metered?: boolean;
   /**
+   * The feature-flag provider backing `GET /v1/flags` (F-058; FR-57). The composition root passes
+   * `runtime.flags`. Omitted ⇒ an empty catalog, which is what every deployment declaring no flags
+   * has anyway — so unlike the usage store this needs no "not configured" error. Rides here rather
+   * than on {@link ApiServices} for the E-015 reason: `instrumentServices` rebuilds that object
+   * member by member, and a member dropped there 500s its routes in production.
+   */
+  readonly flags?: FlagProvider;
+  /**
    * Security-header hardening (F-044; NFR-2). Headers are on by default; `security.hsts` adds HSTS
    * for TLS-terminated profiles. See {@link SecurityHeadersOptions}.
    */
@@ -243,6 +252,7 @@ export function buildServer(services: ApiServices, options: BuildServerOptions =
       memoryRetention: options.memoryRetention ?? EMPTY_RETENTION_POLICY,
       usage: options.usage,
       metered: options.metered ?? false,
+      flags: options.flags,
     },
   );
 

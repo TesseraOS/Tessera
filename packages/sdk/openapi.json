@@ -3668,6 +3668,69 @@
         }
       }
     },
+    "/v1/flags": {
+      "get": {
+        "summary": "Feature flags in effect for the calling tenant.",
+        "tags": [
+          "ops"
+        ],
+        "description": "Read-only (FR-57). Flags are declared in deployment config; each is evaluated for the caller's tenant, and `source` says whether the value came from the flag default or from an explicit override for this tenant. Empty when the deployment declares no flags.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "flags": {
+                      "description": "Every declared flag, evaluated for the calling tenant. Empty when none are declared.",
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "description": "Stable flag identifier, e.g. `beta.search`.",
+                            "type": "string"
+                          },
+                          "description": {
+                            "description": "What turning this flag on does. May be empty.",
+                            "type": "string"
+                          },
+                          "enabled": {
+                            "description": "The value that applies to the calling tenant.",
+                            "type": "boolean"
+                          },
+                          "source": {
+                            "description": "Which rule decided the value: the flag default, or an explicit entry for this tenant.",
+                            "type": "string",
+                            "enum": [
+                              "default",
+                              "tenant-override"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "description",
+                          "enabled",
+                          "source"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "flags"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/events": {
       "get": {
         "tags": [

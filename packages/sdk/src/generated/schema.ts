@@ -1636,6 +1636,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Feature flags in effect for the calling tenant.
+         * @description Read-only (FR-57). Flags are declared in deployment config; each is evaluated for the caller's tenant, and `source` says whether the value came from the flag default or from an explicit override for this tenant. Empty when the deployment declares no flags.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Every declared flag, evaluated for the calling tenant. Empty when none are declared. */
+                            flags: {
+                                /** @description Stable flag identifier, e.g. `beta.search`. */
+                                key: string;
+                                /** @description What turning this flag on does. May be empty. */
+                                description: string;
+                                /** @description The value that applies to the calling tenant. */
+                                enabled: boolean;
+                                /**
+                                 * @description Which rule decided the value: the flag default, or an explicit entry for this tenant.
+                                 * @enum {string}
+                                 */
+                                source: "default" | "tenant-override";
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/events": {
         parameters: {
             query?: never;

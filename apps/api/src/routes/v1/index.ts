@@ -1,4 +1,5 @@
 import type { UsageStore } from '@tessera/billing';
+import type { FlagProvider } from '@tessera/core';
 import type { MemoryRetentionPolicy } from '@tessera/memory';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { ZodFastify } from '../../app-types.js';
@@ -26,6 +27,7 @@ import { registerMeRoutes } from './me.js';
 import { registerRbacRoutes } from './rbac.js';
 import { registerRetentionRoutes } from './retention.js';
 import { registerTokenRoutes } from './tokens.js';
+import { registerFlagsRoutes } from './flags.js';
 import { registerUsageRoutes } from './usage.js';
 
 /** Cross-cutting hardening threaded into the `/v1` scope (F-044). */
@@ -46,6 +48,12 @@ export interface V1HardeningOptions {
   readonly usage: UsageStore | undefined;
   /** Whether this deployment is metered (ADR-0060 §1) — drives the compile entitlement clamp. */
   readonly metered: boolean;
+  /**
+   * The feature-flag provider backing `GET /v1/flags` (F-058; FR-57), or `undefined` when a
+   * composition wired none — then the route answers an empty catalog, which is the honest default
+   * rather than an error, because every deployment starts with no flags declared.
+   */
+  readonly flags: FlagProvider | undefined;
 }
 
 /**
@@ -90,6 +98,7 @@ export function registerV1Routes(
       registerProjectRoutes(v1, services);
       registerStatsRoutes(v1, services, audit);
       registerUsageRoutes(v1, services, hardening.usage, hardening.metered);
+      registerFlagsRoutes(v1, hardening.flags);
       registerEventsRoutes(v1, events, hardening.security);
       registerBillingRoutes(v1, services);
       registerAuditRoutes(v1, audit);

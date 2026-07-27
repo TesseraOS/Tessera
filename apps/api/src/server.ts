@@ -148,6 +148,12 @@ export interface BuildServerOptions {
    */
   readonly usage?: UsageStore;
   /**
+   * Whether this deployment is METERED (F-057; ADR-0060 §1) — i.e. `config.billing.provider !== 'none'`.
+   * The composition root passes `runtime.metered`. Omitted ⇒ `false`: an unmetered deployment is the
+   * safe default, and it is what keeps a hand-composed `buildServer(services)` uncapped.
+   */
+  readonly metered?: boolean;
+  /**
    * Security-header hardening (F-044; NFR-2). Headers are on by default; `security.hsts` adds HSTS
    * for TLS-terminated profiles. See {@link SecurityHeadersOptions}.
    */
@@ -236,6 +242,7 @@ export function buildServer(services: ApiServices, options: BuildServerOptions =
       tokenStore: options.tokenStore,
       memoryRetention: options.memoryRetention ?? EMPTY_RETENTION_POLICY,
       usage: options.usage,
+      metered: options.metered ?? false,
     },
   );
 

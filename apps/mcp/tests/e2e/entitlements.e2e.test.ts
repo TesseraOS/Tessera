@@ -45,7 +45,7 @@ describe('@tessera/mcp compile entitlements', () => {
       ...(await createInMemoryServices()),
       billing: createLocalBilling(),
     };
-    return { client: await connect(buildMcpServer(services)), services };
+    return { client: await connect(buildMcpServer(services, { metered: true })), services };
   }
 
   const FREE_CAP = entitlementsFor('free').maxTokensPerCompile;
@@ -106,9 +106,9 @@ describe('@tessera/mcp compile entitlements', () => {
       ...(await createInMemoryServices()),
       billing: createLocalBilling(),
     };
-    const rest = buildServer(services);
+    const rest = buildServer(services, { metered: true });
     await rest.ready();
-    const mcp = await connect(buildMcpServer(services));
+    const mcp = await connect(buildMcpServer(services, { metered: true }));
 
     try {
       const payload = { task: 'how does authentication work', budget: 50_000 };
@@ -124,6 +124,23 @@ describe('@tessera/mcp compile entitlements', () => {
     } finally {
       await rest.close();
     }
+  });
+
+  it('does NOT cap an UNMETERED deployment that HAS a provider wired (ADR-0060 §1)', async () => {
+    // The shape every runtime-composed Local and self-hosted deployment actually has. Under the old
+    // "is a provider object present" predicate this was capped at 8000 on BOTH surfaces.
+    const services: ApiServices = {
+      ...(await createInMemoryServices()),
+      billing: createLocalBilling(),
+    };
+    const client = await connect(buildMcpServer(services));
+    const pkg = structured<{ budget: number }>(
+      await client.callTool({
+        name: 'compile_context',
+        arguments: { task: 'how does authentication work', budget: 50_000 },
+      }),
+    );
+    expect(pkg.budget).toBe(50_000);
   });
 
   it('does NOT cap a self-hosted deployment that wired no provider (ADR-0056)', async () => {

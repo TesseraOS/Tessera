@@ -51,6 +51,8 @@ export async function startApiServer(options: ApiServerOptions = {}): Promise<Ap
     memoryRetention: runtime.memoryRetention,
     // Per-tenant usage metering (F-057; NFR-12) into the profile's durable store.
     usage: runtime.usage,
+    // Whether the entitlement clamp applies at all (ADR-0060 §1): metered deployments only.
+    metered: runtime.metered,
     // API hardening from config (F-044): security headers/HSTS, per-profile CORS, rate limiting.
     security: { hsts: api.security.hsts },
     cors: { allowedOrigins: api.cors.allowedOrigins },

@@ -56,8 +56,20 @@ break. The common case costs nothing because the field is omitted.
 
 ### 3. Metered deployments only — self-hosted is not "the free plan"
 
-**A deployment that wired a `BillingProvider` is metered and is clamped; one that wired none is
-self-hosted and is not.** `createCompileBudgetClamp(undefined)` returns a pass-through.
+> **Superseded in part by [ADR-0060 §1](0060-usage-metering-analytics-and-the-metered-predicate.md)
+> (2026-07-27) — the *mechanism* below, not the meaning.** This clause's rule is right and stands. Its
+> **detection** never worked: the composition root *always* wires a provider
+> (`createRuntimeBilling` returns `createLocalBilling()` for `provider: 'none'`, and that adapter
+> reports every tenant as free), so "wired a `BillingProvider`" was true for **every** runtime-composed
+> deployment. From F-035 until F-057, every Local and self-hosted deployment was silently capped at the
+> cloud Free tier's 8000 tokens per compile — the exact outcome this clause forbids and whose
+> prevention it listed as a Positive. The decision was made and never implemented; nothing asserted the
+> unmetered case, which is why it survived a full feature's review. `metered` is now an **explicit
+> flag** (`config.billing.provider !== 'none'`) threaded from the composition root, and both this clamp
+> and the monthly compile guard read it.
+
+**A METERED deployment is clamped; an unmetered one is self-hosted and is not.**
+`createCompileBudgetClamp({ metered: false })` — the default — returns a pass-through.
 
 - NFR-12 is **cost control** — *"Local-default avoids API spend; cloud tracks per-tenant usage/cost."*
   A self-hosted operator runs their own hardware and spends their own money. There is no cost for us
@@ -67,8 +79,10 @@ self-hosted and is not.** `createCompileBudgetClamp(undefined)` returns a pass-t
   as such on the pricing page, and a metered tenant on `free` clamps exactly as before. The old
   `?? createLocalBilling()` fallback conflated *unmetered* with *free-tier*; those are different
   things and the fallback is what made them look the same.
-- Wiring the local adapter **explicitly** still meters you — the unmetered case is the *absence* of a
-  provider, not the identity of one. Asserted in `packages/billing/src/budget.test.ts`.
+- A deployment that declares itself **metered** is clamped by whatever provider backs it — the
+  unmetered case is the absence of `metered`, never the identity of the adapter. Asserted in
+  `packages/billing/src/budget.test.ts`, alongside the case that was missing: a provider *is* wired and
+  the deployment is *not* metered, so nothing is capped.
 
 ### 4. One implementation, structurally
 

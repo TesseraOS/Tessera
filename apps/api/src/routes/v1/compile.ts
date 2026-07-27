@@ -11,12 +11,22 @@ import {
 } from '../../schemas/compile.js';
 
 /** `POST /v1/compile` — compile a provenance-tagged, budget-bounded Context Package (F-010). */
-export function registerCompileRoutes(app: ZodFastify, services: ApiServices): void {
+export function registerCompileRoutes(
+  app: ZodFastify,
+  services: ApiServices,
+  metered = false,
+): void {
   // The token budget is capped to the caller's plan entitlement (NFR-12; F-035), through the SAME
-  // clamp the MCP compile tools use (F-077) — one rule, two surfaces. A deployment that wired no
-  // BillingProvider is self-hosted and unmetered, so it is NOT capped (ADR-0056); the previous
-  // `?? createLocalBilling()` fallback capped self-hosted users at the cloud free tier.
-  const clampBudget = createCompileBudgetClamp(services.billing);
+  // clamp the MCP compile tools use (F-077) — one rule, two surfaces.
+  //
+  // `metered` is an explicit flag, not `services.billing !== undefined` (ADR-0060 §1): the
+  // composition root ALWAYS wires a provider, so the old predicate capped every Local and
+  // self-hosted deployment at the cloud free tier's 8000 tokens — which is what ADR-0056 §3 decided
+  // must not happen and believed it had prevented.
+  const clampBudget = createCompileBudgetClamp({
+    ...(services.billing !== undefined ? { billing: services.billing } : {}),
+    metered,
+  });
 
   app.post<{ Body: CompileBody }>(
     '/compile',

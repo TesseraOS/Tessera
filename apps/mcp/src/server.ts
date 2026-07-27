@@ -163,6 +163,11 @@ export interface BuildMcpServerOptions {
    * {@link UsageStore} + ADR-0060.
    */
   readonly usage?: UsageStore;
+  /**
+   * Whether this deployment is METERED (F-057; ADR-0060 §1). Drives the compile entitlement clamp on
+   * this surface exactly as it does on REST — one rule, two surfaces (ADR-0056 §4).
+   */
+  readonly metered?: boolean;
 }
 
 /** Token budget used by `explain` when the caller does not specify one. */
@@ -227,7 +232,10 @@ export function buildMcpServer(
    * humans and unenforced for agents — the population the cap exists to meter. Unmetered when the
    * deployment wired no BillingProvider (ADR-0056).
    */
-  const clampBudget = createCompileBudgetClamp(services.billing);
+  const clampBudget = createCompileBudgetClamp({
+    ...(services.billing !== undefined ? { billing: services.billing } : {}),
+    metered: options.metered ?? false,
+  });
   // Per-tenant usage metering (F-057; NFR-12). Applied per metered tool — see `createMcpMeter` for
   // why it is neither generic in `runTool` nor folded into `McpGateway.guard`.
   const meter = createMcpMeter(options.usage);

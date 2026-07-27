@@ -76,6 +76,17 @@ describe('local profile — usage and subscriptions outlive the runtime', () => 
     ]);
   });
 
+  it('is UNMETERED when no billing provider is configured — the ADR-0060 §1 predicate', async () => {
+    // The composition root always wires a provider object, so `runtime.metered` is the ONLY thing
+    // that distinguishes a self-hosted deployment from a cloud tenant on the free plan. Found by
+    // mutation: hard-coding `metered: true` in assembleRuntime turned nothing red without this case,
+    // and that is precisely how every Local deployment ended up capped at 8000 tokens.
+    const rt = (runtime = await boot());
+    expect(rt.metered).toBe(false);
+    // ...and the provider IS present, which is what makes the flag necessary rather than redundant.
+    expect(rt.services.billing).toBeDefined();
+  });
+
   it('meters ingested documents when the worker writes them, not when a scan is requested', async () => {
     // ADR-0060 §5: `POST /v1/sources/:id/scan` returns 202 since F-081, so metering the REQUEST would
     // count intent. This asserts the subscriber counts real documents — and note the assertion is
@@ -151,6 +162,9 @@ describe('local profile — usage and subscriptions outlive the runtime', () => 
       status: 'active',
       externalId: 'sub_seeded',
     });
+    // The other half of the ADR-0060 §1 predicate: configuring a provider IS what makes a deployment
+    // metered. Same runtime, opposite answer to the case above — which is the whole distinction.
+    expect(runtime.metered).toBe(true);
   });
 });
 
@@ -201,10 +215,16 @@ describe.skipIf(!selfHosted)(
       // first record() fails with "relation does not exist".
       const booted = await boot();
       try {
-        // Let the profile finish coming up before recording. The BullMQ worker's Redis connection is
-        // still handshaking immediately after boot, and closing the runtime mid-handshake makes
-        // ioredis reject with "Connection is closed" — an unhandled rejection that fails the RUN even
-        // though every assertion passed. Readiness is the runtime's own answer to "am I up yet".
+        // Let the profile finish coming up before recording — readiness is the runtime's own answer
+        // to "am I up yet", and closing a runtime whose BullMQ Redis connection is still handshaking
+        // makes ioredis reject with "Connection is closed": an unhandled rejection that fails the RUN
+        // with every assertion green.
+        //
+        // Stated honestly: this is a MITIGATION, not a fix, and the defect is not this feature's.
+        // Measured by stashing every F-057 change and running the sibling self-hosted suite at HEAD
+        // four times — it produced the same unhandled rejection on 2 of 4 runs. Pre-existing and
+        // flaky, visible only under TESSERA_TEST_SELF_HOSTED=1, which is why it has gone unnoticed.
+        // Tracked as F-096 rather than absorbed here.
         expect(await booted.runtime.services.readiness?.()).toMatchObject({ ready: true });
 
         await booted.runtime.usage.record({

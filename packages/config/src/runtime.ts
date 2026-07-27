@@ -51,6 +51,16 @@ export interface Runtime {
   /** The billing provider (local/free or Dodo), selected by `config.billing` (F-030). */
   readonly billing: BillingProvider;
   /**
+   * Whether this deployment is **metered** — `config.billing.provider !== 'none'` (ADR-0060 §1).
+   *
+   * The surfaces read this rather than testing `billing !== undefined`, because a provider object is
+   * always present: `createRuntimeBilling` falls back to the local/free adapter, which reports every
+   * tenant as free. Inferring meterage from its presence capped every Local and self-hosted
+   * deployment at the cloud free tier's 8000 tokens per compile — the exact outcome ADR-0056 §3
+   * decided against and believed it had prevented.
+   */
+  readonly metered: boolean;
+  /**
    * Durable per-tenant usage buckets (F-057; NFR-12) — what the metering recorders write to, what the
    * monthly compile entitlement is measured against, and what `GET /v1/usage` and the Analytics view
    * read. Always present: the profile supplies it, so there is no "metering is off" runtime shape.

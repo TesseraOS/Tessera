@@ -43,6 +43,8 @@ export interface V1HardeningOptions {
    * generator) working.
    */
   readonly usage: UsageStore | undefined;
+  /** Whether this deployment is metered (ADR-0060 §1) — drives the compile entitlement clamp. */
+  readonly metered: boolean;
 }
 
 /**
@@ -79,7 +81,7 @@ export function registerV1Routes(
       registerRbacRoutes(v1);
       registerTokenRoutes(v1, hardening.tokenStore);
       registerSearchRoutes(v1, services);
-      registerCompileRoutes(v1, services);
+      registerCompileRoutes(v1, services, hardening.metered);
       registerEffectsRoutes(v1, services);
       registerGraphRoutes(v1, services);
       registerMemoryRoutes(v1, services, events);

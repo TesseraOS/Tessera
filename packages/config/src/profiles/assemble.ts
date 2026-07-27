@@ -370,6 +370,9 @@ export async function assembleRuntime(
     services,
     auth: createRuntimeAuth(config.auth, adapters.tokenStore),
     billing,
+    // Whether this deployment is METERED (ADR-0060 §1) — an explicit flag, never inferred from the
+    // presence of a provider object, because the composition root always wires one.
+    metered: config.billing.provider !== 'none',
     // Per-tenant usage metering (F-057). On the Runtime rather than in ApiServices, deliberately:
     // ApiServices is rebuilt member-by-member by `instrumentServices`, and a member dropped there
     // 500s its routes in production (E-015, twice). BuildServerOptions is structurally immune.

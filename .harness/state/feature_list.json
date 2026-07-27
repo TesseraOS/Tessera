@@ -3148,6 +3148,32 @@
         "E-019"
       ],
       "notes": "FOUND WHILE PLANNING F-057 (2026-07-27) and deliberately REFUSED there as scope creep (golden rule 2), even though F-057 touches the checkout flow and the two-line fix was tempting. Verified at the time: apps/api/src/routes/v1/billing.ts sets only `config: { public: true }` — no `config.audit` on any billing route — while the actions and their dashboard labels have existed since F-046. This is a governance gap, not a cosmetic one: FR-56 says privileged actions are auditable, and a plan change is about as privileged as a tenant-level action gets."
+    },
+    {
+      "id": "F-096",
+      "title": "The guarded self-hosted suite fails its own run on a teardown race: ioredis rejects with \"Connection is closed\" after every assertion has passed",
+      "requirements": [
+        "NFR-16"
+      ],
+      "service": "root",
+      "package": "@tessera/config",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "`TESSERA_TEST_SELF_HOSTED=1 pnpm --filter @tessera/config test` exits 0 on repeated runs. Today it intermittently reports `Tests 8 passed` AND `Errors 1-2 errors`, and vitest fails the run on the unhandled rejection — a suite that is green on every assertion but red overall is the worst possible signal",
+        "The root cause is fixed at the source, not by swallowing the rejection: closing a runtime whose BullMQ/ioredis connection is still handshaking (or has a command in flight) makes ioredis reject with `Connection is closed` from its own event handler. Candidates: await the queue's readiness before `close()` resolves, or have `createBullMqQueue().close()` drain and detach ioredis listeners before disconnecting",
+        "A repeated-run check (e.g. the suite run 5x in CI or a documented local loop) demonstrates the flake is gone rather than reshuffled",
+        "The mitigation comment in packages/config/tests/integration/usage-persistence.test.ts (await readiness before recording) is revisited — keep it if still warranted, delete it if the real fix subsumes it"
+      ],
+      "verification": [
+        "test"
+      ],
+      "effects": [
+        "E-014"
+      ],
+      "notes": "FOUND DURING F-057 increment 6a (2026-07-27) and attributed by measurement rather than assumption: every F-057 change was stashed and tests/integration/self-hosted-profile.test.ts was run four times against HEAD — it produced the same unhandled ioredis rejection on 2 of 4 runs. So this is PRE-EXISTING and flaky, not a regression from F-057, and it was left alone rather than absorbed. It is invisible in the default `test` gate because the suite is skipped without TESSERA_TEST_SELF_HOSTED=1, which is exactly why it has survived: the one gate that would catch it is the one almost nobody runs. Related: the same class of teardown race is why F-056 had to kill process TREES in the web-perf gate."
     }
   ]
 }

@@ -72,12 +72,38 @@ describe('@tessera/api billing (F-030)', () => {
     });
   });
 
-  describe('metered deployment (a billing provider IS wired)', () => {
+  describe('an UNMETERED deployment that HAS a provider wired (ADR-0060 §1)', () => {
     let app: ReturnType<typeof buildServer>;
     beforeEach(async () => {
-      // Wiring the local adapter means "meter me": it reports a free subscription, so the free cap
-      // applies exactly as it does for any cloud tenant on `free`.
+      // The shape every runtime-composed Local and self-hosted deployment actually has: a provider IS
+      // present (createRuntimeBilling returns createLocalBilling() for provider: 'none'), but the
+      // deployment is not metered. The old predicate — "is an object present" — capped all of them at
+      // 8000 tokens, which is what ADR-0056 §3 decided must not happen and believed it had prevented.
+      // This is the assertion that did not exist, and the reason the defect survived.
       app = buildServer({ ...services, billing: createLocalBilling() });
+      await app.ready();
+    });
+    afterEach(async () => {
+      await app.close();
+    });
+
+    it('does not clamp, because meterage is stated and it was not', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/v1/compile',
+        payload: { task: 'how does authentication work', budget: 50000 },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().budget).toBe(50000);
+    });
+  });
+
+  describe('metered deployment (a billing provider is wired AND metered is declared)', () => {
+    let app: ReturnType<typeof buildServer>;
+    beforeEach(async () => {
+      // The cloud shape: a provider plus an explicit `metered`. The local adapter reports a free
+      // subscription, so the free cap applies exactly as it does for any cloud tenant on `free`.
+      app = buildServer({ ...services, billing: createLocalBilling() }, { metered: true });
       await app.ready();
     });
     afterEach(async () => {
@@ -113,7 +139,9 @@ describe('@tessera/api billing (F-030)', () => {
         webhookSecret: WEBHOOK_SECRET,
         store: createInMemorySubscriptionStore(),
       });
-      app = buildServer({ ...services, billing });
+      // A Dodo deployment is by definition metered (config.billing.provider !== 'none'), so it says so
+      // — ADR-0060 §1: meterage is declared by the composition root, never inferred from the provider.
+      app = buildServer({ ...services, billing }, { metered: true });
       await app.ready();
     });
     afterEach(async () => {

@@ -58,6 +58,10 @@ export function registerMcpHttp(app: McpHost, options: RegisterMcpHttpOptions): 
   const handler: McpHttpHandler = createMcpHttpHandler(services, {
     // The same gateway stdio builds — auth + RBAC + quotas + audit, unchanged (ADR-0036 parity).
     gateway: createRuntimeGateway(runtime),
+    // Metering + the entitlement predicate must match stdio exactly (F-057; ADR-0060 §1/§5), or the
+    // two MCP transports would disagree about whether a compile is capped and counted.
+    usage: runtime.usage,
+    metered: runtime.metered,
     sessionTtlMs: config.sessionTtlMs,
     maxSessions: config.maxSessions,
   });

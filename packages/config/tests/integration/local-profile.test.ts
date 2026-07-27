@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { putFragment } from '../../src/fragment-source';
 import { loadConfig } from '../../src/load';
 import { createRuntime } from '../../src/profiles/create-runtime';
@@ -72,6 +73,55 @@ describe('local profile runtime', () => {
 
     // Readiness probe reports healthy.
     expect(await rt.services.readiness?.()).toMatchObject({ ready: true });
+  });
+
+  it('exposes a plugin host and reports the EMPTY set honestly on /ready (F-058, ADR-0061 §3)', async () => {
+    runtime = await makeRuntime();
+
+    // The whole point of the wiring: registering a plugin is now a call, not a rebuild of the
+    // composition root.
+    expect(runtime.plugins.list()).toEqual([]);
+
+    const report = await runtime.services.readiness?.();
+
+    // `ok: true` alone cannot distinguish "nothing is broken" from "nothing is loaded", so the detail
+    // has to say which. This is the shipped state of every profile today.
+    expect(report?.checks.find((check) => check.name === 'plugins')).toEqual({
+      name: 'plugins',
+      ok: true,
+      detail: '0 plugins registered',
+    });
+    expect(report?.ready).toBe(true);
+  });
+
+  it('a registered, unhealthy plugin makes /ready NOT ready — the aggregation is real', async () => {
+    runtime = await makeRuntime();
+    runtime.plugins.register({
+      manifest: {
+        id: 'test.broken',
+        kind: 'processor',
+        name: 'Broken',
+        version: '1.0.0',
+        configSchema: z.object({}),
+      },
+      setup: () => ({
+        capability: {},
+        health: () => ({ ok: false, detail: 'upstream unreachable' }),
+      }),
+    });
+    await runtime.plugins.load('test.broken');
+    await runtime.plugins.start('test.broken');
+
+    const report = await runtime.services.readiness?.();
+
+    // Proves the empty-set report above is honest rather than hardcoded: the same check goes red
+    // when something real is wrong.
+    expect(report?.ready).toBe(false);
+    expect(report?.checks.find((check) => check.name === 'plugins')).toEqual({
+      name: 'plugins',
+      ok: false,
+      detail: '1 registered; unhealthy: test.broken',
+    });
   });
 
   it('no longer refuses a non-local profile — F-056 closed the F-023 deferral', async () => {

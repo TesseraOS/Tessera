@@ -7,6 +7,7 @@ import type { BillingProvider, UsageStore } from '@tessera/billing';
 import type { FlagProvider } from '@tessera/core';
 import type { SourceService } from '@tessera/ingestion';
 import type { MemoryRetentionPolicy } from '@tessera/memory';
+import type { PluginHost } from '@tessera/plugin-host';
 import type { KeywordRetriever, TemporalRetriever } from '@tessera/retrieval';
 import type { BlobStore, Queue, RelationalStore, VectorStore } from '@tessera/storage';
 import type { TesseraConfig } from './schema.js';
@@ -73,6 +74,16 @@ export interface Runtime {
    * no "flags are off" runtime shape to branch on. A remote provider swaps in behind the same port.
    */
   readonly flags: FlagProvider;
+  /**
+   * The plugin host (F-058; FR-59/FR-60, ADR-0061 §3) — the process's registry for extension-point
+   * plugins, and what `/ready`'s `plugins` check aggregates.
+   *
+   * **Empty in every profile Tessera ships today, and that is recorded rather than hidden.** Nothing
+   * in the composition root registers a plugin yet: routing embeddings through the host would regress
+   * F-085's worker pool, and routing connectors through it needs a multi-instance host. Wiring the
+   * host here is what makes registering one a call rather than a rebuild of the composition root.
+   */
+  readonly plugins: PluginHost;
   /**
    * The persistent, tenant-scoped audit trail (F-027; FR-55/NFR-13) the REST surface records into,
    * present when `config.audit.enabled`. `undefined` → the surface falls back to its in-memory sink.

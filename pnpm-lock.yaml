@@ -547,6 +547,9 @@ importers:
       '@tessera/memory':
         specifier: workspace:*
         version: link:../memory
+      '@tessera/plugin-host':
+        specifier: workspace:*
+        version: link:../plugin-host
       '@tessera/retrieval':
         specifier: workspace:*
         version: link:../retrieval

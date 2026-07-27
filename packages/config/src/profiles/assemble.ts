@@ -16,6 +16,7 @@ import {
 } from '@tessera/billing';
 import { createContextCompiler } from '@tessera/context-compiler';
 import { createEventBus, createStaticFlagProvider, ValidationError } from '@tessera/core';
+import { createPluginHost, type PluginHealthSummary } from '@tessera/plugin-host';
 import {
   createGraphExtractionSink,
   createIngestionWorker,
@@ -167,6 +168,23 @@ async function createRuntimeBilling(
     });
   }
   return createLocalBilling();
+}
+
+/**
+ * The `detail` string `/ready` shows for the plugin host (F-058; ADR-0061 §3).
+ *
+ * The empty case says **"0 plugins registered"** rather than "healthy". Every profile Tessera ships
+ * today is in that case, and an operator reading `plugins: ok` needs to be able to tell "nothing is
+ * broken" from "nothing is loaded" — the aggregate alone cannot distinguish them, because an empty
+ * set is vacuously healthy.
+ */
+function describePluginHealth(health: PluginHealthSummary): string {
+  const total = health.plugins.length;
+  if (total === 0) return '0 plugins registered';
+  const unhealthy = health.plugins.filter((plugin) => !plugin.ok).map((plugin) => plugin.id);
+  return unhealthy.length === 0
+    ? `${String(total)} registered, all healthy`
+    : `${String(total)} registered; unhealthy: ${unhealthy.join(', ')}`;
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -349,6 +367,11 @@ export async function assembleRuntime(
     events: ingestionEvents,
   });
 
+  // The plugin host (F-058; FR-59/FR-60). Profile-independent: which extension points exist is a
+  // product fact. It starts EMPTY — see `Runtime.plugins` for why nothing is registered yet — and
+  // `/ready` reports that emptiness rather than dressing it up as health.
+  const plugins = createPluginHost();
+
   const services: ApiServices = {
     search: enrichedSearch,
     compiler,
@@ -359,8 +382,14 @@ export async function assembleRuntime(
     projects: createProjectService(adapters.projectStore),
     billing,
     readiness: async () => {
-      const ok = await relational.healthcheck().catch(() => false);
-      const checks = [{ name: adapters.relationalName, ok }];
+      const [ok, pluginHealth] = await Promise.all([
+        relational.healthcheck().catch(() => false),
+        plugins.health(),
+      ]);
+      const checks = [
+        { name: adapters.relationalName, ok },
+        { name: 'plugins', ok: pluginHealth.ok, detail: describePluginHealth(pluginHealth) },
+      ];
       return { ready: checks.every((check) => check.ok), checks };
     },
   };
@@ -380,6 +409,7 @@ export async function assembleRuntime(
     // Feature flags (F-058; FR-57). Profile-independent by construction: a rollout rule is a product
     // decision, so the static adapter over config is built here rather than asked of each profile.
     flags: createStaticFlagProvider(config.flags.definitions),
+    plugins,
     // Persistent audit trail (F-027) when enabled; the surface falls back to its in-memory sink otherwise.
     ...(adapters.auditLog !== undefined ? { audit: adapters.auditLog } : {}),
     memoryRetention: toMemoryRetentionPolicy(config.memory.retention),

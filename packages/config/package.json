@@ -29,6 +29,7 @@
     "@tessera/ingestion": "workspace:*",
     "@tessera/knowledge-graph": "workspace:*",
     "@tessera/memory": "workspace:*",
+    "@tessera/plugin-host": "workspace:*",
     "@tessera/retrieval": "workspace:*",
     "@tessera/storage": "workspace:*",
     "drizzle-orm": "^0.45.2",

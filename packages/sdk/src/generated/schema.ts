@@ -1545,6 +1545,97 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Per-tenant usage, entitlement, latency and retrieval-quality proxies.
+         * @description Aggregated at the store over UTC day buckets. `from` is the window the server actually used (clamped to the earliest day held), which the client must label. Latency is a mean and a max — NOT a percentile. Totals and the daily series honour the X-Tessera-Project selection; `entitlement` is tenant-wide, because a subscription is.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Window length in days (default 30, max 365). */
+                    days?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description The window start the server ACTUALLY used — clamped to the earliest day the usage store holds. Clients must label this, never the requested window: rendering days the store cannot speak for would draw zeros that read as "nothing happened". */
+                            from: string;
+                            /** @description The window end (inclusive), as a UTC day. */
+                            until: string;
+                            totals: {
+                                compiles: number;
+                                searches: number;
+                                documentsIngested: number;
+                                memoriesWritten: number;
+                                tokensCompiled: number;
+                            };
+                            /** @description `null` on an unmetered deployment — there is no entitlement to report (ADR-0060 §1). */
+                            entitlement: {
+                                /** @description `-1` means unlimited. */
+                                maxMonthlyCompiles: number;
+                                /** @description Compiles spent this UTC calendar month, across every project in the tenant. */
+                                compilesUsed: number;
+                                periodStart: string;
+                                periodEnd: string;
+                            } | null;
+                            latency: {
+                                compile: {
+                                    /** @description Mean duration over the window. Not a percentile. */
+                                    avgMs: number;
+                                    /** @description The slowest single occurrence in the window. */
+                                    maxMs: number;
+                                } | null;
+                                search: {
+                                    /** @description Mean duration over the window. Not a percentile. */
+                                    avgMs: number;
+                                    /** @description The slowest single occurrence in the window. */
+                                    maxMs: number;
+                                } | null;
+                            };
+                            /** @description `null` when no compile in the window carried scores. A zero average would be a claim about compiles that never happened. */
+                            quality: {
+                                avgBudgetAdherence: number;
+                                avgProvenanceCoverage: number;
+                            } | null;
+                            /** @description One point per day that has usage — sparse, not zero-filled, and bucketed by UTC day. This deliberately differs from /v1/stats/activity, which buckets into the viewer’s offset (F-088); pre-aggregated buckets cannot be re-split for half-hour offsets, so the analytics view labels its axis UTC. */
+                            daily: {
+                                /** @description UTC calendar day, `YYYY-MM-DD`. */
+                                date: string;
+                                compiles: number;
+                                searches: number;
+                                documentsIngested: number;
+                                tokensCompiled: number;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/events": {
         parameters: {
             query?: never;

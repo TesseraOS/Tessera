@@ -26,6 +26,7 @@ import { registerMeRoutes } from './me.js';
 import { registerRbacRoutes } from './rbac.js';
 import { registerRetentionRoutes } from './retention.js';
 import { registerTokenRoutes } from './tokens.js';
+import { registerUsageRoutes } from './usage.js';
 
 /** Cross-cutting hardening threaded into the `/v1` scope (F-044). */
 export interface V1HardeningOptions {
@@ -88,6 +89,7 @@ export function registerV1Routes(
       registerSourceRoutes(v1, services);
       registerProjectRoutes(v1, services);
       registerStatsRoutes(v1, services, audit);
+      registerUsageRoutes(v1, services, hardening.usage, hardening.metered);
       registerEventsRoutes(v1, events, hardening.security);
       registerBillingRoutes(v1, services);
       registerAuditRoutes(v1, audit);

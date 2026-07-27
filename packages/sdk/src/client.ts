@@ -49,6 +49,8 @@ export type RenameProjectRequest = NonNullable<
 export type ProjectDeleteResult =
   paths['/v1/projects/{id}']['delete']['responses'][200]['content'][Json];
 export type WorkspaceStats = paths['/v1/stats']['get']['responses'][200]['content'][Json];
+export type UsageSummary = paths['/v1/usage']['get']['responses'][200]['content'][Json];
+export type UsageQuery = NonNullable<paths['/v1/usage']['get']['parameters']['query']>;
 export type ActivityQuery = NonNullable<paths['/v1/stats/activity']['get']['parameters']['query']>;
 export type WorkspaceActivity =
   paths['/v1/stats/activity']['get']['responses'][200]['content'][Json];
@@ -156,6 +158,12 @@ export interface TesseraClient {
    * when a source last completed a scan (F-060). Scoped to the caller's tenant.
    */
   getStats(): Promise<WorkspaceStats>;
+  /**
+   * Per-tenant usage, entitlement, latency and retrieval-quality proxies (F-057; FR-47/NFR-12).
+   * Requires `admin:manage`. `from` is the window the server ACTUALLY used — clamped to the earliest
+   * day the store holds — which the caller must label. Latency is a mean and a max, NOT a percentile.
+   */
+  getUsage(query?: UsageQuery): Promise<UsageSummary>;
   /**
    * Daily activity for the Overview chart (F-084) — audit-derived, floored to the trail. `from` is
    * the window the server actually used (clamped to the oldest event it holds), which the caller
@@ -305,6 +313,11 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
     },
     async getStats() {
       return unwrap(await client.GET('/v1/stats', {}));
+    },
+    async getUsage(query) {
+      return unwrap(
+        await client.GET('/v1/usage', query !== undefined ? { params: { query } } : {}),
+      );
     },
     async getActivity(query) {
       return unwrap(

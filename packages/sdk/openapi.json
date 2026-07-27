@@ -3409,6 +3409,265 @@
         }
       }
     },
+    "/v1/usage": {
+      "get": {
+        "summary": "Per-tenant usage, entitlement, latency and retrieval-quality proxies.",
+        "tags": [
+          "usage"
+        ],
+        "description": "Aggregated at the store over UTC day buckets. `from` is the window the server actually used (clamped to the earliest day held), which the client must label. Latency is a mean and a max — NOT a percentile. Totals and the daily series honour the X-Tessera-Project selection; `entitlement` is tenant-wide, because a subscription is.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365
+            },
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "description": "Window length in days (default 30, max 365)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "description": "The window start the server ACTUALLY used — clamped to the earliest day the usage store holds. Clients must label this, never the requested window: rendering days the store cannot speak for would draw zeros that read as \"nothing happened\".",
+                      "type": "string"
+                    },
+                    "until": {
+                      "description": "The window end (inclusive), as a UTC day.",
+                      "type": "string"
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "compiles": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "searches": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "documentsIngested": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "memoriesWritten": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "tokensCompiled": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "compiles",
+                        "searches",
+                        "documentsIngested",
+                        "memoriesWritten",
+                        "tokensCompiled"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "entitlement": {
+                      "description": "`null` on an unmetered deployment — there is no entitlement to report (ADR-0060 §1).",
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "maxMonthlyCompiles": {
+                              "description": "`-1` means unlimited.",
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "compilesUsed": {
+                              "description": "Compiles spent this UTC calendar month, across every project in the tenant.",
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "periodStart": {
+                              "type": "string"
+                            },
+                            "periodEnd": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "maxMonthlyCompiles",
+                            "compilesUsed",
+                            "periodStart",
+                            "periodEnd"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "latency": {
+                      "type": "object",
+                      "properties": {
+                        "compile": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "avgMs": {
+                                  "description": "Mean duration over the window. Not a percentile.",
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "maxMs": {
+                                  "description": "The slowest single occurrence in the window.",
+                                  "type": "number",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "avgMs",
+                                "maxMs"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "search": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "avgMs": {
+                                  "description": "Mean duration over the window. Not a percentile.",
+                                  "type": "number",
+                                  "minimum": 0
+                                },
+                                "maxMs": {
+                                  "description": "The slowest single occurrence in the window.",
+                                  "type": "number",
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "avgMs",
+                                "maxMs"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "compile",
+                        "search"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "quality": {
+                      "description": "`null` when no compile in the window carried scores. A zero average would be a claim about compiles that never happened.",
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "avgBudgetAdherence": {
+                              "type": "number"
+                            },
+                            "avgProvenanceCoverage": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "avgBudgetAdherence",
+                            "avgProvenanceCoverage"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "daily": {
+                      "description": "One point per day that has usage — sparse, not zero-filled, and bucketed by UTC day. This deliberately differs from /v1/stats/activity, which buckets into the viewer’s offset (F-088); pre-aggregated buckets cannot be re-split for half-hour offsets, so the analytics view labels its axis UTC.",
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "description": "UTC calendar day, `YYYY-MM-DD`.",
+                            "type": "string"
+                          },
+                          "compiles": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "searches": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "documentsIngested": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "tokensCompiled": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "compiles",
+                          "searches",
+                          "documentsIngested",
+                          "tokensCompiled"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "until",
+                    "totals",
+                    "entitlement",
+                    "latency",
+                    "quality",
+                    "daily"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/events": {
       "get": {
         "tags": [

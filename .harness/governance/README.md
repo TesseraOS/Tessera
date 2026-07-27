@@ -12,6 +12,7 @@ confidently.
 | [`policy-model`](policy-model.md) | How policies are expressed/enforced: static + **stateful/contextual** (scopes, cost budgets, egress-proxy credentials). |
 | [`adr-policy`](adr-policy.md) | When a decision must become an ADR. |
 | [`third-party-model-review`](third-party-model-review.md) | Using a model outside our Claude workflow (e.g. Codex) to review code — egress-gated, opt-in, advisory-only. |
+| [`release-checklist`](release-checklist.md) | How a release is cut, the supply-chain controls, and why **publishing is a human action** an agent must never take unasked. |
 
 These policies are **binding** and sit just below the golden rules in precedence
 ([`../rules/README.md`](../rules/README.md)). Violating governance is a stop-and-fix event,

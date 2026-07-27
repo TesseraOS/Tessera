@@ -156,7 +156,10 @@ Deployment is **configuration, not a fork** — see the ports & adapters design 
 ## Releasing
 
 Releases are dispatched manually and **do not publish by default**: the workflow builds, packs and
-generates an SBOM on every run, and reaches `npm publish` only when explicitly asked to. See
+generates an SBOM on every run, and reaches `npm publish` only when explicitly asked to. The
+procedure and the supply-chain controls are in
+[`.harness/governance/release-checklist.md`](.harness/governance/release-checklist.md); the
+reasoning is in
 [ADR-0062](docs/adr/0062-apache-2-licence-whole-repo-oss-and-the-publish-closure.md).
 
 ## Contributing

@@ -29,6 +29,24 @@ function list(value: string | undefined): string[] | undefined {
   return items.length > 0 ? items : undefined;
 }
 
+/**
+ * Parse `TESSERA_FLAGS` — `key=true,other=false` — into flag definitions carrying only a default
+ * (FR-57). Per-tenant overrides are deliberately **not** expressible here: a rollout rule naming
+ * specific orgs belongs in a reviewed config file, not in a container's environment.
+ *
+ * A malformed pair is dropped rather than guessed at: `beta.search` with no value could plausibly
+ * mean on *or* off, and picking one silently is how a flag ships in the state nobody intended.
+ */
+function flagDefinitions(value: string | undefined): { key: string; defaultEnabled: boolean }[] {
+  return (list(value) ?? []).flatMap((pair) => {
+    const separator = pair.indexOf('=');
+    if (separator <= 0) return [];
+    const key = pair.slice(0, separator).trim();
+    const enabled = bool(pair.slice(separator + 1));
+    return key.length > 0 && enabled !== undefined ? [{ key, defaultEnabled: enabled }] : [];
+  });
+}
+
 /** Drop `undefined` values so a section only carries the keys actually provided. */
 function clean<T extends Record<string, unknown>>(obj: T): Partial<T> {
   const out: Record<string, unknown> = {};
@@ -143,6 +161,8 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
   const mcp = section({
     ...(mcpHttp !== undefined ? { http: mcpHttp } : {}),
   });
+  const envFlags = flagDefinitions(env.TESSERA_FLAGS);
+  const flags = envFlags.length > 0 ? { definitions: envFlags } : undefined;
 
   if (storage !== undefined) input.storage = storage;
   if (embeddings !== undefined) input.embeddings = embeddings;
@@ -154,6 +174,7 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
   if (sources !== undefined) input.sources = sources;
   if (api !== undefined) input.api = api;
   if (mcp !== undefined) input.mcp = mcp;
+  if (flags !== undefined) input.flags = flags;
   return input as ConfigInput;
 }
 
@@ -174,6 +195,10 @@ function mergeConfig(base: ConfigInput, over: ConfigInput): ConfigInput {
     ...((base.sources ?? over.sources) ? { sources: { ...base.sources, ...over.sources } } : {}),
     ...((base.api ?? over.api) ? { api: { ...base.api, ...over.api } } : {}),
     ...((base.mcp ?? over.mcp) ? { mcp: { ...base.mcp, ...over.mcp } } : {}),
+    // `definitions` is an ARRAY: a shallow merge replaces it wholesale, so a config file's flag list
+    // wins over TESSERA_FLAGS entirely rather than being appended to. That is the documented
+    // precedence (file over env) and the only one that keeps a reviewed rollout list authoritative.
+    ...((base.flags ?? over.flags) ? { flags: { ...base.flags, ...over.flags } } : {}),
   };
 }
 

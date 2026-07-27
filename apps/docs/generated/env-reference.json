@@ -449,6 +449,17 @@
           "description": "Hard cap on concurrent sessions; a new session beyond it is refused 429 with Retry-After."
         }
       ]
+    },
+    {
+      "section": "Feature flags (F-058; FR-57, ADR-0061)",
+      "vars": [
+        {
+          "name": "TESSERA_FLAGS",
+          "default": "beta.search=true,graph.v2=false",
+          "optional": true,
+          "description": "Progressive rollout, evaluated PER TENANT at the API boundary and shown read-only in Settings. This variable sets flag DEFAULTS only, as `key=true|false` pairs — enough for a container that wants one flag flipped. Per-tenant rules (`flags.definitions[].tenants`) are config-file only, deliberately: a rollout naming specific orgs belongs in something reviewable, not in an environment. A flag the file declares wins over this variable entirely (the list is replaced, not merged), and an unknown flag key always evaluates to false."
+        }
+      ]
     }
   ]
 }

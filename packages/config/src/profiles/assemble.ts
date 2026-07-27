@@ -15,7 +15,7 @@ import {
   type UsageStore,
 } from '@tessera/billing';
 import { createContextCompiler } from '@tessera/context-compiler';
-import { createEventBus, ValidationError } from '@tessera/core';
+import { createEventBus, createStaticFlagProvider, ValidationError } from '@tessera/core';
 import {
   createGraphExtractionSink,
   createIngestionWorker,
@@ -377,6 +377,9 @@ export async function assembleRuntime(
     // ApiServices is rebuilt member-by-member by `instrumentServices`, and a member dropped there
     // 500s its routes in production (E-015, twice). BuildServerOptions is structurally immune.
     usage: adapters.usageStore,
+    // Feature flags (F-058; FR-57). Profile-independent by construction: a rollout rule is a product
+    // decision, so the static adapter over config is built here rather than asked of each profile.
+    flags: createStaticFlagProvider(config.flags.definitions),
     // Persistent audit trail (F-027) when enabled; the surface falls back to its in-memory sink otherwise.
     ...(adapters.auditLog !== undefined ? { audit: adapters.auditLog } : {}),
     memoryRetention: toMemoryRetentionPolicy(config.memory.retention),

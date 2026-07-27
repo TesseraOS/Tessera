@@ -275,6 +275,47 @@ const mcpHttpSchema = z
 /** MCP transport settings. stdio needs no configuration; only the remote transport does. */
 const mcpSchema = z.object({ http: mcpHttpSchema }).default({});
 
+/**
+ * One feature flag (FR-57; ADR-0061 §1). `defaultEnabled` applies to every tenant without an entry in
+ * `tenants`; an entry there wins, in either direction. Both default to **off** — a flag you have not
+ * finished declaring has not been rolled out.
+ */
+const flagDefinitionSchema = z.object({
+  key: z.string().min(1),
+  /** What turning this on does. Shown read-only in the dashboard — write it for an operator. */
+  description: z.string().default(''),
+  defaultEnabled: z.boolean().default(false),
+  /** Per-tenant overrides, `tenantId → enabled`. */
+  tenants: z.record(z.string().min(1), z.boolean()).default({}),
+});
+
+/**
+ * Feature flags (FR-57). Declared in the config **file** because a rollout rule is structured data
+ * that belongs in something reviewable; `TESSERA_FLAGS` can set defaults for the container case.
+ *
+ * A duplicate key is rejected here, at load, rather than resolved by "last one wins" — two rules for
+ * one flag is an operator mistake, and the process should die before it serves a rollout that only
+ * half-happened.
+ */
+const flagsSchema = z
+  .object({
+    definitions: z.array(flagDefinitionSchema).default([]),
+  })
+  .default({})
+  .superRefine((value, ctx) => {
+    const seen = new Set<string>();
+    for (const [index, definition] of value.definitions.entries()) {
+      if (seen.has(definition.key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `duplicate feature flag "${definition.key}"`,
+          path: ['definitions', index, 'key'],
+        });
+      }
+      seen.add(definition.key);
+    }
+  });
+
 /** The validated Tessera configuration (FR-50). Deployment is configuration — one surface. */
 export const configSchema = z
   .object({
@@ -292,6 +333,7 @@ export const configSchema = z
     sources: sourcesSchema,
     api: apiSchema,
     mcp: mcpSchema,
+    flags: flagsSchema,
   })
   .superRefine((value, ctx) => {
     // A cross-SECTION rule, so it cannot live inside `authSchema` or `mcpSchema`. Remote MCP in `none`

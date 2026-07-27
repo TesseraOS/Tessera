@@ -4,6 +4,7 @@ import type { Embeddings } from '@tessera/ai';
 import type { ApiEventBus, ApiServices, AuditLog } from '@tessera/api';
 import type { AuthProvider, TokenStore } from '@tessera/api/auth';
 import type { BillingProvider, UsageStore } from '@tessera/billing';
+import type { FlagProvider } from '@tessera/core';
 import type { SourceService } from '@tessera/ingestion';
 import type { MemoryRetentionPolicy } from '@tessera/memory';
 import type { KeywordRetriever, TemporalRetriever } from '@tessera/retrieval';
@@ -66,6 +67,12 @@ export interface Runtime {
    * read. Always present: the profile supplies it, so there is no "metering is off" runtime shape.
    */
   readonly usage: UsageStore;
+  /**
+   * Feature flags (F-058; FR-57), evaluated per tenant at the API boundary. Always present — the
+   * static adapter over `config.flags.definitions`, which is an empty catalog by default, so there is
+   * no "flags are off" runtime shape to branch on. A remote provider swaps in behind the same port.
+   */
+  readonly flags: FlagProvider;
   /**
    * The persistent, tenant-scoped audit trail (F-027; FR-55/NFR-13) the REST surface records into,
    * present when `config.audit.enabled`. `undefined` → the surface falls back to its in-memory sink.

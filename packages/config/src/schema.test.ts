@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadConfig } from './load.js';
+import { configFromEnv, loadConfig } from './load.js';
 import { configSchema } from './schema.js';
 
 describe('config schema + loader', () => {
@@ -227,5 +227,82 @@ describe('config schema + loader', () => {
     expect(() =>
       loadConfig({}, { memory: { retention: { rules: [{ kind: 'bogus' }] } } } as never),
     ).toThrow(/invalid configuration/);
+  });
+});
+
+describe('feature flags (FR-57)', () => {
+  it('defaults to an empty catalog, so a deployment declaring nothing has no flags', () => {
+    expect(configSchema.parse({}).flags).toEqual({ definitions: [] });
+  });
+
+  it('applies per-flag defaults: no description, off, no tenant overrides', () => {
+    const config = configSchema.parse({ flags: { definitions: [{ key: 'beta.search' }] } });
+
+    expect(config.flags.definitions).toEqual([
+      { key: 'beta.search', description: '', defaultEnabled: false, tenants: {} },
+    ]);
+  });
+
+  it('keeps per-tenant overrides as declared', () => {
+    const config = configSchema.parse({
+      flags: {
+        definitions: [
+          {
+            key: 'beta.search',
+            description: 'New ranker',
+            defaultEnabled: false,
+            tenants: { acme: true },
+          },
+        ],
+      },
+    });
+
+    expect(config.flags.definitions[0]?.tenants).toEqual({ acme: true });
+  });
+
+  it('rejects a duplicate flag key at load rather than picking a winner', () => {
+    const result = configSchema.safeParse({
+      flags: { definitions: [{ key: 'dupe' }, { key: 'dupe' }] },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toMatch(/duplicate feature flag "dupe"/);
+  });
+
+  it('rejects an empty flag key', () => {
+    expect(configSchema.safeParse({ flags: { definitions: [{ key: '' }] } }).success).toBe(false);
+  });
+});
+
+describe('TESSERA_FLAGS', () => {
+  it('sets flag defaults from key=value pairs', () => {
+    expect(configFromEnv({ TESSERA_FLAGS: 'beta.search=true,graph.v2=false' }).flags).toEqual({
+      definitions: [
+        { key: 'beta.search', defaultEnabled: true },
+        { key: 'graph.v2', defaultEnabled: false },
+      ],
+    });
+  });
+
+  it('drops a malformed pair rather than guessing what it meant', () => {
+    // `beta.search` alone could mean on or off; picking one silently ships the wrong state.
+    expect(configFromEnv({ TESSERA_FLAGS: 'beta.search,ok=true,=true,x=maybe' }).flags).toEqual({
+      definitions: [{ key: 'ok', defaultEnabled: true }],
+    });
+  });
+
+  it('is absent entirely when the variable is unset or has nothing usable in it', () => {
+    expect(configFromEnv({}).flags).toBeUndefined();
+    expect(configFromEnv({ TESSERA_FLAGS: '' }).flags).toBeUndefined();
+    expect(configFromEnv({ TESSERA_FLAGS: 'garbage' }).flags).toBeUndefined();
+  });
+
+  it('a config file’s flag list REPLACES the env list — the reviewed file wins', () => {
+    const config = loadConfig(
+      { TESSERA_FLAGS: 'from.env=true' },
+      { flags: { definitions: [{ key: 'from.file', defaultEnabled: true }] } },
+    );
+
+    expect(config.flags.definitions.map((f) => f.key)).toEqual(['from.file']);
   });
 });

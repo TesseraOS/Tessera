@@ -1,0 +1,41 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.4/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [
+    [
+      "@tessera/ai",
+      "@tessera/api",
+      "@tessera/billing",
+      "@tessera/cli",
+      "@tessera/config",
+      "@tessera/context-compiler",
+      "@tessera/core",
+      "@tessera/ingestion",
+      "@tessera/knowledge-graph",
+      "@tessera/mcp",
+      "@tessera/memory",
+      "@tessera/observability",
+      "@tessera/plugin-host",
+      "@tessera/retrieval",
+      "@tessera/sdk",
+      "@tessera/server",
+      "@tessera/skills",
+      "@tessera/storage"
+    ]
+  ],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": [
+    "@tessera/web",
+    "@tessera/marketing",
+    "@tessera/docs",
+    "@tessera/brand",
+    "@tessera/mascot",
+    "@tessera/bench",
+    "@tessera/e2e-full",
+    "@tessera/web-perf"
+  ]
+}

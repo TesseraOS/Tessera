@@ -2,7 +2,19 @@
   "name": "@tessera/api",
   "version": "0.0.0",
   "license": "Apache-2.0",
-  "private": true,
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TesseraOS/Tessera.git",
+    "directory": "apps/api"
+  },
+  "homepage": "https://github.com/TesseraOS/Tessera#readme",
+  "bugs": {
+    "url": "https://github.com/TesseraOS/Tessera/issues"
+  },
   "type": "module",
   "exports": {
     ".": {

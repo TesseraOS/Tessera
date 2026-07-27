@@ -11,6 +11,9 @@
   },
   "scripts": {
     "tessera": "node apps/cli/dist/bin/tessera.js",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release:publish": "changeset publish",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
@@ -28,6 +31,7 @@
     }
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.1",
     "@eslint/js": "^9",
     "@types/node": "^22",
     "eslint": "^9",

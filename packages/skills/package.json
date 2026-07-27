@@ -2,7 +2,19 @@
   "name": "@tessera/skills",
   "version": "0.0.0",
   "license": "Apache-2.0",
-  "private": true,
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TesseraOS/Tessera.git",
+    "directory": "packages/skills"
+  },
+  "homepage": "https://github.com/TesseraOS/Tessera#readme",
+  "bugs": {
+    "url": "https://github.com/TesseraOS/Tessera/issues"
+  },
   "type": "module",
   "description": "Tessera's first-party agent skills registry — versioned SKILL.md instructions served identically to the marketing catalog, the CLI, and MCP.",
   "exports": {

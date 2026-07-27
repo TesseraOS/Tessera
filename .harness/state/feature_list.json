@@ -1908,7 +1908,7 @@
       "package": "@tessera/web",
       "release": "R4",
       "priority": "should",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-030",
         "F-035",
@@ -1930,7 +1930,10 @@
         "E-019",
         "E-003",
         "E-004",
-        "E-014"
+        "E-014",
+        "E-029",
+        "E-013",
+        "E-026"
       ],
       "notes": "Plan: .harness/plans/F-057-analytics-usage-metering-and-billing-ui.md. Decision: ADR-0060. TWO corrections to this entry's own acceptance, both made explicitly by the project lead rather than assumed: (1) clause 3's \"latency from the observability metrics\" describes a capability that does not exist — the OTel histograms are no-op (no meter provider is ever registered: metrics.ts:6-9, telemetry.ts:19-20, and neither shipped bin passes a reader), nothing is exported or scraped, and there is no per-tenant dimension. Latency is therefore measured at the metering boundary and reported as average + slowest, NEVER p95 (ADR-0060 §3); true percentiles stay in the gated bench suite. (2) Enforcing maxMonthlyCompiles under the existing \"is a BillingProvider present\" predicate would hard-block every Local and self-hosted deployment after 200 compiles/month — because the composition root ALWAYS wires one (assemble.ts:151 -> local.ts:14 -> free plan), which also means those deployments are silently capped at 8000 tokens/compile TODAY, exactly what ADR-0056 §3 decided must not happen. \"Metered\" becomes an explicit flag and that shipped bug is fixed in its own commit (ADR-0060 §1). Out of scope, deliberately: seat enforcement (maxSeats stays a seam on E-019), a currency cost figure (no per-token price exists — cost posture only), a metrics/scrape endpoint (E-015's own seam), usage retention/pruning (usage is billing evidence), per-principal usage (would pull the store into NFR-13 DSR scope), and an MCP get_usage tool (ADR-0053). Auditing the billing routes is a real latent gap found while planning and refused here as scope creep — filed as F-095."
     },
@@ -3202,7 +3205,7 @@
       "effects": [
         "E-014"
       ],
-      "notes": "FOUND DURING F-057 increment 6a (2026-07-27) and attributed by measurement rather than assumption: every F-057 change was stashed and tests/integration/self-hosted-profile.test.ts was run four times against HEAD — it produced the same unhandled ioredis rejection on 2 of 4 runs. So this is PRE-EXISTING and flaky, not a regression from F-057, and it was left alone rather than absorbed. It is invisible in the default `test` gate because the suite is skipped without TESSERA_TEST_SELF_HOSTED=1, which is exactly why it has survived: the one gate that would catch it is the one almost nobody runs. Related: the same class of teardown race is why F-056 had to kill process TREES in the web-perf gate."
+      "notes": "FOUND DURING F-057 increment 6a (2026-07-27) and attributed by measurement rather than assumption: every F-057 change was stashed and tests/integration/self-hosted-profile.test.ts was run four times against HEAD — it produced the same unhandled ioredis rejection on 2 of 4 runs. So this is PRE-EXISTING and flaky, not a regression from F-057, and it was left alone rather than absorbed. It is invisible in the default `test` gate because the suite is skipped without TESSERA_TEST_SELF_HOSTED=1, which is exactly why it has survived: the one gate that would catch it is the one almost nobody runs. Related: the same class of teardown race is why F-056 had to kill process TREES in the web-perf gate. WIDENED DURING F-057 increment 11 (2026-07-27): the same SIGNATURE — every test reporting passed while the run still exits non-zero — was observed twice more in the workspace gates, in DIFFERENT packages each time. `pnpm -w test:e2e` failed at @tessera/marketing and then at @tessera/api (both passed standalone immediately after: 65 and 140), and `pnpm -w test` failed at @tessera/web while printing \"39 passed / 440 passed\" (green on re-run, 43/43). Cause unproven for those two — what IS established is the signature and that it costs real time and real trust on every feature. This machine is a slow external SSD (Next.js itself prints \"Slow filesystem detected\"), so contention under turbo parallelism is the first hypothesis to test. Scope for whoever takes this: make a gate report WHY a package failed when every test in it passed, then fix the underlying races."
     }
   ]
 }

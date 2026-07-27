@@ -200,6 +200,10 @@
         {
           "kind": "module",
           "ref": "X-Tessera-Project per-call project selection (F-050/ADR-0037) BECOMES REACHABLE (F-055): apps/mcp/src/server.ts projectOf() has read requestInfo.headers['x-tessera-project'] since F-050 and no transport could carry it — stdio has no per-call headers. The streamable-HTTP transport populates requestInfo.headers, so the header now works and is proven for the first time by apps/mcp/tests/e2e/http.e2e.test.ts (a tenant's own project scopes; an unknown id 404s rather than silently falling back). No code change to the tools."
+        },
+        {
+          "kind": "module",
+          "ref": "F-057: GET /v1/usage (admin:manage, additive) -> OpenAPI + SDK (getUsage) + the generated docs reference page, all regenerated in the same commit and held by apps/docs generated-drift. POST /v1/compile and the MCP compile tools gain a 429 RATE_LIMITED path — a behaviour change, no shape change, reusing the existing envelope code so nothing rippled. NO MCP get_usage tool, deliberately (ADR-0060 §8): an agent has no use for a usage histogram, get_stats already covers workspace state, and the one fact an agent could act on (its effective budget) is already on the compile response. Recorded so the absence reads as a decision."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -285,6 +289,10 @@
         {
           "kind": "artifact",
           "ref": "docs/design/MARKETING-DESIGN.md §3.15 skills-catalog + §2.3 .skill-filter, manifest -> 4.11.0 (F-054). The manifest adds a REQUIRED pattern (skills-filter-device-defined) asserting app/globals.css defines .skill-filter, because the archetype filter rail is CSS-only: a native radio group + :has() rules hiding cards whose data-skill-category does not match. It lives in globals.css rather than as a Tailwind variant because :has() needs arbitrary-value brackets, which the closed token set bans — so doc, manifest, and CSS are ONE change. tests/design-lint.test.ts compiles the manifest, so a manifest edit without the CSS is a red build. Zero first-load JS added (gate measured marketing at 204.1 KB gz against the 240 budget)"
+        },
+        {
+          "kind": "module",
+          "ref": "F-057: /analytics + /billing. The single chart series rides --primary per the F-091 rule already recorded here; both routes are gated for WCAG A/AA across all four themes x light/dark in apps/web/tests/e2e/analytics.spec.ts, which is F-057's \"screenshots across themes\" made executable. Nav lives in TWO sources (components/app-shared.tsx and lib/nav.ts) and lib/nav.test.ts now fails if they disagree about a route or its title — the duplication is made safe rather than fixed."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -610,6 +618,10 @@
         {
           "kind": "module",
           "ref": "createCompileBudgetClamp (packages/billing/src/budget.ts) is the single implementation of the compile entitlement rule, and its dependents are BOTH surfaces (apps/api compile route, apps/mcp compile_context + explain) plus apps/mcp/tests/e2e/entitlements.e2e.test.ts, whose parity case fails if either surface is extended without the other. ADR-0056 also CHANGED WHO IS METERED: a deployment that wired no BillingProvider is self-hosted and is NOT clamped — the previous `services.billing ?? createLocalBilling()` fallback conflated *unmetered* with *free-tier* and capped self-hosted users at the cloud Free plan's 8000. This is a REST behaviour change too, not only MCP. The plan catalog is untouched: a metered tenant on `free` still clamps at 8000, and wiring the local adapter EXPLICITLY still meters you (the unmetered case is the absence of a provider, not the identity of one)"
+        },
+        {
+          "kind": "module",
+          "ref": "ADR-0060 §1 (F-057): the metered predicate moved from 'a BillingProvider object is present' to an EXPLICIT `metered` flag threaded from config.billing.provider. This REALIZES ADR-0056 §3, whose stated consequence was never implemented: the composition root always wires a provider (createRuntimeBilling returns createLocalBilling() for provider 'none', and that adapter reports every tenant free), so from F-035 until F-057 every Local and self-hosted deployment was silently capped at the cloud free tier's 8000 tokens per compile. Nothing asserted the unmetered case, which is why it survived a full feature review; both surfaces now have that assertion."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -707,6 +719,10 @@
         {
           "kind": "test",
           "ref": "packages/config/tests/integration/self-hosted-profile.test.ts (guard TESSERA_TEST_SELF_HOSTED=1, needs all three services) runs the IDENTICAL sequence and assertions as local-profile.test.ts — index, search, putFragment, compile, budget — so FR-53's 'no code change between modes' is asserted rather than claimed. Two gotchas encoded there: `search_path` must include `public` or every pgvector statement fails `type \"vector\" does not exist` (the extension installs the type into public; the other PG suites avoid it only because they never touch the vector store), and a memory's corpus ref is its LINEAGE not its version id. The old test pinning the deferral was REWRITTEN, not deleted."
+        },
+        {
+          "kind": "module",
+          "ref": "F-057: ProfileAdapters gains usageStore + subscriptionStore as REQUIRED members, so the compiler asks Local AND self-hosted for both (the ADR-0059 mechanism — an optional member is how a store ends up SQLite-only and caps self-hosted at one node). Runtime gains `usage` and `metered`. createRuntimeBilling changes signature to take the store rather than build one. self-hosted.ts registers pgUsageMigrations + pgSubscriptionMigrations in ALL_MIGRATIONS. NO config schema change (ADR-0060 §10): billing.provider already carries the metered signal, so there is no new TESSERA_* var and no .env.example churn."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -740,6 +756,10 @@
         {
           "kind": "package",
           "ref": "seams (instrument provided, not yet fed): per-adapter spans; registerQueueDepthGauge needs a Queue depth source; OTLP exporters via config"
+        },
+        {
+          "kind": "module",
+          "ref": "F-057: N/A BY CONSTRUCTION, and deliberately so. The usage store rides BuildServerOptions (beside audit/tokenStore/memoryRetention), NOT ApiServices — instrumentServices rebuilds that object member by member and a dropped member 500s its routes in production (two recorded recurrences). The F-063 precedent. Recorded here so a future reader sees the absence was chosen, not overlooked."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -923,7 +943,7 @@
       "to": [
         {
           "kind": "module",
-          "ref": "@tessera/billing adapters: createLocalBilling (open-core free default, no external deps) + createDodoBilling (fetch-based, env-guarded; HMAC webhook verify + payload mapping offline-tested; live Dodo API = seam) + createInMemorySubscriptionStore (a persistent store = seam)"
+          "ref": "@tessera/billing adapters: createLocalBilling (open-core free default, no external deps) + createDodoBilling (fetch-based, env-guarded; HMAC webhook verify + payload mapping offline-tested; live Dodo API = seam) + THREE SubscriptionStore adapters — in-memory (reference), SQLite, Postgres — all three satisfying ONE shared conformance suite (tests/conformance/subscription-store.conformance.ts). The F-030 in-memory seam is CLOSED (F-057): createRuntimeBilling now takes the store the PROFILE supplies, so a restart or a second replica no longer downgrades a paying tenant to free. The suite is what stops the three drifting — the port shipped with none, which is the F-078 pattern one package over."
         },
         {
           "kind": "test",
@@ -939,7 +959,7 @@
         },
         {
           "kind": "module",
-          "ref": "@tessera/api /v1/compile entitlement enforcement (F-035): clampBudgetToPlan caps the requested token budget to the caller's plan (effectiveEntitlements via services.billing, tenant from the AuthContext, local/free fallback) — REALIZED. Monthly-usage metering (needs a persistent usage store), seat limits, and MCP-surface enforcement remain seams"
+          "ref": "@tessera/api /v1/compile + MCP compile_context/explain entitlement enforcement: (1) clampBudgetToPlan caps the requested token budget (F-035/F-077), and (2) createMonthlyCompileGuard refuses past maxMonthlyCompiles with RateLimitedError -> 429 (F-057) — the monthly seam is CLOSED, counted per TENANT across projects, -1 = unlimited, FAIL-OPEN on a store fault (ADR-0060 §6). Both rules read one explicit `metered` flag (ADR-0060 §1), never the presence of a provider object. STILL A SEAM: seat limits (maxSeats) are display-only — there is no seat model to count against, and F-057's acceptance named monthly compiles only."
         },
         {
           "kind": "module",
@@ -1283,6 +1303,10 @@
         {
           "kind": "artifact",
           "ref": ".env.example gains four TESSERA_MCP_HTTP_* vars and apps/api/src/plugins/openapi.ts gains one sentence in info.description (F-055) ⇒ apps/docs/generated/env-reference.json + generated/openapi.json + packages/sdk/openapi.json regenerate. Both regenerations shipped IN the same increment as the input change, so generated-drift.test.ts is never red between commits. The new content/docs/agents/remote-mcp.mdx inlines no generated count (prose-counts.test.ts bans the literal in a paragraph mentioning \"tool\" — it uses <McpToolCount />) and is added to the axe/overflow PAGES set in tests/e2e/docs.spec.ts, which immediately caught a pre-existing AA contrast failure on shiki comment tokens (#6a737d on the dark code background = 3.49:1) affecting three other pages; tracked as F-092 rather than absorbed here, since ADR-0054 constrains docs theming to the --color-fd-* seam."
+        },
+        {
+          "kind": "module",
+          "ref": "F-057: GET /v1/usage regenerates generated/openapi.json and adds content/docs/reference/api/v1/usage/get.mdx; packages/sdk/openapi.json + src/generated/schema.ts regenerate alongside. Done in the SAME commit as the route, never as a follow-up — generated-drift in the `test` gate is what proves the three artifacts agree."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -1357,6 +1381,35 @@
       ],
       "kind": "EFFECT_LINK",
       "rationale": "ADR-0056's decision to clamp SILENTLY rests entirely on this invariant: because the compiler echoes the budget it was given and callers clamp first, `requested > pkg.budget` <=> clamped, EXACTLY — so a clamp is distinguishable from a thin corpus (which returns budget === requested with few fragments) using only data the caller already holds. That is what made an additive per-call field unnecessary on the token-lean agent surface (NFR-4), and it is the same reasoning F-062 reached independently for the dashboard. IF THE COMPILER EVER ECHOES THE REQUESTED (pre-clamp) BUDGET INSTEAD, or clamping moves inside the compiler, three consumers silently start lying at once: explain's budgetClamp, the dashboard notice, and compile_context's own published advice. Recorded because F-077's feature note asserted the OPPOSITE ('an agent quietly downgraded cannot distinguish a clamp from a thin corpus') and a decision was nearly built on the false premise — the invariant is load-bearing and undocumented until now.",
+      "confidence": 1,
+      "origin": "manual"
+    },
+    {
+      "id": "E-029",
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/billing UsageStore port + UsageEvent/UsageAggregate model + the (tenant, project, UTC day, operation) bucket schema (F-057; ADR-0060)"
+      },
+      "to": [
+        {
+          "kind": "module",
+          "ref": "Three adapters: in-memory (the reference the suite is written against), SQLite (Local profile, self-provisioning), Postgres (self-hosted/cloud, exporting pgUsageMigrations — the adapter never creates its own tables). One shared row mapper (adapters/aggregate-row.ts) so the bigint parse cannot be present in one and forgotten in the other."
+        },
+        {
+          "kind": "test",
+          "ref": "ONE shared conformance suite (packages/billing/tests/conformance/usage-store.conformance.ts) run UNMODIFIED by all three adapters — Postgres guarded by TESSERA_TEST_POSTGRES=1. If the suite has to change to accommodate an adapter, that is a finding, not a task (the F-078 rule)."
+        },
+        {
+          "kind": "module",
+          "ref": "Three recorders, one per surface and never two (ADR-0060 §5): the @tessera/api onResponse hook keyed on a per-route `config.meter` marker (handlers ANNOTATE via request.usageTokens/usageScores, they never record); the @tessera/mcp per-tool meter around the service call (NOT generic in runTool — the tenant/project are resolved inside each handler — and NOT in McpGateway.guard, because a stdio deployment has no gateway and must still meter); and the document.ingested subscriber in assembleRuntime, because POST /v1/sources/:id/scan returns 202 since F-081 so metering the request would count intent."
+        },
+        {
+          "kind": "module",
+          "ref": "createMonthlyCompileGuard (the F-035 closure) reads this store; GET /v1/usage + computeUsageSummary aggregate it; the SDK exposes getUsage; /analytics and /billing render it."
+        }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "Minted rather than folded into E-019 because it is a port with its own adapters and its own conformance suite — the effect-link protocol's own trigger. Usage exists to serve entitlements, which is why it lives in @tessera/billing beside them rather than in a separate package: a counter and the limit it is measured against belong together, or they drift. LOAD-BEARING PRIVACY RULE: there is deliberately NO principalId on UsageEvent (ADR-0060 §4). With one, an aggregate counter becomes personal data subject to NFR-13 DSR export AND erasure — and honouring an erasure would destroy the billing evidence the counter exists to be. \"Who did this\" is already answered by the audit trail. A future feature that adds this column silently pulls the store into DSR scope; anyone touching this schema must decide that explicitly. HONESTY RULES the surfaces depend on: buckets are UTC days, pre-aggregated at write time and therefore NOT re-splittable into a viewer offset (this deliberately differs from the F-088 Overview chart, and the analytics page says so); latency is a sum and a max, so it can produce a mean and a maximum but NEVER a percentile (ADR-0060 §3); quality averages divide by scoredCount, not count; and GET /v1/usage returns the window it ACTUALLY used, clamped to the store's earliest day (ADR-0053 clause 3).",
       "confidence": 1,
       "origin": "manual"
     }

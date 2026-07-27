@@ -3,16 +3,16 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
-## 2026-07-27 — F-057 IN PROGRESS: metering, entitlements + /v1/usage (increments 0–7 of 11)
+## 2026-07-27 — F-057 DONE: per-tenant metering, the two closed seams, and the analytics surface
 
 Claimed **F-057** (`should`, lowest-id eligible in R4; F-030 + F-035 + F-046 done). Plan:
 [`F-057-analytics-usage-metering-and-billing-ui.md`](../plans/F-057-analytics-usage-metering-and-billing-ui.md)
 (planner subagent). Decision: **[ADR-0060](../../docs/adr/0060-usage-metering-analytics-and-the-metered-predicate.md)**.
 
-**Not finished — 4 increments remain (8, 9, 10, 11 — the two dashboard views, e2e/axe/screenshots,
-and close).** Everything below is committed green. This stops at the **cut line the plan named**: the
-data + contract half is complete and independently valuable — both the F-035 and F-030 seams are
-closed, and `GET /v1/usage` serves the numbers, with no UI yet.
+All **11 increments** are committed green. Both seams the feature exists to close are closed
+(F-035's monthly compile entitlement, F-030's in-memory subscription store), and a shipped defect
+found on the way — every Local and self-hosted deployment silently capped at 8000 tokens per
+compile — is fixed.
 
 ### The acceptance was wrong about two things, and the lead decided both
 
@@ -58,6 +58,10 @@ Fixed in increment 6a, in its own commit so a regression bisects cleanly. ADR-00
 | 6a | `metered` becomes an explicit flag; the 8000 cap on Local/self-hosted is fixed | full gates + **`e2e-full`** + **`bench`**; 6/6 mutations red |
 | 6b | `createMonthlyCompileGuard` — **the F-035 closure** — on REST + MCP `compile_context` *and* `explain` | api e2e 130, mcp e2e 68; **9/9 mutations red**; red-before captured |
 | 7 | `GET /v1/usage` + Fastify-free `computeUsageSummary` + SDK `getUsage()` + generated docs page | api e2e 140, docs 25 (drift gate green) |
+| 8 | The **Analytics view** + the nav-agreement test that retires the two-source trap | web 429; **10/10 mutations red** |
+| 9 | The **Billing view** + `createCheckout` on the SDK; both views driven live in a browser | web 440; two defects found by looking |
+| 10 | e2e: a **real compile → usage visible**, + WCAG AA across 4 themes × light/dark on both routes | web e2e 64 (was 56); `test:perf` green |
+| 11 | Effects traced (**E-029 minted**, six links amended), feature closed | `verify-state` valid, 29 effect-links |
 
 ### Four things the mutation checks corrected, that comments had claimed
 
@@ -126,26 +130,53 @@ restarted (`C:\Users\ASUS\AppData\Local\Programs\DockerDesktop\Docker Desktop.ex
 `docker compose up -d postgres redis minio`). The `wsl -d docker-desktop --exec` workaround recorded
 for F-056 does **not** start a stopped daemon — it only wakes a running one.
 
-**Next step:** increment **8** — the **Analytics view** (`apps/web/app/analytics/page.tsx`), reading
-`getUsage()` from the SDK, which already exists. Three things a future session must not re-derive:
+### What the last four increments added, and what looking at it caught
 
-1. **Nav lives in TWO places** — `components/app-shared.tsx:36-91` (sidebar) and `lib/nav.ts:27-55`
-   (⌘K palette). Edit both, or the page is reachable from one and invisible to the other. Add a test
-   that the two route sets agree, and retire the trap.
-2. **Label latency "average" and "slowest", never p95**, and label the day axis **UTC** — it
-   deliberately differs from the Overview chart's viewer-local buckets (F-088), and saying so is the
-   mitigation. A single chart series rides `--primary` (the F-091 rule on E-004).
-3. **No currency anywhere.** Cost posture = embeddings provider + plan price + tokens compiled. No
-   per-token price exists in this system, so a dollar figure would be invented.
+The two views are **provenance-first and deliberately silent about what the system cannot prove**.
+Three refusals, each with a test that fails if someone reverses it:
 
-Then **9** (Billing view — the upgrade CTA is *absent* on an unmetered deployment, not dead),
-**10** (e2e that compiles through the real API then asserts the number on `/analytics`, axe AA,
-screenshots 4 themes × light/dark — and the analytics spec must be *seen* to fail against increment 7's
-HEAD, since a green-on-first-run e2e proves nothing), **11** (effects: mint **E-029**, rewrite E-019,
-amend E-013/E-003/E-004/E-014/E-026, record E-015 as structurally N/A; then close).
+- **No percentiles.** The store holds a count, a duration sum and a max; the labels are "average" and
+  "slowest", and an e2e asserts the rendered page never contains `p95`.
+- **No money derived from usage.** A plan's own list price is the only currency printed. There is no
+  per-token price in this system, so anything else would be invented.
+- **No zero chart.** An empty store gets an explicit empty state, and a *one-day* window gets no chart
+  at all — a line needs two points.
 
-Budget a `design-review` pass on 8–9: the contrast gate is executable, layout and hierarchy are not,
-and that pass has found something no test did every previous time.
+That last one, and a duplicated "Free / Free" on the Billing card, were found by **driving both pages
+in a real browser** against a real deployment carrying real compiles — not by any test. That is the
+argument for the visual step surviving in the loop.
+
+F-057's "screenshots across 4 themes × light/dark" is delivered as an **executable matrix**: both
+routes are checked for WCAG A/AA under all four themes in both modes. A screenshot proves a page
+looked right the day someone looked; the matrix fails the build the day a token pairing stops meeting
+AA. Screenshots were still taken — they catch layout and hierarchy, which no assertion does.
+
+### Effects (increment 11)
+
+**E-029 minted** — the usage metering contract: one port, three adapters, one shared conformance
+suite, three recorders. Its rationale carries the load-bearing rules a future change must not
+silently break: **no `principalId`** (that one column turns billing evidence into DSR-erasable
+personal data), UTC buckets that cannot be re-split, latency that can never be a percentile, and a
+window clamped to what the store actually holds.
+
+Amended: **E-019** (both seams closed; `maxSeats` re-stated as still a seam rather than quietly
+dropped), **E-013** (the metered predicate, and that it *realizes* ADR-0056 §3), **E-003** (additive
+route + a 429 path + the refusal to add an MCP tool), **E-004** (two views, the theme matrix, the nav
+trap), **E-014** (two required `ProfileAdapters` members, no config change), **E-015** (recorded as
+structurally N/A, so the absence reads as a decision), **E-026** (generated artifacts).
+
+### Left tracked, not absorbed
+
+**F-095** (billing routes set no `config.audit`), **F-096** (a pre-existing ioredis teardown flake in
+the guarded self-hosted suite, attributed by stashed measurement — 2 of 4 runs at HEAD), **F-097**
+(nothing exposes the embeddings provider, so the cost card can only say what Tessera itself bills).
+
+**Next step:** the next eligible R4 feature by lowest id — **F-058** (feature flags + plugin
+permissions & health) — or **F-093** (`must`: deployment artifacts, unblocked since F-056). Worth
+noting for whoever claims next: `pnpm -w test:e2e` failed twice in a row in *different* packages
+during this session and passed both standalone and on the third full run. That is the disclosed
+parallel-e2e intermittent, and it is now costing real time on every feature — it may deserve its own
+feature rather than another honest footnote.
 
 ---
 

@@ -1908,7 +1908,7 @@
       "package": "@tessera/web",
       "release": "R4",
       "priority": "should",
-      "status": "backlog",
+      "status": "in_progress",
       "blockedBy": [
         "F-030",
         "F-035",
@@ -1931,7 +1931,8 @@
         "E-003",
         "E-004",
         "E-014"
-      ]
+      ],
+      "notes": "Plan: .harness/plans/F-057-analytics-usage-metering-and-billing-ui.md. Decision: ADR-0060. TWO corrections to this entry's own acceptance, both made explicitly by the project lead rather than assumed: (1) clause 3's \"latency from the observability metrics\" describes a capability that does not exist — the OTel histograms are no-op (no meter provider is ever registered: metrics.ts:6-9, telemetry.ts:19-20, and neither shipped bin passes a reader), nothing is exported or scraped, and there is no per-tenant dimension. Latency is therefore measured at the metering boundary and reported as average + slowest, NEVER p95 (ADR-0060 §3); true percentiles stay in the gated bench suite. (2) Enforcing maxMonthlyCompiles under the existing \"is a BillingProvider present\" predicate would hard-block every Local and self-hosted deployment after 200 compiles/month — because the composition root ALWAYS wires one (assemble.ts:151 -> local.ts:14 -> free plan), which also means those deployments are silently capped at 8000 tokens/compile TODAY, exactly what ADR-0056 §3 decided must not happen. \"Metered\" becomes an explicit flag and that shipped bug is fixed in its own commit (ADR-0060 §1). Out of scope, deliberately: seat enforcement (maxSeats stays a seam on E-019), a currency cost figure (no per-token price exists — cost posture only), a metrics/scrape endpoint (E-015's own seam), usage retention/pruning (usage is billing evidence), per-principal usage (would pull the store into NFR-13 DSR scope), and an MCP get_usage tool (ADR-0053). Auditing the billing routes is a real latent gap found while planning and refused here as scope creep — filed as F-095."
     },
     {
       "id": "F-058",
@@ -3116,6 +3117,37 @@
         "E-005"
       ],
       "notes": "FOUND BY F-056 increment 6 (2026-07-26), which turned KeywordRetriever/TemporalRetriever `index`/`remove` from `void` to `Promise<void>` on the stated rationale that a required Promise 'makes the compiler enumerate every caller'. It does not. After the change, all four production call sites in packages/config/src/sources/corpus-indexer.ts were left un-awaited and BOTH typecheck and lint stayed green — the port change bought the ability to have an async implementation, but zero enforcement that anyone awaits it. ADR-0059 §4 now records that correction. The four call sites are awaited (and `Promise.all`-ed, being independent) as of that increment; this feature is about the missing control, not those specific calls."
+    },
+    {
+      "id": "F-095",
+      "title": "The billing routes are never audited: billing.read/billing.manage exist in the vocabulary but no route sets config.audit",
+      "requirements": [
+        "FR-56",
+        "NFR-13"
+      ],
+      "service": "api",
+      "package": "@tessera/api",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "`apps/api/src/routes/v1/billing.ts` flags its routes with the existing `config.audit` marker so the audit recorder records them — today it sets only `config: { public: true }`, so a checkout or a plan change leaves no trail",
+        "The `billing.read` / `billing.manage` actions already in the audit vocabulary (apps/api/src/audit/model.ts:27-28) and already labelled in the dashboard (apps/web/lib/governance.ts:24-25) are actually emitted; a test asserts each billing route produces its expected audit action",
+        "`billing.manage` does not end in `.read`, so it enters ACTIVITY_ACTIONS and the Overview activity chart gains a new source — verify the chart and the audit view both render it correctly rather than assuming",
+        "Decide explicitly whether the webhook route is audited (it is provider-driven, not principal-driven, so the recorder's principal attribution needs an answer, not a default); record the decision"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-020",
+        "E-019"
+      ],
+      "notes": "FOUND WHILE PLANNING F-057 (2026-07-27) and deliberately REFUSED there as scope creep (golden rule 2), even though F-057 touches the checkout flow and the two-line fix was tempting. Verified at the time: apps/api/src/routes/v1/billing.ts sets only `config: { public: true }` — no `config.audit` on any billing route — while the actions and their dashboard labels have existed since F-046. This is a governance gap, not a cosmetic one: FR-56 says privileged actions are auditable, and a plan change is about as privileged as a tenant-level action gets."
     }
   ]
 }

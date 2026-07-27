@@ -3,6 +3,59 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-27 — F-064 IN PROGRESS: FR-49 baseline audited, 2 of 4 gaps closed
+
+Claimed **F-064** (`should`, lowest-id eligible in R4). Plan:
+[`F-064-dashboard-ux-baseline-and-i18n-readiness.md`](../plans/F-064-dashboard-ux-baseline-and-i18n-readiness.md).
+**Increments 0–2 committed green; 3–10 remain.**
+
+### The audit (acceptance clause 1), done before any code
+
+| FR-49 item | Reality |
+|---|---|
+| Virtualized long lists | **Was partial** — memory + search direct, audit via `ui/data-table`; **timeline unwindowed**. Closed in increment 1. |
+| Optimistic memory capture | **Was unbuilt** (no `onMutate` in `apps/web`). Closed in increment 2. |
+| Context menus on data rows | **Unbuilt** — no `ui/context-menu` exists. *Remaining (inc 3).* |
+| Keyboard-shortcuts overlay | **Unbuilt.** *Remaining (inc 4).* |
+| `⌘K` covers every route + primary action | Routes **yes** (maps `navItems`, structurally guarded by the nav-agreement test); primary actions **no** — one exists. *Remaining (inc 5).* |
+| i18n catalog + lint guard | **Unbuilt.** *Remaining (inc 6–8) — the largest and riskiest chunk.* |
+| Screenshot matrix | See the decision below. *Remaining (inc 9).* |
+| Reduced motion | **Already implemented** (`globals.css:288`) — needs an assertion, not code. |
+| axe per route | **Already implemented** — all 14 e2e specs use `AxeBuilder`. |
+
+**Lead decision (AskUserQuestion):** the requested screenshot matrix is what F-057 explicitly
+rejected (its reasoning still sits in `analytics.spec.ts:84` — a screenshot proves a page looked
+right on the day someone looked; an assertion fails the build). Increment 9 will assert theme and
+viewport behaviour and keep screenshots as **non-gating CI artifacts**. An ADR must record that the
+acceptance was interpreted, not followed literally.
+
+### Landed
+
+- **Increment 1 — timeline virtualized.** Three things it cost, each worth more than the change:
+  axe caught a **serious** violation I introduced (`scrollable-region-focusable` — keyboard users
+  could reach row links but never scroll the container); I **asserted something I had not checked**
+  (declared `role="list"`/`role="listitem"` believing absolute positioning drops the implicit role —
+  removed them, re-ran, Chromium keeps the roles and axe passes over 500 entries, so the lint rule
+  was right and the comment now says what was *verified*); and the unit test **broke two unrelated
+  tests** by rendering 500 stubbed rows (~12s, blowing the 5s timeout under parallel load and
+  starving `memory-authoring-dialog` — both passed in isolation, which is how it hid). Unit test now
+  40 rows for the wiring; windowing is asserted in e2e where the real virtualizer makes 500 cheap.
+- **Increment 2 — optimistic capture.** `cancelQueries` first (an in-flight read would overwrite the
+  optimistic row with a stale response), rollback restores the previous cache **wholesale** (removing
+  by id would lose a concurrent write), `onSettled` reconciles on success *and* failure. Pendingness
+  rides on a `pending:` id prefix, not a field on `Memory` — my first version added one behind an
+  `as` cast, which makes every consumer's type lie about the API. 3/3 mutations red.
+
+### Evidence so far
+
+verify-state green; workspace typecheck/lint/format/test green (448 web tests, was 442); timeline
+e2e 2 passed including axe over 500 entries.
+
+**Next step:** increment 3 — `ui/context-menu` + row actions (copy ref / open / show effects) on
+memory, search, audit and timeline. Then the shortcuts overlay (4), palette primary actions (5), the
+i18n catalog + migration + lint guard (6–8), theme/viewport parity (9), and close-out (10).
+
+---
 ## 2026-07-27 — F-059 DONE: Apache-2.0, the supply chain, and a publish set that was wrong
 
 Claimed **F-059** (`must`, lowest-id eligible in R4; F-051 + F-053 done). Plan:

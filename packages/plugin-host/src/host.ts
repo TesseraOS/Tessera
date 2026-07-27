@@ -4,6 +4,8 @@ import {
   type Plugin,
   type PluginContext,
   type PluginGrants,
+  type PluginHealthReport,
+  type PluginHealthSummary,
   type PluginHostContext,
   type PluginInfo,
   type PluginInstance,
@@ -69,6 +71,36 @@ function createGrants(pluginId: string, granted: readonly PluginPermission[]): P
 }
 
 /**
+ * Health for one plugin (FR-59). Only a `started` plugin is asked; every other status answers from
+ * the status itself, because "not running" is not the same as "broken" and a readiness probe that
+ * conflates them would hold traffic over a plugin nobody started.
+ */
+async function healthOf(entry: Entry): Promise<PluginHealthReport> {
+  const id = entry.plugin.manifest.id;
+  const base = { id, status: entry.status };
+  if (entry.status === 'failed') {
+    return { ...base, ok: false, detail: entry.error ?? 'failed' };
+  }
+  if (entry.status !== 'started' || entry.instance === undefined) {
+    return { ...base, ok: true, detail: `not started (${entry.status})` };
+  }
+  if (entry.instance.health === undefined) {
+    // The honest answer: the host has nothing to say against a plugin that reports nothing.
+    return { ...base, ok: true, detail: 'does not report health' };
+  }
+  try {
+    const health = await entry.instance.health();
+    return {
+      ...base,
+      ok: health.ok,
+      detail: health.detail ?? (health.ok ? 'healthy' : 'unhealthy'),
+    };
+  } catch (error) {
+    return { ...base, ok: false, detail: errorMessage(error) };
+  }
+}
+
+/**
  * The plugin host (FR-40/58): discovery (registration), config validation, lifecycle, and **failure
  * isolation** — a misbehaving plugin is marked `failed` and never throws out of the host or stops
  * other plugins. `load` is the one exception: an *unknown id* is a programming error and throws.
@@ -89,6 +121,11 @@ export interface PluginHost {
   stopAll(): Promise<readonly PluginInfo[]>;
   /** Dispose every instance (reverse order) and clear them, isolating failures. */
   dispose(): Promise<readonly PluginInfo[]>;
+  /**
+   * Aggregate health across every registered plugin (FR-59). Isolated like everything else: a plugin
+   * whose `health()` throws is reported unhealthy, never propagated.
+   */
+  health(): Promise<PluginHealthSummary>;
   /** The capability a loaded plugin provides (the underlying port), or `undefined`. */
   capability<T = unknown>(id: string): T | undefined;
   /** Snapshots of every registered plugin, optionally filtered by kind. */
@@ -246,6 +283,13 @@ export function createPluginHost(context: PluginHostContext = {}): PluginHost {
         }
       }
       return order.map((id) => toInfo(require(id)));
+    },
+
+    async health() {
+      const plugins = await Promise.all(order.map((id) => healthOf(require(id))));
+      // Vacuously true for an empty host — see ADR-0061 §3. The caller (the readiness probe) is the
+      // one that says "0 plugins registered"; the summary just reports what it found.
+      return { ok: plugins.every((plugin) => plugin.ok), plugins };
     },
 
     capability<T = unknown>(id: string): T | undefined {

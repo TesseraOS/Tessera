@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import type { Plugin, PluginPermission } from './domain.js';
+import type { Plugin, PluginHealth, PluginPermission } from './domain.js';
 import { createPluginHost } from './host.js';
 import { fakeEmbeddingsPlugin, transformersEmbeddingsPlugin } from './plugins/embeddings.js';
 import { filesystemConnectorPlugin } from './plugins/filesystem-connector.js';
@@ -413,5 +413,160 @@ describe('plugin grants — denied by default (FR-60)', () => {
     const info = await host.load('tessera.ai.transformers-embeddings');
     expect(info.status).toBe('failed');
     expect(info.error).toMatch(/did not declare permission "network"/);
+  });
+});
+
+describe('plugin health (FR-59)', () => {
+  /** A plugin whose `health()` is whatever the test says it is. */
+  function reporting(
+    id: string,
+    health: () => PluginHealth | Promise<PluginHealth>,
+  ): Plugin<Record<string, never>, object> {
+    return {
+      manifest: {
+        id,
+        kind: 'processor',
+        name: id,
+        version: '1.0.0',
+        configSchema: z.object({}),
+      },
+      setup: () => ({ capability: {}, health }),
+    };
+  }
+
+  it('is vacuously ok for a host with no plugins at all', async () => {
+    // The shipped profiles are exactly this case (ADR-0061 §3) — it must be a true empty report,
+    // not an error and not a fabricated entry.
+    expect(await createPluginHost().health()).toEqual({ ok: true, plugins: [] });
+  });
+
+  it('asks a started plugin and reports what it said', async () => {
+    const host = createPluginHost();
+    host.register(reporting('p.up', () => ({ ok: true, detail: 'root reachable' })));
+
+    await host.load('p.up');
+    await host.start('p.up');
+
+    expect(await host.health()).toEqual({
+      ok: true,
+      plugins: [{ id: 'p.up', status: 'started', ok: true, detail: 'root reachable' }],
+    });
+  });
+
+  it('reports an unhealthy plugin and drags the aggregate down with it', async () => {
+    const host = createPluginHost();
+    host.register(reporting('p.up', () => ({ ok: true })));
+    host.register(reporting('p.down', () => ({ ok: false, detail: 'endpoint refused' })));
+
+    for (const id of ['p.up', 'p.down']) {
+      await host.load(id);
+      await host.start(id);
+    }
+
+    const summary = await host.health();
+    expect(summary.ok).toBe(false);
+    expect(summary.plugins.map((p) => [p.id, p.ok, p.detail])).toEqual([
+      ['p.up', true, 'healthy'],
+      ['p.down', false, 'endpoint refused'],
+    ]);
+  });
+
+  it('treats a throwing health check as unhealthy without propagating it', async () => {
+    const host = createPluginHost();
+    host.register(
+      reporting('p.throws', () => {
+        throw new Error('probe boom');
+      }),
+    );
+    host.register(reporting('p.fine', () => ({ ok: true })));
+
+    await host.load('p.throws');
+    await host.start('p.throws');
+    await host.load('p.fine');
+    await host.start('p.fine');
+
+    // Isolation, same as everywhere else: one bad probe must not take the aggregation with it.
+    const summary = await host.health();
+    expect(summary.plugins.find((p) => p.id === 'p.throws')).toEqual({
+      id: 'p.throws',
+      status: 'started',
+      ok: false,
+      detail: 'probe boom',
+    });
+    expect(summary.plugins.find((p) => p.id === 'p.fine')?.ok).toBe(true);
+  });
+
+  it('a rejected promise is unhealthy too, not an unhandled rejection', async () => {
+    const host = createPluginHost();
+    host.register(reporting('p.rejects', () => Promise.reject(new Error('async boom'))));
+
+    await host.load('p.rejects');
+    await host.start('p.rejects');
+
+    expect((await host.health()).plugins[0]).toMatchObject({ ok: false, detail: 'async boom' });
+  });
+
+  it('does not ask a plugin that was never started, and does not call it broken', async () => {
+    const probe = vi.fn(() => ({ ok: false, detail: 'should never be asked' }));
+    const host = createPluginHost();
+    host.register(reporting('p.idle', probe));
+
+    await host.load('p.idle');
+
+    expect(await host.health()).toEqual({
+      ok: true,
+      plugins: [{ id: 'p.idle', status: 'loaded', ok: true, detail: 'not started (loaded)' }],
+    });
+    expect(probe).not.toHaveBeenCalled();
+  });
+
+  it('reports a failed plugin as unhealthy, carrying its isolated error', async () => {
+    const host = createPluginHost();
+    host.register({
+      manifest: {
+        id: 'p.broken',
+        kind: 'connector',
+        name: 'broken',
+        version: '1',
+        configSchema: z.object({}),
+      },
+      setup() {
+        throw new Error('setup boom');
+      },
+    });
+
+    await host.load('p.broken');
+
+    expect(await host.health()).toEqual({
+      ok: false,
+      plugins: [{ id: 'p.broken', status: 'failed', ok: false, detail: 'setup boom' }],
+    });
+  });
+
+  it('says so when a started plugin reports no health, rather than inventing one', async () => {
+    const host = createPluginHost();
+    host.register(counterPlugin('p.counter'));
+
+    await host.load('p.counter', { start: 0 });
+    await host.start('p.counter');
+
+    expect((await host.health()).plugins[0]).toEqual({
+      id: 'p.counter',
+      status: 'started',
+      ok: true,
+      detail: 'does not report health',
+    });
+  });
+
+  it('health is a query — it never changes a plugin’s status', async () => {
+    const host = createPluginHost();
+    host.register(reporting('p.sick', () => ({ ok: false, detail: 'degraded' })));
+
+    await host.load('p.sick');
+    await host.start('p.sick');
+    await host.health();
+
+    // Acting on a bad result is the restart policy's job, not the probe's.
+    expect(host.list()[0]?.status).toBe('started');
   });
 });

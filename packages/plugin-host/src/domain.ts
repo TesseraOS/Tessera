@@ -106,6 +106,16 @@ export interface PluginManifest<TConfig = unknown> {
 }
 
 /**
+ * A plugin's own answer to "can you do your job right now?" (FR-59) — e.g. a connector stat-ing its
+ * root, a remote provider pinging its endpoint.
+ */
+export interface PluginHealth {
+  readonly ok: boolean;
+  /** Non-sensitive detail: what was checked, or why it is unhealthy. **Never** secrets or credentials. */
+  readonly detail?: string;
+}
+
+/**
  * A live plugin instance: the capability it provides (the underlying port implementation) plus
  * optional lifecycle hooks the host drives.
  */
@@ -114,6 +124,28 @@ export interface PluginInstance<TCapability = unknown> {
   start?(): Promise<void> | void;
   stop?(): Promise<void> | void;
   dispose?(): Promise<void> | void;
+  /**
+   * Optional liveness check (FR-59). The host calls this only while the plugin is `started`, treats a
+   * throw as unhealthy, and **never lets it change the plugin's status** — health is a query, not a
+   * lifecycle transition. Acting on a bad result is the restart policy's job.
+   */
+  health?(): Promise<PluginHealth> | PluginHealth;
+}
+
+/** One plugin's health as the host reports it. */
+export interface PluginHealthReport {
+  readonly id: string;
+  readonly status: PluginStatus;
+  readonly ok: boolean;
+  /** Why — including "not started" and "does not report health", which are both `ok` states. */
+  readonly detail: string;
+}
+
+/** The host's aggregate health (FR-59), suitable for a readiness probe. */
+export interface PluginHealthSummary {
+  /** True when no registered plugin is unhealthy. **Vacuously true for an empty host** (ADR-0061 §3). */
+  readonly ok: boolean;
+  readonly plugins: readonly PluginHealthReport[];
 }
 
 /**

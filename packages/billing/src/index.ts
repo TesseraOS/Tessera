@@ -11,6 +11,10 @@ export * from './ports.js';
 export * from './subscription-store.js';
 export * from './adapters/local.js';
 export * from './adapters/dodo.js';
+// Durable SubscriptionStore adapters (F-057; closes the F-030 in-memory seam — ADR-0060 §7).
+export * from './adapters/subscription-row.js';
+export * from './adapters/sqlite-subscription-store.js';
+export * from './adapters/postgres-subscription-store.js';
 
 // Per-tenant usage metering (F-057; NFR-12, FR-47 — ADR-0060). It lives here, beside the entitlements
 // it exists to serve: a counter and the limit it is measured against belong in one package, or they drift.

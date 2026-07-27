@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { putFragment } from '../../src/fragment-source';
 import { loadConfig } from '../../src/load';
+import { createRuntime } from '../../src/profiles/create-runtime';
 import { createLocalRuntime } from '../../src/profiles/local';
 import type { Runtime } from '../../src/runtime';
 
@@ -73,9 +74,17 @@ describe('local profile runtime', () => {
     expect(await rt.services.readiness?.()).toMatchObject({ ready: true });
   });
 
-  it('refuses a non-local profile until the cloud profile lands (F-023)', async () => {
-    const config = loadConfig({ TESSERA_PROFILE: 'cloud' });
-    await expect(createLocalRuntime(config)).rejects.toThrow(/not wired/);
+  it('no longer refuses a non-local profile — F-056 closed the F-023 deferral', async () => {
+    // This test used to assert `rejects.toThrow(/not wired/)`. That throw was the whole of the
+    // F-023/ADR-0026 deferral, and F-056 deleted it: `createRuntime` now selects a real self-hosted
+    // profile. Rewritten rather than removed, so the change of behaviour stays visible in history.
+    //
+    // `createSelfHostedRuntime` needs Postgres/Redis/S3, so this asserts only what can be asserted
+    // offline: the failure is now about a MISSING CONNECTION, not an unimplemented profile. The real
+    // boot is `self-hosted-profile.test.ts` (guarded by TESSERA_TEST_SELF_HOSTED=1).
+    const config = loadConfig({ TESSERA_PROFILE: 'self-hosted' });
+    await expect(createRuntime(config, { env: {} })).rejects.toThrow(/DATABASE_URL/);
+    await expect(createRuntime(config, { env: {} })).rejects.not.toThrow(/not wired/);
   });
 
   // Guarded: exercises the real Transformers.js default (downloads a model). Off by default to keep

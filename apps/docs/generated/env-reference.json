@@ -236,30 +236,60 @@
       "section": "Self-hosted / cloud only (leave unset for local)",
       "vars": [
         {
-          "name": "DATABASE_URL",
+          "name": "TESSERA_PROFILE",
+          "default": "self-hosted",
+          "optional": true,
+          "description": "Set TESSERA_PROFILE=self-hosted to select Postgres + S3 + Redis for EVERY store (F-056). The profile refuses to boot if any of the three connections below is missing, rather than failing later mid-request. Bring the services up with `docker compose up -d`."
+        },
+        {
+          "name": "TESSERA_SECRET_DATABASE_URL",
           "default": "postgres://tessera:tessera@127.0.0.1:5432/tessera",
           "optional": true,
-          "description": "Postgres + pgvector (F-023; see docker-compose.yml). Required for the self-hosted/cloud profiles."
+          "description": " Connections are SECRETS (they carry credentials), so they go through the SecretsProvider — which means the TESSERA_SECRET_ prefix for the default \"env\" provider:"
         },
         {
-          "name": "REDIS_URL",
+          "name": "TESSERA_SECRET_REDIS_URL",
+          "default": "redis://127.0.0.1:6379",
+          "optional": true
+        },
+        {
+          "name": "TESSERA_SECRET_S3_ACCESS_KEY_ID",
           "default": "",
           "optional": true
         },
         {
-          "name": "OBJECT_STORE_ENDPOINT",
+          "name": "TESSERA_SECRET_S3_SECRET_ACCESS_KEY",
           "default": "",
           "optional": true
         },
         {
-          "name": "OBJECT_STORE_BUCKET",
-          "default": "",
+          "name": "TESSERA_S3_BUCKET",
+          "default": "tessera",
+          "optional": true,
+          "description": " S3 addressing is ordinary config, not secret:"
+        },
+        {
+          "name": "TESSERA_S3_ENDPOINT",
+          "default": "http://127.0.0.1:9000",
+          "optional": true,
+          "note": "omit for real AWS"
+        },
+        {
+          "name": "TESSERA_S3_REGION",
+          "default": "us-east-1",
           "optional": true
+        },
+        {
+          "name": "TESSERA_S3_FORCE_PATH_STYLE",
+          "default": "1",
+          "optional": true,
+          "note": "required for MinIO (no wildcard DNS)"
         },
         {
           "name": "OIDC_ISSUER_URL",
           "default": "",
-          "optional": true
+          "optional": true,
+          "description": ""
         }
       ]
     },

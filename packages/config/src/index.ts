@@ -13,6 +13,11 @@ export * from './secrets/index.js';
 export * from './fragment-source.js';
 export * from './runtime.js';
 export * from './profiles/local.js';
+// The profile selector (F-056) — what every process should boot through. `self-hosted.js` is
+// deliberately NOT re-exported: it is reached by dynamic import so `pg`/`bullmq`/`ioredis` stay out
+// of a Local process's module graph.
+export * from './profiles/create-runtime.js';
+export type { ProfileAdapters } from './profiles/assemble.js';
 export * from './auth/sqlite-token-store.js';
 export * from './projects/sqlite-project-store.js';
 export * from './sources/sqlite-source-registry.js';

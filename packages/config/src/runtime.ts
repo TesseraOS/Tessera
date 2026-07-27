@@ -7,13 +7,20 @@ import type { BillingProvider } from '@tessera/billing';
 import type { SourceService } from '@tessera/ingestion';
 import type { MemoryRetentionPolicy } from '@tessera/memory';
 import type { KeywordRetriever, TemporalRetriever } from '@tessera/retrieval';
-import type { BlobStore, Queue, SqliteStore, VectorStore } from '@tessera/storage';
+import type { BlobStore, Queue, RelationalStore, VectorStore } from '@tessera/storage';
 import type { TesseraConfig } from './schema.js';
 import type { SecretsProvider } from './secrets/index.js';
 
-/** The wired low-level stores a runtime owns. */
+/**
+ * The wired low-level stores a runtime owns.
+ *
+ * `relational` is the **port**, not a dialect: the Local profile supplies `SqliteStore` and the
+ * self-hosted profile `PostgresStore` (F-056). Narrowing this to one dialect is what made
+ * `createLocalRuntime` the only profile that could exist — everything downstream needs the lifecycle
+ * (`healthcheck`/`close`), and the typed Drizzle handle belongs to whoever constructs the adapters.
+ */
 export interface RuntimeStores {
-  readonly relational: SqliteStore;
+  readonly relational: RelationalStore;
   readonly vector: VectorStore;
   readonly blob: BlobStore;
   readonly queue: Queue;

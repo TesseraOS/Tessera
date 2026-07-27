@@ -55,10 +55,19 @@ export function configFromEnv(env: Env = process.env): ConfigInput {
     logLevel: env.TESSERA_LOG_LEVEL,
   });
 
+  // S3 addressing for the self-hosted profile (F-056). Credentials are deliberately NOT here —
+  // they come from the SecretsProvider (`S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY`).
+  const s3 = section({
+    bucket: env.TESSERA_S3_BUCKET,
+    endpoint: env.TESSERA_S3_ENDPOINT,
+    region: env.TESSERA_S3_REGION,
+    forcePathStyle: bool(env.TESSERA_S3_FORCE_PATH_STYLE),
+  });
   const storage = section({
     sqlitePath: env.TESSERA_SQLITE_PATH,
     vectorPath: env.TESSERA_VECTOR_PATH,
     blobRoot: env.TESSERA_BLOB_ROOT,
+    ...(s3 !== undefined ? { s3 } : {}),
   });
   const embeddings = section({
     provider: env.TESSERA_EMBEDDINGS_PROVIDER,

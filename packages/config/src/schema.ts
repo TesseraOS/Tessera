@@ -24,14 +24,34 @@ export type AuthMode = (typeof AUTH_MODES)[number];
 export const BILLING_PROVIDERS = ['none', 'dodo'] as const;
 export type BillingProviderKind = (typeof BILLING_PROVIDERS)[number];
 
+/**
+ * S3-compatible object storage for the `self-hosted` profile (F-056).
+ *
+ * **Credentials are deliberately absent.** The access key and secret come from the
+ * {@link SecretsProvider} (`S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY`), like the Dodo billing keys —
+ * config is a file people commit and paste into issues; secrets are not.
+ */
+const s3Schema = z
+  .object({
+    bucket: z.string().min(1).optional(),
+    /** e.g. `https://s3.eu-west-1.amazonaws.com`, or `http://minio:9000`. */
+    endpoint: z.string().url().optional(),
+    region: z.string().min(1).default('us-east-1'),
+    /** Required for MinIO and anything else without wildcard DNS for bucket subdomains. */
+    forcePathStyle: z.boolean().default(false),
+  })
+  .default({});
+
 const storageSchema = z
   .object({
-    /** RelationalStore path (`:memory:` for ephemeral). */
+    /** RelationalStore path (`:memory:` for ephemeral). Local profile. */
     sqlitePath: z.string().min(1).default(`${DEFAULT_DATA_DIR}/tessera.db`),
-    /** VectorStore (sqlite-vec) path. */
+    /** VectorStore (sqlite-vec) path. Local profile. */
     vectorPath: z.string().min(1).default(`${DEFAULT_DATA_DIR}/vectors.db`),
-    /** Filesystem BlobStore root (also backs the compiler's fragment corpus). */
+    /** Filesystem BlobStore root (also backs the compiler's fragment corpus). Local profile. */
     blobRoot: z.string().min(1).default(`${DEFAULT_DATA_DIR}/blobs`),
+    /** S3 object storage; `self-hosted` profile only. */
+    s3: s3Schema,
   })
   .default({});
 

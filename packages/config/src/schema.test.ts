@@ -97,6 +97,28 @@ describe('config schema + loader', () => {
     expect(config.api.security.hsts).toBe(true);
   });
 
+  it('maps TESSERA_S3_* addressing, keeping credentials out of config (F-056)', () => {
+    const config = loadConfig({
+      TESSERA_S3_BUCKET: 'tessera',
+      TESSERA_S3_ENDPOINT: 'http://127.0.0.1:9000',
+      TESSERA_S3_REGION: 'eu-west-1',
+      TESSERA_S3_FORCE_PATH_STYLE: '1',
+    });
+    expect(config.storage.s3).toEqual({
+      bucket: 'tessera',
+      endpoint: 'http://127.0.0.1:9000',
+      region: 'eu-west-1',
+      forcePathStyle: true,
+    });
+    // Credentials are a SecretsProvider concern; config is a file people commit and paste into
+    // issues, so there must be nowhere here to put a secret by accident.
+    expect(JSON.stringify(config.storage.s3)).not.toMatch(/secret|accessKey/i);
+  });
+
+  it('defaults s3 addressing without requiring any of it for the local profile', () => {
+    expect(loadConfig({}).storage.s3).toEqual({ region: 'us-east-1', forcePathStyle: false });
+  });
+
   it('rejects an invalid api rate-limit number', () => {
     expect(() => loadConfig({ TESSERA_API_RATE_LIMIT: 'lots' })).toThrow(/invalid configuration/);
   });

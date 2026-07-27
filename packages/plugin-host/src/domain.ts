@@ -141,6 +141,32 @@ export interface PluginHealthReport {
   readonly detail: string;
 }
 
+/**
+ * How hard the host tries before it gives up on starting a plugin (FR-59, failure isolation extended).
+ *
+ * **The default is `maxRestarts: 0` — no retries at all.** Retrying is opt-in because a plugin whose
+ * `start` throws deterministically gains nothing from being asked four more times, and a host that
+ * retries by default turns a fast, legible failure into a slow one.
+ */
+export interface PluginRestartPolicy {
+  /** Retry attempts after the first failure. `0` reproduces the original fail-immediately behavior. */
+  readonly maxRestarts: number;
+  /** Delay before the first retry. */
+  readonly initialDelayMs: number;
+  /** Multiplier applied to the delay after each attempt. */
+  readonly factor: number;
+  /** Ceiling on the delay, so a long backoff cannot grow without bound. */
+  readonly maxDelayMs: number;
+}
+
+/** Options for {@link createPluginHost} beyond the base context. */
+export interface PluginHostOptions {
+  /** Restart/backoff policy; merged over the defaults. */
+  readonly restart?: Partial<PluginRestartPolicy>;
+  /** Injectable delay, so backoff sequencing is deterministic in tests instead of wall-clock. */
+  readonly sleep?: (ms: number) => Promise<void>;
+}
+
 /** The host's aggregate health (FR-59), suitable for a readiness probe. */
 export interface PluginHealthSummary {
   /** True when no registered plugin is unhealthy. **Vacuously true for an empty host** (ADR-0061 §3). */
@@ -177,6 +203,8 @@ export interface PluginInfo {
    * array is the honest answer for a plugin that declared nothing, not missing information.
    */
   readonly permissions: readonly PluginPermission[];
+  /** Retry attempts the host has spent on this plugin — non-zero means it has been flapping. */
+  readonly restarts: number;
   /** Present when `status` is `failed` — the isolated error message (never throws out of the host). */
   readonly error?: string;
 }

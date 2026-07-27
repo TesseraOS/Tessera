@@ -570,3 +570,177 @@ describe('plugin health (FR-59)', () => {
     expect(host.list()[0]?.status).toBe('started');
   });
 });
+
+describe('restart / backoff (FR-59)', () => {
+  /** A plugin whose `start` throws the first `failures` times, then succeeds. */
+  function flaky(id: string, failures: number): Plugin<Record<string, never>, object> {
+    let attempts = 0;
+    return {
+      manifest: {
+        id,
+        kind: 'processor',
+        name: id,
+        version: '1.0.0',
+        configSchema: z.object({}),
+      },
+      setup: () => ({
+        capability: {},
+        start() {
+          attempts += 1;
+          if (attempts <= failures) throw new Error(`start boom ${attempts}`);
+        },
+      }),
+    };
+  }
+
+  it('does not retry by default — the original fail-fast behavior is byte-stable', async () => {
+    const sleep = vi.fn(async () => {});
+    const host = createPluginHost({}, { sleep });
+    host.register(flaky('p.flaky', 1));
+
+    await host.load('p.flaky');
+    const info = await host.start('p.flaky');
+
+    expect(info.status).toBe('failed');
+    expect(info.error).toBe('start boom 1'); // no "gave up after" suffix when retries are off
+    expect(info.restarts).toBe(0);
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  it('retries until the plugin starts, and reports how many attempts it cost', async () => {
+    const sleep = vi.fn(async () => {});
+    const host = createPluginHost({}, { restart: { maxRestarts: 3 }, sleep });
+    host.register(flaky('p.flaky', 2));
+
+    await host.load('p.flaky');
+    const info = await host.start('p.flaky');
+
+    expect(info.status).toBe('started');
+    expect(info.error).toBeUndefined();
+    expect(info.restarts).toBe(2);
+  });
+
+  it('backs off exponentially, capped at maxDelayMs', async () => {
+    const delays: number[] = [];
+    const host = createPluginHost(
+      {},
+      {
+        restart: { maxRestarts: 5, initialDelayMs: 100, factor: 3, maxDelayMs: 1000 },
+        sleep: async (ms) => {
+          delays.push(ms);
+        },
+      },
+    );
+    host.register(flaky('p.flaky', 99));
+
+    await host.load('p.flaky');
+    await host.start('p.flaky');
+
+    // 100 → 300 → 900 → capped at 1000 → 1000. Five retries means five waits.
+    expect(delays).toEqual([100, 300, 900, 1000, 1000]);
+  });
+
+  it('gives up after the budget and says so', async () => {
+    const host = createPluginHost({}, { restart: { maxRestarts: 2 }, sleep: async () => {} });
+    host.register(flaky('p.doomed', 99));
+
+    await host.load('p.doomed');
+    const info = await host.start('p.doomed');
+
+    expect(info.status).toBe('failed');
+    expect(info.error).toMatch(/start boom 3 \(gave up after 2 restart attempt\(s\)\)/);
+    expect(info.restarts).toBe(2);
+  });
+
+  it('startAll still isolates: a doomed plugin exhausts its budget without stopping the others', async () => {
+    const host = createPluginHost({}, { restart: { maxRestarts: 2 }, sleep: async () => {} });
+    host.register(flaky('p.doomed', 99));
+    host.register(counterPlugin('p.ok'));
+
+    await host.load('p.doomed');
+    await host.load('p.ok', { start: 0 });
+    const infos = await host.startAll();
+
+    expect(infos.find((i) => i.id === 'p.doomed')?.status).toBe('failed');
+    expect(infos.find((i) => i.id === 'p.ok')?.status).toBe('started');
+  });
+
+  it('restart() recovers a plugin that failed at start', async () => {
+    const host = createPluginHost({}, { sleep: async () => {} });
+    host.register(flaky('p.flaky', 1));
+
+    await host.load('p.flaky');
+    expect((await host.start('p.flaky')).status).toBe('failed');
+
+    // The second attempt succeeds because the plugin's own counter has moved on.
+    expect((await host.restart('p.flaky')).status).toBe('started');
+  });
+
+  it('restart() stops a started plugin before starting it again', async () => {
+    const stop = vi.fn();
+    const start = vi.fn();
+    const host = createPluginHost({}, { sleep: async () => {} });
+    host.register(counterPlugin('p.counter', { start, stop }));
+
+    await host.load('p.counter', { start: 0 });
+    await host.start('p.counter');
+    expect((await host.restart('p.counter')).status).toBe('started');
+
+    expect(stop).toHaveBeenCalledOnce();
+    expect(start).toHaveBeenCalledTimes(2);
+  });
+
+  it('restart() cannot resurrect a plugin that failed during setup — there is no instance', async () => {
+    const host = createPluginHost({}, { sleep: async () => {} });
+    host.register({
+      manifest: {
+        id: 'p.badsetup',
+        kind: 'connector',
+        name: 'bad',
+        version: '1',
+        configSchema: z.object({}),
+      },
+      setup() {
+        throw new Error('setup boom');
+      },
+    });
+
+    await host.load('p.badsetup');
+    const info = await host.restart('p.badsetup');
+
+    expect(info.status).toBe('failed');
+    expect(info.error).toBe('setup boom');
+  });
+
+  it('an unhealthy started plugin is recovered by restart(), closing the health → action loop', async () => {
+    let broken = true;
+    const host = createPluginHost({}, { sleep: async () => {} });
+    host.register({
+      manifest: {
+        id: 'p.selfheal',
+        kind: 'processor',
+        name: 'selfheal',
+        version: '1',
+        configSchema: z.object({}),
+      },
+      setup: () => ({
+        capability: {},
+        start() {
+          broken = false;
+        },
+        stop() {
+          broken = true;
+        },
+        health: () => ({ ok: !broken, detail: broken ? 'degraded' : 'recovered' }),
+      }),
+    });
+
+    await host.load('p.selfheal');
+    await host.start('p.selfheal');
+    broken = true; // it goes bad while running
+    expect((await host.health()).ok).toBe(false);
+
+    await host.restart('p.selfheal');
+    expect((await host.health()).ok).toBe(true);
+  });
+});

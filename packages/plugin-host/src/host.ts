@@ -6,11 +6,13 @@ import {
   type PluginGrants,
   type PluginHealthReport,
   type PluginHealthSummary,
+  type PluginHostOptions,
   type PluginHostContext,
   type PluginInfo,
   type PluginInstance,
   type PluginKind,
   type PluginPermission,
+  type PluginRestartPolicy,
   type PluginStatus,
 } from './domain.js';
 
@@ -23,6 +25,8 @@ interface Entry {
   readonly permissions: readonly PluginPermission[];
   /** Declared entries the host does NOT recognize — these fail the plugin at load. */
   readonly unrecognized: readonly string[];
+  /** Retry attempts spent on this plugin (FR-59). */
+  restarts: number;
   status: PluginStatus;
   error: string | undefined;
   instance: PluginInstance<unknown> | undefined;
@@ -115,6 +119,12 @@ export interface PluginHost {
   start(id: string): Promise<PluginInfo>;
   /** Start every loaded plugin, isolating failures. */
   startAll(): Promise<readonly PluginInfo[]>;
+  /**
+   * Stop then start a plugin, through the restart policy (FR-59) — the recovery action for a plugin
+   * `health()` reported bad, or one already `failed` at start. A plugin that failed during `setup`
+   * has no instance to restart and stays `failed`; re-`load` it instead.
+   */
+  restart(id: string): Promise<PluginInfo>;
   /** Stop a started plugin's instance. */
   stop(id: string): Promise<PluginInfo>;
   /** Stop every started plugin (reverse order), isolating failures. */
@@ -145,17 +155,37 @@ function toInfo(entry: Entry): PluginInfo {
     version: manifest.version,
     status: entry.status,
     permissions: entry.permissions,
+    restarts: entry.restarts,
   };
   return entry.error === undefined ? base : { ...base, error: entry.error };
 }
 
+/** Fail immediately, exactly as the host did before restarts existed. See {@link PluginRestartPolicy}. */
+const DEFAULT_RESTART_POLICY: PluginRestartPolicy = {
+  maxRestarts: 0,
+  initialDelayMs: 100,
+  factor: 2,
+  maxDelayMs: 30_000,
+};
+
+const defaultSleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
 /**
  * Create a {@link PluginHost}. `context` is the base handed to each plugin's `setup` (e.g. a bound
- * logger); the host adds that plugin's own {@link PluginGrants} to it at load.
+ * logger); the host adds that plugin's own {@link PluginGrants} to it at load. `options` carries the
+ * restart policy and an injectable `sleep`.
  */
-export function createPluginHost(context: PluginHostContext = {}): PluginHost {
+export function createPluginHost(
+  context: PluginHostContext = {},
+  options: PluginHostOptions = {},
+): PluginHost {
   const entries = new Map<string, Entry>();
   const order: string[] = [];
+  const policy: PluginRestartPolicy = { ...DEFAULT_RESTART_POLICY, ...options.restart };
+  const sleep = options.sleep ?? defaultSleep;
 
   function require(id: string): Entry {
     const entry = entries.get(id);
@@ -165,17 +195,37 @@ export function createPluginHost(context: PluginHostContext = {}): PluginHost {
     return entry;
   }
 
+  /**
+   * Start a plugin, retrying per the restart policy (FR-59). With the default policy this is one
+   * attempt and the original behavior; with retries configured, the plugin is only declared `failed`
+   * once the budget is exhausted, and the message says how many attempts it took.
+   */
   async function startEntry(entry: Entry): Promise<void> {
     if (entry.instance === undefined || (entry.status !== 'loaded' && entry.status !== 'stopped')) {
       return;
     }
-    try {
-      await entry.instance.start?.();
-      entry.status = 'started';
-      entry.error = undefined;
-    } catch (error) {
-      entry.status = 'failed';
-      entry.error = errorMessage(error);
+    const attempts = policy.maxRestarts + 1;
+    let delay = policy.initialDelayMs;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        await entry.instance.start?.();
+        entry.status = 'started';
+        entry.error = undefined;
+        return;
+      } catch (error) {
+        const message = errorMessage(error);
+        if (attempt === attempts) {
+          entry.status = 'failed';
+          entry.error =
+            policy.maxRestarts === 0
+              ? message
+              : `${message} (gave up after ${policy.maxRestarts} restart attempt(s))`;
+          return;
+        }
+        entry.restarts += 1;
+        await sleep(delay);
+        delay = Math.min(delay * policy.factor, policy.maxDelayMs);
+      }
     }
   }
 
@@ -201,6 +251,7 @@ export function createPluginHost(context: PluginHostContext = {}): PluginHost {
       entries.set(id, {
         plugin: plugin as unknown as ErasedPlugin,
         permissions,
+        restarts: 0,
         unrecognized,
         status: 'registered',
         error: undefined,
@@ -256,6 +307,18 @@ export function createPluginHost(context: PluginHostContext = {}): PluginHost {
     async startAll() {
       for (const id of order) await startEntry(require(id));
       return order.map((id) => toInfo(require(id)));
+    },
+
+    async restart(id) {
+      const entry = require(id);
+      await stopEntry(entry);
+      // A plugin that failed at START still holds its instance and is recoverable; one that failed at
+      // SETUP does not, and `startEntry` leaves it alone. The distinction is why this is not a reset.
+      if (entry.status === 'failed' && entry.instance !== undefined) {
+        entry.status = 'stopped';
+      }
+      await startEntry(entry);
+      return toInfo(entry);
     },
 
     async stop(id) {

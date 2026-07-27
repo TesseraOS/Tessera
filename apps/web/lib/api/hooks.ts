@@ -14,7 +14,9 @@ import type {
   EditMemoryBody,
   EffectsQuery,
   GraphQuery,
+  Memory,
   MemoryListFilter,
+  MemoryListResponse,
   RegisterSourceBody,
 } from './types';
 
@@ -54,16 +56,83 @@ export function useCompile() {
   });
 }
 
-/** Capture a memory (FR-13) — POST /v1/memory. Refreshes the memory list on success. */
+/**
+ * Capture a memory (FR-13) — POST /v1/memory, applied **optimistically** (F-064; FR-49).
+ *
+ * Capture is the one write in the dashboard where optimism is safe: it is an append, the server
+ * assigns no field the user is looking at while they wait, and a failure is fully reversible by
+ * dropping the row. Contrast the writes that are deliberately NOT optimistic — a scan is
+ * asynchronous and its outcome is genuinely unknown, and an edit appends a superseding version whose
+ * number the server owns.
+ *
+ * The optimistic row is marked `pending` so a view can render it as in-flight rather than pretending
+ * it is durable. On error the previous cache is restored wholesale — reversing by id would lose any
+ * concurrent write that landed in between.
+ */
 export function useCaptureMemory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: CaptureMemoryBody) => api.captureMemory(body),
-    onSuccess: () => {
+    onMutate: async (body: CaptureMemoryBody) => {
+      // Cancel in-flight list reads first: one resolving after this write would overwrite the
+      // optimistic row with a server response that predates it.
+      await queryClient.cancelQueries({ queryKey: ['memories'] });
+      const previous = queryClient.getQueriesData<MemoryListResponse>({ queryKey: ['memories'] });
+      const optimistic = optimisticMemory(body);
+      queryClient.setQueriesData<MemoryListResponse>({ queryKey: ['memories'] }, (current) =>
+        current === undefined
+          ? current
+          : { ...current, memories: [optimistic, ...current.memories] },
+      );
+      return { previous };
+    },
+    onError: (_error, _body, context) => {
+      for (const [key, data] of context?.previous ?? []) {
+        queryClient.setQueryData(key, data);
+      }
+    },
+    // Always refetch, success or failure: on success the optimistic row is replaced by the real one
+    // (server id, timestamps, version), and on failure the restore above is confirmed against truth.
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['memories'] });
       void queryClient.invalidateQueries({ queryKey: RECENT_ACTIVITY_QUERY_KEY });
     },
   });
+}
+
+/**
+ * The prefix marking a locally-invented, not-yet-durable memory id.
+ *
+ * Pendingness rides on the **id** rather than on an extra `pending` field, because `Memory` is the
+ * server's contract: adding a client-only flag to it would make every consumer's type lie about what
+ * the API returns, and the alternative — an `as` cast — hides the same lie from the compiler.
+ */
+export const PENDING_MEMORY_PREFIX = 'pending:';
+
+/** Whether a row is an optimistic placeholder rather than something the server has acknowledged. */
+export function isPendingMemory(memory: Pick<Memory, 'id'>): boolean {
+  return memory.id.startsWith(PENDING_MEMORY_PREFIX);
+}
+
+/** A locally-invented memory row shown while the capture is in flight. */
+function optimisticMemory(body: CaptureMemoryBody): Memory {
+  const now = new Date().toISOString();
+  const id = `${PENDING_MEMORY_PREFIX}${now}`;
+  return {
+    id,
+    lineageId: id,
+    kind: body.kind,
+    title: body.title,
+    body: body.body,
+    scope: body.scope ?? '',
+    confidence: body.confidence ?? 1,
+    metadata: body.metadata ?? {},
+    version: 1,
+    supersedes: null,
+    // `null` means "this is the current head", which is exactly what the user just asserted.
+    supersededBy: null,
+    createdAt: now,
+  };
 }
 
 /** List the current memories (FR-45), optionally filtered by kind/scope — GET /v1/memory. */

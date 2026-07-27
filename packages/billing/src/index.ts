@@ -17,3 +17,5 @@ export * from './adapters/dodo.js';
 export * from './usage/period.js';
 export * from './usage/ports.js';
 export * from './usage/adapters/in-memory-usage-store.js';
+export * from './usage/adapters/sqlite-usage-store.js';
+export * from './usage/adapters/postgres-usage-store.js';

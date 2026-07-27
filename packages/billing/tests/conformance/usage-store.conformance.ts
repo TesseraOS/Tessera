@@ -86,10 +86,19 @@ export function runUsageStoreConformance(name: string, makeStore: UsageStoreFact
     });
 
     it('returns numbers, not strings — a driver that hands back bigint counts as text must be parsed', async () => {
-      // node-postgres returns `count(*)`/`sum()` as strings (bigint, to avoid truncating past 2^53).
-      // A stray '2' satisfies loose equality and then flows into arithmetic as '21' — so assert the TYPE.
-      // Mutation check: dropping the Number(...) parse in the Postgres adapter leaves every other
-      // assertion in this suite green and turns only this one red. That is the point of it.
+      // node-postgres returns a bigint as a STRING (to avoid truncating past 2^53), and a stray '2'
+      // satisfies loose equality before flowing into arithmetic as '21'. So assert the TYPE.
+      //
+      // Measured, per field, by mutating `toUsageAggregate` one field at a time against real Postgres
+      // — because the obvious version of this comment was wrong:
+      //   count / tokens / scoredCount   sum() over an INTEGER column -> bigint -> string  => RED
+      //   sumDurationMs / maxDurationMs / sumBudgetAdherence / sumProvenanceCoverage
+      //                                  sum()/max() over FLOAT8 already arrives as a number => GREEN
+      // So the parse is load-bearing for exactly the three integer-summed fields, and on the other four
+      // it is a deliberate no-op that costs nothing and survives a driver or pg-types change. This
+      // assertion is therefore NOT uniquely load-bearing for any single field today — the strict
+      // equality checks elsewhere in this suite also catch a string count — but it is the only place
+      // that states the contract itself, which is what a future adapter will be read against.
       const { store, cleanup } = await makeStore();
       try {
         await store.record(usageEvent({ tokens: 10, durationMs: 5, budgetAdherence: 0.5 }));

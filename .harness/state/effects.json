@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-07-26",
+  "updated": "2026-07-27",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -22,6 +22,10 @@
         {
           "kind": "decision",
           "ref": "docs/adr/0003-local-first-cloud-ready-ports-and-adapters.md"
+        },
+        {
+          "kind": "contract",
+          "ref": "every storage/domain PORT now has at least two real adapters (F-056), which is what turns \"ports and adapters\" from an intention into a checked property: MemoryStore, GraphStore, BlobStore, Queue, KeywordRetriever, TemporalRetriever, IngestionManifest, SourceRegistry, ProjectStore, TokenStore and AuditLog each pass the SAME shared conformance suite on SQLite/filesystem/in-process AND on Postgres/S3/BullMQ. Two of those suites (audit log, project store) were previously reachable only by their in-memory reference adapters and now ship on `@tessera/api/conformance`; the source registry likewise on `@tessera/ingestion/conformance`."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -314,6 +318,10 @@
         {
           "kind": "test",
           "ref": "The `perf` gate DID its job on F-061: it failed at 918/900 when label+kind+node all rode by default, and thresholds.json was NOT touched (per its own line 3). Measuring per-field disproved the plan’s arithmetic — `node` cost 135 and RESTATED the label (node.key is the path minus the extension) — which produced the opt-in design. Re-measured at 783/900 (117 spare, 13%). Search p95 rose ~60% (5.6ms -> ~8.9ms) from the per-hit corpus lookup, still ~34x under the 300ms NFR-4 ceiling. NOTE for future work: the label’s cost scales with path length, so the 13% headroom is the budget for any further always-on field."
+        },
+        {
+          "kind": "test",
+          "ref": "new env-guarded suites that a machine without Docker skips cleanly (F-056): TESSERA_TEST_S3=1 (MinIO), TESSERA_TEST_REDIS=1 (Redis), TESSERA_TEST_SELF_HOSTED=1 (all three). `gates.json` is UNCHANGED — these are opt-in like F-023's TESSERA_TEST_POSTGRES, because making them gates would force Docker on every contributor for every change. The compose-boot CI job is F-093. NOTE the standing risk: a guarded suite that nobody runs proves nothing — F-023's pgvector suites sat unexecuted until F-056 increment 1 ran them."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -679,10 +687,30 @@
         {
           "kind": "module",
           "ref": "@tessera/config remote-MCP wiring (F-055, ADR-0058): a config.mcp.http section (enabled, path, sessionTtlMs, maxSessions) + TESSERA_MCP_HTTP_* env → apps/server mounts @tessera/mcp/http on the SAME Fastify app that serves REST when enabled. Carries configSchema's FIRST CROSS-SECTION refinement — a root-level .superRefine rejecting mcp.http.enabled while auth.mode is none (it cannot live inside authSchema or mcpSchema; wrapping the object is safe because .parse/.safeParse plus z.input/z.output are configSchema's only uses — nothing reads .shape). Failing there means the process dies at config load before an adapter is constructed, rather than at the first unauthenticated tool call or, worse, silently ignoring the setting. Runtime itself is UNCHANGED: runtime.config already carries the whole TesseraConfig. Four new env vars ⇒ .env.example (verify-state env-docs)."
+        },
+        {
+          "kind": "module",
+          "ref": "the composition root SPLITS (F-056, ADR-0059 §1): profiles/assemble.ts holds everything profile-independent (services built from ports), and profiles/local.ts (423 lines -> 76) + the new profiles/self-hosted.ts each construct ONLY their own adapters, handing over a `ProfileAdapters` bundle. profiles/create-runtime.ts selects. The InternalError throw at local.ts:222 — the whole of the F-023/ADR-0026 deferral — is DELETED. Anyone adding a store must now add it to ProfileAdapters, which makes the compiler ask both profiles for it rather than letting one silently lack it."
+        },
+        {
+          "kind": "module",
+          "ref": "`self-hosted.js` is reached by DYNAMIC import from create-runtime.ts, never statically. Its graph pulls pg + bullmq + ioredis; a static import would put all three into every Local process, including the stdio MCP binary an agent spawns on a laptop. Same argument as the @tessera/mcp/http subpath (ADR-0058), one level up. `cloud` falls through to the same branch today so divergence is a change of adapters, not a new code path."
+        },
+        {
+          "kind": "contract",
+          "ref": "RuntimeStores.relational widens from `SqliteStore` to the `RelationalStore` PORT (F-056). Narrowing it to one dialect is what made createLocalRuntime the only profile that could exist. Consumers use the lifecycle (healthcheck/close); the typed Drizzle handle belongs to whoever constructs the adapters. Checked: no consumer reached for `.db` through Runtime.stores."
+        },
+        {
+          "kind": "schema",
+          "ref": "config.storage gains `s3 {bucket, endpoint, region, forcePathStyle}` + TESSERA_S3_* env (F-056). CREDENTIALS ARE DELIBERATELY ABSENT — DATABASE_URL, REDIS_URL, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY come from the SecretsProvider (TESSERA_SECRET_* for the env provider), because config is a file people commit and paste into issues. A test asserts there is nowhere in config to put a secret by accident. Four new documented env vars => .env.example (verify-state env-docs) => apps/docs/generated/env-reference.json regenerated in-change."
+        },
+        {
+          "kind": "test",
+          "ref": "packages/config/tests/integration/self-hosted-profile.test.ts (guard TESSERA_TEST_SELF_HOSTED=1, needs all three services) runs the IDENTICAL sequence and assertions as local-profile.test.ts — index, search, putFragment, compile, budget — so FR-53's 'no code change between modes' is asserted rather than claimed. Two gotchas encoded there: `search_path` must include `public` or every pgvector statement fails `type \"vector\" does not exist` (the extension installs the type into public; the other PG suites avoid it only because they never touch the vector store), and a memory's corpus ref is its LINEAGE not its version id. The old test pinning the deferral was REWRITTEN, not deleted."
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "@tessera/config is the composition root: the config schema + Local profile select and wire every adapter (sqlite/sqlite-vec/filesystem/in-process/transformers) into the ApiServices both surfaces consume. Changing the config schema, the profile wiring, the SecretsProvider port, or the blob FragmentSource convention ripples to whoever boots a runtime and to the future Postgres/cloud profile (F-023). The embedding dimension flows from the provider to the vector store (ADR-0006). ApiServices is imported type-only so api never depends on config (no cycle). F-085 added embeddings.workers (default 1) and a worker-pool branch to createEmbeddings: workers>0 runs the transformers provider on a worker_threads pool (@tessera/ai createWorkerPoolEmbeddings), which degrades to in-process on its own if worker_threads is unavailable. This is default-on and it is safe by that fallback; each worker loads its own ~90MB model, which is why the default is 1 and deliberately NOT cpus. createLocalRuntime.close() now also awaits embeddings.close?.() so the worker threads are terminated on shutdown (the runtime previously had nothing that needed closing on the embeddings). TESSERA_EMBEDDINGS_WORKERS documents it in .env.example.",
+      "rationale": "@tessera/config is the composition root: the config schema + Local profile select and wire every adapter (sqlite/sqlite-vec/filesystem/in-process/transformers) into the ApiServices both surfaces consume. Changing the config schema, the profile wiring, the SecretsProvider port, or the blob FragmentSource convention ripples to whoever boots a runtime and to the future Postgres/cloud profile (F-023). The embedding dimension flows from the provider to the vector store (ADR-0006). ApiServices is imported type-only so api never depends on config (no cycle). F-085 added embeddings.workers (default 1) and a worker-pool branch to createEmbeddings: workers>0 runs the transformers provider on a worker_threads pool (@tessera/ai createWorkerPoolEmbeddings), which degrades to in-process on its own if worker_threads is unavailable. This is default-on and it is safe by that fallback; each worker loads its own ~90MB model, which is why the default is 1 and deliberately NOT cpus. createLocalRuntime.close() now also awaits embeddings.close?.() so the worker threads are terminated on shutdown (the runtime previously had nothing that needed closing on the embeddings). TESSERA_EMBEDDINGS_WORKERS documents it in .env.example. F-056 CLOSES the F-023/ADR-0026 deferral: `createRuntime` selects a real self-hosted profile with eleven Postgres/S3/BullMQ adapters and no SQLite in the data path, and every package's migrations are applied once at boot under a Postgres advisory lock (the runner reads-then-applies, so replicas booting together would otherwise race).",
       "confidence": 1,
       "origin": "manual"
     },

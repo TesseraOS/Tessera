@@ -3,7 +3,7 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
-## 2026-07-26 — F-056 IN PROGRESS: self-hosted profile (increments 0–7 of 8)
+## 2026-07-26 — F-056 DONE: the self-hosted profile boots for real (all 8 increments)
 
 Claimed **F-056** (`must`, lowest-id eligible; F-023 + F-053 done). Plan:
 [`F-056-self-hosted-profile-and-deployment.md`](../plans/F-056-self-hosted-profile-and-deployment.md)
@@ -185,7 +185,7 @@ mutation check caught a comment claiming more than its test delivered.
 
 ### Evidence
 
-- config **116/117** with Postgres (was 86) · retrieval **48/48** (was 36). With Postgres + MinIO + Redis: storage **70/70** (was 42) · memory 69/69 ·
+- config **126/127** with all four guards (was 86) · retrieval **48/48** (was 36). With Postgres + MinIO + Redis: storage **70/70** (was 42) · memory 69/69 ·
   knowledge-graph 54/54. `pnpm -w test` unchanged at 43/43 with none reachable (guarded suites skip).
 - Retry is mutation-verified (pinning `attempts: 1` turns that case red), as were the two increment-4
   S3 bugs.
@@ -208,15 +208,53 @@ and shared** with the SQLite adapter, and keyword scores stay `1/(1+rank)` rathe
 — fusion combines scores across retrievers, so a different curve would rank the same corpus
 differently per deployment profile. The score is contract, not implementation.
 
-**Increment 8 is all that remains, and it is where clause 1 closes:** a shared `profiles/assemble.ts`
-holding the profile-independent composition, `local.ts` and a new `self-hosted.ts` each constructing
-only their own adapters, `createRuntime` selecting between them via a **dynamic import** so
-`bullmq`/`ioredis`/`pg` never enter the local process graph. The eleven migration arrays are applied
-once at boot under `withPgAdvisoryLock`. Then delete the `InternalError` throw at
-[`profiles/local.ts:222`](../../packages/config/src/profiles/local.ts).
+### Increment 8 — the profile, and clause 1 closing
 
-**Do not trust `typecheck` to find dropped `await`s** (increment 6's finding): the rule is off and
-`tests/` is not typechecked at all. Grep the call sites.
+`profile: "self-hosted"` boots for real. The `InternalError` at `profiles/local.ts:222` — the entirety
+of the F-023/ADR-0026 deferral — is deleted.
+
+**Split, not branched.** `assemble.ts` holds everything profile-independent (services are built from
+ports, and a port does not know its adapter); `local.ts` (**423 lines → 76**) and `self-hosted.ts`
+each construct only their own adapters and hand over a `ProfileAdapters` bundle. The alternative —
+one `createRuntime` with thirteen branches through 200 lines of wiring — is how two profiles quietly
+diverge in what they *compose* rather than what they *select*. Adding a store now means adding it to
+`ProfileAdapters`, so the compiler asks **both** profiles for it.
+
+`self-hosted.js` is reached by **dynamic import**: its graph pulls `pg` + `bullmq` + `ioredis`, and a
+static import would put all three in every Local process — including the stdio MCP binary an agent
+spawns on a laptop. Same argument as the `@tessera/mcp/http` subpath, one level up.
+
+**The parity test is the point:** it runs the identical sequence and assertions as
+`local-profile.test.ts` (index → search → putFragment → compile → budget), so FR-53's "no code change
+between modes" is asserted rather than claimed. Mutation-verified — routing self-hosted to Local
+turns 5 tests red.
+
+Two findings worth keeping:
+
+- **`search_path` must include `public`.** `CREATE EXTENSION vector` installs the *type* there, so a
+  schema-only path fails every pgvector statement with `type "vector" does not exist`. The other
+  Postgres suites get away with it only because none of them touch the vector store.
+- **A memory's corpus ref is its LINEAGE, not its version id** — an edited memory keeps one
+  searchable document rather than accumulating one per version.
+
+Connections are secrets (SecretsProvider); S3 addressing is ordinary config, and a test asserts there
+is nowhere in config to put a credential by accident. Missing connections fail at **boot**, naming the
+setting — a profile that started and then failed mid-request would be worse than one that refuses.
+
+The old test pinning the deferral was **rewritten, not deleted**, so the behaviour change stays
+visible in history.
+
+### Standing hazards for whoever picks up F-093
+
+- **Do not trust `typecheck` to find dropped `await`s** (increment 6): `no-floating-promises` is off
+  and `tests/` is outside every build tsconfig, so those files are never typechecked. Grep.
+- **A guarded suite nobody runs proves nothing.** F-023's pgvector suites sat unexecuted until
+  increment 1 ran them. `docker compose up -d` plus `TESSERA_TEST_POSTGRES=1 TESSERA_TEST_S3=1
+  TESSERA_TEST_REDIS=1 TESSERA_TEST_SELF_HOSTED=1`, or the Postgres half of this feature is unverified.
+- **Docker Desktop dies on this machine.** `Docker Desktop.exe` alone exits when its WSL backend is
+  stopped; `wsl -d docker-desktop --exec /bin/sh -c true` first, then launch — daemon up in ~6s.
+- **The intermittent `@tessera/api#test:e2e` task failure persists** (suite prints 116/116, task exits
+  non-zero). Seen again this session; still undiagnosed.
 
 **Docker Desktop died mid-session and had to be restarted by hand.** `Docker Desktop.exe` alone exits
 immediately when its WSL backend is stopped; `wsl -d docker-desktop --exec /bin/sh -c true` starts the
@@ -342,6 +380,12 @@ because fixing it means overriding the Fumadocs code theme, which ADR-0054 const
   cause is unknown, a 1-in-3 CI flake is not acceptable long-term, and the final verification run for
   this feature was clean at 26/26. Whoever picks up F-056 (which adds compose-boot CI) should expect
   to meet this again.
+
+### Next step
+
+**F-093** (`must`, R4, blockedBy F-056 — now unblocked): Dockerfiles, the app services in compose,
+the compose-boot CI smoke, release CD, and the three deployment guides. The plan already covers it
+(increments 9–13 of `F-056-self-hosted-profile-and-deployment.md`).
 
 ### Effects
 

@@ -3,13 +3,16 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
-## 2026-07-27 — F-057 IN PROGRESS: usage metering + the metered predicate (increments 0–6a of 11)
+## 2026-07-27 — F-057 IN PROGRESS: metering, entitlements + /v1/usage (increments 0–7 of 11)
 
 Claimed **F-057** (`should`, lowest-id eligible in R4; F-030 + F-035 + F-046 done). Plan:
 [`F-057-analytics-usage-metering-and-billing-ui.md`](../plans/F-057-analytics-usage-metering-and-billing-ui.md)
 (planner subagent). Decision: **[ADR-0060](../../docs/adr/0060-usage-metering-analytics-and-the-metered-predicate.md)**.
 
-**Not finished — 5 increments remain (6b, 7, 8, 9, 10, 11).** Everything below is committed green.
+**Not finished — 4 increments remain (8, 9, 10, 11 — the two dashboard views, e2e/axe/screenshots,
+and close).** Everything below is committed green. This stops at the **cut line the plan named**: the
+data + contract half is complete and independently valuable — both the F-035 and F-030 seams are
+closed, and `GET /v1/usage` serves the numbers, with no UI yet.
 
 ### The acceptance was wrong about two things, and the lead decided both
 
@@ -53,6 +56,8 @@ Fixed in increment 6a, in its own commit so a regression bisects cleanly. ADR-00
 | 4 | `ProfileAdapters` gains both stores as **required**; `createRuntimeBilling` takes the store; `Runtime.usage` | 130 passed with both guards; 4/4 mutations red |
 | 5 | Three recorders: REST `onResponse` hook, MCP per-tool meter, ingestion `document.ingested` subscriber | api e2e 121, mcp e2e 62; 5/6 mutations red (see below) |
 | 6a | `metered` becomes an explicit flag; the 8000 cap on Local/self-hosted is fixed | full gates + **`e2e-full`** + **`bench`**; 6/6 mutations red |
+| 6b | `createMonthlyCompileGuard` — **the F-035 closure** — on REST + MCP `compile_context` *and* `explain` | api e2e 130, mcp e2e 68; **9/9 mutations red**; red-before captured |
+| 7 | `GET /v1/usage` + Fastify-free `computeUsageSummary` + SDK `getUsage()` + generated docs page | api e2e 140, docs 25 (drift gate green) |
 
 ### Four things the mutation checks corrected, that comments had claimed
 
@@ -76,6 +81,32 @@ falsified four claims — each is now recorded in the code rather than quietly f
   table. The added case reaches it through the Dodo provider, whose `getSubscription` resolves
   `store.get() ?? freeSubscription()` with no network call, so a missing table is a hard error.
 
+### The F-035 seam, in the words of its own red-before
+
+`maxMonthlyCompiles` had been in the plan catalog since F-030 and was read by nothing. Captured
+against HEAD before the guard existed:
+
+```
+refuses with 429 once the entitlement is spent   → expected 200 to be 429
+counts across projects (a subscription is per tenant) → expected 200 to be 429
+does not count a refused compile against the tenant  → expected 201 to be 200
+```
+
+The third is the seam in miniature: with nothing enforcing the limit, the counter simply ran **past**
+it. The guard is built once and called by `POST /v1/compile` and by MCP `compile_context` **and**
+`explain` — `explain` compiles, so exempting the diagnostic path would leave a tool an agent could
+switch to the moment it hit the cap. It counts per **tenant** across projects (per-project counting
+would let a tenant mint compiles by minting projects), treats `-1` as unlimited before any numeric
+compare, and **fails open** on a store fault — a deliberate cost leak, asserted rather than assumed.
+
+### A build-graph trap worth knowing before you run a mutation by hand
+
+`apps/*` consume `@tessera/billing` and `@tessera/api` through their **dist**, so a source mutation
+there is not felt until the package is rebuilt. An unbuilt change does not present as a focused
+failure — it presents as **every test in the suite timing out at 10s, including `GET /health`**,
+because the server fails during route registration. Rebuild the changed package before drawing any
+conclusion from a mutation run.
+
 ### Scope refused rather than absorbed
 
 - **F-095** — the billing routes set no `config.audit`, so a checkout leaves no trail. Found while
@@ -95,11 +126,26 @@ restarted (`C:\Users\ASUS\AppData\Local\Programs\DockerDesktop\Docker Desktop.ex
 `docker compose up -d postgres redis minio`). The `wsl -d docker-desktop --exec` workaround recorded
 for F-056 does **not** start a stopped daemon — it only wakes a running one.
 
-**Next step:** increment **6b** — `createMonthlyCompileGuard` (the F-035 closure), one implementation
-adopted by `POST /v1/compile` and by MCP `compile_context` + `explain`, `RateLimitedError` → 429,
-fail-open on store error. Capture the **red-before** run first: today a tenant compiles without limit
-forever, and that failure *is* the seam. Then 7 (`GET /v1/usage` + SDK + docs regeneration in the
-same commit), 8–9 (Analytics + Billing views), 10 (e2e + axe + screenshots), 11 (effects + state).
+**Next step:** increment **8** — the **Analytics view** (`apps/web/app/analytics/page.tsx`), reading
+`getUsage()` from the SDK, which already exists. Three things a future session must not re-derive:
+
+1. **Nav lives in TWO places** — `components/app-shared.tsx:36-91` (sidebar) and `lib/nav.ts:27-55`
+   (⌘K palette). Edit both, or the page is reachable from one and invisible to the other. Add a test
+   that the two route sets agree, and retire the trap.
+2. **Label latency "average" and "slowest", never p95**, and label the day axis **UTC** — it
+   deliberately differs from the Overview chart's viewer-local buckets (F-088), and saying so is the
+   mitigation. A single chart series rides `--primary` (the F-091 rule on E-004).
+3. **No currency anywhere.** Cost posture = embeddings provider + plan price + tokens compiled. No
+   per-token price exists in this system, so a dollar figure would be invented.
+
+Then **9** (Billing view — the upgrade CTA is *absent* on an unmetered deployment, not dead),
+**10** (e2e that compiles through the real API then asserts the number on `/analytics`, axe AA,
+screenshots 4 themes × light/dark — and the analytics spec must be *seen* to fail against increment 7's
+HEAD, since a green-on-first-run e2e proves nothing), **11** (effects: mint **E-029**, rewrite E-019,
+amend E-013/E-003/E-004/E-014/E-026, record E-015 as structurally N/A; then close).
+
+Budget a `design-review` pass on 8–9: the contrast gate is executable, layout and hierarchy are not,
+and that pass has found something no test did every previous time.
 
 ---
 

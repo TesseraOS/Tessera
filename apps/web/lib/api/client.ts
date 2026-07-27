@@ -27,6 +27,7 @@ import type {
   MemoryListFilter,
   MemoryListResponse,
   PlansResponse,
+  FeatureFlagsResponse,
   ReadyStatus,
   RegisterSourceBody,
   ScanAccepted,
@@ -174,6 +175,8 @@ export const api = {
    * entirely rather than rendering one that cannot work.
    */
   createCheckout: (body: CheckoutBody): Promise<CheckoutSession> => sdk.createCheckout(body),
+  /** Feature flags in effect for this tenant (F-058; FR-57). Read-only — config declares them. */
+  getFlags: (): Promise<FeatureFlagsResponse> => sdk.getFlags(),
   getHealth: (): Promise<HealthStatus> => sdk.getHealth(),
   getReady: (): Promise<ReadyStatus> => sdk.getReady(),
 };

@@ -342,6 +342,11 @@ export function useCheckout() {
   });
 }
 
+/** Feature flags in effect for this tenant (F-058; FR-57) — GET /v1/flags. */
+export function useFlags() {
+  return useQuery({ queryKey: ['flags'], queryFn: () => api.getFlags(), staleTime: 60_000 });
+}
+
 /** Liveness — GET /health. */
 export function useHealth() {
   return useQuery({ queryKey: ['health'], queryFn: () => api.getHealth(), staleTime: 15_000 });

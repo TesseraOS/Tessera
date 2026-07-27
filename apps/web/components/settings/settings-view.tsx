@@ -17,7 +17,7 @@ import { AppearanceSettings } from '@/components/settings/appearance-settings';
 import { ErrorState } from '@/components/error-state';
 import { cn } from '@/lib/utils';
 import { API_ORIGIN } from '@/lib/api/client';
-import { useHealth, usePlans, useReady } from '@/lib/api/hooks';
+import { useFlags, useHealth, usePlans, useReady } from '@/lib/api/hooks';
 import { formatNumber } from '@/lib/format';
 import type { Plan } from '@/lib/api/types';
 
@@ -44,6 +44,7 @@ export function SettingsView() {
     <div className="space-y-4">
       <AppearanceSettings />
       <DeploymentCard />
+      <FlagsCard />
       <PlansCard />
       <GovernanceCard />
     </div>
@@ -124,6 +125,104 @@ function DeploymentCard() {
         ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Feature flags in effect for this workspace (F-058; FR-57). **Read-only**: flags are declared in
+ * deployment config and there is no write API, so this renders the state and says where it came
+ * from rather than offering a toggle that could not do anything (ADR-0022).
+ *
+ * The values arrive already evaluated FOR THIS TENANT — the dashboard never sees another tenant's
+ * rollout rules.
+ */
+function FlagsCard() {
+  const { data, isPending, isError, error, refetch } = useFlags();
+  const flags = data?.flags ?? [];
+
+  return (
+    <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
+      <CardHeader className="space-y-1 p-0 pb-3">
+        <CardTitle className="text-sm">Feature flags</CardTitle>
+        <CardDescription>
+          Progressive rollout for this workspace, evaluated per tenant. Declared in deployment
+          configuration — this view is read-only.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        {isError ? (
+          <ErrorState
+            title="Could not load feature flags"
+            description={error instanceof Error ? error.message : 'Is the Tessera API running?'}
+            onRetry={() => void refetch()}
+          />
+        ) : isPending ? (
+          <Skeleton className="h-24 w-full" />
+        ) : flags.length === 0 ? (
+          <p className="text-muted-foreground text-xs">
+            This deployment declares no feature flags.
+          </p>
+        ) : (
+          <div className="border-border/60 rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="h-8 text-xs">Flag</TableHead>
+                  <TableHead className="h-8 text-xs">Description</TableHead>
+                  <TableHead className="h-8 text-xs">Source</TableHead>
+                  <TableHead className="h-8 text-right text-xs">State</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {flags.map((flag) => (
+                  <TableRow key={flag.key}>
+                    <TableCell className="text-foreground py-2 font-mono text-xs">
+                      {flag.key}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground py-2 text-xs">
+                      {flag.description === '' ? '—' : flag.description}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground py-2 text-xs">
+                      {flag.source === 'tenant-override'
+                        ? 'Override for this workspace'
+                        : 'Default'}
+                    </TableCell>
+                    <TableCell className="py-2 text-right">
+                      <FlagBadge enabled={flag.enabled} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * On/off for a flag. Deliberately **not** {@link StatusBadge}: a flag that is off is a normal state,
+ * and painting it with the destructive colour would read as a fault an operator needs to fix.
+ */
+function FlagBadge({ enabled }: { enabled: boolean }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        'h-5 gap-1 text-[10px] font-medium',
+        enabled
+          ? 'border-emerald-600/30 text-emerald-700 dark:border-emerald-500/30 dark:text-emerald-500'
+          : 'border-border text-muted-foreground',
+      )}
+    >
+      {enabled ? (
+        <Check className="size-3" aria-hidden="true" />
+      ) : (
+        <X className="size-3" aria-hidden="true" />
+      )}
+      {enabled ? 'On' : 'Off'}
+    </Badge>
   );
 }
 

@@ -10,6 +10,17 @@ vi.mock('@/lib/api/client', () => ({
       status: 'ready' as const,
       checks: [{ name: 'sqlite', ok: true, detail: 'open' }],
     })),
+    getFlags: vi.fn(async () => ({
+      flags: [
+        {
+          key: 'beta.search',
+          description: 'New ranker',
+          enabled: true,
+          source: 'tenant-override' as const,
+        },
+        { key: 'graph.v2', description: '', enabled: false, source: 'default' as const },
+      ],
+    })),
     getPlans: vi.fn(async () => ({
       plans: [
         {
@@ -48,5 +59,31 @@ describe('SettingsView', () => {
 
     // Governance posture is a read-only card with a link to /governance.
     expect(screen.getByText('Governance & retention')).toBeInTheDocument();
+  });
+
+  it('renders the feature flags in effect for this tenant, and how each was decided', async () => {
+    renderWithClient(<SettingsView />);
+
+    expect(await screen.findByText('Feature flags')).toBeInTheDocument();
+    expect(await screen.findByText('beta.search')).toBeInTheDocument();
+    expect(screen.getByText('New ranker')).toBeInTheDocument();
+    // `source` is rendered, not just the value — a rollout you cannot explain is one you cannot debug.
+    expect(screen.getByText('Override for this workspace')).toBeInTheDocument();
+    expect(screen.getByText('On')).toBeInTheDocument();
+
+    // The off flag renders as a normal state, and its empty description as an em dash.
+    expect(screen.getByText('graph.v2')).toBeInTheDocument();
+    expect(screen.getByText('Off')).toBeInTheDocument();
+    expect(screen.getByText('Default')).toBeInTheDocument();
+  });
+
+  it('renders no toggle — flags are declared in config and there is no write API (ADR-0022)', async () => {
+    renderWithClient(<SettingsView />);
+    await screen.findByText('beta.search');
+
+    // A control that cannot change anything is worse than no control. Nothing in the flags table is
+    // interactive, so this asserts the card ships state rather than a decorative switch.
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   });
 });

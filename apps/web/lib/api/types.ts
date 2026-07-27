@@ -413,6 +413,20 @@ export interface PlansResponse {
   plans: Plan[];
 }
 
+// --- feature flags (F-058; FR-57) — mirrors apps/api/src/schemas/flags.ts ---
+
+/** One flag as it resolves FOR THE CALLING TENANT, plus the rule that decided it. */
+export interface FeatureFlag {
+  key: string;
+  description: string;
+  enabled: boolean;
+  source: 'default' | 'tenant-override';
+}
+
+export interface FeatureFlagsResponse {
+  flags: FeatureFlag[];
+}
+
 // --- ops (unversioned GET /health + GET /ready) — mirrors apps/api/src/routes/health.ts ---
 export interface HealthStatus {
   status: 'ok';

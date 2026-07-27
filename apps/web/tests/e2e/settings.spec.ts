@@ -13,6 +13,21 @@ test('settings renders health, dependency checks, budgets, and posture; passes a
       json: { status: 'ready', checks: [{ name: 'sqlite', ok: true, detail: 'open' }] },
     });
   });
+  await page.route('**/v1/flags', async (route) => {
+    await route.fulfill({
+      json: {
+        flags: [
+          {
+            key: 'beta.search',
+            description: 'Rank search results with the new hybrid scorer.',
+            enabled: true,
+            source: 'tenant-override',
+          },
+          { key: 'legacy.compile', description: '', enabled: false, source: 'default' },
+        ],
+      },
+    });
+  });
   await page.route('**/v1/billing/plans', async (route) => {
     await route.fulfill({
       json: {
@@ -34,11 +49,18 @@ test('settings renders health, dependency checks, budgets, and posture; passes a
   // Deployment: the API endpoint + a real dependency check from /ready.
   await expect(page.getByText('API endpoint')).toBeVisible();
   await expect(page.getByText('sqlite')).toBeVisible();
+  // Feature flags (F-058), evaluated for this tenant — the value AND the rule that decided it.
+  await expect(page.getByText('beta.search')).toBeVisible();
+  await expect(page.getByText('Override for this workspace')).toBeVisible();
+  await expect(page.getByText('legacy.compile')).toBeVisible();
+  // Read-only: flags come from deployment config, so the card must ship no control (ADR-0022).
+  await expect(page.getByRole('switch')).toHaveCount(0);
   // Budgets from /v1/billing/plans.
   await expect(page.getByText('8,000')).toBeVisible();
   // Governance posture is read-only (no fake controls).
   await expect(page.getByText('Governance & retention')).toBeVisible();
 
+  // a11y runs with the flags table POPULATED — the state the card is actually in for an operator.
   const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
   expect(results.violations).toEqual([]);
 });

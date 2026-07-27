@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   Activity,
   FileText,
@@ -84,20 +85,83 @@ export function TimelineView() {
           description="Capture a memory or scan a source — events will appear here in real time."
         />
       ) : (
-        <ol className="space-y-0" aria-label="Activity timeline">
-          {entries.map((entry, index) => (
-            <TimelineRow key={entry.id} entry={entry} last={index === entries.length - 1} />
-          ))}
-        </ol>
+        <VirtualTimeline entries={entries} />
       )}
     </div>
   );
 }
 
-function TimelineRow({ entry, last }: { entry: TimelineEntry; last: boolean }) {
+/**
+ * The virtualized feed (F-064; FR-49). The timeline merges memory lineages, the audit trail and live
+ * SSE activity, so it is the list in the dashboard most likely to grow without bound — and it was the
+ * one long list still rendering every row.
+ *
+ * Unlike `ui/data-table`, this keeps NATIVE list semantics — no explicit `role="list"`/`role="listitem"`.
+ * The worry was that absolutely positioning a row blockifies it and drops the implicit `listitem`
+ * role, which is the real reason the data-table declares its grid roles. It was **tested rather than
+ * assumed**: with the roles removed, the e2e still resolves the list and its items through the
+ * accessibility tree in Chromium, and axe passes over 500 entries. A `<table>` genuinely loses its
+ * roles under `display: block`; an `<ol>` does not, so declaring them here would be the redundancy
+ * `jsx-a11y/no-redundant-roles` exists to catch.
+ *
+ * The `<ol>` is the virtualizer's height spacer, so the rendered `<li>` remain its DIRECT children —
+ * an intermediate spacer div would break `aria-required-children`. Row heights vary (titles wrap),
+ * so rows are measured rather than estimated.
+ */
+function VirtualTimeline({ entries }: { entries: readonly TimelineEntry[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: entries.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => TIMELINE_ROW_ESTIMATE,
+    overscan: 8,
+  });
+
+  return (
+    // The scroller is a FOCUSABLE, labelled region. Without `tabIndex`, axe fails
+    // `scrollable-region-focusable` (serious): a keyboard-only user can reach the rows' links but can
+    // never scroll the container itself, so anything below the fold is unreachable. It cannot be the
+    // `<ol>` — that element carries the virtualizer's total height, and a scroll container has to be
+    // the fixed-height ancestor of the thing it scrolls.
+    <div
+      ref={scrollRef}
+      tabIndex={0}
+      role="region"
+      aria-label="Activity timeline"
+      className="focus-visible:ring-ring max-h-[70vh] overflow-y-auto rounded-md focus-visible:ring-2 focus-visible:outline-none"
+    >
+      <ol className="relative w-full" style={{ height: `${String(virtualizer.getTotalSize())}px` }}>
+        {virtualizer.getVirtualItems().map((item) => {
+          const entry = entries[item.index];
+          if (entry === undefined) return null;
+          return (
+            <li
+              key={entry.id}
+              data-index={item.index}
+              ref={virtualizer.measureElement}
+              className="absolute top-0 left-0 flex w-full gap-3"
+              style={{ transform: `translateY(${String(item.start)}px)` }}
+            >
+              <TimelineRowBody entry={entry} last={item.index === entries.length - 1} />
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+/** Estimated row height before measurement; rows are measured, so this only affects the first paint. */
+const TIMELINE_ROW_ESTIMATE = 76;
+
+/**
+ * A row's contents, without its `<li>` — the list item is owned by {@link VirtualTimeline}, which has
+ * to position and measure it. Splitting here keeps the virtualization concern out of the presentation.
+ */
+function TimelineRowBody({ entry, last }: { entry: TimelineEntry; last: boolean }) {
   const Icon = CATEGORY_ICON[entry.category];
   return (
-    <li className="flex gap-3">
+    <>
       <div className="flex flex-col items-center">
         <span className="bg-muted text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-full [&_svg]:size-3.5">
           <Icon aria-hidden="true" />
@@ -128,7 +192,7 @@ function TimelineRow({ entry, last }: { entry: TimelineEntry; last: boolean }) {
           {formatTimestamp(entry.at)}
         </p>
       </div>
-    </li>
+    </>
   );
 }
 

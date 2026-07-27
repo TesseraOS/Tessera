@@ -3,6 +3,100 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-27 — F-058 DONE: feature flags, plugin permissions, plugin health — and one honest empty set
+
+Claimed **F-058** (`could`, lowest-id eligible in R4; F-013 done). Plan:
+[`F-058-feature-flags-plugin-permissions-and-health.md`](../plans/F-058-feature-flags-plugin-permissions-and-health.md).
+Decision: **[ADR-0061](../../docs/adr/0061-feature-flags-plugin-permissions-and-plugin-health.md)**.
+
+All **10 increments** are committed green. FR-57, FR-59 and FR-60 are closed — the last three
+requirements R4 carried as declared-but-unbuilt.
+
+> The planner subagent was cut off mid-run by a session limit; the plan was authored inline against
+> `plans/TEMPLATE.md` rather than re-spawning. Noted so the plan's authorship is not misread.
+
+### What reconnaissance found, before any code
+
+**`@tessera/plugin-host` had ZERO consumers.** Excluding the package itself, nothing under
+`packages/` or `apps/` imported it — F-013 shipped a well-tested library the running system did not
+hold. That makes acceptance clause 2 ("host aggregation exposed on `/ready` details") unsatisfiable
+as written: there was nothing to aggregate.
+
+Both ways to give it something load-bearing were checked and **rejected with evidence**:
+
+1. **Embeddings through the host** regresses **F-085**. `transformersEmbeddingsPlugin` calls
+   `createTransformersEmbeddings` directly and has no worker-pool branch; the composition root's
+   `createEmbeddings` does. Sourcing embeddings from the plugin puts ONNX back on the main thread —
+   the measured problem F-085 exists to fix.
+2. **Connectors through the host** is the right eventual answer (`connectorForRecord` is a hardcoded
+   `switch`, exactly what a host should replace), but connectors are built **per source record**
+   while the host keys **one instance per plugin id**, so two filesystem sources with different roots
+   collide. That is an ADR-0020 contract change — **scope creep, flagged not planned in**, and now
+   filed as **F-098**.
+
+**Lead decision (AskUserQuestion):** wire the host as `Runtime.plugins`, and have `/ready` report the
+real aggregate — which today is the empty set, stated as `ok: true, detail: "0 plugins registered"`.
+`ok` alone cannot distinguish "nothing is broken" from "nothing is loaded", so the detail carries the
+difference. A second integration test registers a plugin whose `health()` fails and asserts `/ready`
+goes **not ready**; that test is what makes the empty report honest rather than hardcoded.
+
+### What landed
+
+| # | Increment | Evidence |
+|---|-----------|----------|
+| 0 | Plan + ADR-0061 + claim | `verify-state` valid |
+| 1 | `permissions` on the manifest — closed vocabulary, normalized at register, surfaced in `PluginInfo`; an unrecognized declaration fails the plugin at load, **before config and before setup** | plugin-host 16 (was 10); **4/4 mutations red** |
+| 2 | `PluginGrants` — denied by default; `PluginContext.permissions` required, `createPluginHost` takes `PluginHostContext` so no signature can widen a plugin's grants | 25 tests; **6/6 red** |
+| 3 | `health()` in the lifecycle + never-throwing `host.health()` aggregation | 34 tests; **5/5 red** |
+| 4 | Restart/backoff, **default `maxRestarts: 0`** (existing behavior byte-stable), injectable `sleep` so the sequence is asserted exactly | 43 tests; **5/6 red** (1 equivalent) |
+| 5 | `FlagProvider` port + `createStaticFlagProvider` in `@tessera/core` | core 25 (was 15); **6/6 red** |
+| 6 | `config.flags` + `TESSERA_FLAGS` + `Runtime.flags` | config 101 (was 88); **3/4 red** (1 equivalent) |
+| 7 | `GET /v1/flags` + SDK `getFlags()` + generated reference | api e2e 146 (was 140) |
+| 8 | The Settings flags card, verified against the **live API** | web 442 (was 429); web e2e 64 |
+| 9 | `Runtime.plugins` + the `/ready` plugins check | config 103; **3/3 red** |
+| 10 | Effects traced (E-016, E-014, E-003), F-098 filed, records | full gates + `e2e-full` |
+
+### Three defaults chosen so a mistake fails closed
+
+- A plugin declaring **nothing** is granted **nothing**. This is why `permissions` is *optional*
+  where ADR-0059 would argue for required — here the omission-default is the safe one.
+- An **unknown flag key evaluates to `false`**. A typo must not enable an unfinished feature.
+- A **duplicate flag key throws** at config load rather than resolving by last-one-wins, so the
+  process dies before serving a rollout that only half-happened.
+
+### Two mistakes caught by the work itself
+
+1. **A mutation exposed a test that proved nothing.** "The first-party connector actually asks before
+   it walks a root" stayed green with the `require('filesystem:read')` call deleted — because loading
+   succeeds either way. It now strips the *declaration* and asserts the same setup is refused. Two
+   mutants went red only after that fix.
+2. **The settings a11y assertion had been running over an error state.** `settings.spec.ts` never
+   stubbed `/v1/flags`, so axe was analysing the card's failure branch. It now stubs the route and
+   runs a11y with the table populated — the state an operator actually sees.
+
+Two surviving mutants are reported as **equivalent, not as gaps**: dropping the `status === 'failed'`
+guard in `restart()` (loaded/stopped/started all reach `startEntry` identically), and `separator <= 0`
+→ `< 0` in the `TESSERA_FLAGS` parser (the later `key.length > 0` check already rejects it).
+
+### Evidence
+
+Full gates green: `verify-state`, typecheck (46 tasks), lint, format, test (44), build (23),
+`test:e2e` (27 tasks), `test:e2e:full` (6 passed). The docs drift gate caught the new env var on its
+first run and `generated/env-reference.json` + the `/v1/flags` reference page were regenerated
+in-change.
+
+Increment 8 was verified against the **real stack**, not only mocks: the actual API was booted with
+flags declared through the config path (via a scratchpad launcher, since `TESSERA_FLAGS` deliberately
+cannot express per-tenant overrides or descriptions — the two rendering paths worth looking at), and
+the rendered card was read out of the live DOM. All three paths confirmed, zero console errors.
+**Screenshots were unavailable in this session** (the Browser pane was not compositing frames), so the
+visual evidence is DOM extraction plus the populated-table axe run, not an image.
+
+**Next step:** **F-059** — launch readiness (license/open-core, SBOM/supply-chain, release process,
+npm publish, repo polish) is the next lowest-id eligible in R4. **F-098** (multi-instance plugin host)
+is the follow-up that turns this feature's `/ready` seam into a load path.
+
+---
 ## 2026-07-27 — F-057 DONE: per-tenant metering, the two closed seams, and the analytics surface
 
 Claimed **F-057** (`should`, lowest-id eligible in R4; F-030 + F-035 + F-046 done). Plan:

@@ -204,6 +204,10 @@
         {
           "kind": "module",
           "ref": "F-057: GET /v1/usage (admin:manage, additive) -> OpenAPI + SDK (getUsage) + the generated docs reference page, all regenerated in the same commit and held by apps/docs generated-drift. POST /v1/compile and the MCP compile tools gain a 429 RATE_LIMITED path — a behaviour change, no shape change, reusing the existing envelope code so nothing rippled. NO MCP get_usage tool, deliberately (ADR-0060 §8): an agent has no use for a usage histogram, get_stats already covers workspace state, and the one fact an agent could act on (its effective budget) is already on the compile response. Recorded so the absence reads as a decision."
+        },
+        {
+          "kind": "module",
+          "ref": "`GET /v1/flags` (F-058; FR-57) — the caller’s EVALUATED flags, never the catalog (raw definitions would put every other tenant’s rollout on the wire). Guarded by `stats:read`, an EXISTING permission: minting `flags:read` would ripple GET /v1/rbac -> OpenAPI -> SDK -> the dashboard token-scope UI to gate a read revealing only this tenant’s own posture. Not audited (the /v1/stats posture). The provider rides on BuildServerOptions, NOT ApiServices — the E-015 reason. With no provider wired it answers an EMPTY CATALOG rather than /v1/usage’s 409, because “no flags are declared” is the true default state of every deployment. SDK `getFlags()` + a generated reference page follow."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -723,6 +727,14 @@
         {
           "kind": "module",
           "ref": "F-057: ProfileAdapters gains usageStore + subscriptionStore as REQUIRED members, so the compiler asks Local AND self-hosted for both (the ADR-0059 mechanism — an optional member is how a store ends up SQLite-only and caps self-hosted at one node). Runtime gains `usage` and `metered`. createRuntimeBilling changes signature to take the store rather than build one. self-hosted.ts registers pgUsageMigrations + pgSubscriptionMigrations in ALL_MIGRATIONS. NO config schema change (ADR-0060 §10): billing.provider already carries the metered signal, so there is no new TESSERA_* var and no .env.example churn."
+        },
+        {
+          "kind": "schema",
+          "ref": "F-058 adds `config.flags.definitions` (key/description/defaultEnabled/tenants) + `TESSERA_FLAGS` (`key=true,other=false`, DEFAULTS ONLY — per-tenant rules are config-file-only, because a rollout naming specific orgs belongs in something reviewable). Duplicate keys are rejected by the schema at load. `definitions` is an ARRAY, so the shallow per-section merge REPLACES it: a config file wins over the env var wholesale rather than appending. One new documented env var => .env.example => apps/docs/generated/env-reference.json regenerated in-change (the drift gate caught it)."
+        },
+        {
+          "kind": "module",
+          "ref": "Runtime gains `flags` (FlagProvider over config, F-058) and `plugins` (PluginHost). BOTH are built in the profile-INDEPENDENT half rather than asked of each profile: a rollout rule and the set of extension points are product facts, not deployment adapters, so ADR-0059’s make-the-compiler-ask-both-profiles argument does not apply. `services.readiness` gains a second check (`plugins`) beside the relational one."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -789,10 +801,30 @@
         {
           "kind": "package",
           "ref": "third-party plugins import the SDK; the deployment profile (F-015) may later wire adapters via the host"
+        },
+        {
+          "kind": "contract",
+          "ref": "F-058 EXTENDS the envelope in three ways, all breaking for a third-party plugin that predates them: PluginManifest gains `permissions` (optional — omitting it grants NOTHING, which is the safe default and why it is not required, unlike the ADR-0059 argument for stores); PluginInstance gains `health()`; PluginInfo gains REQUIRED `permissions` and `restarts`. A declaration the host does not recognize FAILS the plugin at load, before config parsing and before setup — types do not survive a plugin loaded from JavaScript, so the closed vocabulary is checked at runtime."
+        },
+        {
+          "kind": "contract",
+          "ref": "`PluginContext` gains a REQUIRED `permissions: PluginGrants`, and `createPluginHost` now takes `PluginHostContext` (= PluginContext minus grants) plus a second `PluginHostOptions` argument. The split IS the enforcement: grants are per-plugin and derived from the manifest, so no signature exists by which a caller hands a plugin permissions it never declared. ADR-0061 §2 is explicit that this is a boundary GATE, not a sandbox — a plugin runs in-process and can still reach `fs` without asking (the ADR-0020 limit, unchanged)."
+        },
+        {
+          "kind": "module",
+          "ref": "restart/backoff (`PluginRestartPolicy`, `host.restart(id)`, injectable `sleep`) defaults to `maxRestarts: 0` — byte-stable with the pre-F-058 fail-fast behavior, asserted by a test that also checks `sleep` is never called. Retrying is opt-in because a deterministic start failure gains nothing from four more attempts. `restart()` deliberately cannot resurrect a plugin that failed during SETUP (no instance); that one must be re-`load`ed."
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/config now DEPENDS on @tessera/plugin-host (F-058) — the first consumer the package has ever had. `assembleRuntime` constructs the host as `Runtime.plugins` and `/ready` aggregates `host.health()`. No cycle: plugin-host depends on core/ai/ingestion and never on config."
+        },
+        {
+          "kind": "module",
+          "ref": "The first-party plugins declare AND ask: filesystem connector requires `filesystem:read`, transformers embeddings requires `network` + `filesystem:write` (it downloads a model once and caches it on disk). Tests strip the declaration and assert the SAME setup is then refused — loading successfully proves nothing on its own, which a mutation caught."
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "The Plugin SDK is a uniform ENVELOPE over the existing ports — it does not re-define them. Changing the Plugin/Manifest/Instance contract or the host (load/lifecycle/isolation semantics) breaks every first-party + third-party plugin and the conformance tests; the PluginKinds must stay aligned with the underlying ports (E-007/8/9/12). First-party wrappers live in plugin-host so it depends on ingestion/ai one-way (no cycle); domain packages are untouched. Failure isolation (config-invalid + setup/lifecycle errors → failed, never crash the host) is the FR-58 invariant.",
+      "rationale": "The Plugin SDK is a uniform ENVELOPE over the existing ports — it does not re-define them. Changing the Plugin/Manifest/Instance contract or the host (load/lifecycle/isolation semantics) breaks every first-party + third-party plugin and the conformance tests; the PluginKinds must stay aligned with the underlying ports (E-007/8/9/12). First-party wrappers live in plugin-host so it depends on ingestion/ai one-way (no cycle); domain packages are untouched. Failure isolation (config-invalid + setup/lifecycle errors → failed, never crash the host) is the FR-58 invariant. F-058 turns the envelope from declaration-only into declaration + gate + health, and gives the host its first home in a running process (Runtime.plugins). The host is still EMPTY in every shipped profile, recorded in ADR-0061 §3 rather than hidden: routing embeddings through it would regress F-085 (the plugin has no worker-pool branch) and routing connectors through it needs a MULTI-INSTANCE host, because the contract keys one instance per plugin id and two filesystem sources with different roots collide. That refactor is F-098.",
       "confidence": 1,
       "origin": "manual"
     },

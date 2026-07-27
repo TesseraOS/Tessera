@@ -1949,7 +1949,7 @@
       "package": "@tessera/plugin-host",
       "release": "R4",
       "priority": "could",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-013"
       ],
@@ -3206,6 +3206,40 @@
         "E-014"
       ],
       "notes": "FOUND DURING F-057 increment 6a (2026-07-27) and attributed by measurement rather than assumption: every F-057 change was stashed and tests/integration/self-hosted-profile.test.ts was run four times against HEAD — it produced the same unhandled ioredis rejection on 2 of 4 runs. So this is PRE-EXISTING and flaky, not a regression from F-057, and it was left alone rather than absorbed. It is invisible in the default `test` gate because the suite is skipped without TESSERA_TEST_SELF_HOSTED=1, which is exactly why it has survived: the one gate that would catch it is the one almost nobody runs. Related: the same class of teardown race is why F-056 had to kill process TREES in the web-perf gate. WIDENED DURING F-057 increment 11 (2026-07-27): the same SIGNATURE — every test reporting passed while the run still exits non-zero — was observed twice more in the workspace gates, in DIFFERENT packages each time. `pnpm -w test:e2e` failed at @tessera/marketing and then at @tessera/api (both passed standalone immediately after: 65 and 140), and `pnpm -w test` failed at @tessera/web while printing \"39 passed / 440 passed\" (green on re-run, 43/43). Cause unproven for those two — what IS established is the signature and that it costs real time and real trust on every feature. This machine is a slow external SSD (Next.js itself prints \"Slow filesystem detected\"), so contention under turbo parallelism is the first hypothesis to test. Scope for whoever takes this: make a gate report WHY a package failed when every test in it passed, then fix the underlying races."
+    },
+    {
+      "id": "F-098",
+      "title": "Multi-instance plugin host: make the first-party plugins load-bearing by routing connectors through it",
+      "requirements": [
+        "FR-40",
+        "FR-58",
+        "FR-59",
+        "FR-60"
+      ],
+      "service": "api",
+      "package": "@tessera/plugin-host",
+      "release": "R4",
+      "priority": "could",
+      "status": "backlog",
+      "blockedBy": [
+        "F-058"
+      ],
+      "acceptance": [
+        "The host keys instances per (pluginId, instanceId) rather than one per plugin id — today two filesystem sources with different roots collide on tessera.connector.filesystem, which is the reason connectors cannot go through the host (ADR-0061 §3)",
+        "packages/config/src/profiles/connectors.ts connectorForRecord — a hardcoded switch, exactly what a plugin host should replace — builds connectors THROUGH the host, so the first-party connector plugin becomes load-bearing (FR-40 dogfooding) and its filesystem:read declaration gates real work",
+        "The /ready plugins check stops reporting \"0 plugins registered\" on a deployment with registered sources: the aggregation F-058 built becomes a real signal rather than a reachable seam",
+        "ADR amending ADR-0020/ADR-0061 §3 with the instance-keying model; the existing plugin-host suite passes unmodified where behaviour is unchanged, and every changed invariant has a test that was red first"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test"
+      ],
+      "effects": [
+        "E-016",
+        "E-014",
+        "E-009"
+      ]
     }
   ]
 }

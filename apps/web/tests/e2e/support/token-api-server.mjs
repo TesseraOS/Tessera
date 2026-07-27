@@ -37,6 +37,12 @@ const app = buildServer(runtime.services, {
   events: runtime.events,
   // Back /v1/tokens self-service (F-046) so the profile's token panel + the e2e work in token mode.
   tokenStore: runtime.auth.tokenStore,
+  // Real per-tenant metering (F-057) so the Analytics e2e can compile through this server and then
+  // read its own usage back — a stub would prove the view renders, not that the metering path works.
+  usage: runtime.usage,
+  // Metered ON here, unlike a plain Local deployment, so the e2e exercises the entitlement branch:
+  // usage-vs-limit on Billing and the upgrade CTA. The unmetered branch is covered by the RTL suite.
+  metered: true,
 });
 
 // Test-only channel so the spec can read the issued token. NOT a production route.

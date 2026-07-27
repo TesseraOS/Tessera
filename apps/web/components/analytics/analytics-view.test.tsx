@@ -170,6 +170,30 @@ describe('AnalyticsView (F-057; FR-47)', () => {
     expect(container.textContent).toMatch(/utc days/i);
   });
 
+  it('draws no trend for a single day — a line needs two points', async () => {
+    // Found by LOOKING at it against a real one-day-old deployment: a single point renders as a lone
+    // dot marooned in an empty box, which reads as broken rather than as young. The day's total is
+    // already in the card above, so the chart adds nothing.
+    // Mutation check: relaxing the guard back to `daily.length > 0` turns this red.
+    getUsage.mockResolvedValue(
+      usage({
+        daily: [
+          {
+            date: '2026-05-01',
+            compiles: 5,
+            searches: 10,
+            documentsIngested: 0,
+            tokensCompiled: 20_000,
+          },
+        ],
+      }),
+    );
+    renderView();
+
+    await screen.findByText(/^usage$/i);
+    expect(screen.queryByText(/compiles per day/i)).toBeNull();
+  });
+
   it('labels latency "average" and "slowest", and NEVER "p95"', async () => {
     // The load-bearing assertion of this suite (ADR-0060 §3). A sum and a max cannot produce a
     // percentile, so any copy claiming one would be fabrication. Mutation check: renaming a label to

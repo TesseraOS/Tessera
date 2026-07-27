@@ -25,8 +25,9 @@ import { useUsage } from '@/lib/api/hooks';
  *    that. Real percentiles are measured offline by the gated `bench` suite against NFR-4.
  * 2. **No money.** The only currency in the system is a plan's list price. There is no per-token
  *    price and no provider bill, so a dollar figure here would be invented — which DESIGN-SYSTEM §0
- *    forbids. "Cost posture" is the honest form: which embeddings provider is in use, and what that
- *    implies for spend.
+ *    forbids. "Cost posture" is what remains provable: tokens compiled, usage against the plan, and
+ *    what Tessera itself bills. It cannot name the embeddings provider either — nothing on the API
+ *    exposes it (F-097) — so it does not claim to.
  * 3. **UTC days, said out loud.** These buckets are pre-aggregated at write time and cannot be
  *    re-split, so unlike the Overview chart (viewer-local, F-088) this axis is UTC. Two day
  *    boundaries in one product is confusing *unless it is stated*, so it is stated.
@@ -78,7 +79,7 @@ function Metric({ label, value, hint }: MetricProps) {
 function AnalyticsSkeleton() {
   return (
     <div className="space-y-4" aria-hidden="true">
-      <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
+      <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="space-y-2">
@@ -88,7 +89,7 @@ function AnalyticsSkeleton() {
           ))}
         </div>
       </Card>
-      <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
+      <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
         <Skeleton className="h-40 w-full" />
       </Card>
     </div>
@@ -131,7 +132,7 @@ export function AnalyticsView() {
 
   return (
     <div className="space-y-4">
-      <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
+      <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
         <CardHeader className="p-0 pb-4">
           <CardTitle>Usage</CardTitle>
           <CardDescription>
@@ -147,7 +148,13 @@ export function AnalyticsView() {
         </CardContent>
       </Card>
 
-      {daily.length > 0 ? (
+      {/*
+        TWO days, not one. Found by looking at it: a one-day window renders a single dot marooned in
+        an empty 40px box, which reads as a broken chart rather than as a young workspace. A trend
+        needs two points to be a trend, and the day's total is already the number in the card above.
+        Same principle as the Overview chart's refusal to draw a flat zero line (F-084).
+      */}
+      {daily.length > 1 ? (
         <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
           <CardHeader className="p-0 pb-4">
             <CardTitle className="text-sm font-semibold">Compiles per day</CardTitle>
@@ -191,7 +198,7 @@ export function AnalyticsView() {
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
+        <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
           <CardHeader className="p-0 pb-4">
             <CardTitle>Latency</CardTitle>
             <CardDescription>
@@ -219,7 +226,7 @@ export function AnalyticsView() {
           </CardContent>
         </Card>
 
-        <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
+        <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
           <CardHeader className="p-0 pb-4">
             <CardTitle>Retrieval quality</CardTitle>
             <CardDescription>
@@ -252,7 +259,7 @@ export function AnalyticsView() {
         </Card>
       </div>
 
-      <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
+      <Card className="bg-sidebar gap-0 border-none p-4 shadow-none dark:ring-0">
         <CardHeader className="p-0 pb-4">
           <CardTitle>Cost posture</CardTitle>
           <CardDescription>

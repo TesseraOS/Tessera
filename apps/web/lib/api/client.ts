@@ -42,6 +42,8 @@ import type {
   Identity,
   RbacCatalog,
   RecentActivity,
+  CheckoutBody,
+  CheckoutSession,
   Subscription,
   TokenList,
   UsageQuery,
@@ -166,6 +168,12 @@ export const api = {
 
   // --- settings-facing reads (no config write surface; render read-only) ---
   getPlans: (): Promise<PlansResponse> => sdk.getPlans(),
+  /**
+   * Start a hosted checkout for a paid plan (F-030; admin:manage). Only reachable on a metered
+   * deployment — the local/free adapter rejects it, which is why the Billing view hides the CTA
+   * entirely rather than rendering one that cannot work.
+   */
+  createCheckout: (body: CheckoutBody): Promise<CheckoutSession> => sdk.createCheckout(body),
   getHealth: (): Promise<HealthStatus> => sdk.getHealth(),
   getReady: (): Promise<ReadyStatus> => sdk.getReady(),
 };

@@ -5,6 +5,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { api } from './client';
 import { useApiEvent } from './events';
 import { useProjectStore } from '@/lib/store/project';
+import type { CheckoutBody } from '@tessera/sdk';
 import type {
   AuditExportQuery,
   AuditQuery,
@@ -329,6 +330,16 @@ export function useScanStatusSync(): void {
 /** Subscription plans + entitlements (budgets) — GET /v1/billing/plans (public). */
 export function usePlans() {
   return useQuery({ queryKey: ['plans'], queryFn: () => api.getPlans(), staleTime: 60_000 });
+}
+
+/**
+ * Start a hosted checkout and hand back the provider URL (F-030; F-057). The caller decides what to
+ * do with it — this hook never navigates, so a test can assert the call without a jsdom navigation.
+ */
+export function useCheckout() {
+  return useMutation({
+    mutationFn: (body: CheckoutBody) => api.createCheckout(body),
+  });
 }
 
 /** Liveness — GET /health. */

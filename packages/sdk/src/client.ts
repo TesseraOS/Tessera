@@ -50,6 +50,11 @@ export type ProjectDeleteResult =
   paths['/v1/projects/{id}']['delete']['responses'][200]['content'][Json];
 export type WorkspaceStats = paths['/v1/stats']['get']['responses'][200]['content'][Json];
 export type UsageSummary = paths['/v1/usage']['get']['responses'][200]['content'][Json];
+export type CheckoutBody = NonNullable<
+  paths['/v1/billing/checkout']['post']['requestBody']
+>['content'][Json];
+export type CheckoutSession =
+  paths['/v1/billing/checkout']['post']['responses'][200]['content'][Json];
 export type UsageQuery = NonNullable<paths['/v1/usage']['get']['parameters']['query']>;
 export type ActivityQuery = NonNullable<paths['/v1/stats/activity']['get']['parameters']['query']>;
 export type WorkspaceActivity =
@@ -182,6 +187,11 @@ export interface TesseraClient {
   getPlans(): Promise<Plans>;
   /** The calling tenant's current subscription (`admin:manage`). */
   getSubscription(): Promise<Subscription>;
+  /**
+   * Start a hosted checkout for a paid plan (F-030; admin:manage). Rejects with VALIDATION on a
+   * deployment whose billing provider is local/free — there is no checkout to start there.
+   */
+  createCheckout(body: CheckoutBody): Promise<CheckoutSession>;
   /** Liveness — `GET /health`. */
   getHealth(): Promise<HealthStatus>;
   /**
@@ -337,6 +347,9 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
     },
     async getPlans() {
       return unwrap(await client.GET('/v1/billing/plans', {}));
+    },
+    async createCheckout(body) {
+      return unwrap(await client.POST('/v1/billing/checkout', { body }));
     },
     async getSubscription() {
       return unwrap(await client.GET('/v1/billing/subscription', {}));

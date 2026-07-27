@@ -2,6 +2,7 @@ import {
   Activity,
   Boxes,
   ChartNoAxesCombined,
+  CreditCard,
   FileSearch,
   LayoutGrid,
   Network,
@@ -54,7 +55,10 @@ export const navGroups: NavGroup[] = [
   },
 ];
 
-export const footerNav: NavItem[] = [{ title: 'Settings', href: '/settings', icon: Settings }];
+export const footerNav: NavItem[] = [
+  { title: 'Billing', href: '/billing', icon: CreditCard },
+  { title: 'Settings', href: '/settings', icon: Settings },
+];
 
 /** Flat list (sidebar groups + footer) — consumed by the ⌘K command palette and breadcrumb. */
 export const navItems: NavItem[] = [...navGroups.flatMap((g) => g.items), ...footerNav];

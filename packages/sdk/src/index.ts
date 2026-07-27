@@ -37,6 +37,8 @@ export {
   type CreateProjectRequest,
   type RenameProjectRequest,
   type ProjectDeleteResult,
+  type CheckoutBody,
+  type CheckoutSession,
   type UsageQuery,
   type UsageSummary,
   type WorkspaceStats,

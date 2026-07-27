@@ -3,6 +3,7 @@ import {
   Activity,
   Boxes,
   ChartNoAxesCombined,
+  CreditCard,
   FileSearch,
   LayoutGrid,
   Network,
@@ -98,6 +99,12 @@ export function buildNavGroups(pathname: string): SidebarNavGroup[] {
 export function buildFooterNavLinks(pathname: string): SidebarNavItem[] {
   const isActive = makeIsActive(pathname);
   return [
+    {
+      title: 'Billing',
+      path: '/billing',
+      icon: <CreditCard />,
+      isActive: isActive('/billing'),
+    },
     { title: 'Settings', path: '/settings', icon: <Settings />, isActive: isActive('/settings') },
   ];
 }

@@ -3,9 +3,10 @@ name: CI
 # Runs the harness verification gates on every change (ADR-0010, NFR-15).
 # Steps mirror .harness/verification/gates.json — keep them in lockstep (effect E-005).
 #
-# Activation: this workflow runs once the repo has a GitHub remote (today there is none).
+# The remote exists (ADR-0055: trunk-based `main` with a remote), so this workflow is live.
 # Branch protection on `main` should require the `verify`, `security`, and `secret-scan`
-# jobs to pass before merge, so the gates can never be skipped (ADR-0010).
+# jobs to pass before merge, so the gates can never be skipped (ADR-0010). `sbom` produces
+# evidence rather than a verdict and is not a required check.
 
 on:
   push:
@@ -106,6 +107,36 @@ jobs:
           scanners: vuln
           severity: CRITICAL,HIGH
           exit-code: '1'
+
+  # Software Bill of Materials (NFR-18). Reuses Trivy rather than introducing a second supply-chain
+  # tool: it already reads pnpm-lock.yaml for the audit job above (ADR-0052), so the SBOM and the
+  # vulnerability report describe the SAME dependency resolution. A separate generator could disagree
+  # with the audit about what is installed, and then neither number could be trusted.
+  #
+  # This is NOT a verification gate — it produces evidence, it does not pass or fail a change — so it
+  # is deliberately absent from gates.json (E-005 mirrors gates INTO ci.yml, not the reverse).
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate SBOM (CycloneDX)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: pnpm-lock.yaml
+          format: cyclonedx
+          output: sbom.cyclonedx.json
+          # An SBOM is an inventory, not a verdict: it must be produced even when the audit job is
+          # failing the build, because that is exactly when someone needs to know what is installed.
+          exit-code: '0'
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cyclonedx.json
+          retention-days: 90
 
   secret-scan:
     runs-on: ubuntu-latest

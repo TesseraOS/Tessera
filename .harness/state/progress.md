@@ -3,6 +3,106 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-27 — F-057 IN PROGRESS: usage metering + the metered predicate (increments 0–6a of 11)
+
+Claimed **F-057** (`should`, lowest-id eligible in R4; F-030 + F-035 + F-046 done). Plan:
+[`F-057-analytics-usage-metering-and-billing-ui.md`](../plans/F-057-analytics-usage-metering-and-billing-ui.md)
+(planner subagent). Decision: **[ADR-0060](../../docs/adr/0060-usage-metering-analytics-and-the-metered-predicate.md)**.
+
+**Not finished — 5 increments remain (6b, 7, 8, 9, 10, 11).** Everything below is committed green.
+
+### The acceptance was wrong about two things, and the lead decided both
+
+1. **Clause 3's "latency from the observability metrics" describes a capability that does not exist.**
+   `createInstruments` builds histograms on the global meter, which is a no-op until a provider is
+   registered (`metrics.ts:6-9`); `startTelemetry`'s `metricReader` defaults to none
+   (`telemetry.ts:19-20`); neither shipped bin passes one (`bin/api.ts:11`, `bin/mcp.ts:14`). Nothing
+   is exported, scraped, or tenant-dimensioned. **Decision:** measure at the metering boundary and
+   report **average + slowest, never p95** — a sum and a max cannot produce a percentile, and calling
+   a mean "p95" is fabrication. True percentiles stay in the gated `bench` suite against NFR-4.
+
+2. **The monthly cap could not be enforced under the existing predicate without breaking every
+   self-hosted deployment.** See below. **Decision:** an explicit `metered` flag.
+
+### The defect this feature would have amplified — verified, then fixed
+
+`createRuntimeBilling` returns `createLocalBilling()` for `provider: 'none'` (`assemble.ts:151`) →
+that adapter resolves every tenant to `freeSubscription` (`local.ts:14`) → free caps
+`maxTokensPerCompile` at 8000 (`domain.ts:38`) → `createCompileBudgetClamp` treated *any* defined
+provider as metered (`budget.ts:32`).
+
+**So every runtime-composed Local and self-hosted deployment has been capped at 8000 tokens per
+compile since F-035** — while `budget.ts`'s own prose and [ADR-0056 §3](../../docs/adr/0056-entitlement-clamp-silent-and-metered-only.md)
+said that must not happen, and ADR-0056 listed preventing it as a *Positive it had delivered*. The
+decision was made; the composition root never implemented it. The Inspector's 32000 preset was being
+silently reduced. Enforcing `maxMonthlyCompiles` under the same predicate would have hard-blocked
+every local and self-hosted deployment after **200 compiles a month** — the F-056 lesson ("a shortcut
+that caps a deployment profile") applied to *all* profiles at once.
+
+Fixed in increment 6a, in its own commit so a regression bisects cleanly. ADR-0056 §3 now carries a
+"superseded in part" note: its *meaning* stands, its *detection* never worked.
+
+### What landed
+
+| # | Increment | Evidence |
+|---|---|---|
+| 0 | Plan + ADR-0060 + claim | `verify-state` valid |
+| 1 | `UsageStore` contract, UTC period arithmetic, in-memory reference adapter, shared conformance suite | 50 tests (was 30); **10/10 mutations red** |
+| 2 | SQLite + Postgres UsageStore, both running the suite unmodified | **79 passed, zero skipped** with `TESSERA_TEST_POSTGRES=1`; 9/9 mutations red |
+| 3 | Durable `SubscriptionStore` (SQLite + Postgres) + the conformance suite the port never had, run by all three adapters | 104 passed, zero skipped; 6/6 mutations red |
+| 4 | `ProfileAdapters` gains both stores as **required**; `createRuntimeBilling` takes the store; `Runtime.usage` | 130 passed with both guards; 4/4 mutations red |
+| 5 | Three recorders: REST `onResponse` hook, MCP per-tool meter, ingestion `document.ingested` subscriber | api e2e 121, mcp e2e 62; 5/6 mutations red (see below) |
+| 6a | `metered` becomes an explicit flag; the 8000 cap on Local/self-hosted is fixed | full gates + **`e2e-full`** + **`bench`**; 6/6 mutations red |
+
+### Four things the mutation checks corrected, that comments had claimed
+
+The house standard is that a test comment states what mutation turns it red. Running those mutations
+falsified four claims — each is now recorded in the code rather than quietly fixed:
+
+- **The bigint parse is load-bearing for three fields, not seven.** Mutating `toUsageAggregate` one
+  field at a time against real Postgres: `count`/`tokens`/`scoredCount` are `sum()` over *integer* →
+  bigint → **string** (RED); the four float8 sums already arrive as numbers (**GREEN — nothing to
+  catch**). The parse stays on all seven (it survives a `pg-types` change), but the suite no longer
+  claims to be uniquely load-bearing.
+- **REST failure isolation comes from Fastify, not from our `.catch`.** Dropping the `.catch` leaves
+  the broken-store test green: `onResponse` runs after the response is sent, so a rejected hook is
+  logged, never surfaced. The `.catch` still earns its place (it turns an opaque hook error into a
+  warn carrying the operation) — but the test pins the *behaviour*, not that line.
+- **Nothing asserted the `metered` default, or `runtime.metered` at all.** Flipping the default to
+  `true`, or hard-coding `metered: true` in `assembleRuntime`, turned **nothing** red on the first
+  pass. That is the same shape of gap that let the original defect ship, so both now have cases.
+- **One self-hosted migration set was unguarded.** Deleting `pgSubscriptionMigrations` from
+  `ALL_MIGRATIONS` left all 129 tests passing — nothing on that path had touched the `subscriptions`
+  table. The added case reaches it through the Dodo provider, whose `getSubscription` resolves
+  `store.get() ?? freeSubscription()` with no network call, so a missing table is a hard error.
+
+### Scope refused rather than absorbed
+
+- **F-095** — the billing routes set no `config.audit`, so a checkout leaves no trail. Found while
+  planning; a two-line fix inside a feature that already touches checkout, and still scope creep.
+- **F-096** — the guarded self-hosted suite intermittently fails its own run on an ioredis
+  `Connection is closed` teardown race, with **every assertion green**. Attributed by measurement,
+  not assumption: every F-057 change stashed, the sibling suite run 4× against HEAD, same rejection
+  on **2 of 4**. Pre-existing, guard-only, and invisible in the default `test` gate — which is
+  exactly why it has survived.
+- Seat enforcement, a currency cost figure, a metrics/scrape endpoint, usage retention, per-principal
+  usage, and an MCP `get_usage` tool are all out of scope with reasons recorded in ADR-0060.
+
+### Environment note
+
+Docker Desktop stopped mid-session and the guarded suites failed on `CREATE SCHEMA` until it was
+restarted (`C:\Users\ASUS\AppData\Local\Programs\DockerDesktop\Docker Desktop.exe`, then
+`docker compose up -d postgres redis minio`). The `wsl -d docker-desktop --exec` workaround recorded
+for F-056 does **not** start a stopped daemon — it only wakes a running one.
+
+**Next step:** increment **6b** — `createMonthlyCompileGuard` (the F-035 closure), one implementation
+adopted by `POST /v1/compile` and by MCP `compile_context` + `explain`, `RateLimitedError` → 429,
+fail-open on store error. Capture the **red-before** run first: today a tenant compiles without limit
+forever, and that failure *is* the seam. Then 7 (`GET /v1/usage` + SDK + docs regeneration in the
+same commit), 8–9 (Analytics + Billing views), 10 (e2e + axe + screenshots), 11 (effects + state).
+
+---
+
 ## 2026-07-26 — F-056 DONE: the self-hosted profile boots for real (all 8 increments)
 
 Claimed **F-056** (`must`, lowest-id eligible; F-023 + F-053 done). Plan:

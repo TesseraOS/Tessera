@@ -19,6 +19,8 @@
  *                          (README/AGENTS/CLAUDE/NOTICE + docs/** + .harness/**).
  *   7. env docs          — every TESSERA_* env var read by config/server is documented in
  *                          .env.example (operators can discover it).
+ *   8. brand             — the internal codename never reaches a product-facing surface, and every
+ *                          published package sits in the @tessera scope (ADR-0008).
  *
  * Zero npm dependencies so it works pre-toolchain and in any CI. Errors fail (exit 1);
  * warnings are printed but do not fail (historical debt that must not break the gate).
@@ -356,6 +358,54 @@ if (envExample !== null) {
       err(
         'env-docs',
         `${token} (used in ${file.replaceAll(sep, '/')}) is not documented in .env.example`,
+      );
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 8. brand — the internal codename must not reach a product-facing surface (ADR-0008, F-059)
+// ---------------------------------------------------------------------------
+// ADR-0008 keeps `ContextOS` as an INTERNAL codename only: the public brand is Tessera. Historical
+// notes, ADRs and the harness may say it freely — that is the point of a codename — so this checks
+// only what a user or an npm visitor can see. Asserting it once during a launch review is how it
+// creeps back; this makes it an invariant instead.
+const BRAND_SURFACES = [
+  ...filesUnder('apps/web/app', '.tsx'),
+  ...filesUnder('apps/web/components', '.tsx'),
+  ...filesUnder('apps/marketing/content', '.mdx'),
+  ...filesUnder('apps/docs/content', '.mdx'),
+];
+for (const relFile of BRAND_SURFACES) {
+  const text = loadText(relFile, { optional: true });
+  if (text !== null && text.includes('ContextOS')) {
+    err(
+      'brand',
+      `${relFile.replaceAll(sep, '/')} exposes the internal codename "ContextOS" (ADR-0008)`,
+    );
+  }
+}
+// The npm surface: a published package's name and description are the first thing a user reads.
+// Direct children only — `filesUnder` would recurse into every node_modules tree and never return.
+for (const base of ['packages', 'apps', 'tests']) {
+  let entries;
+  try {
+    entries = readdirSync(join(root, base));
+  } catch {
+    continue;
+  }
+  for (const entry of entries) {
+    const relFile = join(base, entry, 'package.json');
+    if (!existsSync(join(root, relFile))) continue;
+    const manifest = loadJson(relFile, { optional: true });
+    if (manifest === null || manifest.private === true) continue;
+    if (!String(manifest.name).startsWith('@tessera/')) {
+      err('brand', `published package "${manifest.name}" is outside the @tessera scope (ADR-0008)`);
+    }
+    if (String(manifest.description ?? '').includes('ContextOS')) {
+      err(
+        'brand',
+        `published package "${manifest.name}" description exposes the codename (ADR-0008)`,
       );
     }
   }

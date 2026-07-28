@@ -9,6 +9,7 @@ import {
   createSqliteVecStore,
 } from '@tessera/storage';
 import { createSqliteAuditLog } from '../audit/sqlite-audit-log.js';
+import { createSqliteNotificationStore } from '../notifications/sqlite-notification-store.js';
 import { createSqliteTokenStore } from '../auth/sqlite-token-store.js';
 import { createSqliteProjectStore } from '../projects/sqlite-project-store.js';
 import { createSqliteManifest } from '../sources/sqlite-manifest.js';
@@ -71,6 +72,10 @@ export async function createLocalRuntime(
     // local` + `billing.provider: dodo` is a legal config: a self-hoster on a paid plan.
     usageStore: createSqliteUsageStore(relational.db),
     subscriptionStore: createSqliteSubscriptionStore(relational.db),
+    // Read state is durable even in single-node Local (F-065): a restart that forgets which
+    // notifications you had seen re-raises every badge, which is the failure mode the feature exists
+    // to remove — and a phone and a laptop are two devices against one Local server.
+    notificationStore: createSqliteNotificationStore(relational.db),
     ...(config.auth.mode === 'token' ? { tokenStore: createSqliteTokenStore(relational.db) } : {}),
     ...(config.audit.enabled ? { auditLog: createSqliteAuditLog(relational.db) } : {}),
     // Every SQLite adapter shares the one handle `assembleRuntime` already closes; nothing else to do.

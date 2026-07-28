@@ -10,7 +10,11 @@ import {
 // Dedicated subpaths, not the package roots: these conformance modules import vitest, and the root
 // entries are loaded by the shipped runtime.
 import { runSourceRegistryConformance } from '@tessera/ingestion/conformance';
-import { runAuditLogConformance, runProjectStoreConformance } from '@tessera/api/conformance';
+import {
+  runAuditLogConformance,
+  runNotificationStoreConformance,
+  runProjectStoreConformance,
+} from '@tessera/api/conformance';
 import { createPostgresManifest, pgManifestMigrations } from '../../src/sources/postgres-manifest';
 import {
   createPostgresSourceRegistry,
@@ -25,6 +29,10 @@ import {
   pgTokenStoreMigrations,
 } from '../../src/auth/postgres-token-store';
 import { createPostgresAuditLog, pgAuditLogMigrations } from '../../src/audit/postgres-audit-log';
+import {
+  createPostgresNotificationStore,
+  pgNotificationStoreMigrations,
+} from '../../src/notifications/postgres-notification-store';
 
 /**
  * The five Postgres control-plane stores from F-056 increment 7 — manifest, source registry, project
@@ -44,6 +52,7 @@ const ALL_MIGRATIONS = [
   ...pgProjectStoreMigrations,
   ...pgTokenStoreMigrations,
   ...pgAuditLogMigrations,
+  ...pgNotificationStoreMigrations,
 ];
 
 let schemaCounter = 0;
@@ -146,6 +155,13 @@ describe.skipIf(!enabled)('postgres config stores (TESSERA_TEST_POSTGRES=1)', ()
   runAuditLogConformance('postgres', async () => {
     const { db, cleanup } = await freshSchema('audit');
     return { log: createPostgresAuditLog(db), cleanup };
+  });
+
+  // F-065. The self-hosted twin runs the SAME suite the SQLite one does, so the two cannot disagree
+  // about the thing that matters here: whose read marks these are.
+  runNotificationStoreConformance('postgres', async () => {
+    const { db, cleanup } = await freshSchema('notif');
+    return { store: createPostgresNotificationStore(db), cleanup };
   });
 
   describe('token store', () => {

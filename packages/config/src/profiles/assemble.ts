@@ -1,5 +1,11 @@
 import type { Embeddings } from '@tessera/ai';
-import type { ApiEventMap, ApiServices, AuditLog, AuditMetadata } from '@tessera/api';
+import type {
+  ApiEventMap,
+  ApiServices,
+  AuditLog,
+  AuditMetadata,
+  NotificationStore,
+} from '@tessera/api';
 import {
   createLocalAuthProvider,
   createOidcAuthProvider,
@@ -99,6 +105,12 @@ export interface ProfileAdapters {
    */
   readonly usageStore: UsageStore;
   readonly subscriptionStore: SubscriptionStore;
+  /**
+   * Per-principal notification read state + preferences (F-065). **Required from both profiles**,
+   * for the reason stated above: cross-device read state is the whole point of F-065, so a
+   * self-hosted deployment left without it would ship the exact defect the feature exists to fix.
+   */
+  readonly notificationStore: NotificationStore;
   /** Present when `config.auth.mode === 'token'`; the profile picks the backing store. */
   readonly tokenStore?: TokenStore;
   /** Present when `config.audit.enabled`. */
@@ -475,6 +487,9 @@ export async function assembleRuntime(
     plugins,
     // Persistent audit trail (F-027) when enabled; the surface falls back to its in-memory sink otherwise.
     ...(adapters.auditLog !== undefined ? { audit: adapters.auditLog } : {}),
+    // Cross-device notification read state + preferences (F-065). On the Runtime rather than in
+    // ApiServices for the E-015 reason the usage store documents above.
+    notifications: adapters.notificationStore,
     memoryRetention: toMemoryRetentionPolicy(config.memory.retention),
     sources,
     events,

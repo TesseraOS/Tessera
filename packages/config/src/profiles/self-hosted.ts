@@ -25,6 +25,10 @@ import {
 import { createPostgresAuditLog, pgAuditLogMigrations } from '../audit/postgres-audit-log.js';
 import { createPostgresTokenStore, pgTokenStoreMigrations } from '../auth/postgres-token-store.js';
 import {
+  createPostgresNotificationStore,
+  pgNotificationStoreMigrations,
+} from '../notifications/postgres-notification-store.js';
+import {
   createPostgresProjectStore,
   pgProjectStoreMigrations,
 } from '../projects/postgres-project-store.js';
@@ -71,6 +75,7 @@ const ALL_MIGRATIONS = [
   ...pgAuditLogMigrations,
   ...pgUsageMigrations,
   ...pgSubscriptionMigrations,
+  ...pgNotificationStoreMigrations,
 ];
 
 /** Read a required secret, with an error naming the setting rather than the internal key. */
@@ -161,6 +166,7 @@ export async function createSelfHostedRuntime(
     projectStore: createPostgresProjectStore(relational.db),
     usageStore: createPostgresUsageStore(relational.db),
     subscriptionStore: createPostgresSubscriptionStore(relational.db),
+    notificationStore: createPostgresNotificationStore(relational.db),
     ...(config.auth.mode === 'token'
       ? { tokenStore: createPostgresTokenStore(relational.db) }
       : {}),

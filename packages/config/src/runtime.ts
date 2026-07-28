@@ -1,7 +1,7 @@
 import type { Embeddings } from '@tessera/ai';
 // `ApiEventBus`/`ApiEventMap` are imported TYPE-ONLY (the bus is built via `@tessera/core`) so
 // `@tessera/config` — and the MCP process booting through it — stays Fastify-free (ADR-0030).
-import type { ApiEventBus, ApiServices, AuditLog } from '@tessera/api';
+import type { ApiEventBus, ApiServices, AuditLog, NotificationStore } from '@tessera/api';
 import type { AuthProvider, TokenStore } from '@tessera/api/auth';
 import type { BillingProvider, UsageStore } from '@tessera/billing';
 import type { FlagProvider } from '@tessera/core';
@@ -89,6 +89,12 @@ export interface Runtime {
    * present when `config.audit.enabled`. `undefined` → the surface falls back to its in-memory sink.
    */
   readonly audit?: AuditLog;
+  /**
+   * Per-principal notification read state + preferences (F-065; ADR-0064) — the only part of a
+   * notification that is not projected from the audit trail. **Always present**: every profile must
+   * supply one, because read state that does not cross devices is the defect this feature fixes.
+   */
+  readonly notifications: NotificationStore;
   /**
    * The resolved memory retention policy (FR-15; from `config.memory.retention`, days → ms). Empty by
    * default (retention off). `apps/server` passes it to `buildServer` so `POST /v1/retention/prune`

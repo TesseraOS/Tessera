@@ -20,3 +20,8 @@ export {
   runProjectStoreConformance,
   type ProjectStoreFactory,
 } from './projects/store.conformance.js';
+export {
+  runNotificationStoreConformance,
+  type NotificationStoreFactory,
+  type NotificationStoreHarness,
+} from './notifications/notification-store.conformance.js';

@@ -2430,7 +2430,7 @@
       "package": "@tessera/mcp",
       "release": "R4",
       "priority": "should",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [],
       "acceptance": [
         "An agent connecting over stdio to a token- (or OIDC-) mode deployment can present a credential and be authenticated into the right principal/tenant; the mechanism is documented for operators (an agent client launches tessera-mcp with a config it controls)",
@@ -2448,7 +2448,7 @@
         "E-018",
         "E-020"
       ],
-      "notes": "FOUND BY F-048 (2026-07-16). `defaultCredentialResolver` (apps/mcp/src/gateway.ts) reads the SDK `authInfo.token` or an `Authorization` header — both are populated only by an HTTP transport's auth middleware. Over **stdio** neither exists, so in token mode every tool call fails UNAUTHORIZED and there is no supported way to hand `tessera-mcp` a token; nothing in .env.example offers one. The gateway's own doc comment claims it 'works over stdio (one identity)', which is true only in zero-auth `none` mode. Today's real local shape is TESSERA_AUTH_MODE=none + TESSERA_AUTH_TENANT=<tenant>, which is what F-048's agent journey drives (documented at that override). This blocks a hosted/multi-client stdio deployment and interacts with F-055 (API-key principals). Options to weigh: a TESSERA_MCP_TOKEN env credential (simplest; note it lands in the agent client's config file), a token file path, or the `resolveCredential` seam the gateway already exposes."
+      "notes": "FOUND BY F-048 (2026-07-16), CLOSED 2026-07-28 under ADR-0065. The stdio credential is a SECRET like any other (key MCP_TOKEN, read through the existing SecretsProvider) rather than a new mechanism: one key gives the env and file channels, and the file channel answers the real hazard that agent-client config files get synced and committed. Threat model recorded in the ADR: never argv (hence mcp-config emits a PLACEHOLDER and has no --token <value> flag), never shell history, never logged, rotation needs a restart. The static resolver IGNORES the request context rather than merging it (a stdio peer controls the JSON-RPC message), and is wired on stdio ONLY — a process-wide credential on the HTTP transport would authenticate every remote caller as the operator. token/oidc mode with no credential REFUSES TO START, naming the key; `none` mode is unchanged. The F-048 agent journey now runs authenticated, its TESSERA_AUTH_MODE=none override and the note pointing here both removed."
     },
     {
       "id": "F-073",

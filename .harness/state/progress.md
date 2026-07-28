@@ -3,6 +3,88 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-28 — F-072 DONE: stdio can authenticate; F-069 assessed and NOT claimed
+
+**F-072** complete across **5 increments**. Plan:
+[`F-072-mcp-stdio-credential-channel.md`](../plans/F-072-mcp-stdio-credential-channel.md).
+Decision: **[ADR-0065](../../docs/adr/0065-the-mcp-stdio-credential-is-a-secret-not-a-new-mechanism.md)**.
+
+### F-069 was skipped deliberately, and why is in the feature entry
+
+F-069 is the next `must` by id, and it is **blocked on facts this repository cannot produce**: a
+booked domain with live mailboxes (the acceptance already records the booking as the stakeholder's
+pending action) and the 15 counsel facts behind `COUNSEL_IDS` — entity, address, representative,
+register-number, jurisdiction, contact-email, dpo, processors, retention, transfers,
+supervisory-authority, payments, rights-phrasing, dpa. Inventing any of them is precisely what
+`apps/marketing/lib/legal/types.ts` was built to prevent ("a fabricated fact cannot silently replace
+a placeholder"), and `tests/legal-content.test.ts` fails the build if an email address or an entity
+suffix appears in the copy. Not claimed, status left `backlog`, and the assessment is recorded in its
+`notes` so the next agent does not re-derive it. **`oss-license` is the one placeholder resolvable
+today** (from F-059's Apache-2.0 decision), but a single-placeholder edit drops no page badge.
+
+### The defect F-048 found, closed
+
+`defaultCredentialResolver` reads the SDK `authInfo` or an `Authorization` header — **stdio populates
+neither**, so a token-mode deployment failed every tool call as UNAUTHORIZED while the gateway's own
+comment claimed stdio "works (one identity)". There was no supported way to hand `tessera-mcp` a
+token; F-048 worked around it with `TESSERA_AUTH_MODE=none` and filed this.
+
+**The credential is now a secret like any other** — key `MCP_TOKEN`, read through the existing
+`SecretsProvider`. One key buys the env *and* file channels; a bespoke variable pair would have been
+a second secrets mechanism with its own precedence and error handling for no capability the first
+one lacks. The file channel answers the real hazard: agent-client config files get synced and
+committed.
+
+### Three decisions, each pinned by a test verified falsifiable
+
+- **A missing credential refuses to start**, naming the key, instead of booting and failing all
+  twenty tools. Confirmed by disabling the guard — exactly two tests go red.
+- **The static resolver ignores the request context rather than merging it.** A stdio peer controls
+  the JSON-RPC message and could otherwise name a principal the operator never granted it. Confirmed
+  by removing the wiring — exactly two tests go red.
+- **No `--token <value>` CLI flag.** A secret in argv is visible to a process listing and lands in
+  shell history, which would defeat choosing an env channel at all; `mcp-config --token` emits a
+  placeholder, `--secrets-file` emits a path.
+
+Two tests in `mcp-gateway.test.ts` were rewritten mid-increment because they *could not fail*: the
+local provider authenticates anything, so "guard resolved" passed with the resolver wired backwards.
+They now spy on which credential the provider is handed.
+
+### The acceptance's own definition of done
+
+The F-048 agent journey drops its `none` override and runs against the deployment's **real** token
+mode. Verified it is genuinely authenticating rather than passing for the wrong reason: removing the
+credential fails the journey, and the built binary prints
+`auth.mode "token" requires an MCP credential over stdio: set the MCP_TOKEN secret …` on stderr.
+
+### Evidence
+
+`verify-state` valid (99 features, 32 effect-links — E-018 and E-020 extended); workspace typecheck /
+lint / format / test green; **e2e gate 27/27 tasks** (api 161, mcp 76, web 76, marketing 65, docs 24,
+server 6, cli 4) and the full-stack agent journey green. Generated CLI reference regenerated
+in-change.
+
+**One honest note:** an earlier e2e run had `apps/api`'s `hardening.e2e.test.ts` fail once (1 of 11)
+and pass in isolation and on two subsequent full runs. **F-072 does not touch `apps/api` at all**
+(`git diff --name-only` over the feature's commits confirms it), so it is not caused by this work;
+the plausible candidates in that file are the fixed-window rate-limit test and the real-socket SSE
+test, both timing-shaped under parallel load. Recorded rather than dismissed — it is un-diagnosed,
+not benign.
+
+Also caught in passing: `verify-state`'s env-docs check flagged a **comment** that spelled out a
+variable name as an undocumented env var. It was right — prose that names a variable reads exactly
+like a use of it — so the comment was reworded rather than the check weakened.
+
+### Carried forward
+
+- The credential is read once at boot (the file provider also caches), so rotating a token needs a
+  process restart. Documented; an agent client restarts on reload anyway.
+- `hardening.e2e.test.ts`'s one-off failure above — worth a look next time `apps/api` is open.
+
+**Next step:** **F-074** — Core Web Vitals gate for public surfaces — is the next lowest-id eligible
+in R4 (F-069 stays blocked on stakeholder input; F-093 is `must` but higher-id).
+
+---
 ## 2026-07-28 — F-065 DONE: notifications become a projection of the trail, with cross-device read state
 
 **F-065** complete across **10 increments**. Plan:

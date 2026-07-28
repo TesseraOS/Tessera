@@ -55,9 +55,13 @@ export function createRuntimeGateway(
  * `TESSERA_SECRET_MCP_TOKEN`; with `secrets.provider: file` it is the `MCP_TOKEN` entry in the
  * secrets JSON.
  *
- * Reusing the existing provider rather than minting a `TESSERA_MCP_TOKEN` variable is the decision
+ * Reusing the existing provider rather than minting a dedicated variable of its own is the decision
  * (ADR-0065): it gives the env **and** file channels with one key, and the file channel is what
  * answers the real hazard — agent-client config files get synced and committed.
+ *
+ * (This comment names no bespoke variable literally: `verify-state`'s env-docs check scans source
+ * for env-var-shaped tokens and would demand that one be documented in `.env.example`. It was right
+ * to flag the earlier wording — prose that spells out a variable reads exactly like a use of it.)
  */
 export const MCP_CREDENTIAL_SECRET_KEY = 'MCP_TOKEN';
 

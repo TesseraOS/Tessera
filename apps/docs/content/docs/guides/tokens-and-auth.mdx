@@ -98,14 +98,42 @@ override it), plus the claim names that carry roles and tenant
 `TESSERA_AUTH_OIDC_TENANT_CLAIM`, default `tenant_id`). Full variable documentation
 is in the [configuration reference](/docs/reference/configuration).
 
-## MCP and auth — the stdio special case
+## MCP and auth — the stdio credential
 
 The stdio MCP server is spawned by your agent on your machine and inherits the
-deployment's config. There is no credential prompt in the stdio transport — a local
-agent is the machine's user, which is exactly the `none`-mode trust model.
+deployment's config. In `none` mode nothing further is needed: a local agent is the
+machine's user, which is exactly that trust model.
 
-Locking agents down independently of humans becomes meaningful over
-[remote MCP](/docs/agents/remote-mcp), where each client presents its own Bearer
-token. It rides exactly the token model documented on this page: the same tokens,
-the same roles, the same revocation — so a token scoped to `viewer` is a read-only
-agent, and revoking it cuts the agent off on its next call.
+In **`token` or `oidc` mode** the transport carries no `Authorization` header — there
+is no HTTP request to put one on — so the credential is supplied as a **secret** under
+the key `MCP_TOKEN`, read through the same
+[secrets provider](/docs/reference/configuration) as every other secret:
+
+```bash
+tessera token issue --roles member     # the secret is printed once
+tessera mcp-config --token             # ready-to-paste client config with the env block
+```
+
+The snippet carries a **placeholder** for you to replace in the client's config file.
+There is no `--token <value>` flag on purpose: a secret on a command line is visible
+to anyone who can list processes, and it lands in your shell history.
+
+If the client config is something you sync or commit, keep the token out of it
+entirely — point the server at a secrets file instead, and the config carries a path:
+
+```bash
+tessera mcp-config --secrets-file /etc/tessera/secrets.json
+```
+
+`tessera-mcp` **refuses to start** in `token`/`oidc` mode when no credential is set,
+naming the key on stderr — rather than starting and failing every tool call, which is
+much harder to diagnose from an agent client.
+
+The credential is read once at startup, so rotating a token means restarting the
+server — which your agent client does anyway when you reload it.
+
+Agents lock down independently of humans on both transports now, and over
+[remote MCP](/docs/agents/remote-mcp) each client presents its own Bearer token. Both
+ride exactly the token model documented on this page: the same tokens, the same
+roles, the same revocation — so a token scoped to `viewer` is a read-only agent, and
+revoking it cuts the agent off on its next call.

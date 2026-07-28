@@ -205,6 +205,17 @@
       ]
     },
     {
+      "section": "MCP over stdio in token/oidc mode (F-072, ADR-0065)",
+      "vars": [
+        {
+          "name": "TESSERA_SECRET_MCP_TOKEN",
+          "default": "",
+          "optional": true,
+          "description": "stdio carries no Authorization header, so the credential comes from the SecretsProvider under the key MCP_TOKEN. Set it in the `env` block of your AGENT CLIENT's config (never on a command line — argv is visible to a process listing and lands in shell history). Without it, `tessera-mcp` refuses to start in token/oidc mode rather than failing every tool call. `none` mode needs nothing. Run `tessera mcp-config --token` for a ready-to-paste snippet."
+        }
+      ]
+    },
+    {
       "section": "Billing (F-030; open-core — local/free by default, no external service)",
       "vars": [
         {

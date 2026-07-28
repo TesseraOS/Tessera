@@ -975,6 +975,10 @@
         {
           "kind": "module",
           "ref": "session OWNER binding (F-055, ADR-0058 §4): an MCP HTTP session records the (tenantId, principalId) that opened it — BOTH halves, because the token store's principal_id has no cross-tenant uniqueness, so an id-only bind let globex's ci-bot attach to acme's session (found by the evaluator pass with a runnable repro; the shipped test covered only same-tenant/different-principal, which passes under either implementation) and answers 404 — NOT 403 — to any other principal, matching the SDK's own status for an unknown session so a stranger holding a leaked session id learns nothing. Verified by mutation (dropping the check turns the test red). The stdio credential gap is UNCHANGED and remains F-072 — but the claim in its notes that authInfo/Authorization are populated \"only by an HTTP transport's auth middleware\" is now outdated: there is one, it is ours, and it is deliberately not the SDK's (requireBearerAuth is Express-shaped AND rejects the non-expiring tokens Tessera issues, bearerAuth.js:30-35)."
+        },
+        {
+          "kind": "module",
+          "ref": "F-072: the MCP **stdio** transport can finally resolve a principal. `defaultCredentialResolver` reads the SDK authInfo or an Authorization header and stdio populates NEITHER, so token/oidc mode failed every tool call — `createStaticCredentialResolver` carries the one identity a stdio connection has, from the `MCP_TOKEN` secret (ADR-0065). Three couplings to keep: it is wired from apps/server/src/mcp.ts ONLY (a process-wide credential on the HTTP transport would authenticate every remote caller as the operator); it IGNORES the request context rather than merging it (a stdio peer controls the JSON-RPC message and could otherwise name a principal the operator never granted); and token/oidc mode with no credential now REFUSES TO START, so any composition that boots tessera-mcp must supply one or handle the throw"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -1093,6 +1097,10 @@
         {
           "kind": "module",
           "ref": "F-065 grew AUDIT_ACTIONS by four. source.scan.completed / source.scan.failed are background scan OUTCOMES, recorded by the @tessera/config ingestion-to-SSE bridge and attributed to the principal that started the scan (threaded through ScanOptions.actor; an unattributed scan records nothing rather than inventing a system actor) — since F-081 the 202 response left \"did it work?\" recorded nowhere durable, which is what made scan.failed underivable. notification.read / notification.manage cover the F-065 surface. EVERY widening ripples the same way: both adapters typed action columns, the Zod enum to OpenAPI to the regenerated SDK, apps/web AUDIT_ACTION_LABELS (an exhaustive Record, so a compile error until updated), the CSV export, and describeEvent. The scan actions do not end in .read, so they join ACTIVITY_ACTIONS: a scan is now TWO points on the Overview chart (started, finished) rather than one"
+        },
+        {
+          "kind": "module",
+          "ref": "F-072: gateway audit now attributes stdio calls to a REAL principal. Before, the only way to run stdio against a gated deployment was zero-auth `none` mode, so the trail recorded the local stand-in; an authenticated stdio agent is recorded as its own token principal in its own tenant, which is what makes the MCP half of the trail usable for compliance. Pinned by the gateway e2e (a capture_memory over stdio lands as actor {principalId, kind: token} in tenant acme)"
         }
       ],
       "kind": "EFFECT_LINK",

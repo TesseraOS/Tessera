@@ -109,6 +109,39 @@ export {
 } from './audit/index.js';
 export { API_VERSION } from './plugins/openapi.js';
 
+// Notifications (F-065; FR-38/FR-49, ADR-0064) — a typed projection of the audit trail. Fastify-free
+// so the composition root can build the persistent read-state/preferences store without Fastify, and
+// so MCP calls the same projection REST does.
+export {
+  DEFAULT_NOTIFICATION_PAGE_SIZE,
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  EMPTY_READ_STATE,
+  MAX_NOTIFICATION_PAGE_SIZE,
+  NOTIFIABLE_ACTIONS,
+  NOTIFICATION_KINDS,
+  NOTIFICATION_SEVERITIES,
+  NOTIFICATION_UNREAD_WINDOW,
+  READ_IDS_CAP,
+  SEVERITY_BY_KIND,
+  isRead,
+  kindForAction,
+  kindsWithSeverity,
+  listNotifications,
+  newestNotificationAt,
+  unreadCountFor,
+  withAllRead,
+  withPreferenceDefaults,
+  withRead,
+  type Notification,
+  type NotificationContext,
+  type NotificationKind,
+  type NotificationPage,
+  type NotificationPreferences,
+  type NotificationQuery,
+  type NotificationReadState,
+  type NotificationSeverity,
+} from './notifications/index.js';
+
 // Multi-project workspaces (F-066; ADR-0037) — the domain/port/in-memory adapter + service are
 // Fastify-free (the composition root builds a persistent store); the `/v1/projects` routes wrap the
 // service. A project is a `(tenant, project)` scope under the tenant.

@@ -2191,7 +2191,7 @@
       "package": "@tessera/api",
       "release": "R4",
       "priority": "should",
-      "status": "backlog",
+      "status": "in_progress",
       "blockedBy": [
         "F-060",
         "F-045"

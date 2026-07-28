@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useEffect, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ import { MemoryStrata } from '@/components/art';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { MemoryAuthoringDialog } from '@/components/memory/memory-authoring-dialog';
+import { useQuickAction } from '@/lib/store/quick-action';
 import { MemoryDetail } from '@/components/memory/memory-detail';
 import { useMemories } from '@/lib/api/hooks';
 import { MEMORY_KIND_ACCENT, MEMORY_KIND_LABELS, formatTimestamp } from '@/lib/memory';
@@ -35,6 +36,12 @@ export function MemoryView() {
   const [scope, setScope] = useState<string>(ALL);
   const [selected, setSelected] = useState<string | null>(null);
   const [authoringOpen, setAuthoringOpen] = useState(false);
+  // Opened by ⌘K → Capture memory, which navigates here first (F-064). One-shot: `consume` clears
+  // the request as it reads it, so a remount cannot pop the dialog open again.
+  const consumeQuickAction = useQuickAction((state) => state.consume);
+  useEffect(() => {
+    if (consumeQuickAction('capture-memory')) setAuthoringOpen(true);
+  }, [consumeQuickAction]);
   const [editing, setEditing] = useState<Memory | null>(null);
 
   const openCapture = () => {

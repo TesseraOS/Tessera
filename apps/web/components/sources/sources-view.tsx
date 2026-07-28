@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuickAction } from '@/lib/store/quick-action';
 import {
   AlertCircle,
   Boxes,
@@ -63,6 +64,11 @@ function formatTime(iso: string): string {
  */
 export function SourcesView() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  // Opened by ⌘K → Add source, which navigates here first (F-064). See lib/store/quick-action.
+  const consumeQuickAction = useQuickAction((state) => state.consume);
+  useEffect(() => {
+    if (consumeQuickAction('add-source')) setDialogOpen(true);
+  }, [consumeQuickAction]);
   const { data, isPending, isError, error, refetch, isFetching } = useSources();
   const scanEvents = useScanEvents();
   // Without this, a scan-status snapshot fetched mid-scan stays `running` forever (F-087).

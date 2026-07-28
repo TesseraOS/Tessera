@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'next-themes';
-import { CommandPalette, isPaletteShortcut } from '@/components/command-palette';
+import { CommandPalette, PRIMARY_ACTIONS, isPaletteShortcut } from '@/components/command-palette';
 import { useCommandMenu } from '@/lib/store/command';
+import { useQuickAction } from '@/lib/store/quick-action';
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({
@@ -88,5 +89,56 @@ describe('isPaletteShortcut', () => {
   it('rejects k without a modifier, and other modified keys', () => {
     expect(isPaletteShortcut(event({}))).toBe(false);
     expect(isPaletteShortcut(event({ key: 'j', ctrlKey: true }))).toBe(false);
+  });
+});
+
+describe('primary actions (F-064; FR-49)', () => {
+  beforeEach(() => {
+    useQuickAction.setState({ pending: null });
+    useCommandMenu.setState({ open: true });
+  });
+
+  it('offers every declared route action', async () => {
+    renderPalette();
+
+    // Derived from the table, so adding an entry without an item — or vice versa — fails here rather
+    // than being noticed by a user who cannot find the action.
+    for (const { label } of PRIMARY_ACTIONS) {
+      expect(await screen.findByRole('option', { name: label })).toBeInTheDocument();
+    }
+    expect(screen.getByRole('option', { name: 'Compile context' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'New project' })).toBeInTheDocument();
+  });
+
+  it('leaves a request for the destination view AND navigates there', async () => {
+    const user = userEvent.setup();
+    renderPalette();
+
+    await user.click(await screen.findByRole('option', { name: 'Capture memory' }));
+
+    // Both halves matter: navigation alone lands the user on /memory with nothing open, and the
+    // request alone never gets read because the view is not mounted.
+    expect(push).toHaveBeenCalledWith('/memory');
+    expect(useQuickAction.getState().pending).toBe('capture-memory');
+  });
+
+  it('routes each action to its own view', async () => {
+    const user = userEvent.setup();
+    renderPalette();
+
+    await user.click(await screen.findByRole('option', { name: 'Add source' }));
+
+    expect(push).toHaveBeenCalledWith('/sources');
+    expect(useQuickAction.getState().pending).toBe('add-source');
+  });
+
+  it('compiling is navigation only — it opens no dialog, because Compile spends budget', async () => {
+    const user = userEvent.setup();
+    renderPalette();
+
+    await user.click(await screen.findByRole('option', { name: 'Compile context' }));
+
+    expect(push).toHaveBeenCalledWith('/inspector');
+    expect(useQuickAction.getState().pending).toBeNull();
   });
 });

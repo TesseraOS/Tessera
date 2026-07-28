@@ -2,7 +2,16 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FolderKanban, Monitor, Moon, Palette, Sun } from 'lucide-react';
+import {
+  Boxes,
+  FileSearch,
+  FolderKanban,
+  Monitor,
+  Moon,
+  NotebookText,
+  Palette,
+  Sun,
+} from 'lucide-react';
 import {
   CommandDialog,
   CommandEmpty,
@@ -15,6 +24,7 @@ import {
 import { navItems } from '@/lib/nav';
 import { useCommandMenu } from '@/lib/store/command';
 import { useNewProjectDialog } from '@/lib/store/quick-create';
+import { useQuickAction, type QuickAction } from '@/lib/store/quick-action';
 import { useAppearanceTransition } from '@/lib/theme';
 import { THEMES, THEME_LABELS } from '@/lib/theme-script';
 
@@ -45,10 +55,25 @@ export function isPaletteShortcut(
   return event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey);
 }
 
+/**
+ * Route primary actions reachable from the palette (F-064; FR-49). A table rather than repeated JSX,
+ * so "does every route with an action expose it?" is a question a test can answer.
+ */
+export const PRIMARY_ACTIONS: readonly {
+  label: string;
+  href: string;
+  action: QuickAction;
+  icon: typeof NotebookText;
+}[] = [
+  { label: 'Capture memory', href: '/memory', action: 'capture-memory', icon: NotebookText },
+  { label: 'Add source', href: '/sources', action: 'add-source', icon: Boxes },
+];
+
 /** Global ⌘K / Ctrl-K command palette (UX baseline, FR-49). */
 export function CommandPalette() {
   const { open, setOpen, toggle } = useCommandMenu();
   const router = useRouter();
+  const requestQuickAction = useQuickAction((state) => state.request);
   const { setAppearance } = useAppearanceTransition();
   const openNewProject = useNewProjectDialog((state) => state.setOpen);
 
@@ -77,6 +102,33 @@ export function CommandPalette() {
           <CommandItem value="New project" onSelect={() => run(() => openNewProject(true))}>
             <FolderKanban />
             New project
+          </CommandItem>
+          {/*
+            Each of these navigates AND leaves a one-shot request the destination view consumes on
+            arrival (F-064). The palette fires from anywhere, so the target view usually does not
+            exist yet — a request survives the navigation where a direct call could not.
+          */}
+          {PRIMARY_ACTIONS.map(({ label, href, action, icon: Icon }) => (
+            <CommandItem
+              key={action}
+              value={label}
+              onSelect={() =>
+                run(() => {
+                  requestQuickAction(action);
+                  router.push(href);
+                })
+              }
+            >
+              <Icon />
+              {label}
+            </CommandItem>
+          ))}
+          <CommandItem
+            value="Compile context"
+            onSelect={() => run(() => router.push('/inspector'))}
+          >
+            <FileSearch />
+            Compile context
           </CommandItem>
         </CommandGroup>
         <CommandSeparator />

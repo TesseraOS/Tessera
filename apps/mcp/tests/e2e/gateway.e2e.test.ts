@@ -12,14 +12,16 @@ import {
   buildMcpServer,
   createInMemoryQuotaLimiter,
   createMcpGateway,
+  createStaticCredentialResolver,
   type QuotaLimiter,
 } from '../../src/index';
 import { createInMemoryServices } from './support/in-memory-services';
 
 /**
  * Drive the gated MCP surface through a REAL MCP client over a linked in-memory transport (FR-36).
- * The gateway reuses the real F-025 token AuthProvider; a fixed credential resolver stands in for the
- * one client identity a stdio connection carries.
+ * The gateway reuses the real F-025 token AuthProvider, with the **production** stdio resolver
+ * (`createStaticCredentialResolver`, F-072) carrying the one identity a stdio connection has — it
+ * used to be an inline stand-in here, which meant the shipped path was never the tested one.
  */
 describe('@tessera/mcp gateway (auth + quotas)', () => {
   let clients: Client[] = [];
@@ -58,7 +60,7 @@ describe('@tessera/mcp gateway (auth + quotas)', () => {
       auth: createTokenAuthProvider({ tokenStore }),
       ...(opts.quota !== undefined ? { quota: opts.quota } : {}),
       ...(opts.audit !== undefined ? { audit: opts.audit } : {}),
-      resolveCredential: () => ({ authorization: `Bearer ${token}`, headers: {} }),
+      resolveCredential: createStaticCredentialResolver(token),
     });
     return connect(buildMcpServer(services, { gateway }));
   }
@@ -111,6 +113,54 @@ describe('@tessera/mcp gateway (auth + quotas)', () => {
     const client = await connect(buildMcpServer(services));
     const result = await client.callTool({ name: 'capture_memory', arguments: MEMORY_ARGS });
     expect(result.isError).toBeFalsy();
+  });
+
+  describe('the stdio credential (F-072; ADR-0065)', () => {
+    /** A gated server whose stdio credential is `token` — whatever that token happens to be. */
+    async function serverWithCredential(token: string): Promise<Client> {
+      const services = await createInMemoryServices();
+      const tokenStore = createInMemoryTokenStore();
+      await tokenStore.issue({ tenantId: 'acme', principalId: 'agent', roles: ['member'] });
+      const gateway = createMcpGateway({
+        auth: createTokenAuthProvider({ tokenStore }),
+        resolveCredential: createStaticCredentialResolver(token),
+      });
+      return connect(buildMcpServer(services, { gateway }));
+    }
+
+    it('authenticates a stdio agent into its own tenant, and audits it as that principal', async () => {
+      // The whole feature: before F-072 there was no way to reach this state over stdio, because
+      // the default resolver has neither headers nor authInfo to read.
+      const audit = createInMemoryAuditLog();
+      const client = await gatedClient({ roles: ['member'], audit });
+
+      const result = await client.callTool({ name: 'capture_memory', arguments: MEMORY_ARGS });
+      expect(result.isError).toBeFalsy();
+
+      const { events } = await audit.forTenant('acme').query();
+      expect(events[0]).toMatchObject({
+        tenantId: 'acme',
+        actor: { principalId: 'client', kind: 'token' },
+        outcome: 'success',
+      });
+    });
+
+    it('refuses a WRONG credential with a clean UNAUTHORIZED, leaking nothing', async () => {
+      const client = await serverWithCredential('tok_not_a_real_token');
+      const result = await client.callTool({ name: 'search', arguments: { query: 'a' } });
+
+      expect(result.isError).toBe(true);
+      expect(errorCode(result)).toBe('UNAUTHORIZED');
+      // The masked envelope must not echo the credential back to the caller that sent it.
+      expect(JSON.stringify(result)).not.toContain('tok_not_a_real_token');
+    });
+
+    it('refuses an EMPTY credential the same way — no accidental anonymous access', async () => {
+      const client = await serverWithCredential('');
+      const result = await client.callTool({ name: 'search', arguments: { query: 'a' } });
+      expect(result.isError).toBe(true);
+      expect(errorCode(result)).toBe('UNAUTHORIZED');
+    });
   });
 
   describe('audit recording (F-047 — closes the F-027 seam)', () => {

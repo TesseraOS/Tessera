@@ -10,16 +10,16 @@ import { FIXTURE_TERM, readHandoff } from '../support/handoff.js';
  * the human journey used**. This is the test that proves ADR-0036's "one engine, two surfaces" claim
  * over real files rather than a shared in-process object.
  *
- * **Why the MCP process runs in zero-auth mode:** the stdio transport carries no `Authorization` header
- * and no SDK `authInfo` (those come from an HTTP transport's auth middleware), so today there is **no
- * way to hand a Bearer token to `tessera-mcp` over stdio** — token mode would reject every call as
- * UNAUTHORIZED. Zero-auth + an explicit tenant is the real, supported shape for a local agent (the
- * single-user machine case), so that is what we drive. The gap is recorded as a finding (**F-072**),
- * not papered over here.
+ * **Authenticated since F-072.** This spec used to override the deployment to `TESSERA_AUTH_MODE=none`,
+ * because stdio carries no `Authorization` header and no SDK `authInfo` (those come from an HTTP
+ * transport's auth middleware) and there was no supported way to hand `tessera-mcp` a token — token
+ * mode rejected every call as UNAUTHORIZED. The credential now travels as a secret (`MCP_TOKEN`,
+ * ADR-0065), so the agent runs against the deployment's **real** token mode, presenting the same
+ * owner token the human journey uses, and is authenticated into `handoff.tenantId` (`acme`) rather
+ * than asserting itself into it.
  *
- * The agent runs as the deployment's real tenant (`handoff.tenantId` = `acme`) — the scan indexed
- * into that tenant since F-071 (ADR-0057), so the zero-auth MCP process reads acme's own corpus with
- * `TESSERA_AUTH_TENANT` set to it.
+ * That difference is the point: the tenant is now something the server decides from a credential,
+ * not something the launcher declares.
  */
 const repoRoot = resolve(process.cwd(), '../..');
 const mcpBin = resolve(repoRoot, 'apps/server/dist/bin/mcp.js');
@@ -51,10 +51,10 @@ test('a real MCP agent works the same deployment: search → compile → effects
       ...(process.env as Record<string, string>),
       // Attach to the SAME data dir the API server is serving (SQLite is WAL, so this is safe).
       ...handoff.env,
-      // See the note above: stdio has no credential channel, so the local agent shape is zero-auth
-      // bound to the tenant whose data we want.
-      TESSERA_AUTH_MODE: 'none',
-      TESSERA_AUTH_TENANT: handoff.tenantId,
+      // The credential channel F-072 added: one token, supplied by the launcher, resolved through
+      // the deployment's SecretsProvider. No auth-mode override — the server stays in token mode and
+      // decides the tenant from this credential.
+      TESSERA_SECRET_MCP_TOKEN: handoff.token,
     },
     stderr: 'pipe',
   });

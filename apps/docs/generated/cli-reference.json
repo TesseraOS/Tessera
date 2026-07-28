@@ -35,7 +35,7 @@
     {
       "name": "mcp-config",
       "summary": "Emit ready-to-paste MCP client config for the major agents.",
-      "usage": "Usage: tessera mcp-config [--agent <id>] [--config <path>] [--command <cmd>] [--json]\n\nAgents: claude-code, cursor, cline, codex, continue\n\nPrints the connection snippet each agent needs to launch the Tessera stdio MCP server.\nBy default every agent is emitted; --agent selects one. --command overrides the launcher\n(default 'npx -y @tessera/cli mcp'); --config sets the config path passed to the server."
+      "usage": "Usage: tessera mcp-config [--agent <id>] [--config <path>] [--command <cmd>]\n                         [--token | --secrets-file <path>] [--json]\n\nAgents: claude-code, cursor, cline, codex, continue\n\nPrints the connection snippet each agent needs to launch the Tessera stdio MCP server.\nBy default every agent is emitted; --agent selects one. --command overrides the launcher\n(default 'npx -y @tessera/cli mcp'); --config sets the config path passed to the server.\n\nCredentials (needed when auth.mode is token or oidc — stdio carries no headers):\n  --token                include TESSERA_SECRET_MCP_TOKEN=paste-your-token-here, for you\n                         to replace in the config file. There is no --token <value> flag:\n                         a secret on a command line is visible to a process listing and\n                         lands in your shell history.\n  --secrets-file <path>  point the server at a secrets JSON holding MCP_TOKEN instead, so a\n                         config file that gets synced or committed carries a path, not a token.\n\nIssue a token with 'tessera token issue'."
     },
     {
       "name": "skills",

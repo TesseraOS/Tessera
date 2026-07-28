@@ -258,7 +258,11 @@ export type AuditAction =
   | 'retention.manage'
   | 'dsr.export'
   | 'dsr.delete'
-  | 'audit.export';
+  | 'audit.export'
+  | 'source.scan.completed'
+  | 'source.scan.failed'
+  | 'notification.read'
+  | 'notification.manage';
 
 export type AuditOutcome = 'success' | 'denied';
 

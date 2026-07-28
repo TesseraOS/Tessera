@@ -12,9 +12,13 @@
 // The tenant primitive now lives in @tessera/core (ADR-0033) so the domain stores can scope by tenant
 // (`forTenant`) without depending on @tessera/api; imported for use below and re-exported to keep the
 // auth model's public API stable (a request's tenant resolution stays co-located with the auth model).
-import { DEFAULT_TENANT_ID, type TenantId } from '@tessera/core';
+// `PrincipalKind` followed `TenantId` into core for the same reason (F-065): a domain package that
+// attributes work to a principal — ingestion naming who started a background scan, so its outcome
+// lands in the trail under the right actor — must be able to say so without depending on
+// `@tessera/api`. This model stays the authority on how a *request* resolves to a principal.
+import { DEFAULT_TENANT_ID, type PrincipalKind, type TenantId } from '@tessera/core';
 
-export { DEFAULT_TENANT_ID, type TenantId };
+export { DEFAULT_TENANT_ID, type TenantId, type PrincipalKind };
 
 /** Roles, most- to least-privileged. The source of truth for {@link ROLE_PERMISSIONS}. */
 export const ROLES = ['owner', 'admin', 'member', 'viewer'] as const;
@@ -73,9 +77,6 @@ export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
   ],
   viewer: READ_PERMISSIONS,
 };
-
-/** Whether a principal is the local no-auth stand-in, an authenticated user, or an API token. */
-export type PrincipalKind = 'local' | 'user' | 'token';
 
 /** Who (or what) is making the request, and what they are allowed to be. */
 export interface Principal {

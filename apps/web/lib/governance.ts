@@ -31,6 +31,12 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   'dsr.export': 'Data export',
   'dsr.delete': 'Data erasure',
   'audit.export': 'Audit export',
+  // Background scan outcomes (F-065) — distinct from `source.manage`, which records that a scan was
+  // *started*. Labelled as outcomes so the trail reads as a sequence, not a repetition.
+  'source.scan.completed': 'Scan completed',
+  'source.scan.failed': 'Scan failed',
+  'notification.read': 'Notifications read',
+  'notification.manage': 'Notification preferences',
 };
 
 export const AUDIT_ACTIONS = Object.keys(AUDIT_ACTION_LABELS) as AuditAction[];

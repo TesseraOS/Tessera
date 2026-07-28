@@ -1,5 +1,5 @@
 import type { Embeddings } from '@tessera/ai';
-import type { ApiEventMap, ApiServices, AuditLog } from '@tessera/api';
+import type { ApiEventMap, ApiServices, AuditLog, AuditMetadata } from '@tessera/api';
 import {
   createLocalAuthProvider,
   createOidcAuthProvider,
@@ -15,7 +15,13 @@ import {
   type UsageStore,
 } from '@tessera/billing';
 import { createContextCompiler } from '@tessera/context-compiler';
-import { createEventBus, createStaticFlagProvider, ValidationError } from '@tessera/core';
+import {
+  createEventBus,
+  createStaticFlagProvider,
+  ValidationError,
+  type PrincipalRef,
+  type TenantId,
+} from '@tessera/core';
 import { createPluginHost, type PluginHealthSummary } from '@tessera/plugin-host';
 import {
   createGraphExtractionSink,
@@ -105,6 +111,40 @@ export interface ProfileAdapters {
 
 export interface AssembleOptions {
   readonly secrets: SecretsProvider;
+}
+
+/**
+ * Record a background scan's outcome in the audit trail (F-065), attributed to the principal that
+ * started it. A no-op when auditing is disabled or the scan was unattributed — see the subscribers
+ * in `assembleRuntime` for why an unattributed row is not written.
+ *
+ * Best-effort and failure-isolated: the ingestion pipeline must not fail because a sink did.
+ */
+function recordScanOutcome(
+  auditLog: AuditLog | undefined,
+  action: 'source.scan.completed' | 'source.scan.failed',
+  tenantId: TenantId,
+  sourceId: string,
+  actor: PrincipalRef | undefined,
+  metadata?: AuditMetadata,
+): void {
+  if (auditLog === undefined || actor === undefined) return;
+  void auditLog
+    .forTenant(tenantId)
+    .record({
+      tenantId,
+      actor,
+      action,
+      target: sourceId,
+      outcome: 'success',
+      // Omitted rather than empty: `{}` would serialize into every failure row and read as "we
+      // measured nothing" instead of "there is nothing to measure".
+      ...(metadata !== undefined ? { metadata } : {}),
+    })
+    .catch(() => {
+      // Swallowed by design, exactly as the boundary recorder does: a trail write must never break
+      // the pipeline that triggered it.
+    });
 }
 
 /**
@@ -334,6 +374,29 @@ export async function assembleRuntime(
         .catch(() => {
           // Swallowed by design: a metering failure must never break the ingestion pipeline.
         });
+    }),
+    // Scan OUTCOMES into the audit trail (F-065). The `source.manage` row the boundary records means
+    // "a scan was started" — since F-081 the request is answered before any work happens, so whether
+    // it then succeeded or died was recorded nowhere. These two rows are what make `scan.completed` /
+    // `scan.failed` derivable as notifications at all, and what lets a returning user or a
+    // reconnecting agent ask "did my scan work?" from persisted state instead of a live stream.
+    //
+    // Attribution comes from the event, not from this process: `actor` is the principal the boundary
+    // passed to `startScan`. Without one there is nobody to attribute the row to, and the trail's
+    // whole contract is who-did-what — so an unattributed scan records nothing rather than inventing
+    // a system actor. Failure-isolated, like the metering subscriber above.
+    ingestionEvents.on('source.scan.completed', ({ tenantId, sourceId, actor, summary }) => {
+      recordScanOutcome(adapters.auditLog, 'source.scan.completed', tenantId, sourceId, actor, {
+        added: summary.added,
+        modified: summary.modified,
+        removed: summary.removed,
+      });
+    }),
+    ingestionEvents.on('source.scan.failed', ({ tenantId, sourceId, actor }) => {
+      // The error message is deliberately NOT carried into the trail: it originates in a connector
+      // and can quote a path or a remote's response (NFR-7 — the trail holds no content). The
+      // failure itself is the auditable fact; the detail stays in the source's status and the logs.
+      recordScanOutcome(adapters.auditLog, 'source.scan.failed', tenantId, sourceId, actor);
     }),
   ];
 

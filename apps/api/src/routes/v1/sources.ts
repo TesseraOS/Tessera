@@ -1,7 +1,7 @@
 import { InternalError, NotFoundError } from '@tessera/core';
 import type { SourceId, SourceRecord, SourceService } from '@tessera/ingestion';
 import type { ZodFastify } from '../../app-types.js';
-import { requirePermission, tenantOf } from '../../auth/index.js';
+import { actorOf, requirePermission, tenantOf } from '../../auth/index.js';
 import { projectOf } from '../../projects/selection.js';
 import type { ApiServices } from '../../services.js';
 import {
@@ -165,7 +165,12 @@ export function registerSourceRoutes(app: ZodFastify, services: ApiServices): vo
       // the client held a request open for the whole ingest — CPU-bound embedding included. The
       // audited action still fires here and still records the truth: a scan was *requested*.
       // A 409 (already running) surfaces from ConflictError via the error handler.
-      const status = await scoped.startScan(id);
+      //
+      // The actor rides along (F-065) so the scan's OUTCOME — recorded long after this response —
+      // lands in the trail under whoever asked for it, rather than under a system identity that
+      // would tell a compliance reader nothing.
+      const actor = actorOf(request);
+      const status = await scoped.startScan(id, actor !== undefined ? { actor } : {});
       const source = await scoped.get(id);
       if (source === undefined) {
         throw new NotFoundError('source not found', { details: { id } });

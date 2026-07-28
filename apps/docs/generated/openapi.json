@@ -4362,7 +4362,11 @@
                 "retention.manage",
                 "dsr.export",
                 "dsr.delete",
-                "audit.export"
+                "audit.export",
+                "source.scan.completed",
+                "source.scan.failed",
+                "notification.read",
+                "notification.manage"
               ]
             },
             "in": "query",
@@ -4505,7 +4509,11 @@
                               "retention.manage",
                               "dsr.export",
                               "dsr.delete",
-                              "audit.export"
+                              "audit.export",
+                              "source.scan.completed",
+                              "source.scan.failed",
+                              "notification.read",
+                              "notification.manage"
                             ]
                           },
                           "target": {
@@ -4597,7 +4605,11 @@
                 "retention.manage",
                 "dsr.export",
                 "dsr.delete",
-                "audit.export"
+                "audit.export",
+                "source.scan.completed",
+                "source.scan.failed",
+                "notification.read",
+                "notification.manage"
               ]
             },
             "in": "query",
@@ -4733,7 +4745,11 @@
                               "retention.manage",
                               "dsr.export",
                               "dsr.delete",
-                              "audit.export"
+                              "audit.export",
+                              "source.scan.completed",
+                              "source.scan.failed",
+                              "notification.read",
+                              "notification.manage"
                             ]
                           },
                           "target": {
@@ -5272,7 +5288,11 @@
                               "retention.manage",
                               "dsr.export",
                               "dsr.delete",
-                              "audit.export"
+                              "audit.export",
+                              "source.scan.completed",
+                              "source.scan.failed",
+                              "notification.read",
+                              "notification.manage"
                             ]
                           },
                           "target": {

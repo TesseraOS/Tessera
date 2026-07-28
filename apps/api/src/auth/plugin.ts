@@ -1,4 +1,4 @@
-import { ForbiddenError, UnauthorizedError } from '@tessera/core';
+import { ForbiddenError, UnauthorizedError, type PrincipalRef } from '@tessera/core';
 import type { FastifyRequest, preHandlerAsyncHookHandler } from 'fastify';
 import type { ZodFastify } from '../app-types.js';
 import {
@@ -65,4 +65,19 @@ export function requirePermission(permission: Permission): preHandlerAsyncHookHa
  */
 export function tenantOf(request: FastifyRequest): TenantId {
   return request.authContext?.tenantId ?? DEFAULT_TENANT_ID;
+}
+
+/**
+ * The principal a request is attributable to (F-065) — the same shape the audit recorder stamps on
+ * an event, so work handed to a background job carries the attribution the trail will need long
+ * after the response is sent (see `POST /v1/sources/:id/scan`).
+ *
+ * `undefined` on a request with no resolved {@link AuthContext}. Callers pass it straight through:
+ * an absent actor means the resulting work is unattributed, which is a fact worth preserving rather
+ * than papering over with {@link LOCAL_PRINCIPAL}.
+ */
+export function actorOf(request: FastifyRequest): PrincipalRef | undefined {
+  const context = request.authContext;
+  if (context === undefined || context === null) return undefined;
+  return { principalId: context.principal.id, kind: context.principal.kind };
 }

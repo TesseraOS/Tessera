@@ -9,6 +9,7 @@ import type { Queue } from '@tessera/storage';
 import type {
   IngestionEvents,
   IngestionScope,
+  ScanOptions,
   ScanSummary,
   SourceDescriptor,
   SourceId,
@@ -123,7 +124,7 @@ export interface SourceService {
    * {@link SourceService.startScan} instead, because an HTTP client should not hold a request open
    * for an entire ingest.
    */
-  scan(id: SourceId): Promise<SourceScanResult>;
+  scan(id: SourceId, options?: ScanOptions): Promise<SourceScanResult>;
   /**
    * Start a scan in the background and return as soon as it is **accepted** (F-081).
    *
@@ -132,7 +133,7 @@ export interface SourceService {
    * Throws {@link ConflictError} if a scan of this source is already running — two coordinators
    * racing over one manifest is not a scan, it is a data race.
    */
-  startScan(id: SourceId): Promise<SourceScanStatus>;
+  startScan(id: SourceId, options?: ScanOptions): Promise<SourceScanStatus>;
   scanStatus(id: SourceId): Promise<SourceScanStatus | undefined>;
   /**
    * Aggregate numbers for this tenant's sources (F-060). Counts documents from the manifest rather
@@ -170,7 +171,11 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
   }
 
   /** Run one scan for a source in the given tenant view: diff → enqueue → (drain) → status + events. */
-  async function performScan(registry: SourceRegistry, id: SourceId): Promise<SourceScanResult> {
+  async function performScan(
+    registry: SourceRegistry,
+    id: SourceId,
+    options: ScanOptions = {},
+  ): Promise<SourceScanResult> {
     const record = await registry.get(id);
     if (record === undefined) {
       throw new NotFoundError('source not found', { details: { id } });
@@ -191,6 +196,10 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
       kind: record.kind,
       label: record.label,
     };
+    // Attribution for the TERMINAL events only (F-065): `started`/`progress` are already delivered to
+    // a caller who is still watching, while `completed`/`failed` are the ones that outlive the
+    // request and need to name whose scan this was for the trail.
+    const attribution = options.actor !== undefined ? { actor: options.actor } : {};
 
     const previous = statuses.get(id);
     const keepLast = previous?.lastScan !== undefined ? { lastScan: previous.lastScan } : {};
@@ -262,14 +271,14 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
       const indexed = awaited && events !== undefined ? { indexed: persistedPaths.size } : {};
       const at = new Date().toISOString();
       statuses.set(id, { state: 'idle', lastScan: { summary, at, ...indexed } });
-      await events?.emit('source.scan.completed', { ...scope, summary });
+      await events?.emit('source.scan.completed', { ...scope, ...attribution, summary });
       return { source: record, summary, ...indexed };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       statuses.set(id, { state: 'error', error: message, ...keepLast });
       // A background scan's caller is long gone by the time this throws (see `startScan`), so the
       // failure has to reach the stream or it reaches nobody.
-      await events?.emit('source.scan.failed', { ...scope, error: message });
+      await events?.emit('source.scan.failed', { ...scope, ...attribution, error: message });
       throw error;
     } finally {
       for (const unsubscribe of unsubscribes) unsubscribe();
@@ -307,11 +316,11 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
         statuses.delete(id);
       },
 
-      scan(id) {
-        return performScan(registry, id);
+      scan(id, options) {
+        return performScan(registry, id, options);
       },
 
-      async startScan(id) {
+      async startScan(id, options) {
         // Resolve the source in THIS tenant's view first: a background job must not be startable
         // against a source the caller cannot see, and a 404 has to surface to the caller — after
         // this returns, nothing is listening.
@@ -336,7 +345,7 @@ export function createSourceService(options: SourceServiceOptions): SourceServic
         // Deliberately not awaited — that is the feature. `performScan` records failure in
         // `statuses` and emits `source.scan.failed`, so the catch here only stops an unhandled
         // rejection from taking the process down; it is not where the error is reported.
-        void performScan(registry, id).catch(() => undefined);
+        void performScan(registry, id, options).catch(() => undefined);
 
         return status;
       },

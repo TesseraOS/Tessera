@@ -382,6 +382,65 @@ describe('startScan', () => {
     await expect(service.startScan(source.id)).resolves.toMatchObject({ state: 'running' });
   });
 
+  it('carries the initiating actor onto the terminal scan events, and only those (F-065)', async () => {
+    const files = new Map([['a.md', '# A']]);
+    const { service, events } = harness(new Map([['/repo', files]]));
+    const source = await service.register({ kind: 'fake', config: { root: '/repo' } });
+
+    const actors: Record<string, unknown> = {};
+    for (const type of ['source.scan.started', 'source.scan.completed'] as const) {
+      events.on(type, (e: { actor?: unknown }) => {
+        actors[type] = e.actor;
+      });
+    }
+
+    await service.scan(source.id, { actor: { principalId: 'user-7', kind: 'user' } });
+
+    // The outcome is what outlives the request, so it is the one that must name whose scan it was.
+    expect(actors['source.scan.completed']).toEqual({ principalId: 'user-7', kind: 'user' });
+    // `started` reaches a caller who is still watching — attribution there would be surface for
+    // nobody, and putting a principal id on more wire payloads than necessary is not free.
+    expect(actors['source.scan.started']).toBeUndefined();
+  });
+
+  it('attributes a background FAILURE to whoever started it (F-065)', async () => {
+    const files = new Map([['a.md', '# A']]);
+    const { service, events } = harness(new Map([['/repo', files]]));
+    const source = await service.register({ kind: 'fake', config: { root: '/repo' } });
+
+    const failed: { actor?: unknown }[] = [];
+    events.on('source.scan.failed', (e) => void failed.push(e));
+
+    files.clear();
+    const connector = service.connectorFor({ id: source.id, kind: 'fake', label: source.label });
+    connector!.list = () => Promise.reject(new Error('connector exploded'));
+
+    await service.startScan(source.id, { actor: { principalId: 'tok_9', kind: 'token' } });
+
+    await vi.waitFor(() => {
+      expect(failed).toHaveLength(1);
+    });
+    // The whole point: the request was answered long before this fired, so the trail row the
+    // composition root writes from it has no other source of attribution.
+    expect(failed[0]?.actor).toEqual({ principalId: 'tok_9', kind: 'token' });
+  });
+
+  it('emits an UNATTRIBUTED outcome when no actor was supplied (F-065)', async () => {
+    const files = new Map([['a.md', '# A']]);
+    const { service, events } = harness(new Map([['/repo', files]]));
+    const source = await service.register({ kind: 'fake', config: { root: '/repo' } });
+
+    const completed: { actor?: unknown }[] = [];
+    events.on('source.scan.completed', (e) => void completed.push(e));
+
+    await service.scan(source.id);
+
+    // Absent, not a fabricated system principal — a consumer must be able to tell "nobody asked for
+    // this" apart from "the system asked for it", and the audit trail records only the former.
+    expect(completed).toHaveLength(1);
+    expect(completed[0]?.actor).toBeUndefined();
+  });
+
   it('rejects an unknown source up front, while the caller is still listening', async () => {
     const { service } = harness(new Map([['/repo', new Map()]]));
     await expect(service.startScan('missing-source' as SourceId)).rejects.toMatchObject({

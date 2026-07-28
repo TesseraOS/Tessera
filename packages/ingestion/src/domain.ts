@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { Id, ProjectId, TenantId } from '@tessera/core';
+import type { Id, PrincipalRef, ProjectId, TenantId } from '@tessera/core';
 
 /** Identifies a configured ingestion source (one connector instance). */
 export type SourceId = Id<'Source'>;
@@ -163,6 +163,8 @@ export interface IngestionEvents extends Record<string, unknown> {
     readonly kind: string;
     readonly label: string;
     readonly error: string;
+    /** Who started this scan, when the caller said (F-065). See {@link ScanOptions.actor}. */
+    readonly actor?: PrincipalRef;
   };
   readonly 'source.scan.completed': {
     readonly sourceId: SourceId;
@@ -170,7 +172,27 @@ export interface IngestionEvents extends Record<string, unknown> {
     readonly kind: string;
     readonly label: string;
     readonly summary: ScanSummary;
+    /** Who started this scan, when the caller said (F-065). See {@link ScanOptions.actor}. */
+    readonly actor?: PrincipalRef;
   };
+}
+
+/**
+ * Per-scan options (F-065). Optional throughout: a scan started without them behaves exactly as it
+ * did before, which is what keeps every existing caller — and the auto-scan-on-register path —
+ * unchanged.
+ */
+export interface ScanOptions {
+  /**
+   * The principal that asked for this scan, carried onto the terminal lifecycle events so a
+   * consumer can attribute the OUTCOME of background work (the composition root records it in the
+   * audit trail as `source.scan.completed`/`source.scan.failed`).
+   *
+   * The scan itself never reads it — it is attribution, not authorization: the boundary has already
+   * authorized the request by the time this is passed. Absent ⇒ the outcome is emitted unattributed
+   * and nothing is recorded, which is the honest answer for a scan nobody asked for.
+   */
+  readonly actor?: PrincipalRef;
 }
 
 /** Separator between source id and path when deriving a document id (source ids never contain it). */

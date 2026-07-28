@@ -1881,7 +1881,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Filter by action. */
-                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
+                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
                     /** @description Filter by actor principal id. */
                     actor?: string;
                     /** @description Filter by outcome. */
@@ -1916,7 +1916,7 @@ export interface paths {
                                     kind: "local" | "user" | "token";
                                 };
                                 /** @enum {string} */
-                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
                                 target?: string;
                                 /** @enum {string} */
                                 outcome: "success" | "denied";
@@ -1951,7 +1951,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Filter by action. */
-                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
+                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
                     /** @description Filter by actor principal id. */
                     actor?: string;
                     /** @description Filter by outcome. */
@@ -1988,7 +1988,7 @@ export interface paths {
                                     kind: "local" | "user" | "token";
                                 };
                                 /** @enum {string} */
-                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
                                 target?: string;
                                 /** @enum {string} */
                                 outcome: "success" | "denied";
@@ -2191,7 +2191,7 @@ export interface paths {
                                     kind: "local" | "user" | "token";
                                 };
                                 /** @enum {string} */
-                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export";
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
                                 target?: string;
                                 /** @enum {string} */
                                 outcome: "success" | "denied";

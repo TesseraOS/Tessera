@@ -40,14 +40,34 @@ export const AUDIT_ACTIONS = [
   // trail. Distinct from `audit.read` (F-063): paging the view and exfiltrating the whole filtered
   // set are different facts, and one recorded as the other is indistinguishable from scrolling.
   'audit.export',
+  // Background scan OUTCOMES (F-065). Since F-081 a scan runs after the request is answered, so the
+  // `source.manage` row recorded at the boundary means "a scan was started" and the trail stops
+  // there — the one fact a returning user most needs ("did it work?") was unrecorded. Recorded by
+  // the composition root's ingestion→SSE bridge, attributed to the principal who started the scan.
+  //
+  // Two actions rather than one action with a failed outcome, because `AuditOutcome` is
+  // `success | denied`: it answers "was this permitted", not "did the work succeed", and every
+  // existing consumer reads it that way. Widening it to carry operational failure is a real gap
+  // (`recordAudit` also maps a 500 to `denied`) but a separate change with its own blast radius.
+  'source.scan.completed',
+  'source.scan.failed',
+  // Notification preferences (F-065). The read is NOT audited — the notification list is fetched on
+  // every page load, and a row per load would flood the trail it projects, the same posture
+  // `/v1/stats` takes. `notification.read` exists for the MCP surface, where the gateway audits
+  // every tool call by construction. Changing preferences IS recorded: "who turned off
+  // token-change alerts?" is a question about suppressing a security signal.
+  'notification.read',
+  'notification.manage',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 /**
  * The actions the Overview activity chart counts as "work" (F-084) — everything except the passive
- * `*.read` page-view actions. So `search`, `compile`, the `*.write`/`*.manage`/`*.export` mutations
- * and `dsr.delete` count; `memory.read`/`effects.read`/`source.read`/`audit.read`/`billing.read`/
- * `token.read`/`retention.read` do not. A mechanical, defensible rule — "activity, not page views".
+ * `*.read` page-view actions. So `search`, `compile`, the `*.write`/`*.manage`/`*.export` mutations,
+ * `dsr.delete` and the `source.scan.*` outcomes count; `memory.read`/`effects.read`/`source.read`/
+ * `audit.read`/`billing.read`/`token.read`/`retention.read`/`notification.read` do not. A mechanical,
+ * defensible rule — "activity, not page views" — which is why F-065's scan outcomes joined without a
+ * special case, and why the chart now shows a scan as two points (started, finished) rather than one.
  */
 export const ACTIVITY_ACTIONS = AUDIT_ACTIONS.filter(
   (action) => !action.endsWith('.read'),

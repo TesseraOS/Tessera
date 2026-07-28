@@ -2,8 +2,11 @@
 
 import {
   ArrowRight,
+  BellDot,
   BookText,
   Boxes,
+  CircleAlert,
+  CircleCheck,
   CreditCard,
   FileDown,
   FileX2,
@@ -139,6 +142,26 @@ export function describeEvent(event: Pick<RecentActivityEvent, 'action' | 'targe
         ScrollText,
         'Audit trail exported',
         'Compliance export of the audit trail was generated.',
+      );
+    // Scan outcomes (F-065). `source.manage` above says a scan *started*; these say how it ended —
+    // the pair is why a scan now reads as two rows rather than one that never resolves.
+    case 'source.scan.completed':
+      return base(
+        CircleCheck,
+        'Source scan finished',
+        'Indexing completed; new and changed content is searchable.',
+      );
+    case 'source.scan.failed':
+      return base(
+        CircleAlert,
+        'Source scan failed',
+        'Indexing stopped before finishing; open the source for detail.',
+      );
+    case 'notification.manage':
+      return base(
+        BellDot,
+        'Notification preferences updated',
+        'Which events raise a notification was changed.',
       );
     default:
       // A new audit action renders honestly before this map learns it.

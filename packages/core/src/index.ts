@@ -18,4 +18,5 @@ export * from './result.js';
 export * from './config.js';
 export * from './events.js';
 export * from './tenant.js';
+export * from './principal.js';
 export * from './flags.js';

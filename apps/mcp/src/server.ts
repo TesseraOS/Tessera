@@ -20,6 +20,7 @@ import {
   ForbiddenError,
   InternalError,
   NotFoundError,
+  type PrincipalRef,
   type ProjectId,
 } from '@tessera/core';
 import type { CompileRequest } from '@tessera/context-compiler';
@@ -282,6 +283,14 @@ export function buildMcpServer(
   const tenantOf = (ctx: AuthContext | undefined): string => ctx?.tenantId ?? DEFAULT_TENANT_ID;
 
   /**
+   * The principal a call is attributable to (F-065), for work whose outcome is recorded after the
+   * tool has returned. `undefined` when ungated — an unguarded stdio server has resolved no
+   * identity, and inventing one would put a fictitious actor in the audit trail.
+   */
+  const actorOf = (ctx: AuthContext | undefined): PrincipalRef | undefined =>
+    ctx === undefined ? undefined : { principalId: ctx.principal.id, kind: ctx.principal.kind };
+
+  /**
    * The project a data-tool call is scoped to (FR-66, ADR-0037). Multi-client gateways select per call
    * via the `X-Tessera-Project` header; a single-session (stdio) deployment falls back to the configured
    * {@link BuildMcpServerOptions.defaultProject}; otherwise the reserved default project. A non-default
@@ -512,8 +521,13 @@ export function buildMcpServer(
         const ctx = await guard('scan_source', extra);
         const project = await projectOf(ctx, extra);
         const scoped = requireSources(services).forTenant(tenantOf(ctx)).forProject(project);
+        // Attribution for the outcome row the composition root records (F-065). This tool awaits
+        // completion, so the agent gets the summary either way — the actor is what puts the same
+        // scan in the trail under the agent that ran it, matching the REST route.
+        const actor = actorOf(ctx);
         const { source, summary, indexed } = await scoped.scan(
           args.id as Parameters<typeof scoped.scan>[0],
+          actor !== undefined ? { actor } : {},
         );
         return {
           source: toWireSource(source),

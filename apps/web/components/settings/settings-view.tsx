@@ -17,6 +17,7 @@ import { AppearanceSettings } from '@/components/settings/appearance-settings';
 import { ErrorState } from '@/components/error-state';
 import { cn } from '@/lib/utils';
 import { API_ORIGIN } from '@/lib/api/client';
+import { t } from '@/lib/i18n';
 import { useFlags, useHealth, usePlans, useReady } from '@/lib/api/hooks';
 import { formatNumber } from '@/lib/format';
 import type { Plan } from '@/lib/api/types';
@@ -143,34 +144,33 @@ function FlagsCard() {
   return (
     <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
       <CardHeader className="space-y-1 p-0 pb-3">
-        <CardTitle className="text-sm">Feature flags</CardTitle>
-        <CardDescription>
-          Progressive rollout for this workspace, evaluated per tenant. Declared in deployment
-          configuration — this view is read-only.
-        </CardDescription>
+        <CardTitle className="text-sm">{t('settings.flags.title')}</CardTitle>
+        <CardDescription>{t('settings.flags.description')}</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         {isError ? (
           <ErrorState
-            title="Could not load feature flags"
-            description={error instanceof Error ? error.message : 'Is the Tessera API running?'}
+            title={t('settings.flags.error')}
+            description={error instanceof Error ? error.message : t('common.apiUnreachable')}
             onRetry={() => void refetch()}
           />
         ) : isPending ? (
           <Skeleton className="h-24 w-full" />
         ) : flags.length === 0 ? (
-          <p className="text-muted-foreground text-xs">
-            This deployment declares no feature flags.
-          </p>
+          <p className="text-muted-foreground text-xs">{t('settings.flags.empty')}</p>
         ) : (
           <div className="border-border/60 rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-8 text-xs">Flag</TableHead>
-                  <TableHead className="h-8 text-xs">Description</TableHead>
-                  <TableHead className="h-8 text-xs">Source</TableHead>
-                  <TableHead className="h-8 text-right text-xs">State</TableHead>
+                  <TableHead className="h-8 text-xs">{t('settings.flags.column.flag')}</TableHead>
+                  <TableHead className="h-8 text-xs">
+                    {t('settings.flags.column.description')}
+                  </TableHead>
+                  <TableHead className="h-8 text-xs">{t('settings.flags.column.source')}</TableHead>
+                  <TableHead className="h-8 text-right text-xs">
+                    {t('settings.flags.column.state')}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -184,8 +184,8 @@ function FlagsCard() {
                     </TableCell>
                     <TableCell className="text-muted-foreground py-2 text-xs">
                       {flag.source === 'tenant-override'
-                        ? 'Override for this workspace'
-                        : 'Default'}
+                        ? t('settings.flags.source.override')
+                        : t('settings.flags.source.default')}
                     </TableCell>
                     <TableCell className="py-2 text-right">
                       <FlagBadge enabled={flag.enabled} />
@@ -221,7 +221,7 @@ function FlagBadge({ enabled }: { enabled: boolean }) {
       ) : (
         <X className="size-3" aria-hidden="true" />
       )}
-      {enabled ? 'On' : 'Off'}
+      {enabled ? t('settings.flags.on') : t('settings.flags.off')}
     </Badge>
   );
 }

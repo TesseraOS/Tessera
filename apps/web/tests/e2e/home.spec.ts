@@ -80,9 +80,13 @@ test.describe('Dashboard shell', () => {
     await page.goto('/');
 
     // The regression F-060 fixes: these were hardcoded '—'/'0' while the API held real data.
-    await expect(page.getByText('1,234')).toBeVisible();
-    await expect(page.getByText('87')).toBeVisible();
-    await expect(page.getByText('12')).toBeVisible();
+    //
+    // `exact` matters and is not tidiness (F-064). A substring match on '12' also matched the feed's
+    // relative timestamps — "12d ago" — so this test passed or failed depending on the DATE it ran:
+    // a dormant time bomb that went off once the fixture's 2026-07-16 entries were 12 days old.
+    await expect(page.getByText('1,234', { exact: true })).toBeVisible();
+    await expect(page.getByText('87', { exact: true })).toBeVisible();
+    await expect(page.getByText('12', { exact: true })).toBeVisible();
   });
 
   test('the feed renders the persisted trail, and a stream event refreshes it (F-089)', async ({

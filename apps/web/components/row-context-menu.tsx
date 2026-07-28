@@ -11,6 +11,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { copyToClipboard } from '@/lib/clipboard';
+import { t } from '@/lib/i18n';
 
 export interface RowContextMenuProps {
   /** The stable identifier this row is about — a search ref, a memory lineage, an audit target. */
@@ -54,22 +55,22 @@ export function RowContextMenu({
         <ContextMenuSeparator />
         <ContextMenuItem
           onSelect={() => {
-            void copyToClipboard(reference, `Copied ${referenceLabel}`);
+            void copyToClipboard(reference, t('row.copied', { label: referenceLabel }));
           }}
         >
           <Copy aria-hidden="true" />
-          Copy {referenceLabel}
+          {t('row.copy', { label: referenceLabel })}
         </ContextMenuItem>
         {onOpen ? (
           <ContextMenuItem onSelect={onOpen}>
             <ExternalLink aria-hidden="true" />
-            Open
+            {t('row.open')}
           </ContextMenuItem>
         ) : null}
         {onShowEffects ? (
           <ContextMenuItem onSelect={onShowEffects}>
             <Share2 aria-hidden="true" />
-            Show effects
+            {t('row.showEffects')}
           </ContextMenuItem>
         ) : null}
       </ContextMenuContent>

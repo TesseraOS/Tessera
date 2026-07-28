@@ -1,3 +1,5 @@
+import { t } from '@/lib/i18n';
+
 /**
  * The keyboard-shortcut catalog (F-064; FR-49) — the single list the help overlay renders.
  *
@@ -27,24 +29,24 @@ export interface ShortcutGroup {
 
 export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
   {
-    title: 'Global',
-    scope: 'Anywhere in the dashboard',
+    title: t('shortcuts.group.global'),
+    scope: t('shortcuts.group.global.scope'),
     shortcuts: [
-      { keys: ['⌘', 'K'], description: 'Open the command palette' },
-      { keys: ['⌘', 'B'], description: 'Show or hide the sidebar' },
-      { keys: ['?'], description: 'Show this list' },
-      { keys: ['Esc'], description: 'Close the open dialog, sheet, or menu' },
+      { keys: ['⌘', 'K'], description: t('shortcuts.palette') },
+      { keys: ['⌘', 'B'], description: t('shortcuts.sidebar') },
+      { keys: ['?'], description: t('shortcuts.help') },
+      { keys: ['Esc'], description: t('shortcuts.dismiss') },
     ],
   },
   {
-    title: 'Search results',
-    scope: 'While the results list has focus',
+    title: t('shortcuts.group.search'),
+    scope: t('shortcuts.group.search.scope'),
     shortcuts: [
-      { keys: ['↓'], description: 'Move to the next result' },
-      { keys: ['↑'], description: 'Move to the previous result' },
-      { keys: ['Home'], description: 'Jump to the first result' },
-      { keys: ['End'], description: 'Jump to the last result' },
-      { keys: ['Enter'], description: 'Open the focused result' },
+      { keys: ['↓'], description: t('shortcuts.next') },
+      { keys: ['↑'], description: t('shortcuts.previous') },
+      { keys: ['Home'], description: t('shortcuts.first') },
+      { keys: ['End'], description: t('shortcuts.last') },
+      { keys: ['Enter'], description: t('shortcuts.open') },
     ],
   },
 ];

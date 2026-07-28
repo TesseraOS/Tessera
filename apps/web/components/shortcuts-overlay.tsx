@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { t } from '@/lib/i18n';
 import { SHORTCUT_GROUPS, isShortcutsOverlayShortcut } from '@/lib/shortcuts';
 
 /**
@@ -36,7 +37,7 @@ export function ShortcutsOverlay() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Keyboard shortcuts</DialogTitle>
+          <DialogTitle>{t('shortcuts.title')}</DialogTitle>
           <DialogDescription>
             Press <Keycap>?</Keycap> anywhere to bring this back.
           </DialogDescription>

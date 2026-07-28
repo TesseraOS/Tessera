@@ -134,6 +134,7 @@ export {
   withPreferenceDefaults,
   withRead,
   type Notification,
+  type NotificationChannel,
   type NotificationContext,
   type NotificationKind,
   type NotificationPage,

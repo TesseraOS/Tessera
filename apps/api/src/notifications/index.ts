@@ -9,5 +9,9 @@
  */
 export * from './model.js';
 export * from './project.js';
-export type { NotificationRetentionPolicy, NotificationStore } from './port.js';
+export type {
+  NotificationChannel,
+  NotificationRetentionPolicy,
+  NotificationStore,
+} from './port.js';
 export { createInMemoryNotificationStore } from './in-memory.js';

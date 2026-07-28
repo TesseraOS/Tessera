@@ -1089,6 +1089,10 @@
         {
           "kind": "module",
           "ref": "project lifecycle audited (F-050, ADR-0037): AUDIT_ACTIONS gains project.read / project.manage (REST /v1/projects routes + MCP project tools record them); the trail stays tenant-level (events carry no project — the activity feed/bell are tenant-wide by design). web governance AUDIT_ACTION_LABELS + the AuditAction mirror updated in lockstep. Adding an audited action still ⇒ update the enum + every exhaustive consumer"
+        },
+        {
+          "kind": "module",
+          "ref": "F-065 grew AUDIT_ACTIONS by four. source.scan.completed / source.scan.failed are background scan OUTCOMES, recorded by the @tessera/config ingestion-to-SSE bridge and attributed to the principal that started the scan (threaded through ScanOptions.actor; an unattributed scan records nothing rather than inventing a system actor) — since F-081 the 202 response left \"did it work?\" recorded nowhere durable, which is what made scan.failed underivable. notification.read / notification.manage cover the F-065 surface. EVERY widening ripples the same way: both adapters typed action columns, the Zod enum to OpenAPI to the regenerated SDK, apps/web AUDIT_ACTION_LABELS (an exhaustive Record, so a compile error until updated), the CSV export, and describeEvent. The scan actions do not end in .read, so they join ACTIVITY_ACTIONS: a scan is now TWO points on the Overview chart (started, finished) rather than one"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -1529,6 +1533,55 @@
       "kind": "EFFECT_LINK",
       "rationale": "Every user-facing string in a migrated file now has exactly one definition, and the guard makes that structural rather than a convention. The failure mode this exists to contain is that a wrong or missing string renders as a blank or the wrong words with NO test failing — which happened during the migration itself: a catalog value seeded from a truncated lint message silently dropped half a sentence, and only reading the source caught it. Hence the rule that every value must be byte-identical to the string it replaced, copied from the source and never from a diagnostic. That discipline is why 472 web tests passed across the whole feature with none rewritten, which in turn means anything that breaks in a later batch is a real regression rather than churn.",
       "confidence": 1,
+      "origin": "manual"
+    },
+    {
+      "id": "E-032",
+      "from": {
+        "kind": "contract",
+        "ref": "@tessera/api notifications: the NotificationStore port + the trail PROJECTION (apps/api/src/notifications; F-065, ADR-0064). A notification is DERIVED from the audit trail; the store persists only per-principal read state + preferences, keyed {tenantId, principalId}"
+      },
+      "to": [
+        {
+          "kind": "module",
+          "ref": "NotificationStore adapters: createInMemoryNotificationStore (reference, drives the shared suite) + createSqliteNotificationStore + createPostgresNotificationStore (@tessera/config). All three run ONE conformance suite via the @tessera/api/conformance subpath — not a hand-copied subset (the drift F-078 exists to undo). The Postgres twin is REQUIRED from the self-hosted profile, not optional: an optional member is how a store ends up SQLite-only (the rule ProfileAdapters.usageStore already states)"
+        },
+        {
+          "kind": "test",
+          "ref": "notification-store conformance (in-memory + sqlite + postgres): tenant isolation AND principal isolation — two people in one workspace must not share a read mark — plus merge-not-replace preferences, forward-only watermark, prune, and tenant-scoped purge. Verified falsifiable: dropping the tenant predicate from the SQLite row lookup fails exactly the tenant-isolation case and nothing else"
+        },
+        {
+          "kind": "module",
+          "ref": "The projection (listNotifications / unreadCountFor / newestNotificationAt): action-to-kind is ONE map, severity is a property of the kind, and every action outside the map produces no notification. Changing NOTIFICATION_KINDS or the map ripples to the Zod enums, OpenAPI, the regenerated SDK, and the dashboard exhaustive Record maps (lib/notifications.ts ICONS/TITLE_KEYS/BODY_KEYS, KIND_ORDER in the settings card) — each a compile error until updated, which is the point"
+        },
+        {
+          "kind": "module",
+          "ref": "/v1/notifications routes (list, read, read-all, preferences GET/PUT) + schemas to OpenAPI + regenerated @tessera/sdk. Reads need stats:read and are NOT audited (a row per page load would flood the trail they project); read marks and preference writes are self-scoped and need authentication only — requiring a write permission would leave a viewer able to see a badge and never clear it. Preference writes ARE audited (notification.manage). Advances E-003"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/mcp list_notifications — calls the SAME projection against the SAME store (ADR-0036), so an agent and a person looking at one workspace cannot disagree about what has been seen. Reached through the Fastify-free @tessera/api/notifications subpath, which is what keeps Fastify out of the MCP process (F-012). Audited as notification.read, unlike the unaudited REST twin: a rendering client polls, an agent asks"
+        },
+        {
+          "kind": "module",
+          "ref": "@tessera/web: useNotifications + optimistic mark-read, the header bell, and the settings preferences card. apps/web/lib/store/notifications.ts (F-089 per-device localStorage marks) is DELETED, and the sign-out clear() with it — there is nothing left on the device to leak. Copy comes from the kind through lib/i18n, because the API sends no prose"
+        },
+        {
+          "kind": "module",
+          "ref": "DSR erasure (purgeTenant, apps/api/src/dsr/purge.ts) purges notification state — the OPPOSITE call to the retained audit trail, because the trail is the compliance record OF the erasure (ADR-0049) while read marks are convenience keyed by the very principal ids the request is about"
+        },
+        {
+          "kind": "module",
+          "ref": "Composition: ProfileAdapters.notificationStore (required from both profiles), Runtime.notifications, BuildServerOptions.notifications (defaulting to in-memory so buildServer({}) still answers), and apps/server passing runtime.notifications to the API and BOTH MCP transports. See E-014/E-015"
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0064-notifications-project-the-audit-trail.md"
+        }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "The store and the projection are two halves of one contract: a notification is the JOIN of the trail and this principal state, so half the wiring can only answer half the question. The isolation failures are silent ones — a leak between tenants, or between two people sharing one workspace, shows up as somebody clearing a badge and someone else clearing with it — and the shared conformance suite is the only thing that checks that from outside the adapters.",
+      "confidence": 0.95,
       "origin": "manual"
     }
   ]

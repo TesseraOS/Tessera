@@ -1,5 +1,10 @@
 import type { TenantId } from '@tessera/core';
-import type { NotificationKind, NotificationPreferences, NotificationReadState } from './model.js';
+import type {
+  Notification,
+  NotificationKind,
+  NotificationPreferences,
+  NotificationReadState,
+} from './model.js';
 
 /**
  * Retention for notification state (F-065; NFR-13).
@@ -71,4 +76,34 @@ export interface NotificationStore {
   prune(policy: NotificationRetentionPolicy): Promise<number>;
   /** A view of this store confined to `tenantId`. The base store operates in the default tenant. */
   forTenant(tenantId: TenantId): NotificationStore;
+}
+
+/**
+ * Outbound delivery — email, Slack, a webhook (F-065).
+ *
+ * **Declared, not implemented. Nothing in this repository implements or calls it**, and that is the
+ * decision rather than an omission (ADR-0064): a channel needs a delivery guarantee, a retry policy,
+ * a suppression list and a credential per provider, and building all of that for a recipient nobody
+ * has yet produces an integration that is wrong by the time someone wants it. An unimplemented
+ * toggle in a settings screen is worse than an absent one.
+ *
+ * It is written down so the shape is agreed in advance: the projection
+ * ({@link import('./project.js').listNotifications}) is the read side, and a channel is a *writer*
+ * that takes an already-formed notification plus the principal it is for. When a deployment needs
+ * one, the composition root wires adapters here and a per-channel preference joins
+ * {@link import('./model.js').NotificationPreferences} — neither requires reshaping anything above.
+ */
+export interface NotificationChannel {
+  /** Stable identifier for the transport (`email`, `slack`, `webhook`). */
+  readonly name: string;
+  /**
+   * Deliver one notification to one principal. Implementations must be **failure-isolated** — a
+   * dead webhook cannot be allowed to break the request that produced the event — and idempotent
+   * per `notification.id`, because retries are the normal case for every real transport.
+   */
+  deliver(input: {
+    readonly tenantId: TenantId;
+    readonly principalId: string;
+    readonly notification: Notification;
+  }): Promise<void>;
 }

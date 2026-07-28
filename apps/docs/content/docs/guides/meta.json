@@ -7,6 +7,7 @@
     "capturing-memory",
     "tokens-and-auth",
     "tenants-and-projects",
+    "notifications",
     "governance-and-audit",
     "backup-and-restore"
   ]

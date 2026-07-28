@@ -17,6 +17,13 @@ memory writes and deletions, governance operations themselves — are recorded i
 (`TESSERA_AUDIT_ENABLED=true`); disabling it falls back to a non-durable in-memory
 sink, which is a development posture, not an operating one.
 
+A scan records **two** rows, not one: `source.manage` when it is requested, and
+then `source.scan.completed` or `source.scan.failed` when it ends. A scan runs in
+the background — the request is answered before any work happens — so without the
+outcome row the trail would stop at "somebody asked for a scan" and never say
+whether it worked. Both are attributed to the principal that started it; a scan
+nothing asked for records nothing rather than inventing a system actor.
+
 ```bash
 curl "http://127.0.0.1:3000/v1/audit?limit=50" \
   -H "authorization: Bearer <admin-token>"
@@ -77,7 +84,11 @@ Erasure honors a deliberate exception: **the audit trail is retained** — erasi
 content must not erase the record that governance acted, which is the standard
 compliance posture (the trail holds action records, not content bodies). The
 erasure response itemizes what was deleted: memory lineages, graph nodes and edges,
-sources.
+sources, and notification state.
+
+Notification read marks and preferences go the *other* way — they are **erased**.
+The distinction is what each is for: the trail is the record of the erasure, while
+read marks are convenience keyed by the very principal ids the request is about.
 
 ## Quotas
 

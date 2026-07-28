@@ -3,6 +3,83 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-28 — F-065 DONE: notifications become a projection of the trail, with cross-device read state
+
+**F-065** complete across **10 increments**. Plan:
+[`F-065-notification-center-preferences-and-agent-surface.md`](../plans/F-065-notification-center-preferences-and-agent-surface.md).
+Decision: **[ADR-0064](../../docs/adr/0064-notifications-project-the-audit-trail.md)**.
+
+### The acceptance and the repo's own record disagreed; the lead chose
+
+F-065's acceptance predates F-089. It asks for a store holding "typed kinds … per-user read/unread
+state" while, in the same clause, forbidding "a second event taxonomy". F-089 had already answered
+that for the feed — the audit trail is the one history — and rewrote F-065's own `notes` to
+"preferences, CROSS-DEVICE read state, the agent-readable surface, and `occurredAt`". Escalated
+(AskUserQuestion) rather than reinterpreted. **Lead chose the projection reading**, and "only kinds
+with a real producer" — so no `system.alert`.
+
+A notification is now the trail filtered to five kinds, joined with this principal's server-side read
+state. The store persists **only what cannot be derived**.
+
+### What each increment cost
+
+- **inc 1** the gap the projection exposed: since F-081 a scan answers **202**, so the trail recorded
+  "a scan was started" and never whether it worked — `scan.failed` was underivable. Fixed at the
+  source with two new audit actions written by the composition root's bridge. Two actions rather than
+  a third `AuditOutcome`, because outcome answers *"was this permitted"* and every consumer reads it
+  that way. Attribution threaded through `ScanOptions.actor`; `PrincipalKind` followed `TenantId`
+  into `@tessera/core` (the ADR-0033 precedent) so ingestion can name a principal without depending
+  on `@tessera/api`. **An unattributed scan records nothing** rather than inventing a system actor.
+- **inc 4** verified the conformance suite can fail: dropping the tenant predicate from the SQLite row
+  lookup fails exactly `isolates tenants, even for the same principal id` and nothing else. The
+  Postgres twin is **required** from the self-hosted profile — an optional member is how a store ends
+  up SQLite-only, which `ProfileAdapters.usageStore` already says in a comment.
+- **inc 5** closed a gap this feature opened rather than leaving it: DSR erasure now purges
+  notification state. The trail is retained because it is the record *of* the erasure; read marks are
+  convenience keyed by the principal ids the request is about.
+- **inc 8** the `t()` catalog had to grow because the API deliberately sends **no prose** — the kind
+  is the message, so the dashboard can translate it and an agent pays no tokens for a sentence.
+  `severityToneClass` tints only `error`: **there is no `warning` token in the design system**, and
+  hard-coding an amber would put an untokened colour into a themed surface. The icon carries it,
+  which WCAG 1.4.1 requires regardless. Recorded as an ADR follow-up, not smuggled in.
+- **inc 10** writing the effect-links through `node -e '…'` in bash **silently deleted three of nine
+  `to` entries and the middle of two rationales** — backticks used as apostrophes opened command
+  substitution. `verify-state` still said "✓ 32 effect-links", because a shorter string is a valid
+  string. Same shape as F-064's truncated-lint-message bug, caught only by reading the file back.
+
+### The browser scare that was not a defect
+
+Hand-verifying the bell, clicking a row did nothing while a programmatic `.click()` on the same
+button worked and "Mark all as read" — in the same popover — worked with a real click. A
+capture-phase listener proved the trusted event reached the button undefaulted. Cause: each
+synthesized click **gave the window focus**, firing TanStack Query's focus refetch, which re-rendered
+the row between `pointerdown` and `mouseup`. Playwright — whose window is already focused — passed
+first try on the same code. Lesson recorded; the arbiter for "does this interaction work" is the e2e
+suite, not hand-driving.
+
+### Evidence
+
+`verify-state` valid (99 features, **32** effect-links); workspace typecheck / lint / format / test
+green — **480 web unit tests**, api+mcp e2e green (15 notification route cases, 5 MCP tool cases);
+**web e2e 76 passed**, including the cross-device case (two browser contexts, one shared stub state)
+**verified falsifiable** — giving the second context its own state fails it. SDK + generated docs
+reference regenerated in-change. The Postgres conformance run is wired but **not executed here**: no
+Docker in this environment, and it is guarded by `TESSERA_TEST_POSTGRES=1` like every other Postgres
+suite in the repo.
+
+### Carried forward
+
+- **`AuditOutcome` cannot say "this ran and failed"** — `recordAudit` maps a 500 to `denied`. Worked
+  around with two actions; the gap deserves its own feature (ADR-0064 §Follow-ups).
+- **No `warning` colour token** exists; add it before any surface needs warning to shout.
+- **`apps/docs` `generate` needs two runs** when a route is added — `generateApiPages()` re-reads the
+  spec the same run is writing. Costs a red `test` gate to discover.
+- A scan is now **two points** on the Overview chart (started, finished), not one.
+
+**Next step:** **F-069** — operator identity & legal finalization — is the next lowest-id eligible in
+R4 (F-093 is `must` but higher-id; ordering is by release then id).
+
+---
 ## 2026-07-28 — F-064 DONE: the FR-49 baseline audited and closed, i18n groundwork + guard shipped
 
 **F-064** complete across **11 increments**. Plan:

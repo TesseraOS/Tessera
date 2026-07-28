@@ -1,0 +1,109 @@
+---
+title: Notifications
+description: What changed while you were away — a typed projection of the audit trail with cross-device read state, per-kind preferences, and an agent-readable surface.
+---
+
+Notifications answer one question: **what happened in this workspace while I was
+not looking?** For a person that is the bell in the dashboard header; for an agent
+reconnecting after a gap it is the `list_notifications` tool. Both read the same
+data through the same code.
+
+## A notification is a view of the audit trail
+
+There is no separate notification log. The
+[audit trail](/docs/guides/governance-and-audit) already records who did what and
+when, persisted and retention-pruned; a notification is that trail filtered to the
+handful of actions worth interrupting someone about, tagged with a kind and a
+severity, and joined with **your** read marks.
+
+That means notifications inherit the trail's retention: when an event ages out of
+the trail, it is gone from here too. It also means notifications cannot disagree
+with the audit log, because there is only one record.
+
+| Kind | Severity | Fires when |
+| --- | --- | --- |
+| `scan.failed` | `error` | A source scan stopped before finishing |
+| `scan.completed` | `info` | A source scan finished indexing |
+| `memory.captured` | `info` | A memory was written to the workspace |
+| `token.changed` | `warning` | An API token was issued or revoked |
+| `plan.changed` | `info` | The subscription or payment details changed |
+
+Everything else the trail records stays in the trail and in the Overview activity
+feed. A notification interrupts someone, so the bar is higher than "something
+happened".
+
+## Read state follows you, not your browser
+
+Marks are stored **per principal, on the server**, so clearing the badge on a
+laptop clears it on a phone — and clearing it in the dashboard clears it for an
+agent reading the same workspace. Two people in one workspace see the same
+notifications and keep entirely independent marks.
+
+```bash
+curl "http://127.0.0.1:3000/v1/notifications?limit=20" \
+  -H "authorization: Bearer <token>"
+
+# Mark specific ones read (idempotent)
+curl -X POST http://127.0.0.1:3000/v1/notifications/read \
+  -H "authorization: Bearer <token>" -H "content-type: application/json" \
+  -d '{"ids":["<notification-id>"]}'
+
+# Mark everything currently visible to you as read — no timestamp is sent
+curl -X POST http://127.0.0.1:3000/v1/notifications/read-all \
+  -H "authorization: Bearer <token>" -H "content-type: application/json" -d '{}'
+```
+
+`read-all` deliberately takes no instant. The server watermarks from *its* newest
+notification, so a stale page cannot mark rows it was never shown.
+
+The response carries no message text. The `kind` **is** the message: clients
+translate it, and agents pay no tokens for a sentence they do not need.
+
+## Preferences
+
+Per-kind, per person, and stored server-side alongside the read marks — so they
+apply to the bell, to the API, and to agents alike. Send only what changes:
+
+```bash
+curl -X PUT http://127.0.0.1:3000/v1/notifications/preferences \
+  -H "authorization: Bearer <token>" -H "content-type: application/json" \
+  -d '{"plan.changed": false}'
+```
+
+A partial update rather than a whole record, so a client built before a kind
+existed cannot silence that kind by omitting it. Muting a kind removes its rows
+from the list **and** from the unread count — a badge counting things you asked
+not to see could never be cleared.
+
+Changing preferences is itself audited (`notification.manage`): turning off
+token-change alerts suppresses a security signal, and that should be answerable
+from the trail. Reading the list is not audited — it happens on every page load,
+and a row per load would flood the very trail it reads.
+
+## For agents
+
+```
+list_notifications(unreadOnly: true, limit: 20)
+```
+
+The reconnect move: ask what changed, act on it, and the marks you clear are the
+same ones the dashboard sees. Filter by `kind` or `severity` to skip straight to
+failures.
+
+## Permissions
+
+Reading notifications needs `stats:read` — the same member-visible view of
+workspace activity the Overview feed uses, held by `viewer` upward. Marking things
+read and changing your own preferences need only a valid credential: they are
+yours, they cannot affect anyone else, and a viewer who could see a badge but never
+clear it would be a worse answer.
+
+## Outbound channels
+
+Email, Slack, and webhook delivery are a **documented seam**, not a shipped
+feature. The `NotificationChannel` port is declared — so the shape is agreed in
+advance — but nothing implements or calls it. A channel needs a delivery guarantee,
+a retry policy, a suppression list and a credential per provider, and building all
+of that for a recipient nobody has yet produces an integration that is wrong by the
+time someone wants it. An unimplemented toggle in a settings screen is worse than
+an absent one.

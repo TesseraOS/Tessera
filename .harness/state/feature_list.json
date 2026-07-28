@@ -2191,7 +2191,7 @@
       "package": "@tessera/api",
       "release": "R4",
       "priority": "should",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-060",
         "F-045"
@@ -2214,7 +2214,7 @@
         "E-018",
         "E-004"
       ],
-      "notes": "SCOPE NARROWED by F-089 (2026-07-18): the dashboard feed/bell now read persisted trail data with per-device read marks — F-065 keeps what genuinely needs a server store: notification preferences, CROSS-DEVICE read state keyed {tenantId, principalId}, the agent-readable surface, and occurredAt on wire events."
+      "notes": "SCOPE NARROWED by F-089 (2026-07-18), CLOSED 2026-07-28 under ADR-0064. Built as a PROJECTION of the audit trail rather than a second store of the same facts — which is what acceptance clause 1 asks for in its own words (\"never a second event taxonomy\"). The NotificationStore persists only what cannot be derived: cross-device read state + per-user preferences keyed {tenantId, principalId} (in-memory + SQLite + Postgres, one shared conformance suite). Background scan outcomes gained audit rows so scan.failed is derivable at all. Kinds ship only with a real producer: system.alert is NOT built, and token.created/revoked collapse to token.changed because the trail records one action for both. NotificationChannel is declared and unimplemented — a documented seam, per clause 4."
     },
     {
       "id": "F-066",

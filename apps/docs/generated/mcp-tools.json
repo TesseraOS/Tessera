@@ -1,6 +1,6 @@
 {
   "$source": "tools/list from the real tessera-mcp stdio server — regenerate with `pnpm --filter @tessera/docs generate`",
-  "toolCount": 20,
+  "toolCount": 21,
   "tools": [
     {
       "name": "add_source",
@@ -434,6 +434,55 @@
           "principalId",
           "roles"
         ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "list_notifications",
+      "description": "What changed in this workspace — scans that finished or failed, memories captured, tokens and plan changes. Ask this when reconnecting to find out what happened while you were away. Returns kinds and timestamps, never prose; `unreadOnly` uses the same read state the dashboard bell does, so marking something read in either place clears it in both.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "memory.captured",
+                "scan.completed",
+                "scan.failed",
+                "token.changed",
+                "plan.changed"
+              ]
+            },
+            "description": "Restrict to these notification kinds."
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ],
+            "description": "Restrict to one severity."
+          },
+          "unreadOnly": {
+            "type": "boolean",
+            "description": "Only what this principal has not marked read (read state is shared with the UI)."
+          },
+          "limit": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 50,
+            "description": "Max notifications to return (default 20, max 50)."
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Opaque forward cursor from a prior page."
+          }
+        },
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       }

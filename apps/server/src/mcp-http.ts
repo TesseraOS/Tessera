@@ -62,6 +62,11 @@ export function registerMcpHttp(app: McpHost, options: RegisterMcpHttpOptions): 
     // two MCP transports would disagree about whether a compile is capped and counted.
     usage: runtime.usage,
     metered: runtime.metered,
+    // The notification projection needs both halves (F-065): the trail it reads and the store that
+    // says which rows this principal has seen. Wired on both transports, or a reconnecting agent
+    // would get a different answer depending on how it connected.
+    ...(runtime.audit !== undefined ? { audit: runtime.audit } : {}),
+    notifications: runtime.notifications,
     sessionTtlMs: config.sessionTtlMs,
     maxSessions: config.maxSessions,
   });

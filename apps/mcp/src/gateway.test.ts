@@ -43,6 +43,7 @@ describe('TOOL_PERMISSIONS', () => {
       'get_skill',
       'get_stats',
       'issue_token',
+      'list_notifications',
       'list_projects',
       'list_skills',
       'list_sources',

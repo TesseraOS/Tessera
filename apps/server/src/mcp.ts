@@ -40,6 +40,10 @@ export async function startMcpServer(options: McpServerOptions = {}): Promise<Mc
     // Meter the agent surface too (F-057; NFR-12) — the population the entitlement exists to meter.
     usage: runtime.usage,
     metered: runtime.metered,
+    // `list_notifications` (F-065): the trail it projects plus the read state it joins. Both, or the
+    // tool can only answer half the question it exists to answer.
+    ...(runtime.audit !== undefined ? { audit: runtime.audit } : {}),
+    notifications: runtime.notifications,
   });
 
   return {

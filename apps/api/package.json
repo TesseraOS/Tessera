@@ -33,6 +33,10 @@
       "types": "./dist/stats/core.d.ts",
       "import": "./dist/stats/core.js"
     },
+    "./notifications": {
+      "types": "./dist/notifications/index.d.ts",
+      "import": "./dist/notifications/index.js"
+    },
     "./conformance": {
       "types": "./dist/conformance.d.ts",
       "import": "./dist/conformance.js"

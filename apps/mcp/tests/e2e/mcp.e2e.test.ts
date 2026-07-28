@@ -46,6 +46,7 @@ describe('@tessera/mcp tools', () => {
       'get_skill',
       'get_stats',
       'issue_token',
+      'list_notifications',
       'list_projects',
       'list_skills',
       'list_sources',

@@ -36,6 +36,7 @@ export type McpToolName =
   | 'list_sources'
   | 'scan_source'
   | 'get_stats'
+  | 'list_notifications'
   | 'list_projects'
   | 'create_project'
   | 'rename_project'
@@ -58,6 +59,10 @@ export const TOOL_PERMISSIONS: Readonly<Record<McpToolName, Permission>> = {
   list_sources: 'sources:read',
   scan_source: 'sources:manage',
   get_stats: 'stats:read',
+  // The same permission the REST twin requires: a notification is a narrowed view of workspace
+  // activity, and read state is self-scoped, so nothing here is available to a caller that could not
+  // already read `/v1/stats/activity/recent`.
+  list_notifications: 'stats:read',
   list_projects: 'projects:read',
   create_project: 'projects:manage',
   rename_project: 'projects:manage',
@@ -96,6 +101,12 @@ export const MCP_AUDIT_ACTIONS: Readonly<Record<McpToolName, AuditAction>> = {
   // exhaustive over McpToolName. One new vocabulary entry for a read that REST does not record would
   // make the two surfaces disagree for no compliance gain.
   get_stats: 'source.read',
+  // Unlike `get_stats`, this one gets its OWN action rather than borrowing a read: `audit.read` — the
+  // only other candidate — is the admin trail-access signal a compliance reader watches, and
+  // recording an agent's bell fetch as that would drown it. The REST twin stays unaudited (a row per
+  // page load would flood the trail it projects), so the two surfaces differ here on purpose: a
+  // rendering client polls, an agent asks.
+  list_notifications: 'notification.read',
   list_projects: 'project.read',
   create_project: 'project.manage',
   rename_project: 'project.manage',

@@ -1,7 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { ApiServices, AuthContext } from '@tessera/api';
+import type { ApiServices, AuditLog, AuthContext } from '@tessera/api';
 // Value imports from the Fastify-free `@tessera/api/auth` subpath (the F-012 invariant).
 import {
+  LOCAL_PRINCIPAL,
   isExpired,
   isRevoked,
   permissionsForRoles,
@@ -9,6 +10,8 @@ import {
   type Permission,
   type TokenStore,
 } from '@tessera/api/auth';
+// Likewise Fastify-free: the ONE projection `GET /v1/notifications` serves (ADR-0036, ADR-0064).
+import { listNotifications, type NotificationStore } from '@tessera/api/notifications';
 // Likewise Fastify-free: the one workspace-summary implementation REST also serves (ADR-0036).
 import { computeWorkspaceStats } from '@tessera/api/stats';
 // Fastify-free project control-plane (F-066, ADR-0037) — the same service REST's /v1/projects wraps.
@@ -52,6 +55,7 @@ import {
   explainShape,
   getSkillShape,
   getStatsShape,
+  listNotificationsShape,
   issueTokenShape,
   listSkillsShape,
   listProjectsShape,
@@ -173,6 +177,15 @@ export interface BuildMcpServerOptions {
    * this surface exactly as it does on REST — one rule, two surfaces (ADR-0056 §4).
    */
   readonly metered?: boolean;
+  /**
+   * The audit trail the `list_notifications` tool projects (F-065; ADR-0064) and the per-principal
+   * store holding read state + preferences. Both or neither: a notification is the join of the two,
+   * so half the wiring can only answer half a question. Without them the tool returns a clean "not
+   * configured" error, like the token tools do — the composition root passes `runtime.audit` and
+   * `runtime.notifications`.
+   */
+  readonly audit?: AuditLog;
+  readonly notifications?: NotificationStore;
 }
 
 /** Token budget used by `explain` when the caller does not specify one. */
@@ -227,7 +240,7 @@ export function buildMcpServer(
   options: BuildMcpServerOptions = {},
 ): McpServer {
   const server = new McpServer(SERVER_INFO);
-  const { gateway, tokenStore } = options;
+  const { gateway, tokenStore, audit: auditLog, notifications: notificationStore } = options;
   const configuredProject = options.defaultProject ?? DEFAULT_PROJECT_ID;
 
   /**
@@ -489,6 +502,42 @@ export function buildMcpServer(
           .forProject(project)
           .list();
         return { sources: sources.map(toWireSource) };
+      }),
+  );
+
+  server.registerTool(
+    'list_notifications',
+    {
+      description:
+        'What changed in this workspace — scans that finished or failed, memories captured, tokens and plan changes. Ask this when reconnecting to find out what happened while you were away. Returns kinds and timestamps, never prose; `unreadOnly` uses the same read state the dashboard bell does, so marking something read in either place clears it in both.',
+      inputSchema: listNotificationsShape,
+    },
+    (args, extra) =>
+      runTool(async () => {
+        const ctx = await guard('list_notifications', extra);
+        if (notificationStore === undefined || auditLog === undefined) {
+          throw new InternalError('notifications are not configured for this deployment');
+        }
+        const tenantId = tenantOf(ctx);
+        const principalId = ctx?.principal.id ?? LOCAL_PRINCIPAL.id;
+        const store = notificationStore.forTenant(tenantId);
+        const [readState, preferences] = await Promise.all([
+          store.readState(principalId),
+          store.preferences(principalId),
+        ]);
+        // The SAME projection GET /v1/notifications calls (ADR-0036 parity): the two surfaces cannot
+        // answer differently about what happened, because there is only one implementation.
+        return listNotifications(
+          auditLog.forTenant(tenantId),
+          { readState, preferences },
+          {
+            ...(args.kind !== undefined ? { kinds: args.kind } : {}),
+            ...(args.severity !== undefined ? { severity: args.severity } : {}),
+            ...(args.unreadOnly !== undefined ? { unreadOnly: args.unreadOnly } : {}),
+            ...(args.limit !== undefined ? { limit: args.limit } : {}),
+            ...(args.cursor !== undefined ? { cursor: args.cursor } : {}),
+          },
+        );
       }),
   );
 

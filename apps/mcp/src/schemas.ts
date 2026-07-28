@@ -2,6 +2,13 @@
 // Fastify (the F-012 invariant); this subpath carries only the pure auth model.
 import { PERMISSIONS, ROLES } from '@tessera/api/auth';
 import { MAX_PROJECT_NAME_LENGTH } from '@tessera/api/projects';
+// Same reason as the two subpaths above: the notification model is Fastify-free, but the package
+// ROOT is not, and this process must never load Fastify (F-012).
+import {
+  MAX_NOTIFICATION_PAGE_SIZE,
+  NOTIFICATION_KINDS,
+  NOTIFICATION_SEVERITIES,
+} from '@tessera/api/notifications';
 import { EDGE_KINDS, NODE_KINDS } from '@tessera/knowledge-graph';
 import { MEMORY_KINDS } from '@tessera/memory';
 import { SKILL_CATEGORIES, SKILL_NAMES } from '@tessera/skills';
@@ -125,6 +132,33 @@ export const scanSourceShape = {
 
 /** `get_stats` takes no arguments — the workspace is the caller's (tenant, project) scope (F-060). */
 export const getStatsShape = {};
+
+/**
+ * `list_notifications` (F-065) — "what changed in this workspace since I was last here?"
+ *
+ * The agent-first half of the notification centre. Token-lean by construction: the response carries
+ * kinds, not prose, and `since` lets a reconnecting agent ask for the delta rather than paging a
+ * history it has already seen.
+ */
+export const listNotificationsShape = {
+  kind: z
+    .array(z.enum(NOTIFICATION_KINDS))
+    .optional()
+    .describe('Restrict to these notification kinds.'),
+  severity: z.enum(NOTIFICATION_SEVERITIES).optional().describe('Restrict to one severity.'),
+  unreadOnly: z
+    .boolean()
+    .optional()
+    .describe('Only what this principal has not marked read (read state is shared with the UI).'),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_NOTIFICATION_PAGE_SIZE)
+    .optional()
+    .describe(`Max notifications to return (default 20, max ${MAX_NOTIFICATION_PAGE_SIZE}).`),
+  cursor: z.string().min(1).optional().describe('Opaque forward cursor from a prior page.'),
+};
 
 // --- Multi-project workspaces (F-066; ADR-0036/0037 parity with REST /v1/projects) ---
 

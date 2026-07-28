@@ -2491,7 +2491,7 @@
       "package": "@tessera/web-perf",
       "release": "R4",
       "priority": "should",
-      "status": "backlog",
+      "status": "in_progress",
       "blockedBy": [],
       "acceptance": [
         "A LAB measurement of LCP / CLS / TBT for the public marketing surface that is trustworthy on pages running continuous rAF/WebGL animation, asserted against the declared targets already committed in tests/web-perf/budgets.json (marketing: lcpMs 2000, cls 0.05, tbtMs 200 — sourced from marketing-design.manifest.json budgets.webVitals)",

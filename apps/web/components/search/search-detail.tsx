@@ -1,8 +1,9 @@
 'use client';
 
-import { ArrowRight, GitBranch, Loader2 } from 'lucide-react';
+import { ArrowRight, Copy, GitBranch, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { copyToClipboard } from '@/lib/clipboard';
 import {
   Sheet,
   SheetContent,
@@ -118,6 +119,25 @@ function SearchDetailBody({ result, query }: { result: FusedCandidate; query: st
                 Open in Inspector
                 <ArrowRight className="size-4" />
               </a>
+            </Button>
+            {/*
+              Copy ref lives here as well as in the row context menu (F-064), and this is the copy
+              that matters: the menu is opened by right-click or long-press, and the results listbox
+              holds focus via `aria-activedescendant`, so a `contextmenu` keypress fires on the
+              LISTBOX and never reaches a row trigger — verified, not assumed. Without this button the
+              action would be mouse-only, which is a WCAG 2.1.1 failure. The menu is a shortcut; this
+              is the path.
+            */}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                void copyToClipboard(result.ref, 'Copied ref');
+              }}
+            >
+              Copy ref
+              <Copy className="size-4" />
             </Button>
           </div>
         </section>

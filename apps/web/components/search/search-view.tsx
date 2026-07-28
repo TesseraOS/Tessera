@@ -12,6 +12,7 @@ import { SignalField } from '@/components/art';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { ResultCard, RESULT_KINDS, kindOf, type ResultKind } from '@/components/search/result-card';
+import { RowContextMenu } from '@/components/row-context-menu';
 import { SearchDetail } from '@/components/search/search-detail';
 import { useSearch } from '@/lib/api/hooks';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
@@ -299,24 +300,36 @@ function ResultsList({
           const result = results[row.index];
           if (!result) return null;
           return (
-            <div
+            // Right-click a result to copy its ref or open it (F-064; FR-49). "Show effects" is
+            // deliberately absent here: opening the detail already renders effects inline, so a
+            // second item leading to the same place would be a menu that pads itself.
+            <RowContextMenu
               key={result.ref}
-              data-index={row.index}
-              ref={virtualizer.measureElement}
-              className="absolute top-0 left-0 w-full pb-2"
-              style={{ transform: `translateY(${row.start}px)` }}
+              reference={result.ref}
+              referenceLabel="ref"
+              onOpen={() => {
+                onActiveIndexChange(row.index);
+                onSelect(result);
+              }}
             >
-              <ResultCard
-                result={result}
-                id={optionId(row.index)}
-                active={focused && row.index === clamped}
-                selected={row.index === clamped}
-                onSelect={() => {
-                  onActiveIndexChange(row.index);
-                  onSelect(result);
-                }}
-              />
-            </div>
+              <div
+                data-index={row.index}
+                ref={virtualizer.measureElement}
+                className="absolute top-0 left-0 w-full pb-2"
+                style={{ transform: `translateY(${row.start}px)` }}
+              >
+                <ResultCard
+                  result={result}
+                  id={optionId(row.index)}
+                  active={focused && row.index === clamped}
+                  selected={row.index === clamped}
+                  onSelect={() => {
+                    onActiveIndexChange(row.index);
+                    onSelect(result);
+                  }}
+                />
+              </div>
+            </RowContextMenu>
           );
         })}
       </div>

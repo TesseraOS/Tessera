@@ -5,6 +5,8 @@ import tseslint from 'typescript-eslint';
 import reactHooks from 'eslint-plugin-react-hooks';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import prettier from 'eslint-config-prettier';
+import tessera from './eslint-rules/no-hardcoded-strings.mjs';
+import { I18N_ALLOWLIST } from './eslint-rules/i18n-allowlist.mjs';
 
 export default tseslint.config(
   {
@@ -66,6 +68,15 @@ export default tseslint.config(
         'error',
         { tags: ['ul'], roles: ['tabpanel', 'region'], allowExpressionValues: true },
       ],
+    },
+  },
+  {
+    // User-facing copy lives in lib/i18n (F-064; NFR-14). `allow` enumerates the files still to be
+    // migrated — see eslint-rules/i18n-allowlist.mjs for why it is a list and not a warning.
+    files: ['components/**/*.tsx', 'app/**/*.tsx'],
+    plugins: { tessera },
+    rules: {
+      'tessera/no-hardcoded-strings': ['error', { allow: I18N_ALLOWLIST }],
     },
   },
   prettier,

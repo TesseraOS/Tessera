@@ -24,11 +24,11 @@ import type { Plan } from '@/lib/api/types';
 
 /** Format an entitlement limit; `-1` means unlimited (open-core convention). */
 function limit(value: number): string {
-  return value < 0 ? 'Unlimited' : formatNumber(value);
+  return value < 0 ? t('settings.plans.unlimited') : formatNumber(value);
 }
 
 function price(plan: Plan): string {
-  if (plan.priceCents === 0) return 'Free';
+  if (plan.priceCents === 0) return t('settings.plans.free');
   const dollars = plan.priceCents / 100;
   return `$${dollars % 1 === 0 ? dollars.toFixed(0) : dollars.toFixed(2)}/${
     plan.interval === 'year' ? 'yr' : 'mo'
@@ -63,34 +63,48 @@ function DeploymentCard() {
   return (
     <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
       <CardHeader className="space-y-1 p-0 pb-3">
-        <CardTitle className="text-sm">Deployment</CardTitle>
-        <CardDescription>Live connection and dependency health for this workspace.</CardDescription>
+        <CardTitle className="text-sm">{t('settings.deployment.title')}</CardTitle>
+        <CardDescription>{t('settings.deployment.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 p-0">
         <dl className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-1">
-            <dt className="text-muted-foreground text-[11px]">API endpoint</dt>
+            <dt className="text-muted-foreground text-[11px]">
+              {t('settings.deployment.apiEndpoint')}
+            </dt>
             <dd className="text-foreground truncate font-mono text-xs" title={API_ORIGIN}>
               {API_ORIGIN}
             </dd>
           </div>
           <div className="space-y-1">
-            <dt className="text-muted-foreground text-[11px]">Liveness</dt>
+            <dt className="text-muted-foreground text-[11px]">
+              {t('settings.deployment.liveness')}
+            </dt>
             <dd>
               {health.isPending ? (
                 <Skeleton className="h-5 w-16" />
               ) : (
-                <StatusBadge ok={live} okLabel="Live" badLabel="Unreachable" />
+                <StatusBadge
+                  ok={live}
+                  okLabel={t('settings.deployment.live')}
+                  badLabel={t('settings.deployment.unreachable')}
+                />
               )}
             </dd>
           </div>
           <div className="space-y-1">
-            <dt className="text-muted-foreground text-[11px]">Readiness</dt>
+            <dt className="text-muted-foreground text-[11px]">
+              {t('settings.deployment.readiness')}
+            </dt>
             <dd>
               {ready.isPending ? (
                 <Skeleton className="h-5 w-16" />
               ) : (
-                <StatusBadge ok={isReady} okLabel="Ready" badLabel="Not ready" />
+                <StatusBadge
+                  ok={isReady}
+                  okLabel={t('settings.deployment.ready')}
+                  badLabel={t('settings.deployment.notReady')}
+                />
               )}
             </dd>
           </div>
@@ -101,9 +115,15 @@ function DeploymentCard() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-8 text-xs">Dependency</TableHead>
-                  <TableHead className="h-8 text-xs">Detail</TableHead>
-                  <TableHead className="h-8 text-right text-xs">Status</TableHead>
+                  <TableHead className="h-8 text-xs">
+                    {t('settings.deployment.column.dependency')}
+                  </TableHead>
+                  <TableHead className="h-8 text-xs">
+                    {t('settings.deployment.column.detail')}
+                  </TableHead>
+                  <TableHead className="h-8 text-right text-xs">
+                    {t('settings.deployment.column.status')}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -116,7 +136,11 @@ function DeploymentCard() {
                       {check.detail ?? '—'}
                     </TableCell>
                     <TableCell className="py-2 text-right">
-                      <StatusBadge ok={check.ok} okLabel="OK" badLabel="Down" />
+                      <StatusBadge
+                        ok={check.ok}
+                        okLabel={t('settings.deployment.ok')}
+                        badLabel={t('settings.deployment.down')}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -233,12 +257,11 @@ function PlansCard() {
   return (
     <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
       <CardHeader className="space-y-1 p-0 pb-3">
-        <CardTitle className="text-sm">Plans &amp; budgets</CardTitle>
+        <CardTitle className="text-sm">{t('settings.plans.title')}</CardTitle>
         <CardDescription>
-          Entitlements that bound compilation, enforced server-side per plan. This is the catalog —
-          the plan this workspace is on is shown under{' '}
+          {t('settings.plans.descriptionLead')}{' '}
           <Link href="/profile" className="text-foreground font-medium hover:underline">
-            Profile
+            {t('settings.plans.profileLink')}
           </Link>
           .
         </CardDescription>
@@ -246,7 +269,7 @@ function PlansCard() {
       <CardContent className="p-0">
         {isError ? (
           <ErrorState
-            title="Could not load plans"
+            title={t('settings.plans.error')}
             description={error instanceof Error ? error.message : 'Is the Tessera API running?'}
             onRetry={() => void refetch()}
           />
@@ -257,11 +280,17 @@ function PlansCard() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-8 text-xs">Plan</TableHead>
-                  <TableHead className="h-8 text-xs">Price</TableHead>
-                  <TableHead className="h-8 text-right text-xs">Compile budget</TableHead>
-                  <TableHead className="h-8 text-right text-xs">Monthly compiles</TableHead>
-                  <TableHead className="h-8 text-right text-xs">Seats</TableHead>
+                  <TableHead className="h-8 text-xs">{t('settings.plans.column.plan')}</TableHead>
+                  <TableHead className="h-8 text-xs">{t('settings.plans.column.price')}</TableHead>
+                  <TableHead className="h-8 text-right text-xs">
+                    {t('settings.plans.column.compileBudget')}
+                  </TableHead>
+                  <TableHead className="h-8 text-right text-xs">
+                    {t('settings.plans.column.monthlyCompiles')}
+                  </TableHead>
+                  <TableHead className="h-8 text-right text-xs">
+                    {t('settings.plans.column.seats')}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -297,10 +326,8 @@ function GovernanceCard() {
   return (
     <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
       <CardHeader className="space-y-1 p-0 pb-3">
-        <CardTitle className="text-sm">Governance &amp; retention</CardTitle>
-        <CardDescription>
-          How access and history are controlled. Set by server configuration — read-only here.
-        </CardDescription>
+        <CardTitle className="text-sm">{t('settings.governance.title')}</CardTitle>
+        <CardDescription>{t('settings.governance.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 p-0">
         {/*
@@ -311,23 +338,25 @@ function GovernanceCard() {
         */}
         <dl className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-1">
-            <dt className="text-muted-foreground text-[11px]">Access control</dt>
-            <dd className="text-foreground text-xs">Role-based, least privilege</dd>
+            <dt className="text-muted-foreground text-[11px]">{t('settings.governance.access')}</dt>
+            <dd className="text-foreground text-xs">{t('settings.governance.accessValue')}</dd>
           </div>
           <div className="space-y-1">
-            <dt className="text-muted-foreground text-[11px]">Audit trail</dt>
-            <dd className="text-foreground text-xs">Append-only, per tenant</dd>
+            <dt className="text-muted-foreground text-[11px]">{t('settings.governance.audit')}</dt>
+            <dd className="text-foreground text-xs">{t('settings.governance.auditValue')}</dd>
           </div>
           <div className="space-y-1">
-            <dt className="text-muted-foreground text-[11px]">Retention</dt>
-            <dd className="text-foreground text-xs">By max age &amp; max entries</dd>
+            <dt className="text-muted-foreground text-[11px]">
+              {t('settings.governance.retention')}
+            </dt>
+            <dd className="text-foreground text-xs">{t('settings.governance.retentionValue')}</dd>
           </div>
         </dl>
         <Link
           href="/governance"
           className="text-foreground inline-flex items-center gap-1 text-xs font-medium hover:underline"
         >
-          View roles &amp; retention posture
+          {t('settings.governance.link')}
           <ArrowUpRight className="size-3.5" aria-hidden="true" />
         </Link>
       </CardContent>

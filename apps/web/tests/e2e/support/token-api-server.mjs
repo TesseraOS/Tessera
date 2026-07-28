@@ -43,6 +43,9 @@ const app = buildServer(runtime.services, {
   // Metered ON here, unlike a plain Local deployment, so the e2e exercises the entitlement branch:
   // usage-vs-limit on Billing and the upgrade CTA. The unmetered branch is covered by the RTL suite.
   metered: true,
+  // The PERSISTENT notification store (F-065), not the in-memory fallback: cross-device read state
+  // is the claim, and a store that only lives in this process could not fail if the wiring broke.
+  notifications: runtime.notifications,
 });
 
 // Test-only channel so the spec can read the issued token. NOT a production route.

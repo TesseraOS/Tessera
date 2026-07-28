@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { AppearanceSettings } from '@/components/settings/appearance-settings';
+import { NotificationSettings } from '@/components/settings/notification-settings';
 import { ErrorState } from '@/components/error-state';
 import { cn } from '@/lib/utils';
 import { API_ORIGIN } from '@/lib/api/client';
@@ -44,6 +45,9 @@ export function SettingsView() {
   return (
     <div className="space-y-4">
       <AppearanceSettings />
+      {/* The only other per-person write surface on this screen (F-065) — appearance is per browser,
+          notification preferences follow the principal to every device. */}
+      <NotificationSettings />
       <DeploymentCard />
       <FlagsCard />
       <PlansCard />

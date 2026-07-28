@@ -41,6 +41,11 @@ import type {
   CreatedToken,
   CreateTokenRequest,
   Identity,
+  NotificationPage,
+  NotificationPreferences,
+  NotificationPreferencesUpdate,
+  NotificationReadState,
+  NotificationsQuery,
   RbacCatalog,
   RecentActivity,
   CheckoutBody,
@@ -135,6 +140,19 @@ export const api = {
    * stats:read). A narrowed view of the audit trail; the full trail stays behind getAudit (admin).
    */
   getRecentActivity: (limit?: number): Promise<RecentActivity> => sdk.getRecentActivity(limit),
+
+  // --- notifications (F-065; ADR-0064) — the trail projected into kinds, joined with server-side,
+  // cross-device read state. Replaces the per-device localStorage marks F-089 shipped as a stopgap.
+  listNotifications: (query?: NotificationsQuery): Promise<NotificationPage> =>
+    sdk.listNotifications(query),
+  markNotificationsRead: (ids: readonly string[]): Promise<NotificationReadState> =>
+    sdk.markNotificationsRead(ids),
+  markAllNotificationsRead: (): Promise<NotificationReadState> => sdk.markAllNotificationsRead(),
+  getNotificationPreferences: (): Promise<NotificationPreferences> =>
+    sdk.getNotificationPreferences(),
+  updateNotificationPreferences: (
+    update: NotificationPreferencesUpdate,
+  ): Promise<NotificationPreferences> => sdk.updateNotificationPreferences(update),
   /**
    * Per-tenant usage, entitlement, latency and retrieval-quality proxies (F-057; FR-47/NFR-12;
    * admin:manage). Backs the Analytics and Billing views. Latency is a mean and a max, not a p95.

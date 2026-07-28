@@ -12,18 +12,15 @@ import { NavUser } from '@/components/nav-user';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { describeEvent, relativeTime } from '@/components/activity-feed';
+import { relativeTime } from '@/components/activity-feed';
 import { cn } from '@/lib/utils';
-import { useRecentActivity } from '@/lib/api/hooks';
-import { useSession } from '@/lib/auth/use-session';
-import { useCommandMenu } from '@/lib/store/command';
 import {
-  EMPTY_READ_STATE,
-  identityKeyOf,
-  isRead,
-  unreadCount,
-  useNotificationsRead,
-} from '@/lib/store/notifications';
+  useMarkAllNotificationsRead,
+  useMarkNotificationRead,
+  useNotifications,
+} from '@/lib/api/hooks';
+import { describeNotification, severityToneClass } from '@/lib/notifications';
+import { useCommandMenu } from '@/lib/store/command';
 
 export function AppHeader() {
   const pathname = usePathname();
@@ -62,27 +59,24 @@ export function AppHeader() {
 }
 
 /**
- * Notifications (F-089) — the persisted Recent activity entries with **per-message read state**.
+ * The notification centre (F-065; ADR-0064) — typed notifications with **cross-device** read state.
  *
- * The entries are the audit trail's recent work actions (`useRecentActivity` — the same query the
- * Overview feed renders), so they survive a reload. Read marks are per message: clicking a row
- * marks it read (the menu stays open so several can be cleared in a pass), "Mark all as read"
- * watermarks everything visible, and — unlike F-060 — merely *opening* the bell claims nothing.
- * Marks persist per device, keyed by identity, wiped on sign-out (`lib/store/notifications`).
+ * Rows are the audit trail projected into notification kinds (`useNotifications`), so they survive a
+ * reload; read marks now live on the **server**, so a badge cleared on a laptop is clear on a phone.
+ * That is the whole reason F-065 outlived F-089, whose `localStorage` marks were per device by
+ * construction. Clicking a row marks it read and the panel stays open, so several can be cleared in
+ * a pass; merely opening the bell still claims nothing.
+ *
+ * Copy comes from the `kind`, not from the server — the API deliberately sends no prose, so this is
+ * where a notification becomes a sentence, through the i18n catalog.
  */
 function NotificationsMenu() {
-  const { data, isPending, isError, refetch } = useRecentActivity();
-  const { identity } = useSession();
-  const identityKey = identityKeyOf(identity);
-  const readState = useNotificationsRead(
-    (state) => state.byIdentity[identityKey] ?? EMPTY_READ_STATE,
-  );
-  const markRead = useNotificationsRead((state) => state.markRead);
-  const markAllRead = useNotificationsRead((state) => state.markAllRead);
+  const { data, isPending, isError, refetch } = useNotifications();
+  const markRead = useMarkNotificationRead();
+  const markAllRead = useMarkAllNotificationsRead();
 
-  const entries = data?.events ?? [];
-  const unread = unreadCount(entries, readState);
-  const newest = entries[0];
+  const entries = data?.notifications ?? [];
+  const unread = data?.unreadCount ?? 0;
 
   return (
     // A Popover, not a DropdownMenu: `role="menu"` may only contain menu items, and this panel
@@ -110,11 +104,14 @@ function NotificationsMenu() {
       <PopoverContent align="end" className="w-80 p-1">
         <div className="flex items-center justify-between gap-2 px-2 py-1.5">
           <h2 className="text-xs font-medium">{t('header.notifications')}</h2>
-          {unread > 0 && newest !== undefined ? (
+          {unread > 0 ? (
             <button
               type="button"
-              className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
-              onClick={() => markAllRead(identityKey, newest.at)}
+              className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
+              disabled={markAllRead.isPending}
+              // No instant is sent: the server watermarks from its own newest notification, so a
+              // stale panel cannot mark rows it was never shown.
+              onClick={() => markAllRead.mutate()}
             >
               {t('header.markAllRead')}
             </button>
@@ -163,8 +160,9 @@ function NotificationsMenu() {
             aria-label={t('header.recentNotifications')}
           >
             {entries.map((entry) => {
-              const { icon: Icon, title, description } = describeEvent(entry);
-              const read = isRead(entry, readState);
+              const { icon: Icon, title, description } = describeNotification(entry.kind);
+              const tone = severityToneClass(entry.severity);
+              const read = entry.read;
               return (
                 <li key={entry.id}>
                   {/*
@@ -176,11 +174,16 @@ function NotificationsMenu() {
                   */}
                   <button
                     type="button"
-                    onClick={() => markRead(identityKey, entry.id)}
-                    aria-label={`${title} — mark as read`}
+                    onClick={() => markRead.mutate(entry.id)}
+                    aria-label={t('notifications.markRead', { title })}
                     className="hover:bg-accent focus-visible:ring-ring flex w-full items-center gap-2.5 rounded-sm px-2 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
                   >
-                    <span className="bg-muted text-muted-foreground grid size-6 shrink-0 place-items-center rounded-md">
+                    <span
+                      className={cn(
+                        'bg-muted grid size-6 shrink-0 place-items-center rounded-md',
+                        tone ?? 'text-muted-foreground',
+                      )}
+                    >
                       <Icon className="size-3" aria-hidden="true" />
                     </span>
                     <span className="min-w-0 flex-1">

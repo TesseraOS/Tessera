@@ -108,6 +108,27 @@ export const messages = {
   'header.emptyBody':
     'Scans, compiles, and captured memories land here — and stay here across reloads.',
   'header.recentNotifications': 'Recent notifications',
+
+  // --- notifications (F-065) — the API sends kinds, not prose; the sentences live here ---
+  'notifications.kind.memoryCaptured.title': 'Memory captured',
+  'notifications.kind.memoryCaptured.body': 'A new entry was recorded to the workspace memory.',
+  'notifications.kind.scanCompleted.title': 'Source scan finished',
+  'notifications.kind.scanCompleted.body': 'New and changed content is indexed and searchable.',
+  'notifications.kind.scanFailed.title': 'Source scan failed',
+  'notifications.kind.scanFailed.body':
+    'Indexing stopped before finishing; open Sources for detail.',
+  'notifications.kind.tokenChanged.title': 'API token changed',
+  'notifications.kind.tokenChanged.body': 'A token was issued or revoked for this workspace.',
+  'notifications.kind.planChanged.title': 'Plan changed',
+  'notifications.kind.planChanged.body': 'The subscription or payment details were updated.',
+  'notifications.markRead': '{title} — mark as read',
+  'notifications.settings.title': 'Notifications',
+  'notifications.settings.description':
+    'Which events raise a notification for you. Applies to the bell and to agents reading your notifications — and to every device you sign in from.',
+  'notifications.settings.loadFailed': 'Notification preferences could not be loaded.',
+  'notifications.settings.saveFailed': 'That change could not be saved. Try again.',
+  'notifications.settings.severityError': 'Error',
+  'notifications.settings.severityWarning': 'Security',
   'memory.title': 'Memory',
   'memory.description':
     'Browse the decisions, lessons, and incidents your agents rely on. Every memory is versioned — edits append a new version, never overwrite.',

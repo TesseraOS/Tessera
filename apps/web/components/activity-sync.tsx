@@ -3,27 +3,30 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useApiEvent } from '@/lib/api/events';
-import { RECENT_ACTIVITY_QUERY_KEY } from '@/lib/api/hooks';
+import { NOTIFICATIONS_QUERY_KEY, RECENT_ACTIVITY_QUERY_KEY } from '@/lib/api/hooks';
 
 /** Coalescing window for stream-triggered feed refetches — one scan can emit a burst of events. */
 const RECENT_INVALIDATE_DEBOUNCE_MS = 500;
 
 /**
- * The app-wide bridge from the live event stream to the persisted Recent activity query (F-089).
+ * The app-wide bridge from the live event stream to the trail-derived queries (F-089, F-065).
  *
  * Replaces F-060's `FeedIngest`: the feed and the bell no longer accumulate SSE payloads in a
- * session store — they render the audit trail via `useRecentActivity`, and this component's only
- * job is to tell TanStack Query "the trail moved" when the stream says so. Debounced, so a
- * 300-file scan triggers one refetch, not 300 (the same shape as `useStats`).
+ * session store — they render the audit trail (`useRecentActivity`, and since F-065 the
+ * notification centre projected from the same trail), and this component's only job is to tell
+ * TanStack Query "the trail moved" when the stream says so. Debounced, so a 300-file scan triggers
+ * one refetch, not 300 (the same shape as `useStats`). Both queries are invalidated together
+ * because they read the same underlying rows — refreshing one and not the other is how a feed and a
+ * badge come to disagree.
  *
  * Mounted exactly once, in `app/providers.tsx` inside `EventsProvider` — the events arrive while
  * the user is on any route, and the bell that renders the result is on every route. Renders
  * nothing.
  *
  * Only events whose *audited cause* is new matter: `memory.captured` (a `memory.write` row) and
- * the scan lifecycle (`source.scan.started` follows the audited scan request; `completed` also
- * freshens the feed after a long scan). Per-document ingest events carry no trail row of their own
- * and are deliberately not subscribed — they were the burst the debounce existed for.
+ * the scan lifecycle (`source.scan.started` follows the audited scan request; `completed` and
+ * `failed` write their own outcome rows since F-065). Per-document ingest events carry no trail row
+ * of their own and are deliberately not subscribed — they were the burst the debounce existed for.
  */
 export function ActivitySync(): null {
   const queryClient = useQueryClient();
@@ -33,12 +36,15 @@ export function ActivitySync(): null {
     if (pending.current !== undefined) clearTimeout(pending.current);
     pending.current = setTimeout(() => {
       void queryClient.invalidateQueries({ queryKey: RECENT_ACTIVITY_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY });
     }, RECENT_INVALIDATE_DEBOUNCE_MS);
   };
 
   useApiEvent('memory.captured', invalidate);
   useApiEvent('source.scan.started', invalidate);
   useApiEvent('source.scan.completed', invalidate);
+  // A background failure is the notification most worth arriving without a reload (F-065).
+  useApiEvent('source.scan.failed', invalidate);
 
   useEffect(() => () => clearTimeout(pending.current), []);
 

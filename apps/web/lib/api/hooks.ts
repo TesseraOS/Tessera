@@ -5,7 +5,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { api } from './client';
 import { useApiEvent } from './events';
 import { useProjectStore } from '@/lib/store/project';
-import type { CheckoutBody } from '@tessera/sdk';
+import type { CheckoutBody, NotificationPage, NotificationPreferencesUpdate } from '@tessera/sdk';
 import type {
   AuditExportQuery,
   AuditQuery,
@@ -552,5 +552,127 @@ export function useSwitchProject() {
   return (projectId: string) => {
     setSelectedProjectId(projectId);
     void queryClient.invalidateQueries();
+  };
+}
+
+// --- notifications (F-065; ADR-0064) ---------------------------------------------------------
+
+/** Query-key prefix for the notification centre — invalidate to refresh the bell and its badge. */
+export const NOTIFICATIONS_QUERY_KEY = ['notifications'] as const;
+
+/** Query key for this principal's notification preferences. */
+export const NOTIFICATION_PREFERENCES_QUERY_KEY = ['notifications', 'preferences'] as const;
+
+/** How many rows the bell requests. Bounded — the panel is a cue, not a history browser. */
+export const NOTIFICATIONS_LIMIT = 20;
+
+/**
+ * The notification centre (F-065) — the audit trail projected into typed kinds, joined with **this
+ * principal's** read state.
+ *
+ * The read state now comes from the server, which is the whole point: F-089 kept marks in
+ * `localStorage`, so a badge cleared on a laptop was still lit on a phone. Kept fresh by
+ * `ActivitySync` alongside the recent-activity feed — they read the same underlying trail, so one
+ * stream-driven invalidation serves both.
+ */
+export function useNotifications(limit: number = NOTIFICATIONS_LIMIT) {
+  return useQuery({
+    queryKey: [...NOTIFICATIONS_QUERY_KEY, limit],
+    queryFn: () => api.listNotifications({ limit }),
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Mark one notification read.
+ *
+ * Optimistic, and safe for the same reasons memory capture is (see {@link useCaptureMemory}): it is
+ * idempotent, the server assigns nothing the user is watching, and a failure is fully reversible by
+ * restoring the previous cache. Without optimism, clicking a row in the panel would stall on a
+ * round-trip before the dot cleared — the one interaction in the app where latency is most visible,
+ * because people clear several in a row.
+ */
+export function useMarkNotificationRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.markNotificationsRead([id]),
+    onMutate: async (id: string) => {
+      // Cancel in-flight reads first: one resolving after this would overwrite the optimistic mark
+      // with a response that predates it.
+      await queryClient.cancelQueries({ queryKey: NOTIFICATIONS_QUERY_KEY });
+      const previous = queryClient.getQueriesData<NotificationPage>({
+        queryKey: NOTIFICATIONS_QUERY_KEY,
+      });
+      queryClient.setQueriesData<NotificationPage>(
+        { queryKey: NOTIFICATIONS_QUERY_KEY },
+        (current) => (current === undefined ? current : markReadInPage(current, id)),
+      );
+      return { previous };
+    },
+    onError: (_error, _id, context) => {
+      // Restored wholesale rather than by id — reversing one mark would lose any concurrent write
+      // that landed in between.
+      for (const [key, data] of context?.previous ?? []) {
+        queryClient.setQueryData(key, data);
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY });
+    },
+  });
+}
+
+/**
+ * Mark everything read. Not optimistic: the server decides the watermark from its own newest
+ * notification, so the resulting state is genuinely unknown here — guessing it would be the kind of
+ * optimism that has to be taken back.
+ */
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.markAllNotificationsRead(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY }),
+  });
+}
+
+/** This principal's notification preferences. Always complete — every kind is present. */
+export function useNotificationPreferences() {
+  return useQuery({
+    queryKey: NOTIFICATION_PREFERENCES_QUERY_KEY,
+    queryFn: () => api.getNotificationPreferences(),
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * Update notification preferences (partial — only the kinds being changed).
+ *
+ * Invalidates the notification list too: muting a kind removes its rows and changes the badge, so
+ * leaving the list cached would show entries the user just asked not to see.
+ */
+export function useUpdateNotificationPreferences() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (update: NotificationPreferencesUpdate) =>
+      api.updateNotificationPreferences(update),
+    onSuccess: (preferences) => {
+      queryClient.setQueryData(NOTIFICATION_PREFERENCES_QUERY_KEY, preferences);
+      void queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY });
+    },
+  });
+}
+
+/** One page with `id` marked read and the badge decremented. Pure — unit-tested directly. */
+export function markReadInPage(page: NotificationPage, id: string): NotificationPage {
+  const target = page.notifications.find((notification) => notification.id === id);
+  if (target === undefined || target.read) return page;
+  return {
+    ...page,
+    notifications: page.notifications.map((notification) =>
+      notification.id === id ? { ...notification, read: true } : notification,
+    ),
+    // Never below zero: the count is bounded to a window, so a row outside it could otherwise drive
+    // the badge negative.
+    unreadCount: Math.max(0, page.unreadCount - 1),
   };
 }

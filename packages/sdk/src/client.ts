@@ -63,6 +63,17 @@ export type WorkspaceActivity =
   paths['/v1/stats/activity']['get']['responses'][200]['content'][Json];
 export type RecentActivity =
   paths['/v1/stats/activity/recent']['get']['responses'][200]['content'][Json];
+/** The notification centre (F-065) — a projection of the trail joined with this reader's marks. */
+export type NotificationsQuery = NonNullable<
+  paths['/v1/notifications']['get']['parameters']['query']
+>;
+export type NotificationPage = paths['/v1/notifications']['get']['responses'][200]['content'][Json];
+export type NotificationReadState =
+  paths['/v1/notifications/read']['post']['responses'][200]['content'][Json];
+export type NotificationPreferences =
+  paths['/v1/notifications/preferences']['get']['responses'][200]['content'][Json];
+export type NotificationPreferencesUpdate =
+  paths['/v1/notifications/preferences']['put']['requestBody']['content'][Json];
 export type Identity = paths['/v1/me']['get']['responses'][200]['content'][Json];
 export type RbacCatalog = paths['/v1/rbac']['get']['responses'][200]['content'][Json];
 export type TokenList = paths['/v1/tokens']['get']['responses'][200]['content'][Json];
@@ -189,6 +200,25 @@ export interface TesseraClient {
    * (admin-only).
    */
   getRecentActivity(limit?: number): Promise<RecentActivity>;
+  /**
+   * The notification centre (F-065; ADR-0064) — the audit trail projected into typed kinds and
+   * joined with **this principal's** read state, which is stored server-side and therefore the same
+   * on every device. Carries no rendered message text: the `kind` is the message.
+   */
+  listNotifications(query?: NotificationsQuery): Promise<NotificationPage>;
+  /** Mark specific notifications read (idempotent). Returns the updated read state. */
+  markNotificationsRead(ids: readonly string[]): Promise<NotificationReadState>;
+  /**
+   * Mark everything currently visible to this principal as read. Takes no instant — the server uses
+   * its own newest notification, so a stale page cannot mark rows it was never shown.
+   */
+  markAllNotificationsRead(): Promise<NotificationReadState>;
+  /** Which notification kinds reach this principal. Always complete — every kind is present. */
+  getNotificationPreferences(): Promise<NotificationPreferences>;
+  /** Update notification preferences. **Partial**: send only the kinds being changed. */
+  updateNotificationPreferences(
+    update: NotificationPreferencesUpdate,
+  ): Promise<NotificationPreferences>;
   /** A source's most recent scan status. */
   scanStatus(id: string): Promise<ScanStatus>;
   /** The subscription plan catalog + entitlements (public). */
@@ -352,6 +382,23 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
           limit !== undefined ? { params: { query: { limit } } } : {},
         ),
       );
+    },
+    async listNotifications(query) {
+      return unwrap(
+        await client.GET('/v1/notifications', query !== undefined ? { params: { query } } : {}),
+      );
+    },
+    async markNotificationsRead(ids) {
+      return unwrap(await client.POST('/v1/notifications/read', { body: { ids: [...ids] } }));
+    },
+    async markAllNotificationsRead() {
+      return unwrap(await client.POST('/v1/notifications/read-all', { body: {} }));
+    },
+    async getNotificationPreferences() {
+      return unwrap(await client.GET('/v1/notifications/preferences', {}));
+    },
+    async updateNotificationPreferences(update) {
+      return unwrap(await client.PUT('/v1/notifications/preferences', { body: update }));
     },
     async scanStatus(id) {
       return unwrap(await client.GET('/v1/sources/{id}/scan', { params: { path: { id } } }));

@@ -6,6 +6,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppHeader } from '@/components/app-header';
 import { AppSidebar } from '@/components/app-sidebar';
 import { CommandPalette } from '@/components/command-palette';
+import { ShortcutsOverlay } from '@/components/shortcuts-overlay';
 
 /** Routes rendered without the dashboard chrome (their own full-screen layout). */
 const CHROMELESS_PREFIXES = ['/signin'];
@@ -33,6 +34,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </SidebarInset>
       </SidebarProvider>
       <CommandPalette />
+      <ShortcutsOverlay />
     </div>
   );
 }

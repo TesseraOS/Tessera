@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-07-27",
+  "updated": "2026-07-28",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -297,6 +297,14 @@
         {
           "kind": "module",
           "ref": "F-057: /analytics + /billing. The single chart series rides --primary per the F-091 rule already recorded here; both routes are gated for WCAG A/AA across all four themes x light/dark in apps/web/tests/e2e/analytics.spec.ts, which is F-057's \"screenshots across themes\" made executable. Nav lives in TWO sources (components/app-shared.tsx and lib/nav.ts) and lib/nav.test.ts now fails if they disagree about a route or its title — the duplication is made safe rather than fixed."
+        },
+        {
+          "kind": "module",
+          "ref": "F-064 adds three shared UI primitives every surface now inherits: `ui/context-menu` (Radix, `modal={false}` — the default modal mode `aria-hidden`s the page behind it and trips axe `aria-hidden-focus` on the app chrome, 196 violations), `components/row-context-menu` (copy/open/show-effects, actions OMITTED rather than disabled when a surface cannot offer them), and `components/shortcuts-overlay`. All three use design tokens only."
+        },
+        {
+          "kind": "test",
+          "ref": "apps/web/tests/e2e/parity.spec.ts — 13 routes × mobile/desktop must not overflow horizontally, and prefers-reduced-motion must collapse COMPUTED durations. Visited with NO API stubs so every route renders its error/empty state, which are the layouts nobody inspects on a phone. Adding a route means adding it here."
         }
       ],
       "kind": "EFFECT_LINK",
@@ -1487,6 +1495,39 @@
       ],
       "kind": "EFFECT_LINK",
       "rationale": "This contract breaks INSTALLS, not builds — which is precisely why it needs an effect-link. Inside the workspace `workspace:*` always resolves, so no typecheck, test, build or e2e in this repository can see a missing package; pnpm rewrites `workspace:*` to a concrete version at pack time, and the gap surfaces only as a 404 on a user machine. The publish set recorded by F-054 (sdk + cli + skills) was wrong for exactly this reason, and F-059 PROVED it by installing both sets from local tarballs: the 18-package closure installs and runs `tessera doctor` green, while the 3-package set fails with `404 @tessera/api@0.0.0 is not in this registry`. Anyone changing a published package dependency, its files/exports, or its private flag is changing this contract, and the only check that catches a mistake is the offline install proof.",
+      "confidence": 1,
+      "origin": "manual"
+    },
+    {
+      "id": "E-031",
+      "from": {
+        "kind": "contract",
+        "ref": "the i18n catalog (apps/web/lib/i18n) — every user-facing string in the dashboard, plus the ESLint guard that keeps them there"
+      },
+      "to": [
+        {
+          "kind": "module",
+          "ref": "apps/web/lib/i18n/en.ts (flat dotted keys; `MessageKey` is `keyof typeof messages`, so a typo is a BUILD error) and index.ts `t(key, params)` — no fallback-to-key, `{name}` interpolation only. Locale-aware number/date formatting stays in lib/format.ts; two implementations of that is how they come to disagree."
+        },
+        {
+          "kind": "file",
+          "ref": "apps/web/eslint-rules/no-hardcoded-strings.mjs — flags JSX text nodes and a curated list of copy props ONLY. Object literals, template strings, const copy tables and unknown props are deliberately out of scope: a noisy rule gets disabled, and then it protects nothing."
+        },
+        {
+          "kind": "file",
+          "ref": "apps/web/eslint-rules/i18n-allowlist.mjs — the 49 files still carrying copy outside the catalog. Generated from what the rule reports, never hand-written, and REMOVE-ONLY. Shrinking it is the only way to touch those files without disabling the rule."
+        },
+        {
+          "kind": "module",
+          "ref": "Migrated so far: lib/nav.ts, lib/shortcuts.ts, components/shortcuts-overlay.tsx, components/row-context-menu.tsx, components/settings/settings-view.tsx, components/app-header.tsx, components/memory/memory-view.tsx. Changing a string in any of them means changing the CATALOG, not the component."
+        },
+        {
+          "kind": "decision",
+          "ref": "docs/adr/0063-executable-parity-over-screenshots-and-an-enumerated-i18n-allowlist.md"
+        }
+      ],
+      "kind": "EFFECT_LINK",
+      "rationale": "Every user-facing string in a migrated file now has exactly one definition, and the guard makes that structural rather than a convention. The failure mode this exists to contain is that a wrong or missing string renders as a blank or the wrong words with NO test failing — which happened during the migration itself: a catalog value seeded from a truncated lint message silently dropped half a sentence, and only reading the source caught it. Hence the rule that every value must be byte-identical to the string it replaced, copied from the source and never from a diagnostic. That discipline is why 472 web tests passed across the whole feature with none rewritten, which in turn means anything that breaks in a later batch is a real regression rather than churn.",
       "confidence": 1,
       "origin": "manual"
     }

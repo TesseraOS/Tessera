@@ -3,6 +3,79 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-28 — F-064 DONE: the FR-49 baseline audited and closed, i18n groundwork + guard shipped
+
+**F-064** complete across **11 increments**. Plan:
+[`F-064-dashboard-ux-baseline-and-i18n-readiness.md`](../plans/F-064-dashboard-ux-baseline-and-i18n-readiness.md).
+Decision: **[ADR-0063](../../docs/adr/0063-executable-parity-over-screenshots-and-an-enumerated-i18n-allowlist.md)**.
+
+### The audit (clause 1) came first, and found four claimed-but-unbuilt items
+
+| FR-49 item | Found | Closed by |
+|---|---|---|
+| Virtualized long lists | **partial** — timeline rendered every row | inc 1 |
+| Optimistic memory capture | **unbuilt** (no `onMutate` anywhere) | inc 2 |
+| Row context menus | **unbuilt** — no `ui/context-menu` existed at all | inc 3 |
+| Shortcuts overlay | **unbuilt** | inc 4 |
+| `⌘K` route + action coverage | routes structural; **one** action | inc 5 |
+| Reduced motion, per-route axe | **already built** — needed assertions, not code | inc 9 |
+
+### Two acceptance clauses said the wrong thing; both were escalated
+
+1. **Screenshot matrix** → executable parity assertions (ADR-0063 §1). F-057 had already rejected
+   screenshots for this job and its reasoning is still in `analytics.spec.ts`.
+2. **"Externalize user-facing strings"** — one line, but **421 strings across 52 files**. Lead chose
+   guard-now/migrate-incrementally. **F-064 closes with this clause partly met: 3 of 52 files.** The
+   remainder is **F-099**, with the allowlist as its checklist.
+
+### What each increment cost — the corrections matter more than the code
+
+- **inc 1** axe caught a *serious* violation I introduced (`scrollable-region-focusable` — keyboard
+  users could reach row links but never scroll the container). I also **asserted something I had not
+  checked**: declared `role="list"`/`role="listitem"` believing absolute positioning drops the
+  implicit role. Removed them, re-ran: Chromium keeps them, axe passes over 500 entries. The lint
+  rule was right. And my unit test **broke two unrelated tests** by rendering 500 stubbed rows —
+  ~12s, blowing the 5s timeout under parallel load and starving `memory-authoring-dialog`. Both
+  passed in isolation, which is how it hid.
+- **inc 2** my first optimistic row added `pending: true` behind an `as` cast. `Memory` is the
+  server's contract — a client-only field makes every consumer's type lie about the API, and the cast
+  hides that from the compiler. Pendingness moved onto an id prefix.
+- **inc 3** I documented Shift+F10 support as a reason to wrap Radix. Driving it in Chromium: the
+  results listbox holds focus via `aria-activedescendant`, so `contextmenu` fires on the LISTBOX and
+  never reaches a row. **The keyboard cannot open this menu.** That made Copy ref mouse-only — a WCAG
+  2.1.1 failure — so it is now also a button in the result detail, and the e2e pins both halves.
+- **inc 4** "727 color-contrast violations, clean on retry" looked like flakiness. It was axe
+  auditing *during* a dialog fade-in, sampling every element through a half-transparent overlay.
+- **inc 8** seeded a catalog value from a **truncated lint message** and invented the tail, silently
+  losing half a sentence with no test failing. This is the exact risk that made one 52-file sweep the
+  wrong call — and it happened on the second file.
+- **inc 9** the reduced-motion assertion "failed" against 724 durations of `1e-05s` — 0.01ms in
+  scientific notation. Reduced motion was working; my string match could never have seen it. Then
+  verified the test can actually fail by removing the emulation.
+
+Also fixed in passing, verified pre-existing on a clean checkout: `home.spec.ts` asserted
+`getByText('12')` without `exact`, which also matched the feed's "12d ago" — a test that passed or
+failed **depending on the date it ran**, and 2026-07-28 is when the fixture turned 12 days old.
+
+### Evidence
+
+`verify-state` valid (99 features, 31 effect-links); workspace typecheck/lint/format/test green —
+**472 web tests, none rewritten across the entire feature**, which is what the byte-identical rule
+bought; web e2e **73 passed**.
+
+### Carried forward
+
+- **F-099** — finish the migration; allowlist is the checklist.
+- **An axe audit run immediately after opening an animated surface measures transitional colours.**
+  `shortcuts.spec.ts` now awaits `document.getAnimations()`; other specs that audit right after
+  opening an animated surface may be passing on timing luck (ADR-0063 §Follow-ups).
+- The row context menu is **mouse/touch only** by design; every action in it must also exist on a
+  keyboard-reachable surface, or it is a WCAG 2.1.1 failure.
+
+**Next step:** **F-065** — notification service (persistent per-user centre + preferences) — is the
+next lowest-id eligible in R4.
+
+---
 ## 2026-07-27 — F-064 IN PROGRESS: FR-49 baseline audited, 2 of 4 gaps closed
 
 Claimed **F-064** (`should`, lowest-id eligible in R4). Plan:

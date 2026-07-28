@@ -2,7 +2,7 @@
   "$schemaRef": "./schemas/feature_list.schema.json",
   "version": 1,
   "project": "tessera",
-  "updated": "2026-07-27",
+  "updated": "2026-07-28",
   "policy": {
     "wip_limit": 1,
     "ordering": "by release, then id; respect blockedBy"
@@ -2155,7 +2155,7 @@
       "package": "@tessera/web",
       "release": "R4",
       "priority": "should",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [
         "F-041",
         "F-042",
@@ -2174,8 +2174,10 @@
         "e2e"
       ],
       "effects": [
-        "E-004"
-      ]
+        "E-004",
+        "E-031"
+      ],
+      "notes": "AUDIT RESULT (clause 1, done first): four FR-49 items were claimed and unbuilt — timeline virtualization, optimistic memory capture, row context menus (no ui/context-menu existed at all), and the shortcuts overlay; palette route coverage WAS structural but offered one action; reduced motion and per-route axe were already implemented and needed assertions, not code. All closed. PARTIAL, DELIBERATELY: the i18n clause is met as catalog + typed t() + enforced ESLint guard + an enumerated remove-only allowlist, with 3 of 52 files migrated (421 strings). The lead chose guard-now/migrate-incrementally over one sweep because a wrong string renders as a blank with no test failing — proven mid-migration when a value seeded from a truncated lint message lost half a sentence. Remainder is F-099. INTERPRETED, NOT FOLLOWED LITERALLY: the requested screenshot matrix is executable parity assertions instead (ADR-0063 §1), because F-057 already rejected screenshots for this job and its reasoning is still in analytics.spec.ts."
     },
     {
       "id": "F-065",
@@ -3241,6 +3243,37 @@
         "E-014",
         "E-009"
       ]
+    },
+    {
+      "id": "F-099",
+      "title": "Finish the dashboard i18n migration: empty the enumerated allowlist",
+      "requirements": [
+        "NFR-14"
+      ],
+      "service": "web",
+      "package": "@tessera/web",
+      "release": "R4",
+      "priority": "could",
+      "status": "backlog",
+      "blockedBy": [
+        "F-064"
+      ],
+      "acceptance": [
+        "Every file in apps/web/eslint-rules/i18n-allowlist.mjs is migrated to lib/i18n and removed from the list; the list ends empty and the export is deleted along with the `allow` option, so the rule guards the whole dashboard unconditionally",
+        "Each migrated value is BYTE-IDENTICAL to the string it replaced, copied from the source and never from a lint diagnostic — F-064 lost half a sentence exactly that way, with no test failing",
+        "Work in reviewable batches (a few files per commit), running the web unit + e2e suites per batch; a test that breaks is a real regression and must not be \"fixed\" by editing the expectation",
+        "Gates green (typecheck, lint, format, test, e2e incl. axe)"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-031"
+      ],
+      "notes": "F-064 left 49 files and roughly 400 strings. The groundwork (catalog, typed t(), guard, allowlist) is complete — this is mechanical, and its only real risk is silent UI change, which is why the byte-identical rule and per-batch test runs are in the acceptance rather than the commentary."
     }
   ]
 }

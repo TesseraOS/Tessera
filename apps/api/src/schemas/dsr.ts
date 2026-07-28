@@ -31,4 +31,11 @@ export const dsrDeleteResponseSchema = z.object({
     edges: z.number().int().nonnegative(),
   }),
   sources: z.number().int().nonnegative(),
+  notifications: z
+    .number()
+    .int()
+    .nonnegative()
+    .describe(
+      'Per-principal notification rows removed (read state + preferences). Erased, unlike the trail: read marks are convenience keyed by principal id, not a compliance record.',
+    ),
 });

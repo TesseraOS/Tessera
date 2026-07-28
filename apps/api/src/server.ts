@@ -16,6 +16,7 @@ import type { ZodFastify } from './app-types.js';
 import { createLocalAuthProvider, type AuthProvider, type TokenStore } from './auth/index.js';
 import { createInMemoryAuditLog, type AuditLog } from './audit/index.js';
 import { createApiEventBus, type ApiEventBus } from './events.js';
+import { createInMemoryNotificationStore, type NotificationStore } from './notifications/index.js';
 import { registerErrorHandling } from './errors/error-handler.js';
 import { registerOpenapi } from './plugins/openapi.js';
 import { registerHealthRoutes } from './routes/health.js';
@@ -163,6 +164,16 @@ export interface BuildServerOptions {
    */
   readonly flags?: FlagProvider;
   /**
+   * Per-principal notification read state + preferences (F-065; ADR-0064). The composition root
+   * passes `runtime.notifications`; omitted ⇒ a fresh in-memory store, so `/v1/notifications`
+   * answers in every composition and only loses read marks on restart.
+   *
+   * Rides here rather than on {@link ApiServices} for the E-015 reason the usage store documents:
+   * `instrumentServices` rebuilds that object member by member, and a member dropped there 500s its
+   * routes in production.
+   */
+  readonly notifications?: NotificationStore;
+  /**
    * Security-header hardening (F-044; NFR-2). Headers are on by default; `security.hsts` adds HSTS
    * for TLS-terminated profiles. See {@link SecurityHeadersOptions}.
    */
@@ -253,6 +264,7 @@ export function buildServer(services: ApiServices, options: BuildServerOptions =
       usage: options.usage,
       metered: options.metered ?? false,
       flags: options.flags,
+      notifications: options.notifications ?? createInMemoryNotificationStore(),
     },
   );
 

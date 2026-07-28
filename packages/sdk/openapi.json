@@ -3409,6 +3409,462 @@
         }
       }
     },
+    "/v1/notifications": {
+      "get": {
+        "summary": "What changed in this workspace, typed and filtered by your preferences.",
+        "tags": [
+          "notifications"
+        ],
+        "description": "A projection of the audit trail into notification kinds, joined with YOUR read state (cross-device) and preferences. Newest first; `limit` defaults to 20, max 50. Carries no rendered message text — the `kind` is the message, so clients localize and agents stay token-lean. Not audited: it is fetched on every page load.",
+        "parameters": [
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "memory.captured",
+                    "scan.completed",
+                    "scan.failed",
+                    "token.changed",
+                    "plan.changed"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "memory.captured",
+                      "scan.completed",
+                      "scan.failed",
+                      "token.changed",
+                      "plan.changed"
+                    ]
+                  }
+                }
+              ]
+            },
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "description": "Restrict to these kinds; repeat the parameter for several."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "info",
+                "warning",
+                "error"
+              ]
+            },
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "description": "Restrict to one severity."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "unread",
+            "required": false,
+            "description": "When true, return only notifications this principal has not read."
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 50
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "description": "Opaque forward cursor from a prior page."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "notifications": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "description": "The projected audit event id — what a read mark refers to.",
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "memory.captured",
+                              "scan.completed",
+                              "scan.failed",
+                              "token.changed",
+                              "plan.changed"
+                            ]
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "info",
+                              "warning",
+                              "error"
+                            ]
+                          },
+                          "actor": {
+                            "type": "object",
+                            "properties": {
+                              "principalId": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "local",
+                                  "user",
+                                  "token"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "principalId",
+                              "kind"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "target": {
+                            "description": "Non-sensitive ref: an id or a route pattern (NFR-7).",
+                            "type": "string"
+                          },
+                          "at": {
+                            "description": "ISO-8601 (UTC) instant the underlying action happened.",
+                            "type": "string"
+                          },
+                          "read": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "severity",
+                          "actor",
+                          "at",
+                          "read"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "nextCursor": {
+                      "description": "Present iff more match beyond this page. A page can be SHORTER than `limit` while this is set — `unread=true` filters after the query — so page on this, never on length.",
+                      "type": "string"
+                    },
+                    "unreadCount": {
+                      "description": "Unread within the newest 100 notifications this principal's preferences admit — a bounded count, not a total.",
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "notifications",
+                    "unreadCount"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notifications/read": {
+      "post": {
+        "summary": "Mark specific notifications read (idempotent). Cross-device.",
+        "tags": [
+          "notifications"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "required": [
+                  "ids"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "watermark": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "readIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "unreadCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "watermark",
+                    "readIds",
+                    "unreadCount"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notifications/read-all": {
+      "post": {
+        "summary": "Mark everything currently visible to you as read. Cross-device.",
+        "tags": [
+          "notifications"
+        ],
+        "description": "The watermark is taken from the STORE’s newest notification, not from the request: a client’s page may be stale or narrowed by a filter, and letting it name the instant would let it mark rows it was never shown. Kinds you have muted are excluded, so this never claims a row you cannot see.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "watermark": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "readIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "unreadCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "watermark",
+                    "readIds",
+                    "unreadCount"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notifications/preferences": {
+      "get": {
+        "summary": "Which notification kinds reach you. Always complete — every kind is present.",
+        "tags": [
+          "notifications"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "preferences": {
+                      "type": "object",
+                      "properties": {
+                        "memory.captured": {
+                          "type": "boolean"
+                        },
+                        "scan.completed": {
+                          "type": "boolean"
+                        },
+                        "scan.failed": {
+                          "type": "boolean"
+                        },
+                        "token.changed": {
+                          "type": "boolean"
+                        },
+                        "plan.changed": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "memory.captured",
+                        "scan.completed",
+                        "scan.failed",
+                        "token.changed",
+                        "plan.changed"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "preferences"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update your notification preferences (partial; merged over the stored record).",
+        "tags": [
+          "notifications"
+        ],
+        "description": "Send only the kinds you are changing. A partial update rather than a full record so a client built before a kind existed cannot mute it by omission. Audited.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "memory.captured": {
+                    "type": "boolean"
+                  },
+                  "scan.completed": {
+                    "type": "boolean"
+                  },
+                  "scan.failed": {
+                    "type": "boolean"
+                  },
+                  "token.changed": {
+                    "type": "boolean"
+                  },
+                  "plan.changed": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "preferences": {
+                      "type": "object",
+                      "properties": {
+                        "memory.captured": {
+                          "type": "boolean"
+                        },
+                        "scan.completed": {
+                          "type": "boolean"
+                        },
+                        "scan.failed": {
+                          "type": "boolean"
+                        },
+                        "token.changed": {
+                          "type": "boolean"
+                        },
+                        "plan.changed": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "memory.captured",
+                        "scan.completed",
+                        "scan.failed",
+                        "token.changed",
+                        "plan.changed"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "preferences"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/usage": {
       "get": {
         "summary": "Per-tenant usage, entitlement, latency and retrieval-quality proxies.",
@@ -5008,6 +5464,12 @@
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 9007199254740991
+                    },
+                    "notifications": {
+                      "description": "Per-principal notification rows removed (read state + preferences). Erased, unlike the trail: read marks are convenience keyed by principal id, not a compliance record.",
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
                     }
                   },
                   "required": [
@@ -5015,7 +5477,8 @@
                     "deletedAt",
                     "memories",
                     "graph",
-                    "sources"
+                    "sources",
+                    "notifications"
                   ],
                   "additionalProperties": false
                 }

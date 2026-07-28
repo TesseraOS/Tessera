@@ -158,6 +158,24 @@ export function runNotificationStoreConformance(
       }
     });
 
+    it('purges the bound tenant entirely, leaving other tenants intact (DSR erasure)', async () => {
+      const { store, cleanup } = await makeStore();
+      try {
+        const acme = store.forTenant('acme');
+        await acme.markAllRead('alice', AT(10));
+        await acme.setPreferences('bob', { 'scan.failed': false });
+        await store.forTenant('globex').markAllRead('alice', AT(10));
+
+        expect(await acme.purge()).toBe(2);
+        expect(await acme.readState('alice')).toEqual(EMPTY_READ_STATE);
+        expect(await acme.preferences('bob')).toEqual(DEFAULT_NOTIFICATION_PREFERENCES);
+        // An erasure request is about one workspace. Another tenant's state is not its business.
+        expect((await store.forTenant('globex').readState('alice')).watermark).toBe(AT(10));
+      } finally {
+        await cleanup?.();
+      }
+    });
+
     it('prunes stale read state but never a stored preference', async () => {
       const { store, cleanup } = await makeStore();
       try {

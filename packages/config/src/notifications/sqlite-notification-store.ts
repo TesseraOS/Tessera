@@ -140,6 +140,11 @@ export function createSqliteNotificationStore(db: BetterSQLite3Database): Notifi
         return Promise.resolve();
       },
 
+      purge() {
+        const result = db.delete(notificationState).where(inTenant).run();
+        return Promise.resolve(result.changes);
+      },
+
       prune(policy) {
         if (policy.readStateMaxAgeMs === undefined) return Promise.resolve(0);
         const cutoff = Date.now() - policy.readStateMaxAgeMs;

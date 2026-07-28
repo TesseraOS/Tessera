@@ -57,6 +57,16 @@ export interface NotificationStore {
   ): Promise<NotificationPreferences>;
   /** Erase everything held for one principal — read state *and* preferences (DSR erasure, NFR-13). */
   forget(principalId: string): Promise<void>;
+  /**
+   * Erase every principal's state within the bound tenant, returning the number of rows removed
+   * (NFR-13; the `POST /v1/dsr/delete` erasure path).
+   *
+   * Unlike the audit trail — retained on erasure because it is the compliance record *of* the
+   * erasure (ADR-0049) — this store is pure convenience. There is no reason for one person's read
+   * marks to outlive a request to erase the workspace, and every row here is keyed by a principal
+   * id, which is exactly the identifier such a request is about.
+   */
+  purge(): Promise<number>;
   /** Apply a retention policy within the bound tenant; returns the number of rows removed. */
   prune(policy: NotificationRetentionPolicy): Promise<number>;
   /** A view of this store confined to `tenantId`. The base store operates in the default tenant. */

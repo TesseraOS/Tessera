@@ -19,6 +19,8 @@ import { registerSourceRoutes } from './sources.js';
 import { registerProjectRoutes } from './projects.js';
 import { registerProjectSelection } from '../../projects/selection.js';
 import { registerStatsRoutes } from './stats.js';
+import { registerNotificationRoutes } from './notifications.js';
+import type { NotificationStore } from '../../notifications/index.js';
 import { registerEventsRoutes } from './events.js';
 import { registerBillingRoutes } from './billing.js';
 import { registerAuditRoutes } from './audit.js';
@@ -54,6 +56,12 @@ export interface V1HardeningOptions {
    * rather than an error, because every deployment starts with no flags declared.
    */
   readonly flags: FlagProvider | undefined;
+  /**
+   * Per-principal notification read state + preferences (F-065). Always present — `buildServer`
+   * defaults to the in-memory adapter, so `/v1/notifications` answers in every composition rather
+   * than being a route that sometimes 409s.
+   */
+  readonly notifications: NotificationStore;
 }
 
 /**
@@ -97,13 +105,14 @@ export function registerV1Routes(
       registerSourceRoutes(v1, services);
       registerProjectRoutes(v1, services);
       registerStatsRoutes(v1, services, audit);
+      registerNotificationRoutes(v1, audit, hardening.notifications);
       registerUsageRoutes(v1, services, hardening.usage, hardening.metered);
       registerFlagsRoutes(v1, hardening.flags);
       registerEventsRoutes(v1, events, hardening.security);
       registerBillingRoutes(v1, services);
       registerAuditRoutes(v1, audit);
       registerRetentionRoutes(v1, services, hardening.memoryRetention);
-      registerDsrRoutes(v1, services, audit);
+      registerDsrRoutes(v1, services, audit, hardening.notifications);
 
       v1.get(
         '/openapi.json',

@@ -1545,6 +1545,256 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What changed in this workspace, typed and filtered by your preferences.
+         * @description A projection of the audit trail into notification kinds, joined with YOUR read state (cross-device) and preferences. Newest first; `limit` defaults to 20, max 50. Carries no rendered message text — the `kind` is the message, so clients localize and agents stay token-lean. Not audited: it is fetched on every page load.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Restrict to these kinds; repeat the parameter for several. */
+                    kind?: ("memory.captured" | "scan.completed" | "scan.failed" | "token.changed" | "plan.changed") | ("memory.captured" | "scan.completed" | "scan.failed" | "token.changed" | "plan.changed")[];
+                    /** @description Restrict to one severity. */
+                    severity?: "info" | "warning" | "error";
+                    /** @description When true, return only notifications this principal has not read. */
+                    unread?: string;
+                    limit?: number;
+                    /** @description Opaque forward cursor from a prior page. */
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            notifications: {
+                                /** @description The projected audit event id — what a read mark refers to. */
+                                id: string;
+                                /** @enum {string} */
+                                kind: "memory.captured" | "scan.completed" | "scan.failed" | "token.changed" | "plan.changed";
+                                /** @enum {string} */
+                                severity: "info" | "warning" | "error";
+                                actor: {
+                                    principalId: string;
+                                    /** @enum {string} */
+                                    kind: "local" | "user" | "token";
+                                };
+                                /** @description Non-sensitive ref: an id or a route pattern (NFR-7). */
+                                target?: string;
+                                /** @description ISO-8601 (UTC) instant the underlying action happened. */
+                                at: string;
+                                read: boolean;
+                            }[];
+                            /** @description Present iff more match beyond this page. A page can be SHORTER than `limit` while this is set — `unread=true` filters after the query — so page on this, never on length. */
+                            nextCursor?: string;
+                            /** @description Unread within the newest 100 notifications this principal's preferences admit — a bounded count, not a total. */
+                            unreadCount: number;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark specific notifications read (idempotent). Cross-device. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        ids: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            watermark: string | null;
+                            readIds: string[];
+                            unreadCount: number;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark everything currently visible to you as read. Cross-device.
+         * @description The watermark is taken from the STORE’s newest notification, not from the request: a client’s page may be stale or narrowed by a filter, and letting it name the instant would let it mark rows it was never shown. Kinds you have muted are excluded, so this never claims a row you cannot see.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            watermark: string | null;
+                            readIds: string[];
+                            unreadCount: number;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Which notification kinds reach you. Always complete — every kind is present. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            preferences: {
+                                "memory.captured": boolean;
+                                "scan.completed": boolean;
+                                "scan.failed": boolean;
+                                "token.changed": boolean;
+                                "plan.changed": boolean;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        /**
+         * Update your notification preferences (partial; merged over the stored record).
+         * @description Send only the kinds you are changing. A partial update rather than a full record so a client built before a kind existed cannot mute it by omission. Audited.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        "memory.captured"?: boolean;
+                        "scan.completed"?: boolean;
+                        "scan.failed"?: boolean;
+                        "token.changed"?: boolean;
+                        "plan.changed"?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            preferences: {
+                                "memory.captured": boolean;
+                                "scan.completed": boolean;
+                                "scan.failed": boolean;
+                                "token.changed": boolean;
+                                "plan.changed": boolean;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/usage": {
         parameters: {
             query?: never;
@@ -2248,6 +2498,8 @@ export interface paths {
                                 edges: number;
                             };
                             sources: number;
+                            /** @description Per-principal notification rows removed (read state + preferences). Erased, unlike the trail: read marks are convenience keyed by principal id, not a compliance record. */
+                            notifications: number;
                         };
                     };
                 };

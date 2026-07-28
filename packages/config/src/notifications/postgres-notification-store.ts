@@ -144,6 +144,14 @@ export function createPostgresNotificationStore(db: NodePgDatabase): Notificatio
         await db.delete(notificationState).where(rowFor(principalId));
       },
 
+      async purge() {
+        const removed = await db
+          .delete(notificationState)
+          .where(inTenant)
+          .returning({ principalId: notificationState.principalId });
+        return removed.length;
+      },
+
       async prune(policy) {
         if (policy.readStateMaxAgeMs === undefined) return 0;
         const cutoff = Date.now() - policy.readStateMaxAgeMs;

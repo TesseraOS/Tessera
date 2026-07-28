@@ -4,6 +4,7 @@ import type { ZodFastify } from '../../app-types.js';
 import type { AuditLog } from '../../audit/index.js';
 import { requirePermission, tenantOf } from '../../auth/index.js';
 import { buildDsrBundle, purgeTenant } from '../../dsr/index.js';
+import type { NotificationStore } from '../../notifications/index.js';
 import { dsrBundleResponseSchema, dsrDeleteResponseSchema } from '../../schemas/dsr.js';
 import type { ApiServices } from '../../services.js';
 
@@ -57,7 +58,12 @@ function toWireMemory(memory: Memory): {
  * **retains the audit trail** — it is the compliance record of the erasure and holds no content
  * (ADR-0049). The `dsr.delete` event for the call itself is recorded by the audit hook.
  */
-export function registerDsrRoutes(app: ZodFastify, services: ApiServices, audit: AuditLog): void {
+export function registerDsrRoutes(
+  app: ZodFastify,
+  services: ApiServices,
+  audit: AuditLog,
+  notifications: NotificationStore,
+): void {
   const scoped = app.withTypeProvider<ZodTypeProvider>();
 
   scoped.get(
@@ -97,7 +103,7 @@ export function registerDsrRoutes(app: ZodFastify, services: ApiServices, audit:
     },
     async (request) => {
       const tenantId = tenantOf(request);
-      const summary = await purgeTenant(services, tenantId);
+      const summary = await purgeTenant(services, tenantId, { notifications });
       return { tenantId, deletedAt: new Date().toISOString(), ...summary };
     },
   );

@@ -55,6 +55,9 @@ export async function startApiServer(options: ApiServerOptions = {}): Promise<Ap
     metered: runtime.metered,
     // Feature flags evaluated per tenant at the boundary (F-058; FR-57), from config.flags.
     flags: runtime.flags,
+    // Cross-device notification read state + preferences (F-065) in the profile's durable store —
+    // without this the routes fall back to an in-memory one and read marks die with the process.
+    notifications: runtime.notifications,
     // API hardening from config (F-044): security headers/HSTS, per-profile CORS, rate limiting.
     security: { hsts: api.security.hsts },
     cors: { allowedOrigins: api.cors.allowedOrigins },

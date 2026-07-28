@@ -103,6 +103,12 @@ export function createInMemoryNotificationStore(): NotificationStore {
         return Promise.resolve();
       },
 
+      purge() {
+        const removed = principals.size;
+        principals.clear();
+        return Promise.resolve(removed);
+      },
+
       prune(policy) {
         if (policy.readStateMaxAgeMs === undefined) return Promise.resolve(0);
         const cutoff = Date.now() - policy.readStateMaxAgeMs;

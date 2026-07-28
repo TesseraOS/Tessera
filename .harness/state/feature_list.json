@@ -2341,7 +2341,8 @@
       ],
       "effects": [
         "E-022"
-      ]
+      ],
+      "notes": "BLOCKED ON EXTERNAL INPUTS (assessed 2026-07-28, not claimed). Every acceptance clause needs a real-world fact this repository cannot produce, and inventing one is the exact failure lib/legal/types.ts was built to prevent (\"a fabricated fact cannot silently replace a placeholder\"). Two inputs are needed from the stakeholder: (1) tesseraos.dev booked and the privacy@/legal@/hello@ mailboxes live — the acceptance already records this as the stakeholder's pending action; (2) the 15 counsel facts behind COUNSEL_IDS — entity, address, representative, register-number, jurisdiction, contact-email, dpo, processors, retention, transfers, supervisory-authority, payments, rights-phrasing, dpa (oss-license resolves from F-059's Apache-2.0 decision and is the one that could be closed today, but a single-placeholder edit does not drop any page badge). All 15 are still pinned across the five docs in tests/legal-content.test.ts, and its tripwires fail the build if an email address or an entity suffix appears in the copy. Work resumes the moment those facts arrive; the machinery is done (F-067)."
     },
     {
       "id": "F-070",
@@ -2429,7 +2430,7 @@
       "package": "@tessera/mcp",
       "release": "R4",
       "priority": "should",
-      "status": "backlog",
+      "status": "in_progress",
       "blockedBy": [],
       "acceptance": [
         "An agent connecting over stdio to a token- (or OIDC-) mode deployment can present a credential and be authenticated into the right principal/tenant; the mechanism is documented for operators (an agent client launches tessera-mcp with a config it controls)",

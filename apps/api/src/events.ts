@@ -98,11 +98,24 @@ export function createApiEventBus(): ApiEventBus {
  * **Strips `tenantId`** (ADR-0050/ADR-0033): it is how the route decides who may receive an event,
  * not something a client is told. Doing it here rather than at the call site means the wire shape
  * cannot regress if another producer starts writing frames — there is exactly one way out.
+ *
+ * **Stamps `occurredAt`** (F-065): every frame carries the SERVER's clock, so a client no longer has
+ * to substitute its own — which is what it was doing, and which drifts, skews a timeline, and orders
+ * events wrongly against anything fetched from the API. Stamped here for the same reason `tenantId`
+ * is stripped here: one place, so no producer can forget it and no two producers can disagree about
+ * the format.
+ *
+ * The instant is frame-writing time, which is within the emit handler and therefore within a
+ * millisecond or so of the event itself — stated rather than implied, because it is not the domain
+ * event's own timestamp. A payload that already carries `occurredAt` keeps it.
  */
 export function sseFrame(type: string, data: unknown): string {
   const payload =
-    typeof data === 'object' && data !== null && 'tenantId' in data
-      ? Object.fromEntries(Object.entries(data).filter(([key]) => key !== 'tenantId'))
+    typeof data === 'object' && data !== null
+      ? {
+          occurredAt: new Date().toISOString(),
+          ...Object.fromEntries(Object.entries(data).filter(([key]) => key !== 'tenantId')),
+        }
       : data;
   return `event: ${type}\ndata: ${JSON.stringify(payload)}\n\n`;
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   backoffDelay,
   initialScanEventsState,
+  occurredAtOf,
   scanEventsReducer,
   type ScanEventsState,
 } from '@/lib/api/events';
@@ -74,6 +75,27 @@ describe('scanEventsReducer', () => {
     });
 
     expect(state.bySource['s1']).toMatchObject({ running: false, error: 'connector exploded' });
+  });
+});
+
+describe('occurredAtOf', () => {
+  it('prefers the server clock (F-065)', () => {
+    // Every other timestamp on screen comes from the API, so a skewed browser clock put live rows in
+    // the wrong place in a list sorted against fetched ones.
+    expect(occurredAtOf({ occurredAt: '2026-01-01T00:00:00.000Z' })).toBe(
+      '2026-01-01T00:00:00.000Z',
+    );
+  });
+
+  it('falls back to the client clock when a frame carries none', () => {
+    const before = Date.now();
+    const at = occurredAtOf({});
+    expect(Date.parse(at)).toBeGreaterThanOrEqual(before - 1000);
+  });
+
+  it('ignores a non-string occurredAt rather than rendering it', () => {
+    expect(occurredAtOf({ occurredAt: 1234 })).not.toBe(1234);
+    expect(typeof occurredAtOf({ occurredAt: 1234 })).toBe('string');
   });
 });
 

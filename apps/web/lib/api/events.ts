@@ -366,7 +366,7 @@ export function useScanEvents(): ScanEventsState {
     const sourceId = data['sourceId'];
     const summary = data['summary'];
     if (typeof sourceId === 'string' && isScanSummary(summary)) {
-      dispatch({ type: 'source.scan.completed', sourceId, summary, at: new Date().toISOString() });
+      dispatch({ type: 'source.scan.completed', sourceId, summary, at: occurredAtOf(data) });
     }
   });
 
@@ -388,9 +388,22 @@ export interface LiveEvent {
   /** Stable id for the received event (monotonic within the session). */
   id: string;
   type: LiveActivityType;
-  /** Client receive time (ISO) — the wire payloads carry no timestamp. */
+  /**
+   * When the event happened, from the **server's** `occurredAt` (F-065); the client's receive time
+   * only when a frame carries none.
+   *
+   * It used to be receive time unconditionally, which is wrong in a way that shows: every other
+   * timestamp on screen comes from the API, so a skewed browser clock put live rows in the wrong
+   * place in a list sorted against fetched ones.
+   */
   at: string;
   data: Record<string, unknown>;
+}
+
+/** The server's `occurredAt` from a frame, falling back to the client clock when absent. */
+export function occurredAtOf(data: Record<string, unknown>): string {
+  const occurredAt = data['occurredAt'];
+  return typeof occurredAt === 'string' ? occurredAt : new Date().toISOString();
 }
 
 /**
@@ -406,7 +419,7 @@ export function useLiveActivity(limit = 50): LiveEvent[] {
       const entry: LiveEvent = {
         id: `${type}-${Date.now()}-${seq.current++}`,
         type,
-        at: new Date().toISOString(),
+        at: occurredAtOf(data),
         data,
       };
       setEvents((prev) => [entry, ...prev].slice(0, limit));

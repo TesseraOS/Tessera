@@ -4,6 +4,7 @@ import { createInMemoryAuditLog } from '@tessera/api';
 import type { AuthContext, AuthProvider, Permission } from '@tessera/api';
 import {
   createMcpGateway,
+  createStaticCredentialResolver,
   defaultCredentialResolver,
   MCP_AUDIT_ACTIONS,
   TOOL_PERMISSIONS,
@@ -73,6 +74,62 @@ describe('defaultCredentialResolver', () => {
 
   it('is undefined when no credential is present', () => {
     expect(defaultCredentialResolver({}).authorization).toBeUndefined();
+  });
+
+  it('finds NOTHING in a stdio-shaped context — the F-072 defect, pinned', () => {
+    // stdio has no request and no headers, so the default resolver has nothing to read and every
+    // tool call in token mode returned UNAUTHORIZED. This asserts the gap rather than describing it,
+    // so a future change to the SDK's stdio transport that starts carrying auth shows up here.
+    expect(defaultCredentialResolver(EMPTY_CALL).authorization).toBeUndefined();
+  });
+});
+
+describe('createStaticCredentialResolver (stdio — F-072)', () => {
+  it('presents the operator-supplied token on every call', () => {
+    const resolve = createStaticCredentialResolver('tok_abc');
+    expect(resolve(EMPTY_CALL).authorization).toBe('Bearer tok_abc');
+    // One process, one identity: the second call is the same principal, not a fresh negotiation.
+    expect(resolve(EMPTY_CALL).authorization).toBe('Bearer tok_abc');
+  });
+
+  it('IGNORES a credential in the request context rather than preferring it', () => {
+    // The escalation this closes: a stdio peer controls the JSON-RPC message, so if the resolver
+    // merged `requestInfo`/`authInfo` it could name a principal the operator never granted it.
+    const resolve = createStaticCredentialResolver('tok_operator');
+    const smuggled = resolve({
+      authInfo: { token: 'tok_peer' },
+      requestInfo: { headers: { authorization: 'Bearer tok_peer' } },
+    });
+    expect(smuggled.authorization).toBe('Bearer tok_operator');
+    expect(smuggled.headers).toEqual({});
+  });
+
+  it('authenticates a guarded tool call end to end', async () => {
+    let seen: string | undefined;
+    const gateway = createMcpGateway({
+      auth: {
+        authenticate: (input) => {
+          seen = input.authorization;
+          return Promise.resolve(contextWith('agent-1', ['search:read']));
+        },
+      },
+      resolveCredential: createStaticCredentialResolver('tok_abc'),
+    });
+
+    const context = await gateway.guard('search', EMPTY_CALL);
+    expect(seen).toBe('Bearer tok_abc');
+    expect(context.principal.id).toBe('agent-1');
+    expect(context.tenantId).toBe('acme');
+  });
+
+  it('surfaces a rejected token as a clean UNAUTHORIZED', async () => {
+    const gateway = createMcpGateway({
+      auth: {
+        authenticate: () => Promise.reject(new UnauthorizedError('invalid token')),
+      },
+      resolveCredential: createStaticCredentialResolver('tok_wrong'),
+    });
+    await expect(gateway.guard('search', EMPTY_CALL)).rejects.toSatisfy(hasCode('UNAUTHORIZED'));
   });
 });
 

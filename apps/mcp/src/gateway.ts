@@ -17,10 +17,19 @@ import type { QuotaLimiter } from './quota.js';
  * The MCP gateway (FR-36): it brokers multiple clients by authenticating each call into an
  * {@link AuthContext} (reusing the F-025 `AuthProvider`), authorizing the tool against the caller's
  * RBAC permissions, and metering per-principal {@link QuotaLimiter quotas}. It is transport-agnostic:
- * the credential is read from the MCP request via {@link CredentialResolver} (default: the SDK
- * `authInfo` / `Authorization` header), so it works over stdio (one identity) or the multi-client
- * streamable-HTTP transport in `@tessera/mcp/http` (F-055, ADR-0058), which carries a per-client
- * Bearer credential on every request.
+ * the credential is read from the MCP request via {@link CredentialResolver}.
+ *
+ * **Two resolvers, because the transports differ in kind** (F-072, ADR-0065):
+ *
+ * - {@link defaultCredentialResolver} reads the SDK `authInfo` / `Authorization` header — populated
+ *   only by an HTTP transport's auth middleware. The multi-client streamable-HTTP transport in
+ *   `@tessera/mcp/http` (F-055, ADR-0058) carries a per-client Bearer credential on every request,
+ *   so each caller is authenticated as itself.
+ * - {@link createStaticCredentialResolver} is for **stdio**, which has no request and no headers:
+ *   one process, one identity, supplied by the operator when the agent client launches it. Before
+ *   F-072 this comment claimed stdio "works (one identity)" — it did not, except in zero-auth `none`
+ *   mode where the local provider authenticates anything. Every tool call in token mode returned
+ *   UNAUTHORIZED, which is the defect F-048 found and worked around.
  */
 
 /** The tools the gateway guards, each mapped to the permission it requires (RBAC, reuse F-025 catalog). */
@@ -148,6 +157,28 @@ export const defaultCredentialResolver: CredentialResolver = (context) => {
     token !== undefined ? `Bearer ${token}` : firstHeader(headers.authorization);
   return { authorization, headers };
 };
+
+/**
+ * The **stdio** credential resolver (F-072; ADR-0065) — one process, one identity.
+ *
+ * stdio carries no request and no headers, so there is nothing per-call to read: the operator
+ * supplies a token when the agent client launches `tessera-mcp`, and every call on that connection
+ * is that principal. The composition root resolves the token through the deployment's
+ * `SecretsProvider` (key `MCP_TOKEN`) and passes it here — this module never touches the
+ * environment, which is what keeps it transport-agnostic and testable.
+ *
+ * **The request context is deliberately ignored, not merged.** A stdio peer controls the JSON-RPC
+ * message and could otherwise put an `Authorization` header in `requestInfo` and be authenticated as
+ * a principal the operator never granted it — a privilege escalation across a boundary that exists
+ * precisely because the launcher, not the peer, decides who this process is.
+ *
+ * **Use this only for stdio.** Wiring it into the HTTP transport would authenticate every remote
+ * caller as the operator; that transport keeps {@link defaultCredentialResolver}.
+ */
+export function createStaticCredentialResolver(token: string): CredentialResolver {
+  const authorization = `Bearer ${token}`;
+  return () => ({ authorization, headers: {} });
+}
 
 export interface McpGatewayOptions {
   /** Authenticates a resolved credential into an {@link AuthContext} (F-025). Required. */

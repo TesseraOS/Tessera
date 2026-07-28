@@ -27,6 +27,7 @@ export {
   MCP_AUDIT_ACTIONS,
   TOOL_PERMISSIONS,
   createMcpGateway,
+  createStaticCredentialResolver,
   defaultCredentialResolver,
   type CredentialResolver,
   type McpCallContext,

@@ -2,7 +2,7 @@ import type { Runtime } from '@tessera/config';
 import { startMcpStdio } from '@tessera/mcp';
 import { instrumentServices, type Observability } from '@tessera/observability';
 import { createServerRuntime, type ServerRuntimeOptions } from './bootstrap.js';
-import { createRuntimeGateway } from './mcp-gateway.js';
+import { createRuntimeGateway, resolveStdioCredential } from './mcp-gateway.js';
 
 /** The connected MCP server, typed through `@tessera/mcp` (no direct SDK dependency). */
 type ConnectedMcpServer = Awaited<ReturnType<typeof startMcpStdio>>;
@@ -32,7 +32,16 @@ export async function startMcpServer(options: McpServerOptions = {}): Promise<Mc
 
   // Gate the tools with the runtime's providers (F-026/F-034/F-047) — the same gateway the remote HTTP
   // transport builds, so the two transports cannot drift in what they enforce.
-  const gateway = createRuntimeGateway(runtime);
+  //
+  // The one difference is the credential (F-072; ADR-0065): stdio has no request and no headers, so
+  // the operator supplies one token when the agent client launches this process and every call is
+  // that principal. In `none` mode this resolves to `undefined` and nothing changes; in token/oidc
+  // mode a missing credential throws HERE, before serving, rather than failing every tool call.
+  const staticCredential = await resolveStdioCredential(runtime);
+  const gateway = createRuntimeGateway(
+    runtime,
+    staticCredential !== undefined ? { staticCredential } : {},
+  );
   const server = await startMcpStdio(services, {
     gateway,
     // Back the token-management tools with the runtime's token store (F-046; present in token mode).

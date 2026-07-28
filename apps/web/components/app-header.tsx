@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { t } from '@/lib/i18n';
 import { Bell, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AppBreadcrumbs } from '@/components/app-breadcrumbs';
@@ -41,11 +42,11 @@ export function AppHeader() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Open command palette"
+        aria-label={t('header.openPalette')}
         className="text-muted-foreground bg-muted/60 hover:bg-muted hover:text-foreground focus-visible:ring-ring ml-auto inline-flex h-9 w-full max-w-[16rem] items-center gap-2 rounded-lg border border-transparent px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
       >
         <Search className="size-4 shrink-0" />
-        <span className="truncate">Search context…</span>
+        <span className="truncate">{t('header.searchPlaceholder')}</span>
         <kbd className="bg-background text-muted-foreground ml-auto hidden items-center rounded border px-1.5 py-0.5 font-mono text-[10px] sm:inline-flex">
           ⌘K
         </kbd>
@@ -108,14 +109,14 @@ function NotificationsMenu() {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-1">
         <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-          <h2 className="text-xs font-medium">Notifications</h2>
+          <h2 className="text-xs font-medium">{t('header.notifications')}</h2>
           {unread > 0 && newest !== undefined ? (
             <button
               type="button"
               className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none"
               onClick={() => markAllRead(identityKey, newest.at)}
             >
-              Mark all as read
+              {t('header.markAllRead')}
             </button>
           ) : null}
         </div>
@@ -125,7 +126,7 @@ function NotificationsMenu() {
           // be a lie here: the trail may well have history that simply hasn't arrived yet.
           <div className="py-1">
             <p className="sr-only" role="status">
-              Loading notifications…
+              {t('header.loading')}
             </p>
             <div aria-hidden="true">
               {['a', 'b', 'c'].map((key) => (
@@ -142,10 +143,10 @@ function NotificationsMenu() {
         ) : isError ? (
           <div className="flex flex-col items-center gap-2.5 px-4 py-6 text-center">
             <p className="text-muted-foreground text-xs" role="status">
-              Notifications could not be loaded.
+              {t('header.loadFailed')}
             </p>
             <Button variant="outline" size="sm" onClick={() => void refetch()}>
-              Try again
+              {t('header.retry')}
             </Button>
           </div>
         ) : entries.length === 0 ? (
@@ -153,13 +154,14 @@ function NotificationsMenu() {
             <span className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-full">
               <Bell className="size-4" />
             </span>
-            <p className="text-sm font-medium">Nothing here yet</p>
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              Scans, compiles, and captured memories land here — and stay here across reloads.
-            </p>
+            <p className="text-sm font-medium">{t('header.emptyTitle')}</p>
+            <p className="text-muted-foreground text-xs leading-relaxed">{t('header.emptyBody')}</p>
           </div>
         ) : (
-          <ul className="max-h-80 overflow-y-auto py-1" aria-label="Recent notifications">
+          <ul
+            className="max-h-80 overflow-y-auto py-1"
+            aria-label={t('header.recentNotifications')}
+          >
             {entries.map((entry) => {
               const { icon: Icon, title, description } = describeEvent(entry);
               const read = isRead(entry, readState);

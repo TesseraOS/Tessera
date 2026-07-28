@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useEffect, useState } from 'react';
+import { t } from '@/lib/i18n';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -74,24 +75,21 @@ export function MemoryView() {
       <Card className="bg-sidebar border-none p-4 shadow-none dark:ring-0">
         <CardHeader className="flex-row items-start justify-between gap-3 space-y-0 p-0">
           <div className="space-y-1.5">
-            <CardTitle>Memory</CardTitle>
-            <CardDescription>
-              Browse the decisions, lessons, and incidents your agents rely on. Every memory is
-              versioned — edits append a new version, never overwrite.
-            </CardDescription>
+            <CardTitle>{t('memory.title')}</CardTitle>
+            <CardDescription>{t('memory.description')}</CardDescription>
           </div>
           <Button size="sm" className="shrink-0 gap-1.5" onClick={openCapture}>
             <Plus className="size-4" aria-hidden="true" />
-            New memory
+            {t('memory.new')}
           </Button>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-2 p-0 pt-4">
           <Select value={kind} onValueChange={(value) => setKind(value as MemoryKind)}>
-            <SelectTrigger className="h-9 w-[170px]" aria-label="Filter by kind">
-              <SelectValue placeholder="All kinds" />
+            <SelectTrigger className="h-9 w-[170px]" aria-label={t('memory.filterKind')}>
+              <SelectValue placeholder={t('memory.allKinds')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>All kinds</SelectItem>
+              <SelectItem value={ALL}>{t('memory.allKinds')}</SelectItem>
               {MEMORY_KINDS.map((value) => (
                 <SelectItem key={value} value={value}>
                   {MEMORY_KIND_LABELS[value]}
@@ -100,11 +98,11 @@ export function MemoryView() {
             </SelectContent>
           </Select>
           <Select value={scope} onValueChange={setScope}>
-            <SelectTrigger className="h-9 w-[170px]" aria-label="Filter by scope">
-              <SelectValue placeholder="All scopes" />
+            <SelectTrigger className="h-9 w-[170px]" aria-label={t('memory.filterScope')}>
+              <SelectValue placeholder={t('memory.allScopes')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL}>All scopes</SelectItem>
+              <SelectItem value={ALL}>{t('memory.allScopes')}</SelectItem>
               {scopes.map((value) => (
                 <SelectItem key={value} value={value}>
                   {value}
@@ -118,7 +116,7 @@ export function MemoryView() {
       {isError ? (
         <ErrorState
           mascot
-          title="Could not load memories"
+          title={t('memory.loadFailed')}
           description={error instanceof Error ? error.message : 'Is the Tessera API running?'}
           onRetry={() => void refetch()}
         />
@@ -138,7 +136,7 @@ export function MemoryView() {
             memories.length === 0 ? (
               <Button size="sm" variant="outline" className="mt-1.5 gap-1.5" onClick={openCapture}>
                 <Plus className="size-4" aria-hidden="true" />
-                New memory
+                {t('memory.new')}
               </Button>
             ) : undefined
           }
@@ -185,7 +183,7 @@ function MemoryList({
       className="max-h-[65vh] overflow-y-auto pr-1"
       aria-busy={busy}
       role="list"
-      aria-label="Memories"
+      aria-label={t('memory.listLabel')}
     >
       <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
         {virtualizer.getVirtualItems().map((row) => {

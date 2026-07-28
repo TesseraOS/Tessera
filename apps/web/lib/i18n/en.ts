@@ -97,6 +97,28 @@ export const messages = {
   'settings.governance.retentionValue': 'By max age & max entries',
   'settings.governance.link': 'View roles & retention posture',
 
+  'header.openPalette': 'Open command palette',
+  'header.searchPlaceholder': 'Search context…',
+  'header.notifications': 'Notifications',
+  'header.markAllRead': 'Mark all as read',
+  'header.loading': 'Loading notifications…',
+  'header.loadFailed': 'Notifications could not be loaded.',
+  'header.retry': 'Try again',
+  'header.emptyTitle': 'Nothing here yet',
+  'header.emptyBody':
+    'Scans, compiles, and captured memories land here — and stay here across reloads.',
+  'header.recentNotifications': 'Recent notifications',
+  'memory.title': 'Memory',
+  'memory.description':
+    'Browse the decisions, lessons, and incidents your agents rely on. Every memory is versioned — edits append a new version, never overwrite.',
+  'memory.new': 'New memory',
+  'memory.filterKind': 'Filter by kind',
+  'memory.allKinds': 'All kinds',
+  'memory.filterScope': 'Filter by scope',
+  'memory.allScopes': 'All scopes',
+  'memory.loadFailed': 'Could not load memories',
+  'memory.listLabel': 'Memories',
+
   // --- row context menu ---
   'row.copy': 'Copy {label}',
   'row.open': 'Open',

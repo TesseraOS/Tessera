@@ -123,6 +123,7 @@ export {
   NOTIFICATION_UNREAD_WINDOW,
   READ_IDS_CAP,
   SEVERITY_BY_KIND,
+  createInMemoryNotificationStore,
   isRead,
   kindForAction,
   kindsWithSeverity,
@@ -139,7 +140,9 @@ export {
   type NotificationPreferences,
   type NotificationQuery,
   type NotificationReadState,
+  type NotificationRetentionPolicy,
   type NotificationSeverity,
+  type NotificationStore,
 } from './notifications/index.js';
 
 // Multi-project workspaces (F-066; ADR-0037) — the domain/port/in-memory adapter + service are

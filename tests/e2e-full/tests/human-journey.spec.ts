@@ -50,6 +50,20 @@ test('sign in → sources → search → inspector → capture memory → audit,
   // And the excerpt is real fixture prose with the queried term marked, not a placeholder.
   await expect(page.locator('mark').first()).toHaveText(new RegExp(FIXTURE_TERM, 'i'));
 
+  // Opening a file result shows the WHOLE file, not just the matched line (F-075, closing F-061's
+  // SL-2). This is the only place that claim can be proven end to end: the body travels from a
+  // tenant-keyed blob written by a real scan, through the scoped `/v1/fragments/:ref` route and the
+  // dashboard's proxy, into a real browser. The asserted line is the LAST statement of ledger.ts —
+  // far outside any excerpt built around the matched term — so seeing it means the whole body
+  // arrived rather than the snippet being re-rendered under a new heading.
+  await page.getByRole('option').filter({ hasText: 'ledger.ts' }).first().click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet.getByRole('heading', { name: 'File', exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(sheet.getByText(/sum \+ entry\.amount/).first()).toBeVisible();
+  await page.keyboard.press('Escape');
+
   // ---- 4. Inspector compiles a cited, budget-bounded package ---------------------------------
   await page.goto('/inspector');
   await page.getByLabel('Task description').fill(`How does the ${FIXTURE_TERM} ledger work?`);

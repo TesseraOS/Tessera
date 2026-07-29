@@ -129,7 +129,43 @@ test.describe('scope-aware ingestion isolation (F-071)', () => {
     // …but globex has no quernstone.
     expect(hasKeywordHit(await search(handoff.otherToken, FIXTURE_TERM))).toBe(false);
   });
+
+  test('a file BODY is served to its owner and 404s for another tenant (F-075)', async () => {
+    // The F-075 acceptance clause, over real blob keys rather than a fake. Refs are
+    // `sha256(sourceId:path)` — globex can derive this one; what stops it is that its scoped view of
+    // the corpus has nothing under `globex/default/<ref>`.
+    const hits = await search(handoff.token, FIXTURE_TERM);
+    const keywordHit = hits.find((hit) =>
+      hit.signals.some((signal) => signal.signal === 'keyword'),
+    );
+    expect(keywordHit, 'acme must have a keyword hit to read the body of').toBeDefined();
+    const ref = keywordHit!.ref;
+
+    const owner = await readFragment(handoff.token, ref);
+    expect(owner.status, 'acme must read its own file body').toBe(200);
+    expect(owner.body.text, 'the served body must be the real file').toContain(FIXTURE_TERM);
+    expect(owner.body.truncated).toBe(false);
+
+    const stranger = await readFragment(handoff.otherToken, ref);
+    expect(stranger.status, 'globex must not read acme file bodies').toBe(404);
+    // No part of the content leaks through the error either.
+    expect(JSON.stringify(stranger.body)).not.toContain(FIXTURE_TERM);
+  });
 });
+
+/** GET /v1/fragments/:ref as a tenant (F-075). Returns the status, since 404 IS the isolation signal. */
+async function readFragment(
+  token: string,
+  ref: string,
+): Promise<{ status: number; body: { text: string; truncated: boolean } }> {
+  const response = await fetch(`${handoff.apiUrl}/v1/fragments/${encodeURIComponent(ref)}`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  return {
+    status: response.status,
+    body: (await response.json()) as { text: string; truncated: boolean },
+  };
+}
 
 /**
  * GET /v1/effects for a file node in the caller's scope. Returns the raw status too, because a node

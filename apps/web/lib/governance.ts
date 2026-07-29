@@ -16,6 +16,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   'effects.read': 'Effects read',
   'memory.read': 'Memory read',
   'memory.write': 'Memory write',
+  'fragment.read': 'File body read',
   'effects.write': 'Effects write',
   'source.read': 'Source read',
   'source.manage': 'Source manage',

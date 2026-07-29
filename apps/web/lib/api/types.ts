@@ -244,6 +244,7 @@ export type AuditAction =
   | 'effects.read'
   | 'memory.read'
   | 'memory.write'
+  | 'fragment.read'
   | 'effects.write'
   | 'source.read'
   | 'source.manage'

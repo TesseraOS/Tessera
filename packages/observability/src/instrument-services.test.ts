@@ -60,11 +60,16 @@ describe('instrumentServices', () => {
     expect(names).toContain('compile');
   });
 
-  it('forwards the optional sources + projects + billing members (regression: they must not be dropped)', async () => {
+  it('forwards the optional sources + projects + fragments + billing members (regression: they must not be dropped)', async () => {
     const withOptional = {
       ...fakeServices,
       sources: { list: () => Promise.resolve([]) },
       projects: { list: () => Promise.resolve([]) },
+      fragments: {
+        get: (ref: string) => Promise.resolve({ ref, text: 'body', kind: 'code' }),
+        forTenant: () => withOptional.fragments,
+        forProject: () => withOptional.fragments,
+      },
       billing: { listPlans: () => [{ id: 'free' }] },
     } as unknown as ApiServices;
 
@@ -73,6 +78,7 @@ describe('instrumentServices', () => {
     // All present (dropping any silently 4xx/500s its routes on the instrumented server — E-015).
     expect(instrumented.sources).toBeDefined();
     expect(instrumented.projects).toBeDefined();
+    expect(instrumented.fragments).toBeDefined();
     expect(instrumented.billing).toBeDefined();
 
     // billing is passed through untraced → its synchronous methods still return values (not Promises).
@@ -81,8 +87,12 @@ describe('instrumentServices', () => {
     // sources + projects are traced like the other services.
     await instrumented.sources?.list();
     await instrumented.projects?.list('acme');
+    // Through a SCOPED view — a traced corpus must stay scoped, or tracing would quietly hand the
+    // fragments route an unscoped reader (ADR-0067).
+    await instrumented.fragments?.forTenant('acme').forProject('beta').get('ref-1');
     const spans = exporter.getFinishedSpans().map((span) => span.name);
     expect(spans).toContain('sources.list');
     expect(spans).toContain('projects.list');
+    expect(spans).toContain('fragments.get');
   });
 });

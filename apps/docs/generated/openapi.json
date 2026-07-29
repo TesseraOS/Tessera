@@ -212,6 +212,7 @@
                           "search:read",
                           "compile:read",
                           "effects:read",
+                          "fragments:read",
                           "memory:read",
                           "memory:write",
                           "effects:write",
@@ -283,6 +284,7 @@
                           "search:read",
                           "compile:read",
                           "effects:read",
+                          "fragments:read",
                           "memory:read",
                           "memory:write",
                           "effects:write",
@@ -314,6 +316,7 @@
                             "search:read",
                             "compile:read",
                             "effects:read",
+                            "fragments:read",
                             "memory:read",
                             "memory:write",
                             "effects:write",
@@ -400,6 +403,7 @@
                                 "search:read",
                                 "compile:read",
                                 "effects:read",
+                                "fragments:read",
                                 "memory:read",
                                 "memory:write",
                                 "effects:write",
@@ -515,6 +519,7 @@
                         "search:read",
                         "compile:read",
                         "effects:read",
+                        "fragments:read",
                         "memory:read",
                         "memory:write",
                         "effects:write",
@@ -581,6 +586,7 @@
                               "search:read",
                               "compile:read",
                               "effects:read",
+                              "fragments:read",
                               "memory:read",
                               "memory:write",
                               "effects:write",
@@ -2582,6 +2588,71 @@
                   },
                   "required": [
                     "versions"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/fragments/{ref}": {
+      "get": {
+        "summary": "Read the stored body of one corpus fragment by ref.",
+        "tags": [
+          "fragments"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "in": "path",
+            "name": "ref",
+            "required": true
+          },
+          {
+            "name": "X-Tessera-Project",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Project workspace scope (ADR-0037): a project id from GET /v1/projects. Omit (or send `default`) for the tenant's default project; ignored by routes that are not project-scoped."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ref": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ref",
+                    "kind",
+                    "text",
+                    "truncated"
                   ],
                   "additionalProperties": false
                 }
@@ -4857,6 +4928,7 @@
                 "effects.read",
                 "memory.read",
                 "memory.write",
+                "fragment.read",
                 "effects.write",
                 "source.read",
                 "source.manage",
@@ -5004,6 +5076,7 @@
                               "effects.read",
                               "memory.read",
                               "memory.write",
+                              "fragment.read",
                               "effects.write",
                               "source.read",
                               "source.manage",
@@ -5100,6 +5173,7 @@
                 "effects.read",
                 "memory.read",
                 "memory.write",
+                "fragment.read",
                 "effects.write",
                 "source.read",
                 "source.manage",
@@ -5240,6 +5314,7 @@
                               "effects.read",
                               "memory.read",
                               "memory.write",
+                              "fragment.read",
                               "effects.write",
                               "source.read",
                               "source.manage",
@@ -5783,6 +5858,7 @@
                               "effects.read",
                               "memory.read",
                               "memory.write",
+                              "fragment.read",
                               "effects.write",
                               "source.read",
                               "source.manage",

@@ -15,6 +15,7 @@ import { registerCompileRoutes } from './compile.js';
 import { registerEffectsRoutes } from './effects.js';
 import { registerGraphRoutes } from './graph.js';
 import { registerMemoryRoutes } from './memory.js';
+import { registerFragmentRoutes } from './fragments.js';
 import { registerSourceRoutes } from './sources.js';
 import { registerProjectRoutes } from './projects.js';
 import { registerProjectSelection } from '../../projects/selection.js';
@@ -102,6 +103,7 @@ export function registerV1Routes(
       registerEffectsRoutes(v1, services);
       registerGraphRoutes(v1, services);
       registerMemoryRoutes(v1, services, events);
+      registerFragmentRoutes(v1, services);
       registerSourceRoutes(v1, services);
       registerProjectRoutes(v1, services);
       registerStatsRoutes(v1, services, audit);

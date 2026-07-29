@@ -23,6 +23,7 @@ export {
   type MemoryList,
   type Memory,
   type MemoryHistory,
+  type Fragment,
   type AuditQuery,
   type AuditPage,
   type AuditExportQuery,

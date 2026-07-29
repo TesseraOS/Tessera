@@ -32,6 +32,12 @@ export const PERMISSIONS = [
   'search:read',
   'compile:read',
   'effects:read',
+  // Reading a whole corpus body by ref (F-075). Its OWN permission rather than `search:read`, which
+  // grants a ranked list plus a snippet capped at 2000 chars: reusing it would silently widen every
+  // token already issued with that scope. Not `compile:read` either — compile returns what retrieval
+  // selected for a task within a budget, while this is an unbounded by-ref reader. Same argument as
+  // `stats:read` below; scopes are a least-privilege upper bound.
+  'fragments:read',
   'memory:read',
   'memory:write',
   'effects:write',
@@ -50,6 +56,7 @@ const READ_PERMISSIONS: readonly Permission[] = [
   'compile:read',
   'effects:read',
   'memory:read',
+  'fragments:read',
   'sources:read',
   // Every authenticated user can see the project list (it drives the app-shell switcher); creating,
   // renaming, and deleting projects is a `projects:manage` mutation (member+).

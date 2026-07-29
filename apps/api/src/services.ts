@@ -1,5 +1,5 @@
 import type { BillingProvider } from '@tessera/billing';
-import type { ContextCompiler } from '@tessera/context-compiler';
+import type { ContextCompiler, FragmentSource } from '@tessera/context-compiler';
 import type { SourceService } from '@tessera/ingestion';
 import type { KnowledgeGraphService } from '@tessera/knowledge-graph';
 import type { MemoryService } from '@tessera/memory';
@@ -38,6 +38,16 @@ export interface ApiServices {
   readonly graph: KnowledgeGraphService;
   /** Versioned memory (F-007) — `/v1/memory`. */
   readonly memory: MemoryService;
+  /**
+   * The corpus read seam (F-075; ADR-0067) — `GET /v1/fragments/:ref`. Optional for the same reason
+   * `sources`/`projects` are: `buildServer({})` generates the OpenAPI document with no runtime, and
+   * the route answers a clean "not configured" rather than 500ing.
+   *
+   * **Scoped, and that is the whole point.** The route reads through
+   * `.forTenant(...).forProject(...)`, so a ref belonging to another tenant resolves to nothing —
+   * refs are derivable (`sha256(sourceId:path)`), so an unscoped corpus here would be an IDOR.
+   */
+  readonly fragments?: FragmentSource;
   /**
    * Runtime source management (F-038; FR-62) — `/v1/sources*`. Optional; the composition root wires it
    * (register/scan repositories via the ingestion pipeline). When omitted the `/v1/sources` routes

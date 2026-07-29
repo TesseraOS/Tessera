@@ -24,6 +24,7 @@ export type MemoryList = paths['/v1/memory']['get']['responses'][200]['content']
 export type Memory = paths['/v1/memory/{lineageId}']['get']['responses'][200]['content'][Json];
 export type MemoryHistory =
   paths['/v1/memory/{lineageId}/history']['get']['responses'][200]['content'][Json];
+export type Fragment = paths['/v1/fragments/{ref}']['get']['responses'][200]['content'][Json];
 export type AuditQuery = NonNullable<paths['/v1/audit']['get']['parameters']['query']>;
 export type AuditPage = paths['/v1/audit']['get']['responses'][200]['content'][Json];
 export type AuditExportQuery = NonNullable<paths['/v1/audit/export']['get']['parameters']['query']>;
@@ -131,6 +132,11 @@ export interface TesseraClient {
   editMemory(lineageId: string, patch: EditMemoryRequest): Promise<Memory>;
   /** Every version of a memory lineage, oldest first. */
   memoryHistory(lineageId: string): Promise<MemoryHistory>;
+  /**
+   * The stored body of one corpus fragment (throws `NOT_FOUND` if absent **or owned by another
+   * tenant** — the two are deliberately indistinguishable). `text` is capped; `truncated` says when.
+   */
+  getFragment(ref: string): Promise<Fragment>;
   /** Query this tenant's audit trail (admin only), newest-first + paginated. */
   getAudit(query?: AuditQuery): Promise<AuditPage>;
   /**
@@ -311,6 +317,9 @@ export function createTesseraClient(options: TesseraClientOptions): TesseraClien
       return unwrap(
         await client.GET('/v1/memory/{lineageId}/history', { params: { path: { lineageId } } }),
       );
+    },
+    async getFragment(ref) {
+      return unwrap(await client.GET('/v1/fragments/{ref}', { params: { path: { ref } } }));
     },
     async getAudit(query = {}) {
       return unwrap(await client.GET('/v1/audit', { params: { query } }));

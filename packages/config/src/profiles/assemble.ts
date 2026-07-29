@@ -465,6 +465,10 @@ export async function assembleRuntime(
     compiler,
     graph,
     memory: indexedMemory,
+    // The corpus read seam behind `GET /v1/fragments/:ref` (F-075). The SAME source the compiler and
+    // search enrichment use, so a body served by ref and a body cited in a package can never
+    // disagree about a ref — and it is scoped, so the route cannot serve across a tenant.
+    fragments: fragmentSource,
     sources,
     // Multi-project workspaces (F-066, ADR-0037): persistent project catalog under the tenant.
     projects: createProjectService(adapters.projectStore),

@@ -405,6 +405,7 @@
                 "search:read",
                 "compile:read",
                 "effects:read",
+                "fragments:read",
                 "memory:read",
                 "memory:write",
                 "effects:write",

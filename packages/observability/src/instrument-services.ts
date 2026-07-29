@@ -76,6 +76,13 @@ export function instrumentServices(services: ApiServices, obs: Observability): A
     ...(services.projects !== undefined
       ? { projects: traceObject(services.projects, 'projects', obs) }
       : {}),
+    // `fragments` (F-075) is traced like the others. Its scoped views matter more here than for most:
+    // `traceObject` re-wraps `forTenant`/`forProject` rather than treating them as async calls, so a
+    // traced corpus stays a SCOPED corpus. Dropping it 500s `GET /v1/fragments/:ref` on the
+    // instrumented server (E-015).
+    ...(services.fragments !== undefined
+      ? { fragments: traceObject(services.fragments, 'fragments', obs) }
+      : {}),
     ...(services.billing !== undefined ? { billing: services.billing } : {}),
     ...(services.readiness !== undefined ? { readiness: services.readiness } : {}),
   };

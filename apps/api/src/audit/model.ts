@@ -17,6 +17,11 @@ export const AUDIT_ACTIONS = [
   'effects.read',
   'memory.read',
   'memory.write',
+  // Reading a whole file body out of the corpus (F-075). Audited because NFR-13 is one of that
+  // feature's requirements and this is the most content-revealing read the product offers. The
+  // `.read` suffix is load-bearing: ACTIVITY_ACTIONS below excludes it mechanically, so a body fetch
+  // per opened search result cannot inflate the Overview chart.
+  'fragment.read',
   'effects.write',
   'source.read',
   'source.manage',

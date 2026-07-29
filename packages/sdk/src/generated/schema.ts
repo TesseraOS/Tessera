@@ -135,7 +135,7 @@ export interface paths {
                                 roles: ("owner" | "admin" | "member" | "viewer")[];
                             };
                             tenantId: string;
-                            permissions: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
+                            permissions: ("search:read" | "compile:read" | "effects:read" | "fragments:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
                         };
                     };
                 };
@@ -174,9 +174,9 @@ export interface paths {
                     content: {
                         "application/json": {
                             roles: ("owner" | "admin" | "member" | "viewer")[];
-                            permissions: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
+                            permissions: ("search:read" | "compile:read" | "effects:read" | "fragments:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
                             rolePermissions: {
-                                [key: string]: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
+                                [key: string]: ("search:read" | "compile:read" | "effects:read" | "fragments:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
                             };
                         };
                     };
@@ -220,7 +220,7 @@ export interface paths {
                                 principalId: string;
                                 displayName?: string;
                                 roles: ("owner" | "admin" | "member" | "viewer")[];
-                                scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
+                                scopes?: ("search:read" | "compile:read" | "effects:read" | "fragments:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
                                 createdAt: string;
                                 revokedAt: string | null;
                                 expiresAt: string | null;
@@ -246,7 +246,7 @@ export interface paths {
                         principalId: string;
                         displayName?: string;
                         roles: ("owner" | "admin" | "member" | "viewer")[];
-                        scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
+                        scopes?: ("search:read" | "compile:read" | "effects:read" | "fragments:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
                         /** Format: date-time */
                         expiresAt?: string;
                     };
@@ -265,7 +265,7 @@ export interface paths {
                                 principalId: string;
                                 displayName?: string;
                                 roles: ("owner" | "admin" | "member" | "viewer")[];
-                                scopes?: ("search:read" | "compile:read" | "effects:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
+                                scopes?: ("search:read" | "compile:read" | "effects:read" | "fragments:read" | "memory:read" | "memory:write" | "effects:write" | "sources:read" | "sources:manage" | "projects:read" | "projects:manage" | "stats:read" | "admin:manage")[];
                                 createdAt: string;
                                 revokedAt: string | null;
                                 expiresAt: string | null;
@@ -958,6 +958,50 @@ export interface paths {
                                 supersededBy: string | null;
                                 createdAt: string;
                             }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fragments/{ref}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the stored body of one corpus fragment by ref. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ref: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ref: string;
+                            kind: string;
+                            text: string;
+                            path?: string;
+                            truncated: boolean;
                         };
                     };
                 };
@@ -2131,7 +2175,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Filter by action. */
-                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
+                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "fragment.read" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
                     /** @description Filter by actor principal id. */
                     actor?: string;
                     /** @description Filter by outcome. */
@@ -2166,7 +2210,7 @@ export interface paths {
                                     kind: "local" | "user" | "token";
                                 };
                                 /** @enum {string} */
-                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "fragment.read" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
                                 target?: string;
                                 /** @enum {string} */
                                 outcome: "success" | "denied";
@@ -2201,7 +2245,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Filter by action. */
-                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
+                    action?: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "fragment.read" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
                     /** @description Filter by actor principal id. */
                     actor?: string;
                     /** @description Filter by outcome. */
@@ -2238,7 +2282,7 @@ export interface paths {
                                     kind: "local" | "user" | "token";
                                 };
                                 /** @enum {string} */
-                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "fragment.read" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
                                 target?: string;
                                 /** @enum {string} */
                                 outcome: "success" | "denied";
@@ -2441,7 +2485,7 @@ export interface paths {
                                     kind: "local" | "user" | "token";
                                 };
                                 /** @enum {string} */
-                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
+                                action: "search" | "compile" | "effects.read" | "memory.read" | "memory.write" | "fragment.read" | "effects.write" | "source.read" | "source.manage" | "project.read" | "project.manage" | "billing.read" | "billing.manage" | "audit.read" | "token.read" | "token.manage" | "retention.read" | "retention.manage" | "dsr.export" | "dsr.delete" | "audit.export" | "source.scan.completed" | "source.scan.failed" | "notification.read" | "notification.manage";
                                 target?: string;
                                 /** @enum {string} */
                                 outcome: "success" | "denied";

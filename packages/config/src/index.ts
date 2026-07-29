@@ -30,6 +30,7 @@ export * from './sources/postgres-source-registry.js';
 export * from './sources/postgres-manifest.js';
 export * from './auth/postgres-token-store.js';
 export * from './sources/corpus-indexer.js';
+export * from './sources/corpus-migration.js';
 export * from './sources/ingestion-sink.js';
 export * from './sources/memory-indexing.js';
 export * from './sources/search-enrichment.js';

@@ -34,6 +34,20 @@ const MEMORY_HIT = {
 async function stubSearch(page: Page, results: unknown[] = [FILE_HIT, MEMORY_HIT]): Promise<void> {
   await page.route('**/v1/search', (route) => route.fulfill({ json: { results } }));
   await page.route('**/v1/effects**', (route) => route.fulfill({ json: { effects: [] } }));
+  // The file body behind a hit (F-075). Stubbed here rather than per-test because an UNSTUBBED
+  // fragment call makes `FileBody` render `null` — so the a11y audit below would pass by auditing a
+  // section that was never on the page, which is not an audit of anything.
+  await page.route('**/v1/fragments/**', (route) =>
+    route.fulfill({
+      json: {
+        ref: FILE_HIT.ref,
+        kind: 'code',
+        text: 'export function fuse(candidates) {\n  return rank(candidates);\n}\n',
+        path: 'src/retrieval/fuse.ts',
+        truncated: false,
+      },
+    }),
+  );
 }
 
 test('the empty search page passes a11y (no dangling ARIA references)', async ({ page }) => {
@@ -144,7 +158,11 @@ test('the detail Sheet passes a11y with it open', async ({ page }) => {
   await page.goto('/search');
   await page.getByLabel('Search query').fill('fusion');
   await page.getByText('src/retrieval/fuse.ts').click();
-  await expect(page.getByRole('dialog')).toBeVisible();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toBeVisible();
+  // Audit the Sheet in its LOADED state: the file body is a scrollable `<pre>` region added by
+  // F-075, and auditing before it arrives would audit a skeleton.
+  await expect(sheet.getByRole('heading', { name: 'File', exact: true })).toBeVisible();
 
   // The Sheet is new a11y surface — auditing only the list would miss it entirely.
   const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();

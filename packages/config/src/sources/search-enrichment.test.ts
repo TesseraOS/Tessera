@@ -23,24 +23,35 @@ const CORPUS: Record<string, SourceFragment> = {
 };
 
 /**
- * A scope-aware fake corpus (ADR-0067): fragments live under `home`, and a view bound elsewhere
- * resolves nothing — the shape `createBlobFragmentSource` has. Scope-blind doubles would make the
- * rebinding assertions below pass without the rebinding existing.
+ * A scope-aware fake corpus (ADR-0067): fragments live under a `(tenant/project)` and a view bound
+ * elsewhere resolves whatever THAT scope holds — the shape `createBlobFragmentSource` has.
+ *
+ * Keyed by scope rather than by a single `home` so a test can plant a **decoy**. Without one, "a view
+ * bound elsewhere sees nothing" is satisfied by the other scope being empty, and the assertion stays
+ * green even when the rebinding it guards is deleted.
  */
 function fakeFragments(
-  corpus: Record<string, SourceFragment>,
-  home = 'default/default',
+  byScope: Record<string, Record<string, SourceFragment>>,
   view = 'default/default',
 ): FragmentSource {
   return {
-    get: (ref) => Promise.resolve(home === view ? corpus[ref] : undefined),
-    forTenant: (tenantId) => fakeFragments(corpus, home, `${tenantId}/default`),
-    forProject: (projectId) =>
-      fakeFragments(corpus, home, `${view.split('/')[0] ?? ''}/${projectId}`),
+    get: (ref) => Promise.resolve(byScope[view]?.[ref]),
+    forTenant: (tenantId) => fakeFragments(byScope, `${tenantId}/default`),
+    forProject: (projectId) => fakeFragments(byScope, `${view.split('/')[0] ?? ''}/${projectId}`),
   };
 }
 
-const fragments: FragmentSource = fakeFragments(CORPUS);
+/** A different body at the SAME ref, for planting under another scope. */
+const DECOY_CORPUS: Record<string, SourceFragment> = {
+  [FILE_REF]: {
+    ref: FILE_REF,
+    kind: 'code',
+    text: 'a body belonging to a different scope entirely',
+    metadata: { sourceId: 'other', path: 'src/globex/other.ts' },
+  },
+};
+
+const fragments: FragmentSource = fakeFragments({ 'default/default': CORPUS });
 
 function candidate(ref: string, over: Partial<FusedCandidate> = {}): FusedCandidate {
   return {
@@ -197,10 +208,13 @@ describe('createEnrichedRetriever', () => {
       forTenant: vi.fn(() => scoped),
     } satisfies HybridRetriever;
 
-    // The corpus lives under `acme`, so a label can only appear if the FragmentSource was rebound
-    // too. Before F-075 this test passed with the corpus left on the default scope — which is
-    // exactly the gap ADR-0067 closes.
-    const retriever = createEnrichedRetriever(inner, fakeFragments(CORPUS, 'acme/default'));
+    // The corpus lives under `acme`, so the acme label can only appear if the FragmentSource was
+    // rebound too — and the DECOY under the base scope means an unrebound view returns the wrong
+    // label rather than none, so this fails loudly instead of quietly.
+    const retriever = createEnrichedRetriever(
+      inner,
+      fakeFragments({ 'acme/default': CORPUS, 'default/default': DECOY_CORPUS }),
+    );
     const view = retriever.forTenant('acme');
     const [result] = await view.search({ text: 'ledger' });
 
@@ -208,20 +222,27 @@ describe('createEnrichedRetriever', () => {
     expect(result!.label).toBe('src/reporting/ledger.ts');
   });
 
-  it('a view bound to another tenant resolves NO fragment for the same ref', async () => {
-    // The IDOR guard in miniature: same ref, different scope, nothing comes back. The candidate is
-    // still returned (never dropped) — it just cannot be enriched from a corpus it does not own.
+  it('a view bound to another tenant never enriches from a corpus it does not own', async () => {
+    // The IDOR guard in miniature: same ref, different scope. The candidate is still returned (never
+    // dropped) — it just cannot be enriched from a corpus it does not own.
+    //
+    // globex holds its OWN fragment at this ref, so the assertion is "gets globex's label, never
+    // acme's" rather than "gets nothing". Written the other way it passed by emptiness: with globex
+    // absent from the fixture, deleting the corpus rebinding left it green.
     const scoped = innerWith([candidate(FILE_REF)]);
     const inner = {
       search: vi.fn(() => Promise.resolve([])),
       forTenant: vi.fn(() => scoped),
     } satisfies HybridRetriever;
 
-    const retriever = createEnrichedRetriever(inner, fakeFragments(CORPUS, 'acme/default'));
+    const retriever = createEnrichedRetriever(
+      inner,
+      fakeFragments({ 'acme/default': CORPUS, 'globex/default': DECOY_CORPUS }),
+    );
     const [result] = await retriever.forTenant('globex').search({ text: 'ledger' });
 
     expect(result!.ref).toBe(FILE_REF);
-    expect(result!.label).toBeUndefined();
+    expect(result!.label).toBe('src/globex/other.ts');
   });
 
   it('passes the query through to the inner retriever untouched', async () => {
@@ -235,7 +256,7 @@ describe('createEnrichedRetriever', () => {
 
   it('survives a fragment with no metadata rather than throwing', async () => {
     const bare: FragmentSource = fakeFragments({
-      [FILE_REF]: { ref: FILE_REF, kind: 'code', text: 'const a = 1;' },
+      'default/default': { [FILE_REF]: { ref: FILE_REF, kind: 'code', text: 'const a = 1;' } },
     });
     const retriever = createEnrichedRetriever(innerWith([candidate(FILE_REF)]), bare);
 

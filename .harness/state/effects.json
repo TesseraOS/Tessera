@@ -1,7 +1,7 @@
 {
   "$schemaRef": "./schemas/effects.schema.json",
   "version": 1,
-  "updated": "2026-07-28",
+  "updated": "2026-07-29",
   "description": "Effect-link graph: 'change A => must review/change B'. Seeded with architecture invariants; grows as code lands (see protocols/effect-link.md).",
   "links": [
     {
@@ -208,6 +208,10 @@
         {
           "kind": "module",
           "ref": "`GET /v1/flags` (F-058; FR-57) — the caller’s EVALUATED flags, never the catalog (raw definitions would put every other tenant’s rollout on the wire). Guarded by `stats:read`, an EXISTING permission: minting `flags:read` would ripple GET /v1/rbac -> OpenAPI -> SDK -> the dashboard token-scope UI to gate a read revealing only this tenant’s own posture. Not audited (the /v1/stats posture). The provider rides on BuildServerOptions, NOT ApiServices — the E-015 reason. With no provider wired it answers an EMPTY CATALOG rather than /v1/usage’s 409, because “no flags are declared” is the true default state of every deployment. SDK `getFlags()` + a generated reference page follow."
+        },
+        {
+          "kind": "contract",
+          "ref": "GET /v1/fragments/:ref (F-075) — additive per NFR-11. 404-never-403 BY CONSTRUCTION: the handler resolves through a (tenant, project)-scoped FragmentSource and has no second unscoped lookup to compare against, so it cannot distinguish \"another tenant's\" from \"never existed\". Narrow projection {ref, kind, text, path?, truncated}, NOT the ingestion metadata bag; text capped at 131072 chars with the cap DECLARED. Single path segment only (memory/<lineageId> refs stay on /v1/memory/:lineageId). DELIBERATELY NO MCP TOOL: an agent reads fragments through budget-bounded compile_context, and a by-ref bulk reader is a cheaper way to exfiltrate a corpus with no budget accounting — the mcp tool-count assertion is untouched. Regenerates packages/sdk (openapi.json + generated/schema.ts + getFragment) and apps/docs/generated/**; the rbac + audit enums gain fragments:read / fragment.read"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -396,6 +400,10 @@
         {
           "kind": "module",
           "ref": "@tessera/storage migrations/runner (runMigrations + MigrationDb sqlite/postgres) + backup/backup (backupSqlite/restoreSqlite, backupDirectory/restoreDirectory) — ADDITIVE utilities over the stores (F-024/ADR-0027; no port change). Postgres physical backup = ops concern (deferred)"
+        },
+        {
+          "kind": "module",
+          "ref": "BlobStore deliberately does NOT gain forTenant (F-075, ADR-0067 §3) and blob.conformance.ts is UNCHANGED — recorded so nobody \"restores the convention\". forTenant is on every DOMAIN port and no INFRASTRUCTURE port (RelationalStore/Queue/Embeddings all lack it); the unscoped base view must survive for the migration and Runtime.stores.blob either way, so a view here buys ceremony not a guarantee; and createBlobFragmentSource IS the adapter ADR-0033 wants enforcement in. Convention ADDED OVER the port instead: corpus keys are `{tenantId}/{projectId}/{ref}` and `_tessera/` is reserved for Tessera metadata (the migration marker). Note the filesystem adapter does not prune empty parent dirs on delete, so a migrated corpus leaves an empty legacy dir behind — cosmetic, pre-existing, list() returns files"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -646,10 +654,14 @@
         {
           "kind": "module",
           "ref": "ADR-0060 §1 (F-057): the metered predicate moved from 'a BillingProvider object is present' to an EXPLICIT `metered` flag threaded from config.billing.provider. This REALIZES ADR-0056 §3, whose stated consequence was never implemented: the composition root always wires a provider (createRuntimeBilling returns createLocalBilling() for provider 'none', and that adapter reports every tenant free), so from F-035 until F-057 every Local and self-hosted deployment was silently capped at the cloud free tier's 8000 tokens per compile. Nothing asserted the unmetered case, which is why it survived a full feature review; both surfaces now have that assertion."
+        },
+        {
+          "kind": "module",
+          "ref": "FragmentSource is a SCOPED port since F-075/ADR-0067: REQUIRED forTenant/forProject (never optional — an optional scope with a default is the silent-default failure mode ADR-0057 removed). `get(ref)` is unchanged. createContextCompiler rebinds fragmentSource beside retriever + graphStore in BOTH scoped views, so a compiler view that retrieves as one tenant and resolves bodies as another is unrepresentable. Every implementation must supply the two members: createBlobFragmentSource (@tessera/config), createEnrichedRetriever (which rebinds BOTH halves), apps/api + apps/mcp e2e in-memory-services, and the compiler test doubles (tests/integration/scoped-corpus.ts — shared so doubles cannot drift scope-blind)"
         }
       ],
       "kind": "EFFECT_LINK",
-      "rationale": "The ContextPackage shape (sections/provenance/whyIncluded), the CompilationTrace, and the CompileRequest are the contract REST/MCP `compile_context` returns and the web Package Inspector renders (concretely advances E-003); changing them ripples to API/MCP/web. The compiler consumes the retrieval + graph contracts. CQS (PRD §9) is the regression guard that compilation beats naive top-k. FragmentSource is the corpus seam ingestion fills. F-037 (ADR-0033) added ContextCompiler.forTenant (scopes the retriever + graph store) and folded a non-default tenantId into the CompilationKey fingerprint so a shared cache stays tenant-isolated — no ContextPackage/CompileRequest/API shape change (tenancy stays off the wire). F-049 put numbers on it: compile p95 8.7ms (fake embeddings) / 14.2ms (real Transformers.js) against NFR-4 2000ms, and an envelope of x1.61 over the package — of which the trace is only 13%, disproving the assumption that the trace is the token cost; the bulk is JSON escaping + the provenance FR-32 requires.",
+      "rationale": "The ContextPackage shape (sections/provenance/whyIncluded), the CompilationTrace, and the CompileRequest are the contract REST/MCP `compile_context` returns and the web Package Inspector renders (concretely advances E-003); changing them ripples to API/MCP/web. The compiler consumes the retrieval + graph contracts. CQS (PRD §9) is the regression guard that compilation beats naive top-k. FragmentSource is the corpus seam ingestion fills. F-037 (ADR-0033) added ContextCompiler.forTenant (scopes the retriever + graph store) and folded a non-default tenantId into the CompilationKey fingerprint so a shared cache stays tenant-isolated — no ContextPackage/CompileRequest/API shape change (tenancy stays off the wire). F-049 put numbers on it: compile p95 8.7ms (fake embeddings) / 14.2ms (real Transformers.js) against NFR-4 2000ms, and an envelope of x1.61 over the package — of which the trace is only 13%, disproving the assumption that the trace is the token cost; the bulk is JSON escaping + the provenance FR-32 requires. F-075/ADR-0067: FragmentSource became the corpus SCOPE seam — required forTenant/forProject, with the compiler rebinding it alongside retriever/graphStore. A scope-blind test double (`forTenant: () => this`) makes every scoping assertion pass without the scoping existing, so the shared double in tests/integration/scoped-corpus.ts is genuinely scoped and every doubling site uses it.",
       "confidence": 1,
       "origin": "manual"
     },
@@ -755,6 +767,10 @@
         {
           "kind": "module",
           "ref": "Runtime gains `flags` (FlagProvider over config, F-058) and `plugins` (PluginHost). BOTH are built in the profile-INDEPENDENT half rather than asked of each profile: a rollout rule and the set of extension points are product facts, not deployment adapters, so ADR-0059’s make-the-compiler-ask-both-profiles argument does not apply. `services.readiness` gains a second check (`plugins`) beside the relational one."
+        },
+        {
+          "kind": "module",
+          "ref": "assembleRuntime runs migrateCorpusToScopedKeys(blob, scope) at boot BEFORE any service is constructed (F-075/ADR-0067 §4), and wires services.fragments to the SAME fragmentSource the compiler and search enrichment use — so a body served by ref and a body cited in a package cannot disagree. The SQL runMigrations cannot move blobs, so this is its own mechanism: marker-guarded (_tessera/migrations/corpus-scope-keys.json), idempotent, replica-safe copy-then-delete over the PORT (identical on filesystem and S3). Target scope is (config.auth.tenant, default) when auth.mode is none, else (default, default)"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -792,6 +808,10 @@
         {
           "kind": "module",
           "ref": "F-057: N/A BY CONSTRUCTION, and deliberately so. The usage store rides BuildServerOptions (beside audit/tokenStore/memoryRetention), NOT ApiServices — instrumentServices rebuilds that object member by member and a dropped member 500s its routes in production (two recorded recurrences). The F-063 precedent. Recorded here so a future reader sees the absence was chosen, not overlooked."
+        },
+        {
+          "kind": "module",
+          "ref": "instrumentServices must forward the new optional ApiServices.fragments (F-075) — a dropped member 500s GET /v1/fragments/:ref on the instrumented (shipped) server, the E-015 defect that has already happened twice. traceObject re-wraps forTenant/forProject rather than treating them as async calls, so a traced corpus stays a SCOPED corpus; instrument-services.test.ts asserts the forwarding THROUGH a scoped view"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -983,6 +1003,10 @@
         {
           "kind": "module",
           "ref": "F-072: the MCP **stdio** transport can finally resolve a principal. `defaultCredentialResolver` reads the SDK authInfo or an Authorization header and stdio populates NEITHER, so token/oidc mode failed every tool call — `createStaticCredentialResolver` carries the one identity a stdio connection has, from the `MCP_TOKEN` secret (ADR-0065). Three couplings to keep: it is wired from apps/server/src/mcp.ts ONLY (a process-wide credential on the HTTP transport would authenticate every remote caller as the operator); it IGNORES the request context rather than merging it (a stdio peer controls the JSON-RPC message and could otherwise name a principal the operator never granted); and token/oidc mode with no credential now REFUSES TO START, so any composition that boots tessera-mcp must supply one or handle the throw"
+        },
+        {
+          "kind": "module",
+          "ref": "PERMISSIONS + READ_PERMISSIONS gain `fragments:read` (F-075) — its OWN permission, not search:read (which grants a ranked list plus a 2000-char excerpt; reusing it would silently widen every already-issued scoped token into an unbounded body reader) and not compile:read (task- and budget-bounded). Same reasoning that minted stats:read. Consequence: explicitly scoped API tokens must be re-issued to gain it; role-based principals get it automatically. With ADR-0067 the ADR-0033/0037 data-plane guarantee now covers the corpus BODY store — its last unscoped member — which is what closes F-061 SL-2"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -1105,6 +1129,10 @@
         {
           "kind": "module",
           "ref": "F-072: gateway audit now attributes stdio calls to a REAL principal. Before, the only way to run stdio against a gated deployment was zero-auth `none` mode, so the trail recorded the local stand-in; an authenticated stdio agent is recorded as its own token principal in its own tenant, which is what makes the MCP half of the trail usable for compliance. Pinned by the gateway e2e (a capture_memory over stdio lands as actor {principalId, kind: token} in tenant acme)"
+        },
+        {
+          "kind": "module",
+          "ref": "AUDIT_ACTIONS gains `fragment.read` (F-075; NFR-13 — a full-content read is the most content-revealing read in the product). The `.read` suffix is load-bearing: ACTIVITY_ACTIONS/RECENT_ACTIVITY_ACTIONS exclude it MECHANICALLY, so a body fetch per opened search result cannot inflate the Overview chart or the activity feed — no special case, exactly as F-065 scan outcomes joined. apps/web/lib/governance.ts AUDIT_ACTION_LABELS is Record<AuditAction,string> and therefore exhaustive: the compiler demands the label row"
         }
       ],
       "kind": "EFFECT_LINK",

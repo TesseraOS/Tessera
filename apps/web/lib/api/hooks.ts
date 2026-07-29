@@ -166,10 +166,11 @@ export function useFragment(ref: string, enabled = true) {
     queryFn: () => api.getFragment(ref),
     enabled: enabled && ref.length > 0,
     staleTime: 10_000,
-    // A fragment body is immutable for a given ref (the ref is derived from the content's path, and
-    // a re-ingest writes a new body under the same key only when the file changed). One retry is
-    // enough; a 404 here is an answer, not a blip.
-    retry: 1,
+    // No retry. A 404 here is the EXPECTED answer for a ref this tenant does not own — the cross-
+    // tenant case is indistinguishable from "never existed" by design — so retrying doubles the
+    // request for every symbol hit and every foreign ref, and cannot change the outcome. (The
+    // previous `retry: 1` sat directly under a comment saying a 404 is an answer, not a blip.)
+    retry: false,
   });
 }
 

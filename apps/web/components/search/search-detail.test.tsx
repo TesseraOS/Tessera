@@ -80,11 +80,16 @@ describe('SearchDetail file body', () => {
     // no File section at all rather than an empty one implying the file is blank.
     getFragment.mockRejectedValue(new Error('not found'));
 
-    renderDetail(FILE_HIT);
+    const { container } = renderDetail(FILE_HIT);
 
+    // Wait for the query to SETTLE before asserting absence. `expect(...).not.toBeInTheDocument()`
+    // is satisfied at t=0 while the query is still pending, so without this the test passed no
+    // matter what the error branch rendered — a negative assertion decided by timing rather than by
+    // behaviour. The skeleton disappearing is the observable proof that the error state was reached.
     await waitFor(() => {
-      expect(screen.queryByRole('heading', { name: 'File' })).not.toBeInTheDocument();
+      expect(container.querySelector('[data-slot="skeleton"]')).toBeNull();
     });
+    expect(screen.queryByRole('heading', { name: 'File' })).not.toBeInTheDocument();
   });
 
   it('does not request a body for a symbol hit — there is no corpus fragment behind it', () => {

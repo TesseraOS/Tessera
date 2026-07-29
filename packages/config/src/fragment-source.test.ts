@@ -1,5 +1,8 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ValidationError } from '@tessera/core';
-import type { BlobStore } from '@tessera/storage';
+import { createFilesystemBlobStore, type BlobStore } from '@tessera/storage';
 import { describe, expect, it } from 'vitest';
 import {
   corpusKey,
@@ -129,6 +132,41 @@ describe('createBlobFragmentSource', () => {
 
     expect(await source.get('bad-json')).toBeUndefined();
     expect(await source.get('not-a-doc')).toBeUndefined();
+  });
+
+  it('a traversal ref cannot escape its scope on the REAL filesystem adapter (F-075)', async () => {
+    // The test that would have caught the shipped defect. A Map-backed fake cannot traverse, so this
+    // one uses the adapter that actually resolves keys to paths — where `path.win32.join` normalizes
+    // `..` ACROSS a backslash, making `acme/default/a\..\..\..\globex\default\<ref>` land on
+    // globex's file. It read another tenant's body over real HTTP before `blobKeySegments` learned
+    // to reject a backslash.
+    const dir = await mkdtemp(join(tmpdir(), 'tessera-corpus-traversal-'));
+    try {
+      const blob = createFilesystemBlobStore({ root: dir });
+      await putFragment(
+        blob,
+        { ref: REF, text: 'globex confidential', kind: 'code' },
+        { tenantId: 'globex', projectId: 'default' },
+      );
+      const acme = createBlobFragmentSource(blob).forTenant('acme');
+
+      for (const ref of [
+        `a\\..\\..\\..\\globex\\default\\${REF}`,
+        `a/../../../globex/default/${REF}`,
+      ]) {
+        // Refused outright, not silently resolved to `undefined`: the caller asked for something the
+        // key space does not permit, and a quiet `undefined` would hide that from every caller.
+        await expect(acme.get(ref), `traversal ref ${JSON.stringify(ref)}`).rejects.toThrow(
+          ValidationError,
+        );
+      }
+
+      // And the owner still reads its own body — proving the guard did not simply break the store.
+      const globex = createBlobFragmentSource(blob).forTenant('globex');
+      expect(await globex.get(REF)).toMatchObject({ text: 'globex confidential' });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it('deleteFragment removes exactly the scoped key', async () => {

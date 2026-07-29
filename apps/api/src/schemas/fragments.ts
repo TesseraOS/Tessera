@@ -19,7 +19,19 @@ export const MAX_FRAGMENT_TEXT_CHARS = 131_072;
  * dashboard's rewrite proxy for a path that already exists.
  */
 export const fragmentRefParamSchema = z.object({
-  ref: z.string().min(1).max(256),
+  /**
+   * Constrained to the grammar the corpus actually issues — a `sha256` digest, or an id-shaped ref.
+   * **Defence in depth, not the control**: `blobKeySegments` rejects traversal for every adapter, and
+   * a scoped `FragmentSource` is what confines the read. But this is the first place in the product
+   * where a caller-supplied string reaches a storage key, and "any 256 characters" was how a
+   * backslash reached `path.win32.join` and escaped the tenant prefix. A parameter should accept the
+   * shape it is for.
+   */
+  ref: z
+    .string()
+    .min(1)
+    .max(256)
+    .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/, 'ref must be an alphanumeric corpus reference'),
 });
 
 /**

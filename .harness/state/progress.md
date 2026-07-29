@@ -3,6 +3,117 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-29 — F-075 DONE: the corpus gets a tenant, so a file body can finally be served
+
+**F-075** complete across **5 increments**. Plan:
+[`F-075-tenant-keyed-blob-corpus.md`](../plans/F-075-tenant-keyed-blob-corpus.md) (planner subagent).
+Decision: **[ADR-0067](../../docs/adr/0067-the-corpus-is-keyed-by-tenant-and-project.md)**.
+
+### The last store with one key space
+
+Every store in Tessera was scoped by `(tenant, project)` except the one holding the actual text.
+`putFragment` wrote the bare `ref` as the blob key, and a ref is `sha256(sourceId:path)` — derivable,
+not secret. So any by-ref endpoint would have been a cross-tenant IDOR, which is exactly why F-061
+shipped its detail Sheet with a matched excerpt for file results and recorded the limit (SL-2) rather
+than serving a body from an unscoped store.
+
+The red-before test states the defect at its sharpest — **two tenants indexing the same ref left one
+body**:
+
+```
+expected [ 'default/default/memory/<id>' ] to deeply equal [ 'memory/<id>' ]
+expected [ 'acme/default/<ref>', 'globex/default/<ref>' ] to deeply equal [ '<ref>' ]
+```
+
+### Scoping went on FragmentSource, and NOT on BlobStore
+
+The intuitive move is `forTenant` on the `BlobStore` port, matching every other store. It was
+rejected on four counts, and the reasoning is recorded as a **negative effect-link on E-007** so a
+future reader does not "restore the convention": `forTenant` is on every *domain* port and **no**
+*infrastructure* port (`RelationalStore`, `Queue`, `Embeddings` all lack it); the unscoped base view
+has to survive for the migration and `Runtime.stores.blob` either way, so a view there buys ceremony
+rather than a guarantee; it would push a *corpus* convention into a *generic* store's shared
+conformance suite; and `createBlobFragmentSource` **is** the adapter ADR-0033 wants enforcement in.
+
+`FragmentSource` gained **required** `forTenant`/`forProject` and the compiler rebinds it beside
+`retriever` and `graphStore`. That is the whole guarantee, and it is structural: **a compiler view
+whose halves disagree about whose data they read cannot be constructed**, because both derive from
+the same call. `createEnrichedRetriever` — whose doc comment used to explain why an unscoped corpus
+was acceptable *there* — now rebinds both halves, and that paragraph was rewritten rather than left
+quietly false.
+
+Keys are `{tenantId}/{projectId}/{ref}`. The acceptance said "e.g. `{tenantId}/{ref}`"; the project
+segment was added deliberately, because tenant-only keying leaves the identical defect one level
+down in a product where ADR-0037 calls a project an isolation boundary. Scope segments are validated
+**fail-closed**: `TenantId` is a bare string off an OIDC claim, and a tenant named `acme/x` would
+otherwise write into `acme`'s namespace.
+
+### The migration ran in anger, not just in tests
+
+`runMigrations` is SQL-only and cannot move blobs, so this needed its own mechanism: a boot-time,
+marker-guarded, idempotent copy-then-delete pass over the **port** (identical on filesystem and S3),
+called before any service exists. Proven against a real dev corpus rather than a fixture — booting
+the real Local runtime **moved 274 pre-existing unprefixed blobs** under `default/default/` and wrote
+its marker:
+
+```json
+{"tenantId":"default","projectId":"default","moved":274,"at":"2026-07-29T05:44:09.398Z"}
+```
+
+### Mutation testing caught two of my own tests passing for the wrong reason
+
+This is the F-064/F-074 lesson arriving from a third direction, and it cost two real fixes:
+
+1. **The IDOR e2e stayed GREEN with the route's scoping deleted.** The fixture's unscoped base view
+   was empty, so an unscoped read 404ed anyway — the test asserted the right outcome via the wrong
+   cause. A **decoy fragment** now lives under the base view, so "unscoped" means "200 with the
+   decoy" and the mutation goes red.
+2. **The project-scope case asserted an invented header value** (`beta`), which the project-selection
+   preHandler 404s *before the route runs*. It proved only that `beta` did not exist. It now creates
+   a real project; dropping `.forProject` alone turns it red.
+
+Both migration guards were mutation-checked the same way: each one, removed, fails exactly its own
+test. Two existing assertions were also checking a bare ref that nothing writes any more — they would
+have passed vacuously forever, and now name the scoped key.
+
+### One in-scope bug the key change forced into the open
+
+`memory-indexing.ts`'s `deleteLineage` passed no `projectId`, so an erasure in a non-default project
+already cleared the wrong indices. With project-keyed blobs it would also have left the **body**
+behind — index remanence becoming **content remanence after an erasure** (NFR-13). One line, fixed
+here with a test, flagged rather than smuggled.
+
+### The surface
+
+`GET /v1/fragments/:ref` with its **own** `fragments:read` permission — not `search:read`, which
+would have silently widened every already-issued scoped token from a 2000-char excerpt to an
+unbounded body reader — a `fragment.read` audit action that stays out of the activity chart by the
+existing `.read` rule, a narrow projection (never the ingestion metadata bag), a declared cap, and
+**404-never-403 by construction**. No MCP tool: agents read fragments through budget-bounded
+`compile_context`, and a by-ref bulk reader is the opposite of that.
+
+### Evidence
+
+`verify-state` valid (100 features, 32 effect-links; E-003/E-007/E-013/E-014/E-015/E-018/E-020
+extended) · typecheck / lint / format / test (44 tasks) / build green · `e2e` 27 tasks · **`e2e-full`
+7/7**, including globex getting **404** on acme's ref over real blob keys · `web-perf` every enforced
+budget met · `bench` search p95 8.24 ms, compile p95 9.71 ms, tokens 782/783 against 900 — no drift.
+Verified visually in the running app: search → open a file hit renders the body, a memory hit shows
+no File section, console clean.
+
+### Carried forward
+
+- **SL-5:** blobs ingested under a non-default tenant in the F-071→F-075 window land under the
+  deployment's default tenant. Reconstructing true ownership needs the unscoped registry enumeration
+  F-071 refused to add; the remedy is a re-scan. One feature wide, no released build.
+- The filesystem adapter does not prune empty parent dirs on delete, so a migrated corpus leaves an
+  empty legacy directory. Cosmetic and pre-existing — `list()` returns files — but now visible.
+- Explicitly scoped API tokens must be re-issued to gain `fragments:read`. Least privilege working.
+
+**Next step:** **F-076** — one file, one ref: unify the document and graph-node ref spaces so fusion
+can merge them — is the next lowest-id eligible in R4 (F-069 stays blocked on stakeholder input).
+
+---
 ## 2026-07-28 — F-074 DONE: Core Web Vitals become a gate, measured where each metric is meaningful
 
 **F-074** complete. Plan: [`F-074-core-web-vitals-gate.md`](../plans/F-074-core-web-vitals-gate.md).

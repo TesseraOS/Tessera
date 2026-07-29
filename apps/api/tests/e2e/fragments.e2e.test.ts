@@ -12,6 +12,8 @@ import { createInMemoryServices } from './support/in-memory-services';
 
 const ACME_REF = 'a'.repeat(64);
 const BIG_REF = 'b'.repeat(64);
+/** A ref that exists ONLY under globex — the target a traversal would reach if one worked. */
+const GLOBEX_REF = 'd'.repeat(64);
 
 /**
  * A genuinely scope-aware corpus, mirroring `createBlobFragmentSource`: fragments live under one
@@ -71,7 +73,12 @@ describe('@tessera/api /v1/fragments/:ref', () => {
           },
         },
         'acme/beta': {},
-        'globex/default': {},
+        // Populated under a ref of its OWN (not ACME_REF, which the cross-tenant 404 test needs to
+        // stay absent here), so a traversal that DID resolve would return 200 with this body rather
+        // than 404ing because there was nothing to find.
+        'globex/default': {
+          [GLOBEX_REF]: { ref: GLOBEX_REF, kind: 'code', text: 'globex-only confidential body' },
+        },
         // A DECOY under the unscoped base view, holding the same ref with different content.
         // Without it, every negative assertion below would pass against a route that dropped its
         // scoping entirely — the base view would simply be empty and 404 for the wrong reason.
@@ -189,14 +196,33 @@ describe('@tessera/api /v1/fragments/:ref', () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it('rejects a traversal ref as a validation error, never a read', async () => {
-    const res = await app.inject({
-      method: 'GET',
-      url: '/v1/fragments/..',
-      headers: { authorization: `Bearer ${await tokenFor('acme')}` },
-    });
+  it('rejects a traversal-shaped ref at the boundary schema, in either separator', async () => {
+    // This replaces a test that requested `/v1/fragments/..` and asserted 404. Fastify normalizes
+    // that URL to `/v1/` before routing, so it answered "route not found" and never reached the
+    // route it named — it would have passed with no validation whatsoever. It did: an evaluator pass
+    // found a live cross-tenant read behind it.
+    //
+    // **What this test can and cannot prove.** The fake source here is an object lookup, so it could
+    // not traverse even if the boundary let a traversal through — this asserts the SCHEMA rejects
+    // these refs, nothing more. The real containment is proven where keys are actually composed:
+    // `blob.conformance.ts` (every adapter rejects a backslash) and `fragment-source.test.ts` (a
+    // traversal ref cannot escape its scope on the real filesystem adapter).
+    const token = `Bearer ${await tokenFor('acme')}`;
 
-    expect(res.statusCode).toBe(404);
+    for (const ref of [
+      `a\\..\\..\\..\\globex\\default\\${GLOBEX_REF}`,
+      `a/../../../globex/default/${GLOBEX_REF}`,
+    ]) {
+      const res = await app.inject({
+        method: 'GET',
+        url: `/v1/fragments/${encodeURIComponent(ref)}`,
+        headers: { authorization: token },
+      });
+
+      expect(res.statusCode, `traversal ref ${JSON.stringify(ref)}`).toBe(400);
+      expect(res.json().error.code).toBe('VALIDATION');
+      expect(res.body, 'no other scope content may leak').not.toContain('globex-only');
+    }
   });
 
   it('answers a typed error when no corpus is configured (the doc-generation path)', async () => {

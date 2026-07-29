@@ -2608,7 +2608,8 @@
             "schema": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 256
+              "maxLength": 256,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
             },
             "in": "path",
             "name": "ref",

@@ -21,6 +21,7 @@ const handoff = readHandoff();
 
 interface Hit {
   readonly ref: string;
+  readonly kind?: string;
   readonly signals: readonly { readonly signal: string }[];
 }
 
@@ -33,7 +34,9 @@ async function search(token: string, text: string, projectId?: string): Promise<
       'content-type': 'application/json',
       ...(projectId !== undefined ? { 'x-tessera-project': projectId } : {}),
     },
-    body: JSON.stringify({ query: text }),
+    // `kind` is opt-in enrichment; the fragment test below needs it to tell a FILE hit from a
+    // memory the human journey captured against this same live deployment.
+    body: JSON.stringify({ query: text, include: { kind: true } }),
   });
   expect(response.status, `search "${text}"`).toBe(200);
   return ((await response.json()) as { results: Hit[] }).results;
@@ -134,22 +137,31 @@ test.describe('scope-aware ingestion isolation (F-071)', () => {
     // The F-075 acceptance clause, over real blob keys rather than a fake. Refs are
     // `sha256(sourceId:path)` — globex can derive this one; what stops it is that its scoped view of
     // the corpus has nothing under `globex/default/<ref>`.
+    //
+    // The hit must be filtered to `kind: 'file'`, not merely to "has a keyword signal". The human
+    // journey captures a memory titled `Quernstone ledger is append-only (e2e <ts>)` against THIS
+    // deployment and runs first, so a keyword-only filter intermittently selected that memory —
+    // whose body spells the term with a capital Q. The suite is serialized with retries:0 precisely
+    // so a flake is a failure, and this one made the gate red on one run in two while skipping the
+    // isolation assertions below entirely.
     const hits = await search(handoff.token, FIXTURE_TERM);
-    const keywordHit = hits.find((hit) =>
-      hit.signals.some((signal) => signal.signal === 'keyword'),
+    const fileHit = hits.find(
+      (hit) => hit.kind === 'file' && hit.signals.some((signal) => signal.signal === 'keyword'),
     );
-    expect(keywordHit, 'acme must have a keyword hit to read the body of').toBeDefined();
-    const ref = keywordHit!.ref;
+    expect(fileHit, 'acme must have a keyword-matched FILE hit to read the body of').toBeDefined();
+    const ref = fileHit!.ref;
 
     const owner = await readFragment(handoff.token, ref);
     expect(owner.status, 'acme must read its own file body').toBe(200);
-    expect(owner.body.text, 'the served body must be the real file').toContain(FIXTURE_TERM);
+    expect(owner.body.text.toLowerCase(), 'the served body must be the real file').toContain(
+      FIXTURE_TERM.toLowerCase(),
+    );
     expect(owner.body.truncated).toBe(false);
 
     const stranger = await readFragment(handoff.otherToken, ref);
     expect(stranger.status, 'globex must not read acme file bodies').toBe(404);
     // No part of the content leaks through the error either.
-    expect(JSON.stringify(stranger.body)).not.toContain(FIXTURE_TERM);
+    expect(JSON.stringify(stranger.body).toLowerCase()).not.toContain(FIXTURE_TERM.toLowerCase());
   });
 });
 

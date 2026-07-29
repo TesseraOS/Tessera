@@ -72,5 +72,29 @@ export function runBlobConformance(name: string, makeStore: BlobFactory): void {
         await cleanup();
       }
     });
+
+    it('rejects a BACKSLASH key on every adapter and every OS (F-075)', async () => {
+      // The key space must not depend on the platform. `path.win32.join` treats `\` as a separator
+      // and normalizes `..` across it, so `a\..\..\..\other` escapes the directory the caller named
+      // on Windows while being an ordinary opaque name on POSIX and on S3. Once a caller-supplied
+      // string could reach a key (GET /v1/fragments/:ref), that difference was a cross-tenant read.
+      // Asserted in the SHARED suite so no adapter can be the lax one.
+      const { store, cleanup } = await makeStore();
+      try {
+        await store.put('tenant/project/real', bytes('owned by this scope'));
+
+        await expect(
+          store.put(String.raw`tenant/project/a\..\..\escaped`, bytes('x')),
+        ).rejects.toThrow();
+        await expect(store.get(String.raw`tenant/project/a\..\..\..\other`)).rejects.toThrow();
+        await expect(store.exists(String.raw`a\..\b`)).rejects.toThrow();
+        await expect(store.delete(String.raw`tenant\..\..\real`)).rejects.toThrow();
+
+        // Nothing escaped and nothing was destroyed by the attempts above.
+        expect(text(await store.get('tenant/project/real'))).toBe('owned by this scope');
+      } finally {
+        await cleanup();
+      }
+    });
   });
 }

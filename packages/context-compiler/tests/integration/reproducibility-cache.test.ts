@@ -3,7 +3,7 @@ import type { FusedCandidate, HybridRetriever } from '@tessera/retrieval';
 import { createInMemoryCompilationCache } from '../../src/cache';
 import { createContextCompiler } from '../../src/compiler';
 import type { FragmentSource } from '../../src/ports/fragment-source';
-import { scopedFragmentSource, singleFragmentSource } from './scoped-corpus';
+import { singleFragmentSource, singleScopeFragmentSource } from './scoped-corpus';
 import type { CompressionStrategy, RankStrategy } from '../../src/strategies';
 
 const FRAGS: Record<string, string> = {
@@ -29,7 +29,7 @@ function countingRetriever(): HybridRetriever & { calls: () => number } {
   };
 }
 
-const source: FragmentSource = scopedFragmentSource(
+const source: FragmentSource = singleScopeFragmentSource(
   new Map(Object.entries(FRAGS).map(([ref, text]) => [ref, { ref, text, kind: 'code' }] as const)),
 );
 

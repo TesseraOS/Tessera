@@ -278,10 +278,19 @@ export async function assembleRuntime(
   // request. Zero-auth deployments resolve every request to `config.auth.tenant`, so that is where
   // their existing blobs belong; anything else predates multi-tenant ingestion and belongs to the
   // default tenant. Marker-guarded, so this is one `exists()` on every boot after the first.
-  await migrateCorpusToScopedKeys(blob, {
+  const corpusMigration = await migrateCorpusToScopedKeys(blob, {
     tenantId: config.auth.mode === 'none' ? config.auth.tenant : DEFAULT_TENANT_ID,
     projectId: DEFAULT_PROJECT_ID,
   });
+  if (corpusMigration.moved > 0) {
+    // Moving a corpus is a one-time, irreversible-looking event on an operator's data — it belongs
+    // in the boot log, not only in the marker file. ADR-0067 claimed this was "visible in the logs"
+    // before anything actually logged it; an evaluator pass caught the claim, and this is the line
+    // that makes it true. Silent on the common path (nothing to move), so it never becomes noise.
+    console.info(
+      `[tessera] corpus migration: moved ${String(corpusMigration.moved)} blob(s) under their (tenant, project) key`,
+    );
+  }
 
   const graph = createKnowledgeGraphService(adapters.graphStore);
 

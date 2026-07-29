@@ -11,7 +11,7 @@ import {
   type HybridRetriever,
 } from '@tessera/retrieval';
 import type { FragmentSource, SourceFragment } from '../../src/ports/fragment-source';
-import { scopedFragmentSource } from './scoped-corpus';
+import { singleScopeFragmentSource } from './scoped-corpus';
 
 interface Doc {
   readonly key: string;
@@ -80,7 +80,7 @@ export async function buildCorpus(): Promise<Corpus> {
     // Scoped like the real corpus: the docs are indexed under the DEFAULT tenant, so a compiler
     // view bound elsewhere resolves nothing. That is what makes the forTenant test prove the CORPUS
     // is isolated rather than only retrieval.
-    fragmentSource: scopedFragmentSource(fragments),
+    fragmentSource: singleScopeFragmentSource(fragments),
     graphStore,
     id,
     relevant: new Set([id('auth'), id('tokens')]),

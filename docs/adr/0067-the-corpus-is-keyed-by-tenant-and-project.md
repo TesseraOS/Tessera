@@ -64,6 +64,16 @@ A tenant id that cannot be a legal segment produces an **error**, not a namespac
 Validating tenant ids at the *authentication* boundary is the better long-term home; it is recorded as
 a limit here rather than built, because widening auth validation is a separate blast radius.
 
+**How far fail-closed reaches, stated precisely.** This is wider than "the new route stops working".
+`createEnrichedRetriever` calls `fragments.get` for **every** hit, so a tenant whose id is not a legal
+segment loses `/v1/search` and `/v1/compile` as well as `/v1/fragments/:ref`. Concretely, an OIDC
+deployment whose `tenant_id` claim is URL-shaped (`https://issuer.example.com/tenants/acme`),
+colon-shaped (`acme:eu`), longer than 64 characters, or `_`-prefixed is affected. That is a
+deliberate choice — a tenant that cannot be given a private namespace must not be given someone
+else's — but it is a **behaviour change** for such a deployment, and it is why validating the claim at
+authentication is registered as the real fix (**F-101**) rather than left implied. Project ids are
+unaffected: they are `randomUUID()`, always legal.
+
 ### 3. Scoping lives on `FragmentSource`. `BlobStore` deliberately does **not** get `forTenant`
 
 `FragmentSource` (`@tessera/context-compiler`) gains **required** `forTenant`/`forProject`, matching
@@ -168,8 +178,10 @@ It runs over the **port**, so filesystem and S3 behave identically with no profi
   corpus; the already-prefixed check makes that harmless except for a tenant named after a legacy
   key's first segment (`memory`). Stated in the code as well as here.
 - One `list()` on first boot of a self-hosted deployment (a full bucket listing on S3), then one
-  `exists()` per boot forever. A failed migration re-lists until it succeeds — correct behaviour for
-  an incomplete migration, and visible in the logs.
+  `exists()` per boot forever. A failed migration rejects the boot (there is no `catch` between
+  `assembleRuntime` and `startApiServer`) and re-lists on the next attempt — correct behaviour for an
+  incomplete migration. A pass that **moves** anything logs the count; a pass with nothing to move is
+  silent, so the common path adds no noise.
 - This partitions; it does **not** encrypt. NFR-13's "configurable encryption" is a separate concern.
 - Isolation remains only as good as `tenantOf(request)`: this removes an authorization hole, it is not
   an authentication control.

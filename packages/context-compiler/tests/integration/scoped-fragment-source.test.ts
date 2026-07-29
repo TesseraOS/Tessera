@@ -27,20 +27,29 @@ const retriever: HybridRetriever = {
   forProject: () => retriever,
 };
 
+const DECOY = 'a decoy body that belongs to nobody in this test';
+
 describe('the compiler resolves fragments through its own scope (ADR-0067)', () => {
+  // Three scopes, and the DECOYS are load-bearing. With content under `acme/default` alone, every
+  // negative below is satisfied by the other scopes being empty — so they stayed green when the
+  // compiler stopped rebinding `fragmentSource` (an evaluator pass caught exactly that). With a
+  // decoy under the base scope and under `acme/beta`, an unrebound view returns the WRONG body
+  // instead of no body, and the assertions go red.
   const fragmentSource = scopedFragmentSource(
-    new Map([[REF, { ref: REF, text: TEXT, kind: 'code' }]]),
-    {
-      tenantId: 'acme',
-      projectId: 'default',
-    },
+    new Map([
+      ['acme/default', new Map([[REF, { ref: REF, text: TEXT, kind: 'code' }]])],
+      ['default/default', new Map([[REF, { ref: REF, text: DECOY, kind: 'code' }]])],
+      ['acme/beta', new Map([[REF, { ref: REF, text: DECOY, kind: 'code' }]])],
+    ]),
   );
   const compiler = createContextCompiler({ retriever, fragmentSource });
 
-  it('the owning tenant gets the body', async () => {
+  it('the owning tenant gets ITS body, not the base scope decoy', async () => {
     const pkg = await compiler.forTenant('acme').compile({ task: 'rounding rule', budget: 500 });
 
-    expect(pkg.sections.flatMap((section) => section.fragments).map((f) => f.ref)).toEqual([REF]);
+    const fragments = pkg.sections.flatMap((section) => section.fragments);
+    expect(fragments.map((f) => f.ref)).toEqual([REF]);
+    expect(fragments[0]?.text).toContain('half-even');
   });
 
   it('another tenant compiling the SAME ref gets no content, and the compiler says so', async () => {
@@ -54,12 +63,17 @@ describe('the compiler resolves fragments through its own scope (ADR-0067)', () 
     expect(resolve?.dropped.map((drop) => drop.ref)).toEqual([REF]);
   });
 
-  it('another PROJECT within the owning tenant also gets no content', async () => {
+  it('another PROJECT within the owning tenant reads ITS corpus, never the default project"s', async () => {
     const pkg = await compiler
       .forTenant('acme')
       .forProject('beta')
       .compile({ task: 'rounding rule', budget: 500 });
 
-    expect(pkg.sections.flatMap((section) => section.fragments)).toHaveLength(0);
+    // Asserted as "gets the beta content" rather than "gets nothing": beta genuinely holds a
+    // fragment here, so a `forProject` that failed to rebind would surface acme/default's real body
+    // and this goes red. An empty-beta fixture would have passed either way.
+    const text = pkg.sections.flatMap((section) => section.fragments).map((f) => f.text);
+    expect(text).toEqual([DECOY]);
+    expect(text.join()).not.toContain('half-even');
   });
 });

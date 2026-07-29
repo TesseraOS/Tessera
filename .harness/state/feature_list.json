@@ -2523,7 +2523,7 @@
       "package": "@tessera/storage",
       "release": "R4",
       "priority": "should",
-      "status": "backlog",
+      "status": "in_progress",
       "blockedBy": [],
       "acceptance": [
         "The corpus is tenant-partitioned: `putFragment`/`createBlobFragmentSource` key blobs per tenant (e.g. `{tenantId}/{ref}`) and the compiler + search enrichment read through a tenant-scoped FragmentSource; a migration moves existing unprefixed keys",
@@ -2535,7 +2535,8 @@
         "typecheck",
         "lint",
         "test",
-        "e2e"
+        "e2e",
+        "e2e-full"
       ],
       "effects": [
         "E-007",

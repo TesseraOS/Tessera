@@ -154,6 +154,25 @@ export function useMemoryHistory(lineageId: string, enabled = true) {
   });
 }
 
+/**
+ * One corpus fragment's stored body (F-075) — GET /v1/fragments/:ref.
+ *
+ * Tenant- and project-scoped server-side: this hook cannot widen what the caller may read, and a ref
+ * they do not own 404s indistinguishably from one that does not exist.
+ */
+export function useFragment(ref: string, enabled = true) {
+  return useQuery({
+    queryKey: ['fragment', ref],
+    queryFn: () => api.getFragment(ref),
+    enabled: enabled && ref.length > 0,
+    staleTime: 10_000,
+    // A fragment body is immutable for a given ref (the ref is derived from the content's path, and
+    // a re-ingest writes a new body under the same key only when the file changed). One retry is
+    // enough; a 404 here is an answer, not a blip.
+    retry: 1,
+  });
+}
+
 /** Edit a memory (FR-13) — PATCH appends a superseding version. Refreshes the list + the lineage. */
 export function useEditMemory() {
   const queryClient = useQueryClient();

@@ -14,7 +14,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Snippet } from '@/components/search/snippet';
 import { kindOf, titleOf } from '@/components/search/result-card';
-import { useEffects, useMemoryHistory } from '@/lib/api/hooks';
+import { useEffects, useFragment, useMemoryHistory } from '@/lib/api/hooks';
 import {
   NODE_KINDS,
   type CandidateNode,
@@ -108,6 +108,7 @@ function SearchDetailBody({ result, query }: { result: FusedCandidate; query: st
         <ProvenanceTable result={result} />
 
         {kind === 'memory' ? <MemoryBody result={result} /> : null}
+        {kind === 'file' ? <FileBody result={result} /> : null}
 
         <section className="space-y-1.5">
           <h3 className="text-xs font-semibold">Actions</h3>
@@ -212,6 +213,43 @@ function MemoryBody({ result }: { result: FusedCandidate }) {
       <p className="text-muted-foreground text-xs leading-relaxed whitespace-pre-wrap">
         {current.body}
       </p>
+    </section>
+  );
+}
+
+/**
+ * A file's full body, via the tenant- and project-scoped `GET /v1/fragments/:ref` (F-075).
+ *
+ * This section is what F-061 could not ship: it recorded the limit (SL-2) and rendered the matched
+ * excerpt alone, because serving a body by ref over an unscoped corpus would have been a
+ * cross-tenant IDOR. ADR-0067 keyed the corpus by `(tenant, project)`, so the read is safe and the
+ * result stops being a dead end.
+ *
+ * **The excerpt above stays.** It answers *why this ranked* — real offsets into the matched text.
+ * This answers *what this is*. Collapsing them would lose the provenance the panel exists to show.
+ */
+function FileBody({ result }: { result: FusedCandidate }) {
+  const { data, isPending, isError } = useFragment(result.ref);
+
+  if (isPending) return <Skeleton className="h-24 w-full" />;
+  // Absent, never disabled-with-a-lie — the same rule the Effects section follows. A hit whose
+  // fragment the server will not serve (another tenant's ref, or a graph node that was never in the
+  // corpus) shows nothing rather than an empty box claiming to be a file.
+  if (isError || !data) return null;
+
+  return (
+    <section className="space-y-1.5">
+      <h3 className="text-xs font-semibold">File</h3>
+      <div className="bg-muted/40 max-h-96 overflow-auto rounded-lg p-3">
+        <pre className="font-mono text-[11px] leading-relaxed whitespace-pre-wrap">{data.text}</pre>
+      </div>
+      {data.truncated ? (
+        // The number comes from what was actually delivered, not from a copy of the server's cap:
+        // a duplicated constant here would eventually claim a size the API no longer sends.
+        <p className="text-muted-foreground text-[10px]">
+          Showing the first {data.text.length.toLocaleString()} characters.
+        </p>
+      ) : null}
     </section>
   );
 }

@@ -1,6 +1,7 @@
 import { createTesseraClient, TesseraApiError } from '@tessera/sdk';
 import type {
   CreateProjectRequest,
+  Fragment,
   Project,
   ProjectDeleteResult,
   ProjectList,
@@ -120,6 +121,13 @@ export const api = {
   getMemory: (lineageId: string): Promise<Memory> => sdk.getMemory(lineageId),
   memoryHistory: (lineageId: string): Promise<MemoryHistoryResponse> =>
     sdk.memoryHistory(lineageId),
+  /**
+   * The stored body behind a search hit (F-075). Typed from the generated SDK rather than the
+   * hand-written `types.ts` mirror — ADR-0048's direction for new surfaces, so there is no second
+   * declaration to drift. 404s for a ref this tenant does not own, exactly as for one that does not
+   * exist.
+   */
+  getFragment: (ref: string): Promise<Fragment> => sdk.getFragment(ref),
   editMemory: (lineageId: string, body: EditMemoryBody): Promise<Memory> =>
     sdk.editMemory(lineageId, body),
   getAudit: (query: AuditQuery = {}): Promise<AuditPage> => sdk.getAudit(query),

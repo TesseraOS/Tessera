@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { putFragment } from '../../src/fragment-source';
+import { DEFAULT_CORPUS_SCOPE, putFragment } from '../../src/fragment-source';
 import { loadConfig } from '../../src/load';
 import { createRuntime } from '../../src/profiles/create-runtime';
 import { createLocalRuntime } from '../../src/profiles/local';
@@ -59,11 +59,15 @@ describe('local profile runtime', () => {
     expect(results.map((candidate) => candidate.ref)).toContain('doc:auth');
 
     // Blob-backed fragment corpus + compile resolves it.
-    await putFragment(rt.stores.blob, {
-      ref: 'doc:auth',
-      text: 'authentication uses signed tokens to verify the caller',
-      kind: 'markdown',
-    });
+    await putFragment(
+      rt.stores.blob,
+      {
+        ref: 'doc:auth',
+        text: 'authentication uses signed tokens to verify the caller',
+        kind: 'markdown',
+      },
+      DEFAULT_CORPUS_SCOPE,
+    );
     const pkg = await rt.services.compiler.compile({ task: 'authentication tokens', budget: 200 });
     const refs = pkg.sections
       .flatMap((section) => section.fragments)

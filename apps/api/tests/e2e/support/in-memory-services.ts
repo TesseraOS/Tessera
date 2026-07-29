@@ -76,10 +76,26 @@ const keywordRetriever: Retriever = {
   },
 };
 
+/**
+ * The shared fixture corpus, **deliberately visible to every scope** — like `keywordRetriever` above,
+ * and for the same reason: these suites authenticate as `acme`, `globex` and `default` against one
+ * fixture, and a strictly-scoped fake would make them assert the fake's seeding rather than the
+ * behaviour under test.
+ *
+ * Isolation is therefore proved where it is real, not here: `fragments.e2e.test.ts` builds its own
+ * scope-aware source (`scopedFragments`) for the cross-tenant 404, and `tests/e2e-full` proves it
+ * again over the real blob store with real keys.
+ */
 const fragmentSource: FragmentSource = {
   get(ref) {
     const doc = CORPUS[ref];
     return Promise.resolve(doc === undefined ? undefined : { ref, text: doc.text, kind: doc.kind });
+  },
+  forTenant() {
+    return fragmentSource;
+  },
+  forProject() {
+    return fragmentSource;
   },
 };
 

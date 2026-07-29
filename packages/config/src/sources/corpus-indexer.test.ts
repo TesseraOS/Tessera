@@ -84,7 +84,10 @@ describe('createCorpusIndexer', () => {
       kind: 'markdown',
     });
 
-    expect(await blob.exists('doc:1')).toBe(true);
+    // The corpus key carries its owning (tenant, project) since F-075/ADR-0067. Asserting the bare
+    // ref here would pass vacuously against a store that never wrote anything.
+    expect(await blob.exists('default/default/doc:1')).toBe(true);
+    expect(await blob.exists('doc:1')).toBe(false);
     expect((await keyword.retrieve({ text: 'authentication tokens' })).map((c) => c.ref)).toContain(
       'doc:1',
     );
@@ -113,7 +116,9 @@ describe('createCorpusIndexer', () => {
     await indexer.indexDocument({ ref: 'doc:1', text: 'authentication tokens', kind: 'markdown' });
     await indexer.removeDocument({ ref: 'doc:1' });
 
-    expect(await blob.exists('doc:1')).toBe(false);
+    // The SCOPED key, not the bare ref: asserting `doc:1` here would be vacuously true — nothing
+    // ever writes it — and the delete could regress to a no-op without failing.
+    expect(await blob.exists('default/default/doc:1')).toBe(false);
     expect(
       (await keyword.retrieve({ text: 'authentication tokens' })).map((c) => c.ref),
     ).not.toContain('doc:1');

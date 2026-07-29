@@ -72,10 +72,17 @@ const keywordRetriever: Retriever = {
   },
 };
 
+/** Visible to every scope, matching `keywordRetriever` above — see the api support file for why. */
 const fragmentSource: FragmentSource = {
   get(ref) {
     const doc = CORPUS[ref];
     return Promise.resolve(doc === undefined ? undefined : { ref, text: doc.text, kind: doc.kind });
+  },
+  forTenant() {
+    return fragmentSource;
+  },
+  forProject() {
+    return fragmentSource;
   },
 };
 

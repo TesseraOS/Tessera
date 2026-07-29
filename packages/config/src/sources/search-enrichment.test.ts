@@ -22,9 +22,25 @@ const CORPUS: Record<string, SourceFragment> = {
   },
 };
 
-const fragments: FragmentSource = {
-  get: (ref) => Promise.resolve(CORPUS[ref]),
-};
+/**
+ * A scope-aware fake corpus (ADR-0067): fragments live under `home`, and a view bound elsewhere
+ * resolves nothing — the shape `createBlobFragmentSource` has. Scope-blind doubles would make the
+ * rebinding assertions below pass without the rebinding existing.
+ */
+function fakeFragments(
+  corpus: Record<string, SourceFragment>,
+  home = 'default/default',
+  view = 'default/default',
+): FragmentSource {
+  return {
+    get: (ref) => Promise.resolve(home === view ? corpus[ref] : undefined),
+    forTenant: (tenantId) => fakeFragments(corpus, home, `${tenantId}/default`),
+    forProject: (projectId) =>
+      fakeFragments(corpus, home, `${view.split('/')[0] ?? ''}/${projectId}`),
+  };
+}
+
+const fragments: FragmentSource = fakeFragments(CORPUS);
 
 function candidate(ref: string, over: Partial<FusedCandidate> = {}): FusedCandidate {
   return {
@@ -174,20 +190,38 @@ describe('createEnrichedRetriever', () => {
     expect(results[0]!.signals).toEqual(first.signals);
   });
 
-  it('forTenant rebinds the inner retriever', async () => {
+  it('forTenant rebinds BOTH halves — the retriever and the corpus', async () => {
     const scoped = innerWith([candidate(FILE_REF)]);
     const inner = {
       search: vi.fn(() => Promise.resolve([])),
       forTenant: vi.fn(() => scoped),
     } satisfies HybridRetriever;
 
-    const retriever = createEnrichedRetriever(inner, fragments);
+    // The corpus lives under `acme`, so a label can only appear if the FragmentSource was rebound
+    // too. Before F-075 this test passed with the corpus left on the default scope — which is
+    // exactly the gap ADR-0067 closes.
+    const retriever = createEnrichedRetriever(inner, fakeFragments(CORPUS, 'acme/default'));
     const view = retriever.forTenant('acme');
     const [result] = await view.search({ text: 'ledger' });
 
     expect(inner.forTenant).toHaveBeenCalledWith('acme');
-    // Enrichment survives the rebinding, and only looks up refs the scoped view returned.
     expect(result!.label).toBe('src/reporting/ledger.ts');
+  });
+
+  it('a view bound to another tenant resolves NO fragment for the same ref', async () => {
+    // The IDOR guard in miniature: same ref, different scope, nothing comes back. The candidate is
+    // still returned (never dropped) — it just cannot be enriched from a corpus it does not own.
+    const scoped = innerWith([candidate(FILE_REF)]);
+    const inner = {
+      search: vi.fn(() => Promise.resolve([])),
+      forTenant: vi.fn(() => scoped),
+    } satisfies HybridRetriever;
+
+    const retriever = createEnrichedRetriever(inner, fakeFragments(CORPUS, 'acme/default'));
+    const [result] = await retriever.forTenant('globex').search({ text: 'ledger' });
+
+    expect(result!.ref).toBe(FILE_REF);
+    expect(result!.label).toBeUndefined();
   });
 
   it('passes the query through to the inner retriever untouched', async () => {
@@ -200,9 +234,9 @@ describe('createEnrichedRetriever', () => {
   });
 
   it('survives a fragment with no metadata rather than throwing', async () => {
-    const bare: FragmentSource = {
-      get: (ref) => Promise.resolve({ ref, kind: 'code', text: 'const a = 1;' }),
-    };
+    const bare: FragmentSource = fakeFragments({
+      [FILE_REF]: { ref: FILE_REF, kind: 'code', text: 'const a = 1;' },
+    });
     const retriever = createEnrichedRetriever(innerWith([candidate(FILE_REF)]), bare);
 
     const [result] = await retriever.search({ text: 'a', include: { kind: true, node: true } });

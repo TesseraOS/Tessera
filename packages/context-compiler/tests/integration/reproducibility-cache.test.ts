@@ -3,6 +3,7 @@ import type { FusedCandidate, HybridRetriever } from '@tessera/retrieval';
 import { createInMemoryCompilationCache } from '../../src/cache';
 import { createContextCompiler } from '../../src/compiler';
 import type { FragmentSource } from '../../src/ports/fragment-source';
+import { scopedFragmentSource, singleFragmentSource } from './scoped-corpus';
 import type { CompressionStrategy, RankStrategy } from '../../src/strategies';
 
 const FRAGS: Record<string, string> = {
@@ -28,10 +29,9 @@ function countingRetriever(): HybridRetriever & { calls: () => number } {
   };
 }
 
-const source: FragmentSource = {
-  get: (ref) =>
-    Promise.resolve(FRAGS[ref] !== undefined ? { ref, text: FRAGS[ref], kind: 'code' } : undefined),
-};
+const source: FragmentSource = scopedFragmentSource(
+  new Map(Object.entries(FRAGS).map(([ref, text]) => [ref, { ref, text, kind: 'code' }] as const)),
+);
 
 describe('compiler reproducibility + caching + pluggable strategies (F-020)', () => {
   it('serves an identical compile from cache without re-running retrieval', async () => {
@@ -74,10 +74,7 @@ describe('compiler reproducibility + caching + pluggable strategies (F-020)', ()
       'second filler line of unrelated padding content that should be dropped',
       'third filler line of unrelated padding content that should be dropped',
     ].join('\n');
-    const bigSource: FragmentSource = {
-      get: (ref) =>
-        Promise.resolve(ref === 'file:big' ? { ref, text: bigText, kind: 'code' } : undefined),
-    };
+    const bigSource: FragmentSource = singleFragmentSource('file:big', bigText);
     const bigRetriever: HybridRetriever = {
       search: () =>
         Promise.resolve([

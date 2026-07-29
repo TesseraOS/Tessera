@@ -18,11 +18,17 @@ import { extractSnippet } from './search-snippet.js';
  * lesson). It also adds no `ApiServices` member, so the `instrumentServices` trap (E-015, which has
  * already 500ed a route once) is structurally avoided.
  *
- * **Tenant-safe by construction.** The decorator wraps an already-`forTenant`-scoped retriever and
- * only ever looks up refs that scoped retriever returned. It cannot widen what a tenant can see. This
- * is why the corpus `BlobStore` having no `forTenant` is acceptable *here* — and why it would not be
- * for any by-ref endpoint (see the plan's SL-2: refs are derivable, so serving bodies by ref would be
- * a cross-tenant IDOR).
+ * **Tenant-safe twice over.** The decorator wraps an already-`forTenant`-scoped retriever and only
+ * ever looks up refs that scoped retriever returned — so it could not widen what a tenant sees even
+ * if the corpus were open. Since F-075/ADR-0067 it no longer relies on that argument alone: the
+ * {@link FragmentSource} is itself scoped and is rebound in `forTenant`/`forProject` below, so the
+ * lookup is confined to the same `(tenant, project)` as the retriever it decorates.
+ *
+ * That second guarantee is the one that mattered. The first held only because every ref came from a
+ * scoped retriever, which is exactly the premise a by-ref endpoint breaks — refs are
+ * `sha256(sourceId:path)`, derivable and not secret, so `GET /v1/fragments/:ref` over an unscoped
+ * corpus would have been a cross-tenant IDOR. That endpoint is why F-075 exists, and why this
+ * decorator must rebind both halves rather than just its inner retriever.
  */
 
 /** What a result is, as the dashboard's kind filter names them. */
@@ -115,13 +121,15 @@ export function createEnrichedRetriever(
     },
 
     forTenant(tenantId) {
-      // Rebind the inner retriever; the corpus lookup stays keyed by refs that view returns.
-      return createEnrichedRetriever(inner.forTenant(tenantId), fragments);
+      // BOTH halves move together (ADR-0067). Rebinding only the retriever would leave the corpus
+      // reading the default tenant's blobs for another tenant's refs — labels and snippets from the
+      // wrong org, or (harmlessly but wrongly) nothing at all.
+      return createEnrichedRetriever(inner.forTenant(tenantId), fragments.forTenant(tenantId));
     },
 
     forProject(projectId) {
-      // Rebind to the project scope (ADR-0037); the corpus lookup stays keyed by refs that view returns.
-      return createEnrichedRetriever(inner.forProject(projectId), fragments);
+      // Same, for the project scope (ADR-0037).
+      return createEnrichedRetriever(inner.forProject(projectId), fragments.forProject(projectId));
     },
   };
 }

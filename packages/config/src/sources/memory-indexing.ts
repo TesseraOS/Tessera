@@ -86,7 +86,11 @@ export function createIndexingMemoryService(
     },
     async deleteLineage(lineageId) {
       await inner.deleteLineage(lineageId);
-      await indexer.removeDocument({ ref: memoryRef(lineageId), tenantId });
+      // `projectId` is passed for the same reason `prune` passes it: without it an erasure in a
+      // non-default project cleared the DEFAULT project's indices — and since F-075 keys the corpus
+      // blob by project too, it would also have left the BODY behind. Index remanence is a bug;
+      // content remanence after an erasure is an NFR-13 failure.
+      await indexer.removeDocument({ ref: memoryRef(lineageId), tenantId, projectId });
     },
     forTenant(next) {
       return createIndexingMemoryService(inner.forTenant(next), indexer, next, DEFAULT_PROJECT_ID);

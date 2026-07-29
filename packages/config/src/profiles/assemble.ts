@@ -24,6 +24,8 @@ import { createContextCompiler } from '@tessera/context-compiler';
 import {
   createEventBus,
   createStaticFlagProvider,
+  DEFAULT_PROJECT_ID,
+  DEFAULT_TENANT_ID,
   ValidationError,
   type PrincipalRef,
   type TenantId,
@@ -60,6 +62,7 @@ import {
 import type { BlobStore, Queue, RelationalStore, VectorStore } from '@tessera/storage';
 import { createBlobFragmentSource } from '../fragment-source.js';
 import { createCorpusIndexer } from '../sources/corpus-indexer.js';
+import { migrateCorpusToScopedKeys } from '../sources/corpus-migration.js';
 import { createIndexingDocumentSink } from '../sources/ingestion-sink.js';
 import { createIndexingMemoryService } from '../sources/memory-indexing.js';
 import { createEnrichedRetriever } from '../sources/search-enrichment.js';
@@ -269,6 +272,16 @@ export async function assembleRuntime(
 ): Promise<Runtime> {
   const { secrets } = options;
   const { relational, blob, queue, vector, embeddings, keyword, temporal, manifest } = adapters;
+
+  // Corpus keys carry their (tenant, project) since F-075/ADR-0067. A pre-F-075 corpus is unreadable
+  // under the new layout, so it is migrated HERE — before a single service exists, let alone a served
+  // request. Zero-auth deployments resolve every request to `config.auth.tenant`, so that is where
+  // their existing blobs belong; anything else predates multi-tenant ingestion and belongs to the
+  // default tenant. Marker-guarded, so this is one `exists()` on every boot after the first.
+  await migrateCorpusToScopedKeys(blob, {
+    tenantId: config.auth.mode === 'none' ? config.auth.tenant : DEFAULT_TENANT_ID,
+    projectId: DEFAULT_PROJECT_ID,
+  });
 
   const graph = createKnowledgeGraphService(adapters.graphStore);
 

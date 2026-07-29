@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createPostgresStore } from '@tessera/storage';
-import { putFragment } from '../../src/fragment-source';
+import { DEFAULT_CORPUS_SCOPE, putFragment } from '../../src/fragment-source';
 import { createRuntime } from '../../src/profiles/create-runtime';
 import { loadConfig } from '../../src/load';
 import type { Runtime } from '../../src/runtime';
@@ -118,11 +118,15 @@ describe.skipIf(!enabled)('self-hosted profile (TESSERA_TEST_SELF_HOSTED=1)', ()
     const results = await rt.services.search.search({ text: 'authentication tokens' });
     expect(results.map((candidate) => candidate.ref)).toContain('doc:auth');
 
-    await putFragment(rt.stores.blob, {
-      ref: 'doc:auth',
-      text: 'authentication uses signed tokens to verify the caller',
-      kind: 'markdown',
-    });
+    await putFragment(
+      rt.stores.blob,
+      {
+        ref: 'doc:auth',
+        text: 'authentication uses signed tokens to verify the caller',
+        kind: 'markdown',
+      },
+      DEFAULT_CORPUS_SCOPE,
+    );
     const pkg = await rt.services.compiler.compile({ task: 'authentication tokens', budget: 200 });
     const refs = pkg.sections
       .flatMap((section) => section.fragments)
@@ -142,7 +146,10 @@ describe.skipIf(!enabled)('self-hosted profile (TESSERA_TEST_SELF_HOSTED=1)', ()
     });
 
     // Straight from the BlobStore the runtime wired, bypassing every service above it.
-    const bytes = await stores.blob.get(`memory/${captured.lineageId}`);
+    // The key carries its owning (tenant, project) since F-075/ADR-0067.
+    const bytes = await stores.blob.get(
+      `${DEFAULT_CORPUS_SCOPE.tenantId}/${DEFAULT_CORPUS_SCOPE.projectId}/memory/${captured.lineageId}`,
+    );
     expect(new TextDecoder().decode(bytes)).toContain('readable straight out of the object store');
   });
 

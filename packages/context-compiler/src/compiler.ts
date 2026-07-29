@@ -265,11 +265,15 @@ export function createContextCompiler(options: ContextCompilerOptions): ContextC
 
     forTenant(nextTenant) {
       // A tenant switch resets the project scope to the tenant's default (mirrors the stores).
+      // The corpus is rebound alongside the retriever (ADR-0067): both halves of a compiler view
+      // derive from this one call, so a view that retrieves as one tenant and resolves bodies as
+      // another cannot be constructed.
       const scoped: ContextCompilerOptions = {
         ...options,
         tenantId: nextTenant,
         projectId: DEFAULT_PROJECT_ID,
         retriever: retriever.forTenant(nextTenant),
+        fragmentSource: fragmentSource.forTenant(nextTenant),
       };
       return createContextCompiler(
         graphStore === undefined
@@ -284,6 +288,7 @@ export function createContextCompiler(options: ContextCompilerOptions): ContextC
         tenantId,
         projectId: nextProject,
         retriever: retriever.forProject(nextProject),
+        fragmentSource: fragmentSource.forProject(nextProject),
       };
       return createContextCompiler(
         graphStore === undefined

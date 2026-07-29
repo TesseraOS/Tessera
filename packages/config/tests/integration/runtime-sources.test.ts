@@ -78,7 +78,9 @@ describe('runtime source management (F-038)', () => {
     expect(streamed).toContain('completed:3');
 
     // Documents land in the compiler corpus (memory fragments — extracted ADRs — are indexed too, F-039).
-    const docFragments = (await rt.stores.blob.list()).filter((ref) => !ref.startsWith('memory/'));
+    const docFragments = (await rt.stores.blob.list()).filter(
+      (key) => !key.startsWith('_tessera/') && !key.includes('/memory/'),
+    );
     expect(docFragments.length).toBe(3);
 
     // The ADR was auto-extracted into a decision memory through the wired runtime (closing the loop).
@@ -105,7 +107,9 @@ describe('runtime source management (F-038)', () => {
     // Re-scan with no changes → nothing re-indexed.
     const again = await rt.services.sources.scan(source.id);
     expect(again.summary).toEqual({ added: 0, modified: 0, removed: 0, unchanged: 3 });
-    const docFragments = (await rt.stores.blob.list()).filter((ref) => !ref.startsWith('memory/'));
+    const docFragments = (await rt.stores.blob.list()).filter(
+      (key) => !key.startsWith('_tessera/') && !key.includes('/memory/'),
+    );
     expect(docFragments.length).toBe(3);
 
     // Edit a file → exactly one modification.

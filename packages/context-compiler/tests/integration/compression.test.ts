@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FusedCandidate, HybridRetriever } from '@tessera/retrieval';
 import { createContextCompiler } from '../../src/compiler';
 import type { FragmentSource } from '../../src/ports/fragment-source';
+import { singleFragmentSource } from './scoped-corpus';
 import { estimateTokens } from '../../src/tokens';
 
 const BIG_REF = 'file:big';
@@ -27,9 +28,7 @@ function fakeRetriever(refs: readonly string[]): HybridRetriever {
 }
 
 function fragmentSource(text: string): FragmentSource {
-  return {
-    get: (ref) => Promise.resolve(ref === BIG_REF ? { ref, text, kind: 'code' } : undefined),
-  };
+  return singleFragmentSource(BIG_REF, text);
 }
 
 describe('context compiler — citation-preserving compression (FR-31)', () => {

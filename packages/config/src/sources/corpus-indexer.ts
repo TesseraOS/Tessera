@@ -9,7 +9,7 @@ import {
 import type { KeywordRetriever, TemporalRetriever } from '@tessera/retrieval';
 import type { BlobStore, VectorStore } from '@tessera/storage';
 import type { SourceFragment } from '@tessera/context-compiler';
-import { putFragment } from '../fragment-source.js';
+import { deleteFragment, putFragment } from '../fragment-source.js';
 
 /** A timestamp source for the temporal index: epoch ms, ISO string, or Date. */
 export type IndexTimestamp = number | string | Date;
@@ -36,8 +36,8 @@ export interface IndexDocumentInput {
  * Writes `(ref, text)` into the blob corpus + every retrieval index so it becomes findable by
  * `search`/`compile` (F-039). One scope-aware path shared by ingestion (the DocumentSink) and memory
  * capture (a MemoryService decorator), so both share a single ref space (the fusion requirement). The
- * retrieval indices are scoped by `(tenant, project)` (ADR-0033/0037); the content-addressed blob keeps
- * a single ref space (per-tenant blob keying is the separate F-075).
+ * retrieval indices AND the corpus blob are all scoped by `(tenant, project)` (ADR-0033/0037/0067) —
+ * one ref space, partitioned the same way at every layer.
  */
 export interface CorpusIndexer {
   indexDocument(input: IndexDocumentInput): Promise<void>;
@@ -87,7 +87,7 @@ export function createCorpusIndexer(options: CorpusIndexerOptions): CorpusIndexe
         input.metadata === undefined
           ? { ref: input.ref, text: input.text, kind: input.kind }
           : { ref: input.ref, text: input.text, kind: input.kind, metadata: { ...input.metadata } };
-      await putFragment(blob, fragment);
+      await putFragment(blob, fragment, { tenantId, projectId });
 
       // Independent writes to two different indices — run them together (engineering rule:
       // parallelize independent async work) and, critically, AWAIT them: against a networked index
@@ -112,7 +112,7 @@ export function createCorpusIndexer(options: CorpusIndexerOptions): CorpusIndexe
     async removeDocument(input) {
       const tenantId = input.tenantId ?? DEFAULT_TENANT_ID;
       const projectId = input.projectId ?? DEFAULT_PROJECT_ID;
-      await blob.delete(input.ref);
+      await deleteFragment(blob, input.ref, { tenantId, projectId });
       await Promise.all([
         keyword.forTenant(tenantId).forProject(projectId).remove(input.ref),
         temporal.forTenant(tenantId).forProject(projectId).remove(input.ref),

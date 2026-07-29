@@ -350,6 +350,10 @@
         {
           "kind": "file",
           "ref": "scripts/verify-state.mjs gains CHECK 8 (brand): the ADR-0008 codename boundary over apps/web app+components, marketing/docs content, and every PUBLISHED package name/description. It reads direct children for manifests — the first version reused `filesUnder`, which recurses into node_modules and hung the gate past 120s rather than failing it. SECURITY.md also joins the governed doc set (check 6)."
+        },
+        {
+          "kind": "test",
+          "ref": "F-074: the web-perf gate now asserts Core Web Vitals, not only first-load JS (ADR-0066). Observed via PerformanceObserver under prefers-reduced-motion at 4x CDP CPU throttle, median of 3 over a 10s window — NOT Lighthouse, whose simulated throttling produced a 71,670ms TBT here because with the hero art animating TBT is a function of observation length (it doubles when the window doubles). ENFORCED: lcpMs, cls. REPORTED ONLY: tbtMs, registered as F-100 rather than raised. Consequences for anyone touching this gate: the condition is part of the number (a vitals figure without \"reduced motion, 4x CPU\" beside it is unreadable), the gate self-tests computeCls/computeTbt every run because this site CLS is a genuine 0, and CI test:perf is ~35s slower"
         }
       ],
       "kind": "EFFECT_LINK",
@@ -1215,6 +1219,10 @@
         {
           "kind": "decision",
           "ref": "docs/adr/0042-marketing-site-design-direction.md"
+        },
+        {
+          "kind": "test",
+          "ref": "F-074: apps/marketing is now perf-gated on LCP and CLS, so a change to the hero, the fonts, or the layout that regresses either fails CI (ADR-0066). The reduced-motion path is what is measured, which makes it load-bearing in a second way beyond accessibility: the art components must keep painting ONE frozen frame and stopping — if a change makes that path animate or do continuous work, TBT stops terminating and the measurement technique itself breaks, not merely the number. The known miss (one ~263ms hydration long task, ~950-1050ms TBT vs a 200ms budget) is F-100"
         }
       ],
       "kind": "EFFECT_LINK",

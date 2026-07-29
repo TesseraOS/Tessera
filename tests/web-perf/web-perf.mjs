@@ -7,14 +7,24 @@
 // from the build output — Next 16/Turbopack no longer prints first-load JS in its route table, and a
 // server's compression settings must not be able to change what we claim.
 //
-// What it does NOT measure, and why: **Core Web Vitals**. Lighthouse was implemented here and then
-// removed, because on these pages it cannot produce a number worth gating on. The marketing hero runs a
-// WebGL shader and a canvas constellation on continuous rAF loops, so the trace is wall-to-wall long
-// tasks: with the default simulated throttling Lighthouse extrapolated a **71,670 ms TBT inside a ~10 s
-// trace**, and with `throttlingMethod: 'provided'` it returned **TBT NaN, performance score 0**. Gating
-// on either would be gating on noise. CWV needs its own investigation (freeze animations for the trace,
-// or measure via PerformanceObserver) — that is **F-074**, with the evidence recorded there. NFR-17's
-// CWV budgets therefore remain declared-but-unenforced; the bundle budget below is real and enforced.
+// It also measures **Core Web Vitals** for apps that declare a `vitals` budget (F-074; ADR-0066).
+//
+// Not with Lighthouse. F-049 implemented Lighthouse here and removed it: on a page whose hero runs a
+// WebGL shader and a canvas constellation on continuous rAF, simulated throttling extrapolated a
+// **71,670 ms TBT inside a ~10 s trace**, and `throttlingMethod: 'provided'` returned **TBT NaN,
+// performance score 0**. F-074 reproduced the underlying cause **without** Lighthouse, which is what
+// settled the design: with animation running, TBT doubles when the measurement window doubles
+// (2951 ms at 5 s → 6833 ms at 10 s). It is not a property of the page — it is a function of how long
+// you watch. No throttling model is going to fix that.
+//
+// Under `prefers-reduced-motion: reduce` the same page's TBT is **bounded and window-independent**
+// (655–713 ms at both 5 s and 10 s), because the art components paint one frozen frame and stop. So
+// that is the condition CWV is measured in — a state the site genuinely ships, not a test-only mode.
+//
+// The honest limitation, stated here rather than buried: **this does not measure what a
+// motion-enabled visitor experiences.** A pathologically expensive shader would not be caught. What
+// it does catch is every regression a budget is actually for — bundle growth, blocking scripts,
+// layout instability — and it is the only condition in which a task-based metric terminates at all.
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -32,6 +42,84 @@ const budgets = JSON.parse(readFileSync(join(here, 'budgets.json'), 'utf8'));
 const KB = 1024;
 const STARTUP_TIMEOUT_MS = 120_000;
 const SHUTDOWN_GRACE_MS = 5_000;
+
+/**
+ * CPU throttling for the vitals pass (F-074; ADR-0066).
+ *
+ * 4x is Lighthouse's mobile convention, and it is how a 200 ms TBT / 2000 ms LCP budget is normally
+ * read — the declared budgets name no device, so this gate names one. Applied through CDP
+ * (`Emulation.setCPUThrottlingRate`), i.e. **devtools** throttling: the browser really does run
+ * slower. That is the difference from Lighthouse's `simulate`, which models a slower machine from a
+ * fast trace and is what produced a 71,670 ms TBT here.
+ *
+ * Unthrottled was rejected for the reason F-049 rejected it: a localhost LCP of 136 ms represents
+ * nothing, and it would flatter the very number the budget exists to constrain.
+ */
+const CPU_THROTTLE_RATE = 4;
+
+/**
+ * How long to watch after `load` before reading the metrics.
+ *
+ * 10 s, from measurement rather than taste: at 5 s the reduced-motion TBT spread across runs was
+ * 345 ms, at 10 s it was 58 ms — a short window sometimes clips a late task, which shows up as
+ * flakiness that looks like the app moving. LCP can also still be revised upward late.
+ */
+const VITALS_SETTLE_MS = 10_000;
+
+/**
+ * Passes per app, reported as the **median**.
+ *
+ * A single lab run is noise; asserting on a max makes the slowest scheduling accident the verdict.
+ * The min–max is printed alongside so drift is visible rather than assumed — acceptance clause 3
+ * asks for stability *demonstrated*, and a number you cannot see the spread of is not demonstrated.
+ */
+const VITALS_RUNS = 3;
+
+/**
+ * Metrics measured and reported but NOT failed on, with the work item that owns the miss.
+ *
+ * `budgets.json`'s rule is that a miss is a code-splitting job or a **registered work item**, never
+ * a raised number — so the budget below stays at its declared value and the gate says plainly that
+ * the app is over it.
+ *
+ * Marketing measures **~950–1050 ms** against a 200 ms budget as this gate runs it (an isolated
+ * probe on a quiet machine showed ~680 ms — this gate shares a browser and a machine with the bundle
+ * pass, so its figure is the conservative one, which is the right way round for a budget). The cause
+ * is one ~263 ms long task at hydration, present even unthrottled. Deferring it is marketing app
+ * work on a design surface, tracked as F-100.
+ *
+ * Emptying this map is how TBT becomes enforced; that is the whole of F-100's acceptance.
+ */
+const REPORTED_NOT_ENFORCED = { tbtMs: 'F-100' };
+
+/**
+ * Installed before any page script runs, so `buffered: true` cannot miss an early entry.
+ *
+ * Reads the browser's own entries — no model, no extrapolation. Kept as a string because it is
+ * evaluated in the page, not here.
+ */
+const VITALS_COLLECTOR = `
+window.__vitals = { lcp: 0, fcp: 0, shifts: [], longTasks: [] };
+new PerformanceObserver((list) => {
+  for (const entry of list.getEntries()) window.__vitals.lcp = entry.startTime;
+}).observe({ type: 'largest-contentful-paint', buffered: true });
+new PerformanceObserver((list) => {
+  for (const entry of list.getEntries()) {
+    // A shift the user caused by interacting is explicitly not counted by the metric.
+    if (!entry.hadRecentInput) window.__vitals.shifts.push({ value: entry.value, at: entry.startTime });
+  }
+}).observe({ type: 'layout-shift', buffered: true });
+new PerformanceObserver((list) => {
+  for (const entry of list.getEntries()) {
+    window.__vitals.longTasks.push({ start: entry.startTime, duration: entry.duration });
+  }
+}).observe({ type: 'longtask', buffered: true });
+new PerformanceObserver((list) => {
+  for (const entry of list.getEntries()) {
+    if (entry.name === 'first-contentful-paint') window.__vitals.fcp = entry.startTime;
+  }
+}).observe({ type: 'paint', buffered: true });
+`;
 
 /**
  * The gate could not be RUN (not built, port taken, config drift) — as opposed to the budget being
@@ -229,6 +317,180 @@ async function measureFirstLoadJs(browser, url) {
   return bytes / KB;
 }
 
+/**
+ * Cumulative Layout Shift — the **real** metric: the largest sum over a session window, where a
+ * window ends after a 1 s gap or 5 s total.
+ *
+ * Not a naive sum of every shift. Over a 10 s observation a naive sum keeps climbing and would
+ * penalise a page for being watched longer, which is the exact failure mode that makes TBT
+ * ungateable with animation running — reproducing it in CLS would be an unforced error.
+ */
+function computeCls(shifts) {
+  let largest = 0;
+  let windowSum = 0;
+  let windowStart = 0;
+  let previous = 0;
+  for (const shift of shifts) {
+    if (windowSum > 0 && (shift.at - previous > 1000 || shift.at - windowStart > 5000)) {
+      largest = Math.max(largest, windowSum);
+      windowSum = 0;
+    }
+    if (windowSum === 0) windowStart = shift.at;
+    previous = shift.at;
+    windowSum += shift.value;
+  }
+  return Math.max(largest, windowSum);
+}
+
+/**
+ * Total Blocking Time: for every long task between FCP and the end of the window, the part beyond
+ * 50 ms. Tasks straddling either edge are clipped rather than dropped, so the number does not depend
+ * on where a task happened to land.
+ *
+ * **TBT is INP's LAB PROXY, not INP.** INP is a field metric — it needs a real interaction from a
+ * real person, and no lab tool can produce it. The report says `TBT` for that reason, and the budget
+ * it is compared against is `inpMs` mapped across in `budgets.json`, which says so too.
+ */
+function computeTbt(longTasks, fcp, windowEndMs) {
+  let total = 0;
+  for (const task of longTasks) {
+    const end = task.start + task.duration;
+    if (end <= fcp) continue;
+    const start = Math.max(task.start, fcp);
+    if (start >= windowEndMs) continue;
+    const blocking = Math.min(end, windowEndMs) - start - 50;
+    if (blocking > 0) total += blocking;
+  }
+  return total;
+}
+
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+}
+
+/**
+ * One vitals pass: load the page under reduced motion + CPU throttling, watch, read the browser's
+ * own entries.
+ *
+ * `reducedMotion: 'reduce'` is set on the CONTEXT, so it is in force for the very first paint — a
+ * media query flipped after navigation would leave the art already initialised and measure a state
+ * no user is ever in.
+ */
+async function measureVitalsOnce(browser, url) {
+  const context = await browser.newContext({ reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU_THROTTLE_RATE });
+  await page.addInitScript(VITALS_COLLECTOR);
+
+  const startedAt = Date.now();
+  await page.goto(url, { waitUntil: 'load' });
+  await delay(VITALS_SETTLE_MS);
+  const raw = await page.evaluate(() => window.__vitals);
+  const windowEndMs = Date.now() - startedAt;
+
+  await cdp.detach();
+  await context.close();
+
+  if (raw.lcp === 0) {
+    throw new Error(`no LCP entry at ${url} — the harness is broken, not the app`);
+  }
+  return {
+    lcpMs: raw.lcp,
+    cls: computeCls(raw.shifts),
+    tbtMs: computeTbt(raw.longTasks, raw.fcp, windowEndMs),
+  };
+}
+
+/** {@link VITALS_RUNS} passes, reduced to a median plus the observed spread per metric. */
+async function measureVitals(browser, url) {
+  const runs = [];
+  for (let index = 0; index < VITALS_RUNS; index += 1) {
+    runs.push(await measureVitalsOnce(browser, url));
+  }
+  const summarize = (key, round) => {
+    const values = runs.map((run) => run[key]);
+    return {
+      value: round(median(values)),
+      min: round(Math.min(...values)),
+      max: round(Math.max(...values)),
+    };
+  };
+  const ms = (value) => Math.round(value);
+  const ratio = (value) => Math.round(value * 1000) / 1000;
+  return {
+    lcpMs: summarize('lcpMs', ms),
+    cls: summarize('cls', ratio),
+    tbtMs: summarize('tbtMs', ms),
+  };
+}
+
+/**
+ * Verify the metric math against known inputs, every run, before measuring anything.
+ *
+ * These two functions are the gate's only real logic, and the pages they run against cannot
+ * exercise them: this site's CLS is a genuine, stable **0**, so a `computeCls` that always returned
+ * 0 — or summed naively, or ignored session windows — would report "ok" forever and nobody would
+ * know. A budget assertion nothing can drive red is not an assertion.
+ *
+ * Cheap enough to run unconditionally (microseconds), and a failure here is reported as a harness
+ * defect rather than a budget miss, because that is what it is.
+ */
+function assertMetricMath() {
+  const near = computeCls([
+    { at: 0, value: 0.1 },
+    { at: 500, value: 0.2 },
+  ]);
+  if (Math.abs(near - 0.3) > 1e-9) throw new Error(`computeCls: shifts 500ms apart must sum: ${near}`); // prettier-ignore
+
+  // A gap over 1s starts a new session window; the metric is the LARGEST window, not the total —
+  // this is precisely what stops a longer observation inflating the score.
+  const gapped = computeCls([
+    { at: 0, value: 0.1 },
+    { at: 2000, value: 0.2 },
+    { at: 2500, value: 0.05 },
+  ]);
+  if (Math.abs(gapped - 0.25) > 1e-9) throw new Error(`computeCls: 1s gap must split windows: ${gapped}`); // prettier-ignore
+
+  // …and a window is capped at 5s even with NO gap, with the cap measured from where the CURRENT
+  // window started rather than from time zero.
+  //
+  // This input took three attempts to get right, which is the point of writing it down. Every shift
+  // is 900ms after the last, so the 1s-gap rule never fires and only the cap can split. A tiny first
+  // window is followed by a large second one, so a cap anchored at time zero — the natural bug —
+  // splits the second window into single shifts and reports 0.1 where the metric says 0.6. Earlier
+  // versions used a 5.5s gap (which the gap rule handled, never reaching the cap) and then a single
+  // split at the last element (where the anchor is never re-read): both stayed green with the cap
+  // deleted, i.e. they asserted this case's name while proving something else.
+  const capped = computeCls([
+    ...Array.from({ length: 6 }, (_, index) => ({ at: index * 900, value: 0.01 })),
+    ...Array.from({ length: 6 }, (_, index) => ({ at: 5400 + index * 900, value: 0.1 })),
+  ]);
+  if (Math.abs(capped - 0.6) > 1e-9) throw new Error(`computeCls: 5s window cap: ${capped}`);
+
+  // A user-caused shift never reaches here (filtered at the observer by hadRecentInput), so the
+  // only thing left to prove is the arithmetic above.
+
+  const short = computeTbt([{ start: 100, duration: 40 }], 0, 10_000);
+  if (short !== 0) throw new Error(`computeTbt: a task under 50ms blocks nothing: ${short}`);
+
+  const blocking = computeTbt([{ start: 100, duration: 200 }], 0, 10_000);
+  if (blocking !== 150) throw new Error(`computeTbt: 200ms task blocks 150ms: ${blocking}`);
+
+  const beforeFcp = computeTbt([{ start: 0, duration: 200 }], 500, 10_000);
+  if (beforeFcp !== 0) throw new Error(`computeTbt: tasks before FCP are excluded: ${beforeFcp}`);
+
+  // Straddling either edge must CLIP, not drop: dropping makes the number depend on where a task
+  // happened to land relative to the window, which is exactly the instability being designed out.
+  const straddlesFcp = computeTbt([{ start: 0, duration: 300 }], 100, 10_000);
+  if (straddlesFcp !== 150) throw new Error(`computeTbt: clip at FCP: ${straddlesFcp}`);
+
+  const straddlesEnd = computeTbt([{ start: 9900, duration: 300 }], 0, 10_000);
+  if (straddlesEnd !== 50) throw new Error(`computeTbt: clip at window end: ${straddlesEnd}`);
+}
+
 /** The manifest is the source of truth for the marketing budget; drift between them is a failure. */
 function assertManifestAgreement(app, failures) {
   if (app.name !== 'marketing') return;
@@ -245,7 +507,10 @@ function assertManifestAgreement(app, failures) {
 
 async function main() {
   const failures = [];
+  /** Over-budget metrics that are REGISTERED work items — printed loudly, but not a red build. */
+  const notes = [];
   const report = [];
+  assertMetricMath();
   const browser = await chromium.launch();
 
   try {
@@ -260,6 +525,23 @@ async function main() {
           failures.push(
             `${app.name} ${app.path}: first-load JS ${firstLoadKb}KB gz > ${app.firstLoadJsGzipKb}KB budget`,
           );
+        }
+
+        // Vitals only for apps that declare a budget for them: measuring what nothing asserts costs
+        // ~35s per app and produces a number nobody reads.
+        if (app.vitals !== undefined) {
+          entry.vitals = await measureVitals(browser, `${url}${app.path}`);
+          for (const [metric, budget] of Object.entries(app.vitals)) {
+            if (metric.startsWith('$')) continue;
+            const measured = entry.vitals[metric];
+            if (measured === undefined || measured.value <= budget) continue;
+            const over = `${app.name} ${app.path}: ${metric} ${measured.value} > ${budget} budget (reduced motion, ${CPU_THROTTLE_RATE}x CPU)`;
+            // A registered miss is reported, not failed — see REPORTED_NOT_ENFORCED. Anything else
+            // over budget is a real regression and fails the gate.
+            const owner = REPORTED_NOT_ENFORCED[metric];
+            if (owner === undefined) failures.push(over);
+            else notes.push(`${over} — known, tracked as ${owner}`);
+          }
         }
 
         report.push(entry);
@@ -277,6 +559,33 @@ async function main() {
     console.log(
       `  ${entry.app.padEnd(10)} ${entry.path.padEnd(9)} first-load JS ${entry.firstLoadJsGzipKb} KB gz (budget ${budget.firstLoadJsGzipKb})`,
     );
+    if (entry.vitals === undefined) continue;
+    // The condition is printed on every line: a vitals number without it is unreadable, and this is
+    // the one the reader most needs to weigh (reduced motion is a narrower claim than "it is fast").
+    console.log(
+      `             ${' '.repeat(9)} vitals (reduced motion, ${CPU_THROTTLE_RATE}x CPU, median of ${VITALS_RUNS})`,
+    );
+    for (const [metric, budgetValue] of Object.entries(budget.vitals)) {
+      if (metric.startsWith('$')) continue;
+      const measured = entry.vitals[metric];
+      if (measured === undefined) continue;
+      const owner = REPORTED_NOT_ENFORCED[metric];
+      const status =
+        owner !== undefined
+          ? `reported only — ${owner}`
+          : measured.value <= budgetValue
+            ? 'ok'
+            : 'OVER';
+      const label = metric === 'tbtMs' ? 'tbtMs (INP lab proxy)' : metric;
+      console.log(
+        `             ${' '.repeat(9)}   ${label.padEnd(22)} ${String(measured.value).padStart(6)} (budget ${budgetValue}, runs ${measured.min}–${measured.max}) ${status}`,
+      );
+    }
+  }
+
+  if (notes.length > 0) {
+    console.log('\n  Declared but not enforced (registered work items, not raised budgets):');
+    for (const note of notes) console.log(`    - ${note}`);
   }
 
   if (failures.length > 0) {
@@ -287,7 +596,14 @@ async function main() {
     );
     return 1;
   }
-  console.log('\n✓ web-perf gate passed — every budget met\n');
+  // Precise, because "every budget met" would be false while a reported-only miss is printed three
+  // lines above it — and a summary line that contradicts its own report is how a gate stops being
+  // read at all.
+  console.log(
+    notes.length > 0
+      ? `\n✓ web-perf gate passed — every ENFORCED budget met (${notes.length} declared-but-unenforced miss${notes.length === 1 ? '' : 'es'} above)\n`
+      : '\n✓ web-perf gate passed — every budget met\n',
+  );
   return 0;
 }
 

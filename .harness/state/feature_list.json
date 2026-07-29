@@ -2491,7 +2491,7 @@
       "package": "@tessera/web-perf",
       "release": "R4",
       "priority": "should",
-      "status": "in_progress",
+      "status": "done",
       "blockedBy": [],
       "acceptance": [
         "A LAB measurement of LCP / CLS / TBT for the public marketing surface that is trustworthy on pages running continuous rAF/WebGL animation, asserted against the declared targets already committed in tests/web-perf/budgets.json (marketing: lcpMs 2000, cls 0.05, tbtMs 200 — sourced from marketing-design.manifest.json budgets.webVitals)",
@@ -2509,7 +2509,7 @@
         "E-005",
         "E-022"
       ],
-      "notes": "FOUND BY F-049 (2026-07-16), which activated the web-perf gate on bundle budgets but could NOT deliver the CWV half of its acceptance honestly. Lighthouse 13.4 was implemented against the real production build and removed again, with evidence: under its DEFAULT simulated throttling it reported a **TBT of 71,670 ms inside a ~10 s trace** (the marketing hero runs a WebGL ShaderField + a Canvas Constellation on continuous rAF loops, so the trace is wall-to-wall long tasks and the simulation model extrapolates from noise); switching to throttlingMethod:'provided' produced **TBT NaN and performance score 0**, with an unthrottled localhost LCP of 136 ms that represents nothing. Neither number is gateable, and shipping a gate on either would be gating on noise — so CWV was left declared-but-unenforced rather than faked, and NFR-17's CWV clause is NOT yet satisfied. The declared targets and the reasoning are already committed in tests/web-perf/budgets.json ($vitalsNote + the per-app vitals blocks) so this feature starts with its acceptance written. Related lesson: [[playwright-a11y-assertions-avoid-framework-overlays]] already records that these infinite art animations break screenshot capture — the same root cause, a second time, which is itself an argument for option (a)."
+      "notes": "FOUND BY F-049 (2026-07-16), CLOSED 2026-07-28 under ADR-0066. The technique was chosen from MEASUREMENT, not from the candidate list: with the hero art animating, TBT doubles when the observation window doubles (2951ms@5s, 6833ms@10s) — reproduced WITHOUT Lighthouse, so the cause is the page, not the simulation model. Under prefers-reduced-motion it is bounded and window-independent (655-713ms at both), and reduced motion is a shipped state (the designed still frames), not a test-only mode. Gate: PerformanceObserver, 4x CDP CPU throttle, median of 3 over 10s, min-max printed. ENFORCED lcpMs + cls (medians 528/456/488ms vs 2000; 0 vs 0.05, across three consecutive runs). REPORTED ONLY tbtMs — the app measures ~950-1050ms vs 200ms from one ~263ms hydration long task, registered as F-100 rather than raised, per budgets.json own rule. Stated limit: this does not measure what a motion-enabled visitor experiences."
     },
     {
       "id": "F-075",
@@ -3275,6 +3275,37 @@
         "E-031"
       ],
       "notes": "F-064 left 49 files and roughly 400 strings. The groundwork (catalog, typed t(), guard, allowlist) is complete — this is mechanical, and its only real risk is silent UI change, which is why the byte-identical rule and per-batch test runs are in the acceptance rather than the commentary."
+    },
+    {
+      "id": "F-100",
+      "title": "Marketing TBT: the hydration long task keeps the declared INP proxy unenforceable",
+      "requirements": [
+        "NFR-17",
+        "NFR-4"
+      ],
+      "service": "web",
+      "package": "@tessera/marketing",
+      "release": "R4",
+      "priority": "should",
+      "status": "backlog",
+      "blockedBy": [],
+      "acceptance": [
+        "The marketing home's Total Blocking Time comes under the declared 200ms budget as the web-perf gate measures it (prefers-reduced-motion, 4x CDP CPU throttle, median of 3) — today it measures ~950-1050ms, from ONE ~263ms long task at hydration that is present even unthrottled (~218-228ms at 1x), so this is a real main-thread cost and not a measurement artifact",
+        "The cause is identified before it is changed: the task attributes to `window` (top-level script), and the plausible contributors are Next hydration plus the art components' mount effects — the ShaderField creates a WebGL context and compiles its shader inside the hydration commit even under reduced motion, because it still paints one frozen frame. Profile first; a guessed fix on a design surface is how a hero regresses",
+        "Whatever defers the work must not regress what reduced motion is FOR: the designed still frame must still paint (no blank hero, no late pop-in), the F-064 reduced-motion assertions stay green, and the marketing e2e + axe suites stay green",
+        "The gate enforces it afterwards: remove `tbtMs` from REPORTED_NOT_ENFORCED in tests/web-perf/web-perf.mjs and update the $vitalsNote — after this, a TBT regression is a red build. Workspace gates green"
+      ],
+      "verification": [
+        "typecheck",
+        "lint",
+        "test",
+        "e2e"
+      ],
+      "effects": [
+        "E-005",
+        "E-022"
+      ],
+      "notes": "FOUND BY F-074 (2026-07-28), which built the CWV gate and measured this. F-074 deliberately did NOT fix it: budgets.json's rule is that a miss is a code-splitting job or a registered work item and never a raised number, and the app work is a different kind of change from the gate — it touches the marketing hero art, a design surface with real first-paint regression risk. LCP and CLS are enforced today (LCP medians 528/456/488ms against 2000, CLS 0); TBT is measured, printed against its budget, and labelled as this work item. See ADR-0066 for why the measurement is trustworthy at all."
     }
   ]
 }

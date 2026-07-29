@@ -1,7 +1,7 @@
 {
   "$note": "Frontend budgets for the `web-perf` gate (F-049). ADR-0021 asked for these in F-028 and they were never enforced — documentation, not a gate. Now they fail. A miss is a code-splitting job or a registered work item; it is never a raised number here.",
   "$firstLoadNote": "Measured OVER THE WIRE and gzipped by the harness itself (zlib), not read from the build output: Next 16/Turbopack stopped printing first-load JS in the route table (see the turbopack-route-table-no-first-load-js lesson), and server-side compression settings must not change what we claim. Captured at the `load` event and NOT at networkidle — 'First Load JS' is what the route needs to render; chunks pulled in by dynamic import after hydration are excluded, because deferring them is the point of code-splitting. Measuring at networkidle counts the lazy shader chunk and reports ~260KB, failing the app for succeeding.",
-  "$vitalsNote": "CWV are NOT gated here — see F-074 and the header of web-perf.mjs. Lighthouse could not produce a number worth gating on for pages with continuous rAF/WebGL animation: simulated throttling extrapolated a 71,670ms TBT inside a ~10s trace, and throttlingMethod:'provided' returned TBT NaN / performance score 0. The per-app `vitals` block below is retained as the DECLARED target (from the marketing manifest, with inpMs mapped to TBT — its lab proxy, since Lighthouse cannot measure INP, a field metric) so F-074 has its acceptance ready. Declared, not enforced: NFR-17's CWV clause is not yet satisfied by a gate, and this file does not pretend otherwise.",
+  "$vitalsNote": "CWV are measured and ENFORCED here for apps declaring a vitals block (F-074, ADR-0066), by PerformanceObserver rather than Lighthouse — which F-049 removed after simulated throttling extrapolated a 71,670ms TBT inside a ~10s trace and provided-throttling returned TBT NaN. Conditions, which the numbers are meaningless without: prefers-reduced-motion:reduce, 4x CDP CPU throttling (Lighthouse mobile convention; the budgets below name no device, so the gate names one), median of 3 runs, 10s observation. Reduced motion is not a test-only mode — it is the designed still-frame state the site ships — and it is the only condition in which TBT terminates at all: with the art animating, TBT DOUBLES when the observation window doubles (2951ms@5s, 6833ms@10s). The honest limit: this does not measure what a motion-enabled visitor experiences. ENFORCED: lcpMs, cls. REPORTED ONLY: tbtMs — the app measures ~950-1050ms against the 200ms budget as this gate runs it (one ~263ms long task at hydration, present even unthrottled; an isolated probe on a quiet machine showed ~680ms), and per the $note above a miss is a work item, never a raised number: it is registered as F-100. When F-100 lands, remove tbtMs from REPORTED_NOT_ENFORCED in web-perf.mjs and it is enforced too. Stability demonstrated across three consecutive gate runs: LCP medians 528/456/488ms, CLS 0/0/0, TBT medians 1008/964/1008ms — the verdict does not flip and each metric prints its own min-max so drift is visible.",
   "apps": [
     {
       "name": "marketing",
@@ -16,7 +16,7 @@
         "lcpMs": 2000,
         "cls": 0.05,
         "tbtMs": 200,
-        "$source": "marketing-design.manifest.json budgets.webVitals (inpMs 200 → TBT, its lab proxy)."
+        "$source": "marketing-design.manifest.json budgets.webVitals (inpMs 200 → TBT, its LAB PROXY: INP is a field metric and no lab tool can measure it). Asserted under prefers-reduced-motion at 4x CPU — see $vitalsNote."
       }
     },
     {

@@ -3,6 +3,88 @@
 Session-by-session record so any agent can resume from files alone. Newest entries on top.
 Each entry: date · what changed · evidence/verification · decisions · next step.
 
+## 2026-07-28 — F-074 DONE: Core Web Vitals become a gate, measured where each metric is meaningful
+
+**F-074** complete. Plan: [`F-074-core-web-vitals-gate.md`](../plans/F-074-core-web-vitals-gate.md).
+Decision: **[ADR-0066](../../docs/adr/0066-core-web-vitals-measured-under-reduced-motion-not-lighthouse.md)**.
+
+### The technique came from measurement, which is the whole point
+
+F-049 removed Lighthouse from this gate with evidence (71,670 ms TBT inside a ~10 s trace under
+simulated throttling; TBT NaN under `provided`). F-074 refused to pick from the candidate list
+without data, and probing the real production build produced the fact that settles the design:
+
+| condition | window | LCP | CLS | TBT |
+|---|---|---|---|---|
+| motion, 4x CPU | 5 s | 384–824 ms | 0 | **2951–3577 ms** |
+| motion, 4x CPU | 10 s | 364–728 ms | 0 | **6833–7420 ms** |
+| reduce, 4x CPU | 10 s | 344–448 ms | 0 | **655–713 ms** |
+| reduce, 1x CPU | 10 s | 92–124 ms | 0 | 218–228 ms |
+
+**With the art animating, TBT doubles when the observation window doubles** — it measures how long
+you watched, not the page. Reproducing that *without* Lighthouse is what proves the cause is the
+page rather than the simulation model, and that no throttling setting would have fixed it. Under
+`prefers-reduced-motion` it is bounded and window-independent, and reduced motion is a state the site
+genuinely ships (the designed still frames), not a test-only mode.
+
+So: `PerformanceObserver` (the browser's own LCP / layout-shift / longtask entries), 4x CDP CPU
+throttling (devtools, not `simulate`), median of 3 over a 10 s window, with the min–max printed.
+**The limit is stated in four places rather than buried: this does not measure what a motion-enabled
+visitor experiences.**
+
+### One budget is registered, not raised — and the summary line had to change with it
+
+LCP and CLS are **enforced**. TBT is **~950–1050 ms against a 200 ms budget**, from one ~263 ms long
+task at hydration that is present even unthrottled (218–228 ms at 1x) — a real main-thread cost, not
+an artifact. `budgets.json`'s standing rule is that a miss is a work item and never a raised number,
+so it is **F-100** (marketing app work: defer the WebGL/shader init out of the hydration commit), and
+the gate prints it against its budget with its owner.
+
+That forced a second correction: the old success line said "every budget met", which would be false
+three lines under a printed miss. It now says "every **ENFORCED** budget met (1 declared-but-
+unenforced miss above)". A verdict that contradicts its own report is how a gate stops being read.
+
+### Stability, demonstrated
+
+Three consecutive gate runs — LCP medians **528 / 456 / 488 ms** (budget 2000), CLS **0 / 0 / 0**,
+TBT medians **1008 / 964 / 1008 ms**. The verdict never flips, and every metric prints its own
+min–max so drift is visible rather than assumed.
+
+### The self-test that took three attempts
+
+This site's CLS is a genuine, stable **0**, so nothing the page can do drives a CLS assertion red —
+a `computeCls` that always returned 0 would report "ok" forever. The gate therefore checks its own
+CLS/TBT arithmetic against known inputs every run.
+
+Verifying *that* is where it got interesting. Deleting the session-window anchor left the suite
+**green twice**: the first case used a 5.5 s gap, so the 1 s-gap rule handled it and the 5 s cap was
+never reached; the second split only at the final element, where the anchor is never re-read. Both
+asserted the cap's name while proving something else — F-064's lesson, arrived at from a new
+direction. The committed case is the one where the anchor uniquely decides the answer (0.6 correct,
+0.1 with the bug), and breaking the cap now fails it.
+
+The gate's ability to fail was also verified directly: tightening `lcpMs` to 100 turns it red on the
+right metric with the right message.
+
+### Evidence
+
+`verify-state` valid (**100** features — F-100 registered — 32 effect-links; E-005 and E-022
+extended); `pnpm test:perf` green with vitals reported; workspace typecheck / lint / format / test
+green. `gates.json`'s scope-limit paragraph and `budgets.json`'s `$vitalsNote` now say what is
+enforced and what is not, naming F-100.
+
+### Carried forward
+
+- **F-100** — the hydration long task. Until it lands, TBT is measured but not enforced.
+- CI's `test:perf` is **~35 s slower** (3 passes × 10 s, marketing only). Paid deliberately: fewer
+  passes or a shorter window measured demonstrably worse.
+- These are lab numbers on the runner's hardware. LCP has ~4x headroom; if a slower runner ever flips
+  it, the answer is a documented runner baseline, not a raised budget.
+
+**Next step:** **F-075** — tenant-key the blob corpus so file bodies can be served safely — is the
+next lowest-id eligible in R4 (F-069 stays blocked on stakeholder input).
+
+---
 ## 2026-07-28 — F-072 DONE: stdio can authenticate; F-069 assessed and NOT claimed
 
 **F-072** complete across **5 increments**. Plan:

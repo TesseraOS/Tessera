@@ -8,7 +8,9 @@
       "order": 0,
       "status": "active",
       "command": "node scripts/verify-state.mjs",
-      "requiredFor": ["always"],
+      "requiredFor": [
+        "always"
+      ],
       "description": "Harness integrity gate (hardened 2026-07-04): state files (feature_list.json, effects.json, schema sync), workflow invariants (wip_limit, blockers-done before in_progress/done, plan-before-code for in-flight features), PRD requirement traceability, gates.json validity + CI-mirror (E-005), memory index coverage, governed-doc relative links, and the env-docs guard (every TESSERA_* var read by config/server documented in .env.example)."
     },
     {
@@ -16,7 +18,9 @@
       "order": 1,
       "status": "active",
       "command": "pnpm -w typecheck",
-      "requiredFor": ["code"],
+      "requiredFor": [
+        "code"
+      ],
       "description": "TypeScript strict typecheck across the workspace (turbo run typecheck)."
     },
     {
@@ -24,7 +28,9 @@
       "order": 2,
       "status": "active",
       "command": "pnpm -w lint",
-      "requiredFor": ["code"],
+      "requiredFor": [
+        "code"
+      ],
       "description": "ESLint (flat config) incl. package-boundary rule (turbo run lint)."
     },
     {
@@ -32,7 +38,9 @@
       "order": 3,
       "status": "active",
       "command": "pnpm -w format:check",
-      "requiredFor": ["code"],
+      "requiredFor": [
+        "code"
+      ],
       "description": "Prettier formatting check (code + root config; docs/harness excluded)."
     },
     {
@@ -40,7 +48,9 @@
       "order": 4,
       "status": "active",
       "command": "pnpm -w test",
-      "requiredFor": ["code"],
+      "requiredFor": [
+        "code"
+      ],
       "description": "Unit + integration tests via Vitest (turbo run test), incl. adapter conformance suites."
     },
     {
@@ -48,7 +58,9 @@
       "order": 5,
       "status": "active",
       "command": "pnpm -w build",
-      "requiredFor": ["code"],
+      "requiredFor": [
+        "code"
+      ],
       "description": "Turborepo build of all packages and apps."
     },
     {
@@ -56,7 +68,9 @@
       "order": 6,
       "status": "active",
       "command": "pnpm -w test:e2e",
-      "requiredFor": ["user-facing"],
+      "requiredFor": [
+        "user-facing"
+      ],
       "description": "End-to-end tests across surfaces. api/mcp run HTTP-/SDK-surface e2e (app.inject / in-memory transport; active since F-011). Web (since F-028) runs Playwright against its own dev server, including @axe-core WCAG A/AA assertions. CI installs the Playwright browser before this gate."
     },
     {
@@ -64,7 +78,9 @@
       "order": 7,
       "status": "active",
       "command": "pnpm --filter @tessera/web test:e2e",
-      "requiredFor": ["web"],
+      "requiredFor": [
+        "web"
+      ],
       "ciStep": false,
       "description": "Accessibility (axe / WCAG 2.1 AA) for apps/web — active since F-028 (ADR-0021). Asserted inside the web Playwright e2e (gate 6); CI's e2e step covers it (ciStep:false — the verify-state ci-mirror guard knows this is deliberate). Listed here for traceability."
     },
@@ -73,15 +89,19 @@
       "order": 8,
       "status": "active",
       "command": "pnpm -w test:perf",
-      "requiredFor": ["web"],
-      "description": "Frontend performance budget (ADR-0021) — ACTIVE since F-049; lives in tests/web-perf (@tessera/web-perf). Enforces the first-load JS budget for every web app, measured over the wire and gzipped by the harness (Next 16/Turbopack no longer prints first-load JS, and server compression must not change what we claim), captured at the `load` event so lazily-imported chunks are correctly excluded — that IS the definition of the budget. Marketing's number is cross-checked against docs/design/marketing-design.manifest.json so the two cannot drift. **Scope limit, stated plainly:** Core Web Vitals are NOT gated. Lighthouse was implemented and removed — on pages with continuous rAF/WebGL animation it extrapolated a 71,670ms TBT inside a ~10s trace under simulated throttling, and returned TBT NaN / score 0 under 'provided'. Gating on that would be gating on noise, so NFR-17's CWV clause remains declared-but-unenforced and is tracked as F-074. This gate does not claim to satisfy it. **Runs only @tessera/web-perf** (--filter): unfiltered, turbo gave every package a no-op test:perf node whose ^build rebuilt the entire monorepo — while building neither app this gate measures. It therefore requires gate 5 (build) to have run first; the ordered gate list IS that contract, and the gate fails fast with that instruction rather than waiting on a server that cannot start. It owns real server processes: it spawns `next start` directly (never via a shell/pnpm wrapper) and kills the process TREE — child.kill() reaches only the direct child, and the orphan it used to leave held the stdio pipes open, hanging the gate forever AFTER it printed PASS (2026-07-17)."
+      "requiredFor": [
+        "web"
+      ],
+      "description": "Frontend performance budget (ADR-0021) — ACTIVE since F-049; lives in tests/web-perf (@tessera/web-perf). Enforces the first-load JS budget for every web app, measured over the wire and gzipped by the harness (Next 16/Turbopack no longer prints first-load JS, and server compression must not change what we claim), captured at the `load` event so lazily-imported chunks are correctly excluded — that IS the definition of the budget. Marketing's number is cross-checked against docs/design/marketing-design.manifest.json so the two cannot drift. **Core Web Vitals ARE gated since F-074 (ADR-0066)**, for apps declaring a `vitals` budget (marketing today). Measured by PerformanceObserver — the browser's own LCP / layout-shift / longtask entries — under `prefers-reduced-motion: reduce` with 4x CDP CPU throttling, median of 3 runs over a 10s window. Not Lighthouse: F-049 removed it after simulated throttling extrapolated a 71,670ms TBT inside a ~10s trace and `provided` returned TBT NaN / score 0, and F-074 reproduced the cause WITHOUT Lighthouse — with the hero art animating, TBT DOUBLES when the observation window doubles (2951ms@5s, 6833ms@10s), so it measures how long you watched rather than the page. Under reduced motion it is bounded and window-independent, and reduced motion is a state the site genuinely ships (the designed still frames), not a test-only mode. **The honest limit:** this does not measure what a motion-enabled visitor experiences. **ENFORCED: lcpMs, cls** (medians 528/456/488ms against 2000, and 0 against 0.05, across three consecutive runs). **REPORTED ONLY: tbtMs** — the app measures ~950-1050ms against 200ms from one ~263ms hydration long task, registered as **F-100** rather than raised, per budgets.json's own rule. The gate self-tests its CLS/TBT arithmetic every run, because this site's CLS is a genuine 0 and a broken implementation would otherwise report \"ok\" forever. **Runs only @tessera/web-perf** (--filter): unfiltered, turbo gave every package a no-op test:perf node whose ^build rebuilt the entire monorepo — while building neither app this gate measures. It therefore requires gate 5 (build) to have run first; the ordered gate list IS that contract, and the gate fails fast with that instruction rather than waiting on a server that cannot start. It owns real server processes: it spawns `next start` directly (never via a shell/pnpm wrapper) and kills the process TREE — child.kill() reaches only the direct child, and the orphan it used to leave held the stdio pipes open, hanging the gate forever AFTER it printed PASS (2026-07-17)."
     },
     {
       "id": "e2e-full",
       "order": 9,
       "status": "active",
       "command": "pnpm -w test:e2e:full",
-      "requiredFor": ["release"],
+      "requiredFor": [
+        "release"
+      ],
       "description": "Full-stack end-to-end (NFR-16) — ACTIVE since F-048; lives in tests/e2e-full (@tessera/e2e-full). Boots the REAL server via startApiServer (Local profile, file-backed SQLite in a temp dir, fake embeddings by default; real Transformers.js behind TESSERA_E2E_REAL_EMBEDDINGS=1), registers a fixture repo + scans it before reporting healthy, then runs two journeys against that ONE live deployment: the HUMAN journey (Playwright drives the real apps/web — production build, proxied at the live API, not its own stub — sign-in → sources → search → inspector → capture a memory in the real Monaco editor → audit) and the AGENT journey (a real MCP client spawns the real tessera-mcp binary over stdio against the same database, exercising search/compile_context/get_effects/capture_memory/add_source with budget-bounded + token-lean assertions, cross-verified through REST). Serialized (workers:1) and retries:0 — a flaky full-stack gate is a lie. Ports 3200/3201 so it can run back-to-back with the e2e gate."
     },
     {
@@ -89,7 +109,9 @@
       "order": 10,
       "status": "active",
       "command": "pnpm -w bench",
-      "requiredFor": ["release"],
+      "requiredFor": [
+        "release"
+      ],
       "description": "Backend performance benchmarks (NFR-4) — ACTIVE since F-049; lives in tests/bench (@tessera/bench). Boots the REAL Local runtime in-process over a VERSIONED, deterministic corpus (seeded generator + pinned mtimes — content alone is not enough, since the temporal retriever ranks on mtime and rank-based fusion then shuffles the result set) and asserts committed thresholds (tests/bench/thresholds.json): search p95 < 300 ms and compile p95 < 2 s at the default budget (both NFR-4), incremental-ingest p95, tokens-per-answer for REST *and* MCP separately (ADR-0036 parity), the compile envelope ratio (response tokens / package tokens), and FR-30's budget promise. Thresholds are ABSOLUTE, never baseline deltas: CI hardware varies, so a delta gate would flake until it was disabled. Fake embeddings by default — it measures OUR engine, stays machine-comparable, and keeps the NFR-4 headroom that makes the gate stable; the real-provider number is measured under TESSERA_BENCH_REAL_EMBEDDINGS=1 and recorded in results/baseline.json (never gated on). A miss is a tuning work item, never an edited threshold."
     }
   ]
